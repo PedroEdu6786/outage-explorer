@@ -1,0 +1,28 @@
+{
+  "description": "Buffer final turn summaries and append the session to the project devlog on exit.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/scripts/devlog_hook.py\"",
+            "timeout": 3,
+            "statusMessage": "Saving devlog summary"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/scripts/devlog_hook.py\"",
+            "timeout": 3
+          }
+        ]
+      }
+    ]
+  }
+}
