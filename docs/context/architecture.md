@@ -7,7 +7,7 @@ the ADRs record *why*.
 ## System context (C4 level 1)
 
 ```
-[EIA Open Data API v2] ──▶ [Connector] ──▶ [Local extracts / data model]
+[EIA Open Data API v2] ──▶ [Connector] ──▶ [Backend-owned persistent data]
                                                      ▲
                                                      │
 [Authenticated API client] ──▶ [Backend API] ──────────┘
@@ -15,9 +15,33 @@ the ADRs record *why*.
                                    └── Admin refresh ──▶ [Connector]
 ```
 
-The backend serves locally stored EIA data. The connector fetches upstream
+The deployed backend serves its own persistently stored EIA data to all
+authorized clients. “Local” is relative to the application, not the Admin's
+computer. The connector fetches upstream
 data for the model. This repository currently covers these three parts;
 frontend work is deferred by the user's instruction on 2026-10-01.
+
+The user explicitly corrected the earlier laptop-only deployment assumption.
+Development must reproduce a realistic shared backend deployment. Data and
+operational state must survive application/query container replacement.
+The user selected one active backend replica, serving all authorized users.
+Multiple replicas and horizontal autoscaling are deferred. The user accepted
+Amazon S3 for durable raw/modeled Parquet and DuckDB for analytical SQL;
+see [ADR-0001](../adr/0001-s3-parquet-duckdb.md). Backend analytical disk is
+disposable. Direct S3 reads versus temporary staging remains open;
+staged in-memory execution is the current security proposal. SQLite operational metadata and one application-owned refresh
+task remain proposals; operational state still needs its own durable storage.
+Backend hosting, SQL isolation runtime and availability target remain undecided.
+Query worker/process counts are separate from API replicas.
+
+The user has confirmed seeded database accounts and broad read-only analytical
+SQL, including joins, CTEs, subqueries, aggregations, and window functions.
+An independent auth service is not a requirement. Exact engine version, SQL surface,
+reference authorization, and execution boundaries remain design choices.
+
+The council's draft spec and design discussion are under
+`docs/specs/outage-explorer-backend/`; only explicitly accepted decisions
+(including ADR-0001) are settled. The remaining mechanisms are proposals.
 
 Designs must preserve the three [product promises](overview.md): browsing
 and querying use local data after ingestion, findings are reproducible from
@@ -39,8 +63,10 @@ remains undecided.
 | EIA datasets | required by brief | Daily `us-nuclear-outages`, `facility-nuclear-outages`, and `generator-nuclear-outages` |
 | Backend | **open** | TODO: ADR-0002 — language/framework |
 | Frontend | **deferred** | Outside current repository scope; no UI choice needed now |
-| Data storage | partly specified | Raw extracts as Parquet; model as Parquet or Delta; query engine and optional cache undecided |
-| Deployment | **open** | TODO: ADR-0005 |
+| Analytical storage | **Amazon S3 + Parquet confirmed** | Separate persistent bucket; region and bucket lifecycle/security configuration pending; see ADR-0001 |
+| Query engine | **DuckDB confirmed** | Remote reads versus staging, exact SQL surface and isolated execution still require validation |
+| Operational storage | **open** | Users, sessions, publication/run/cursor metadata require persistence separately from Parquet objects; SQLite remains proposed |
+| Deployment | **one replica confirmed** | Shared service for all authorized users, persistent data/state, reproducible development; hosting/operational persistence/runtime choices pending |
 
 ## Key data-flow questions to resolve first
 
@@ -60,6 +86,6 @@ remains undecided.
 
 ## Related
 
-- Decisions: see `docs/adr/` (create ADR-0001..0005 as the open items above
-  get resolved).
+- Decisions: [ADR-0001 — S3, Parquet and DuckDB](../adr/0001-s3-parquet-duckdb.md).
+  Add further numbered ADRs as the remaining choices are resolved.
 - `AGENTS.md` at repo root tells AI agents how to work in this codebase.

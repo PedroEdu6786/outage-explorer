@@ -1,12 +1,12 @@
 # Project Overview
 
-Outage Explorer lets users explore locally stored U.S. nuclear outage data,
+Outage Explorer lets users explore backend-stored U.S. nuclear outage data,
 query datasets their role permits, and understand discrepancies between
 national, facility, and generator observations.
 
 ## Core product promises
 
-- **Availability:** browsing and querying work from local data after ingestion.
+- **Availability:** browsing and querying work from the backend's own persistent data after ingestion, independently of EIA availability and individual client machines.
 - **Trust:** metrics and discrepancies are explained using reproducible
   evidence from actual EIA records.
 - **Access control:** Viewers can never retrieve facility or generator
@@ -23,6 +23,18 @@ they actually want to ask.
 ## What we're building
 
 Current repository scope, confirmed by the user on 2026-10-01:
+
+The user clarified deployment scope: build realistic application development
+and deployment, with ingested Parquet owned by our backend infrastructure and
+served to all authorized clients through the API. A developer laptop is only
+a development environment. The user selected one backend replica for now;
+multiple replicas and horizontal autoscaling are deferred. The user accepted
+a separate object-storage bucket as the durable home for Parquet and then
+selected Amazon S3 with DuckDB as the query engine. Backend analytical disk is
+disposable; direct remote reads versus temporary staging remains open.
+Operational database persistence and backend hosting are separate open concerns. Seeded
+challenge accounts remain sufficient; this clarification does not request
+registration, a frontend, an automatic refresh schedule, or a compute provider.
 
 - **Data connector:** extract the three daily EIA nuclear outage routes
   (national, facility, generator) into local Parquet with pagination,
@@ -71,6 +83,11 @@ a decision only when it is explicitly accepted and its evidence is recorded.
 - Authorize every supported SQL reference before execution. A `SELECT` can
   still access forbidden data or engine functions; read-only syntax alone
   does not establish safety.
+- The user confirmed broad read-only analytical SQL: joins, CTEs, subqueries,
+  aggregations, and window functions over authorized product datasets.
+  Analysts need open-ended exploration rather than predefined investigations.
+- This is a challenge with seeded database users; registration, password
+  recovery, and external identity integration are outside the current scope.
 - Define and document the daily share of total fleet capacity offline.
 - Provide Admin-only refresh and a clear outcome. A documented endpoint
   satisfies the core capability; a scheduler or Admin screen is not required.
@@ -79,6 +96,12 @@ a decision only when it is explicitly accepted and its evidence is recorded.
   caught, and verification beyond simply running generated code.
 - Keep the implementation explainable and ready for live debugging and
   extension: the live session accounts for 60% of the evaluation.
+
+### Accepted storage and engine
+
+Accepted storage/engine decision: [ADR-0001](../adr/0001-s3-parquet-duckdb.md)
+records Amazon S3 + Parquet + DuckDB, alternatives, rationale and open loading
+choices. This acceptance does not extend to the remaining proposed stack.
 
 ### Proposed choices
 
@@ -96,17 +119,17 @@ a decision only when it is explicitly accepted and its evidence is recorded.
   supporting explanations for discrepancies.
 - Source revisions and available periods that inform refresh semantics.
 
-Frameworks, SQL grammar and reference discovery, refresh execution mode, and
+Frameworks, exact SQL dialect/function surface and reference discovery, refresh execution mode, and
 the definition of "kept current" also remain open design choices. Document
-the accepted choice, rejected alternative, and rationale in `DECISIONS.md`;
+the accepted choice, rejected alternative, and rationale in `docs/adr/`;
 do not infer a choice from the epic list.
 
 ### Deferred extras
 
 - Scheduled refresh and an Admin screen.
-- Optional richer SQL, caching, and other challenge extras unless separately
-  selected. The mandatory access-control promise applies to every supported
-  query path regardless of which optional features are implemented.
+- Caching and other unselected challenge extras. Broad analytical SQL was
+  separately selected by the user and is now required. The mandatory
+  access-control promise applies to every supported query path.
 - Frontend work, including the challenge's core E7 web experience, remains
   deferred under the current repository scope. E7 is required by the full
   challenge, rather than being an optional challenge extra.
