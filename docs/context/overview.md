@@ -31,10 +31,11 @@ a development environment. The user selected one backend replica for now;
 multiple replicas and horizontal autoscaling are deferred. The user accepted
 a separate object-storage bucket as the durable home for Parquet and then
 selected Amazon S3 with DuckDB as the query engine. Backend analytical disk is
-disposable; direct remote reads versus temporary staging remains open.
-Operational database persistence and backend hosting are separate open concerns. Seeded
+disposable; [ADR-0008](../adr/0008-local-parquet-file-cache.md) selects a
+bounded local disk cache of modeled Parquet for DuckDB scans.
+Python/FastAPI, SQLite and ECS hosting are accepted. ECS launch type and durable SQLite storage mechanism remain open (ADR-0011). Seeded
 challenge accounts remain sufficient; this clarification does not request
-registration, a frontend, an automatic refresh schedule, or a compute provider.
+registration, a frontend, or an automatic refresh schedule.
 
 - **Data connector:** extract the three daily EIA nuclear outage routes
   (national, facility, generator) into local Parquet with pagination,
@@ -63,7 +64,7 @@ retained for traceability to the original challenge and remains deferred.
 | E2 — Analytical model and findings | Define keys and relationships, implement the fleet metric, reconcile grains, document three real anomalies | In scope |
 | E3 — Authentication and authorization | Seed the three personas and enforce permissions before data access | In scope |
 | E4 — Discovery and preview | Show permitted schemas and support filtered, backend-paginated previews | In scope |
-| E5 — Read-only SQL | Support a documented SQL subset with table authorization and result limits | In scope |
+| E5 — Read-only SQL | Support broad DuckDB analytical SQL with table authorization, result limits and documented compatibility exceptions | In scope |
 | E6 — Controlled refresh | Let Admins refresh data and receive a clear outcome | In scope |
 | E7 — Minimal web experience | Login, browse datasets, filter records, and run SQL through a web UI | Deferred |
 | E8 — Reproducible delivery | Runnable setup, tests, required documentation, incremental commits, and live-session readiness | In scope from the beginning |
@@ -86,8 +87,10 @@ a decision only when it is explicitly accepted and its evidence is recorded.
 - The user confirmed broad read-only analytical SQL: joins, CTEs, subqueries,
   aggregations, and window functions over authorized product datasets.
   Analysts need open-ended exploration rather than predefined investigations.
-- This is a challenge with seeded database users; registration, password
-  recovery, and external identity integration are outside the current scope.
+- This is a challenge with seeded personas and local operational identities;
+  registration and password recovery remain outside scope. OAuth2
+  remains required; OIDC is no longer required under ADR-0017. Cognito managed login and
+  OAuth2 Authorization Code with PKCE are selected in ADR-0018.
 - Define and document the daily share of total fleet capacity offline.
 - Provide Admin-only refresh and a clear outcome. A documented endpoint
   satisfies the core capability; a scheduler or Admin screen is not required.
@@ -101,33 +104,49 @@ a decision only when it is explicitly accepted and its evidence is recorded.
 
 Accepted storage/engine decision: [ADR-0001](../adr/0001-s3-parquet-duckdb.md)
 records Amazon S3 + Parquet + DuckDB, alternatives, rationale and open loading
-choices. This acceptance does not extend to the remaining proposed stack.
+choices. [ADR-0004](../adr/0004-python-fastapi-backend.md) accepts Python/FastAPI, and [ADR-0005](../adr/0005-sqlite-on-aws.md) accepts SQLite operational storage on AWS.
 
-### Proposed choices
+### Accepted fleet metric
 
-- **Fleet metric:** same-day national offline capacity divided by national
-  total capacity (multiply by 100 when expressing it as a percentage).
-  This is the user's proposal, subject to verification of source fields,
-  units, and denominator meaning; it is not yet a finalized definition.
+“As an Analyst, I want the share of total fleet capacity offline per day,
+ready-made” means the backend provides the daily U.S. nuclear capacity
+offline percentage without requiring the Analyst to derive it. Use national
+`outage / capacity` as a fraction, or `100 * outage / capacity` as a
+percentage; both source fields are in MW. Retain EIA's `percentOutage` for
+comparison. This measures capacity, not the number of reactors shut down.
+The proposed prepared dataset is `fleet_offline_share_daily`, available
+under the existing national-data role policy.
+
+[ADR-0006](../adr/0006-daily-fleet-offline-share.md) records the accepted
+meaning and calculation, verified fields and three actual sample dates.
+It partially resolves Q3; broader validation and edge-case policies remain.
 
 ### Decisions requiring real-data investigation
 
 - Natural keys, required fields, types, and relationships for each grain.
-- Metric field mapping and units, including missing or zero denominator
-  handling.
+- Detailed capacity-basis and partial-output semantics, missing/zero/invalid
+  denominator handling, comparison tolerance and historical metric checks.
 - Missing parent facilities, mismatched sums, actual anomalies, and evidence
   supporting explanations for discrepancies.
 - Source revisions and available periods that inform refresh semantics.
 
-Frameworks, exact SQL dialect/function surface and reference discovery, refresh execution mode, and
-the definition of "kept current" also remain open design choices. Document
+Broad DuckDB analytical feature support is selected in ADR-0012; compatibility
+and reference discovery need verification. ECS launch type, SQLite persistence
+and exact memory/disk budgets remain open. ADR-0013 accepts initial query
+controls: one analytical worker, retryable busy responses, 10-second execution
+timeout and 1,000-row / 1-MiB output caps with explicit truncation. Recent coverage is selected in ADR-0009;
+exact dates require source inspection. Retention/recovery policy is deferred
+under ADR-0010.
+Admin-triggered background refresh with automatic publication is accepted in
+[ADR-0003](../adr/0003-admin-refresh-publication.md). Document
 the accepted choice, rejected alternative, and rationale in `docs/adr/`;
 do not infer a choice from the epic list.
 
 ### Deferred extras
 
 - Scheduled refresh and an Admin screen.
-- Caching and other unselected challenge extras. Broad analytical SQL was
+- Query-result caching and other unselected challenge extras. Local Parquet
+  file caching is selected in ADR-0008. Broad analytical SQL was
   separately selected by the user and is now required. The mandatory
   access-control promise applies to every supported query path.
 - Frontend work, including the challenge's core E7 web experience, remains
@@ -167,3 +186,19 @@ do not infer a choice from the epic list.
 - [architecture.md](architecture.md) — system design and key structures.
 - [conventions.md](conventions.md) — coding and process good practices.
 - [../adr/](../adr/) — architecture decision records (the "why" behind choices).
+
+### Authentication and browsing refinement
+
+ADR-0017 retains OAuth2 and removes required OIDC. Granular RBAC/ABAC with
+applicable row/column policies remains required. ADR-0018 selects Cognito
+managed login and OAuth2 Authorization Code with PKCE; exact client setup,
+identity/session mapping and concrete restrictions remain open. Seeded personas retain local operational records. The accepted experience
+uses one-hour application sessions, re-login on expiry, no automatic renewal
+initially and current-session logout. ADR-0015 accepts preview pages of 100 rows
+by default (initial configurable maximum 500), snapshot-bound cursors and a
+fixed 15-minute browsing expiry. Cognito handles login and OAuth2 token issuance (ADR-0018); client/session integration needs a concrete design; no runtime
+implementation exists yet.
+
+ADR-0016 confirms application-owned authorization tables: identity comes from
+the selected sign-in mechanism, while all product roles, permissions and policy attributes are controlled
+by our operational database. Concrete row/column restrictions remain open.
