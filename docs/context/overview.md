@@ -134,7 +134,18 @@ Broad DuckDB analytical feature support is selected in ADR-0012; compatibility
 and reference discovery need verification. ECS launch type, SQLite persistence
 and exact memory/disk budgets remain open. ADR-0013 accepts initial query
 controls: one analytical worker, retryable busy responses, 10-second execution
-timeout and 1,000-row / 1-MiB output caps with explicit truncation. Recent coverage is selected in ADR-0009;
+timeout and 1,000-row / 1-MiB output caps with explicit truncation.
+[ADR-0020](../adr/0020-paginate-query-results.md) adds pagination of a single
+SQL execution’s result without injecting ORDER BY, LIMIT or OFFSET, replacing
+ADR-0019’s default ordering. [ADR-0021](../adr/0021-number-query-result-pages.md)
+adds `page` (1-based) and `page_size`, with subsequent pages selected by
+`query_id` using the same execution and page size.
+[ADR-0022](../adr/0022-ephemeral-query-pagination-state.md) keeps query-ID metadata
+in a bounded, expiring in-memory store. Store loss or expiration requires an
+explicit rerun with a new ID; it never silently restarts pagination at page 1.
+Abandoned state and any orphaned result files must be reclaimed. The store
+implementation, result placement, TTL and page-size defaults/maximum remain
+open; the existing total cap remains the baseline pending explicit revision. Recent coverage is selected in ADR-0009;
 exact dates require source inspection. Retention/recovery policy is deferred
 under ADR-0010.
 Admin-triggered background refresh with automatic publication is accepted in

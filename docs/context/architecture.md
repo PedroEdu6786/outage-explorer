@@ -51,9 +51,22 @@ Authorization Code with PKCE. Client configuration, token/session mapping and
 concrete row/column policies remain open. ADR-0012 targets broad DuckDB analytical features, with evidence-led exclusions.
 Engine version, reference authorization and execution boundaries need verification.
 
+ADR-0020 supersedes ADR-0019: paginate the result of one SQL execution without
+adding ORDER BY, LIMIT or OFFSET. Preserve explicit clauses and the execution’s
+result sequence across pages, including joins and aggregates. ADR-0021 adds
+`page` (1-based) and `page_size`, with subsequent page selection by opaque
+`query_id`. Retained state binds to caller, execution, snapshot and fixed page
+size; reauthorize each page. ADR-0022 selects bounded, expiring in-memory
+query-ID metadata, separate from durable application records. Store loss or
+expiry requires an explicit rerun with a new ID; never silently return page 1.
+A bounded result spool remains proposed; cleanup must reclaim abandoned state
+and any orphaned files. Store implementation, result format, TTL and budgets
+remain open. Existing total output limits remain the baseline pending explicit
+revision. This behavior is specified, not implemented.
+
 The council's draft spec and design discussion are under
 `docs/specs/outage-explorer-backend/`; only explicitly accepted decisions
-(including ADR-0001 through ADR-0018) are settled. The remaining mechanisms are proposals.
+(including current, nonsuperseded decisions through ADR-0022) are settled. The remaining mechanisms are proposals.
 
 EIA observations are modeled as analytical datasets with versioned schema
 contracts, as accepted in [ADR-0002](../adr/0002-analytical-dataset-contracts.md).
