@@ -1,2 +1,6 @@
 .devlog-state/
 __pycache__/
+.env
+.env.*
+!.env.example
+data/exploration/eia-samples/
