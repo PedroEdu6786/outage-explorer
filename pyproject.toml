@@ -1,0 +1,34 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "outage-explorer"
+version = "0.1.0"
+description = "Layered Flask backend for exploring U.S. nuclear outage data"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["Flask>=3.1,<4", "python-dotenv>=1.1,<2"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10", "ruff>=0.14,<1", "mypy>=1.18,<2", "build>=1,<2", "hatchling>=1.27,<2", "editables>=0.5,<1"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/outage_explorer"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--import-mode=importlib --strict-markers"
+
+[tool.ruff]
+target-version = "py312"
+# Existing devlog tooling retains its independent stdlib checks.
+extend-exclude = ["scripts/devlog_hook.py", "tests/test_devlog_hook.py"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src/outage_explorer"]
+strict = true
