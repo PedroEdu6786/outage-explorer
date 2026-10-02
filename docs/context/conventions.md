@@ -20,9 +20,16 @@ is wrong, propose a change here rather than silently deviating.
 
 ## Code practices
 
-- TODO (once stack is chosen): language, formatter, linter, and test runner.
-- Until then, defaults: format everything, lint everything, tests accompany
-  every behavior change.
+- Follow the accepted [layered monolith structure](code-structure.md) and root
+  [AGENTS.md](../../AGENTS.md). Their dependency matrix governs new application
+  code; ADR-0030 replaces the earlier feature-first proposal.
+- Python >=3.12; Flask 3.1 for HTTP. Use Ruff for scaffold formatting/linting,
+  mypy strict mode for application source, and pytest for behavior and architecture
+  tests. Configuration lives in `pyproject.toml`; resolved development dependencies
+  live in `requirements-dev.txt`. Existing devlog tooling retains its independent
+  standard-library checks and is excluded from Ruff to avoid unrelated rewrites.
+- Tests accompany every behavior change. No Flask/AWS/database dependencies in
+  pure use-case tests; inject application ports.
 - Never commit secrets; config via environment variables.
 
 ## Git practices
@@ -87,11 +94,16 @@ BREAKING CHANGE: Query requests now require a dataset field. Update API
 clients to send the authorized dataset name with each request.
 ```
 
-## Quality gates (to be automated)
+## Quality gates
 
-- TODO: CI pipeline — lint, typecheck, tests on every PR.
-- TODO: "fitness functions" — automated checks that enforce documented
-  decisions (e.g. fail PRs touching guarded code paths without an ADR update).
+- `.github/workflows/ci.yml` runs Ruff lint/format, mypy, pytest, and package
+  build checks on pushes and PRs using Python 3.12 and 3.14. See README for the
+  same local commands. A configured workflow is not evidence of a remote CI run.
+- Import-boundary checks under `tests/architecture/` enforce the structure
+  guide's matrix, including relative imports, re-exports, cycles, the narrow
+  bootstrap startup exception, and negative fixtures. Behavior tests must
+  separately verify authorization, publication, and execution isolation when
+  those use cases are implemented.
 
 ## AI agent practices
 

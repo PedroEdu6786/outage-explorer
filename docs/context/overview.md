@@ -33,13 +33,23 @@ a separate object-storage bucket as the durable home for Parquet and then
 selected Amazon S3 with DuckDB as the query engine. Backend analytical disk is
 disposable; [ADR-0008](../adr/0008-local-parquet-file-cache.md) selects a
 bounded local disk cache of modeled Parquet for DuckDB scans.
-Python/FastAPI, SQLite and ECS hosting are accepted. ECS launch type and durable SQLite storage mechanism remain open (ADR-0011). Seeded
+Python/Flask, PostgreSQL on Amazon RDS, and ECS hosting are accepted.
+ADR-0032 replaces SQLite and its ECS file-storage proposal; launch type, RDS
+configuration and connectivity remain open. Seeded
 challenge accounts remain sufficient; this clarification does not request
 registration, a frontend, or an automatic refresh schedule.
 
 - **Data connector:** extract the three daily EIA nuclear outage routes
   (national, facility, generator) into local Parquet with pagination,
   validation, logging, and safe reruns.
+  ADR-0023/0024 accept documentation-first required fields with collected-data
+  fallback, invalid-row exclusion with visible accounting, identical-duplicate
+  collapse and latest-valid-value replacement. Exact field/key contracts and
+  report format/storage remain pending. ADR-0025 accepts a visible quality
+  summary in the Admin refresh outcome with counts and exclusion reasons.
+  ADR-0026 assumes valid initial analytical data is seeded, keeps existing data
+  when every incoming row is excluded and retains older valid rows when their
+  replacements are invalid; report these outcomes and reasons.
 - **Data model:** define keys, relationships, and types; implement daily fleet
   capacity offline share; reconcile at least 30 days across the three grains
   and document at least three real anomalies with reproducible evidence.
@@ -57,6 +67,11 @@ not current requirements.
 
 "In scope" identifies planned work, not completed implementation. E7 is
 retained for traceability to the original challenge and remains deferred.
+
+The initial [health scaffold](../specs/health-endpoint/spec.md) is implemented:
+an unauthenticated liveness endpoint, layered composition, local Python setup,
+and automated import/behavior checks with CI configuration. Data, authentication,
+refresh, and analytical execution capabilities in the table remain planned.
 
 | Epic | Outcome | Current scope |
 |------|---------|---------------|
@@ -104,7 +119,7 @@ a decision only when it is explicitly accepted and its evidence is recorded.
 
 Accepted storage/engine decision: [ADR-0001](../adr/0001-s3-parquet-duckdb.md)
 records Amazon S3 + Parquet + DuckDB, alternatives, rationale and open loading
-choices. [ADR-0004](../adr/0004-python-fastapi-backend.md) accepts Python/FastAPI, and [ADR-0005](../adr/0005-sqlite-on-aws.md) accepts SQLite operational storage on AWS.
+choices. [ADR-0028](../adr/0028-python-flask-backend.md) accepts Python/Flask, and [ADR-0032](../adr/0032-postgresql-on-rds.md) accepts PostgreSQL operational storage on Amazon RDS.
 
 ### Accepted fleet metric
 
@@ -112,26 +127,43 @@ choices. [ADR-0004](../adr/0004-python-fastapi-backend.md) accepts Python/FastAP
 ready-made” means the backend provides the daily U.S. nuclear capacity
 offline percentage without requiring the Analyst to derive it. Use national
 `outage / capacity` as a fraction, or `100 * outage / capacity` as a
-percentage; both source fields are in MW. Retain EIA's `percentOutage` for
-comparison. This measures capacity, not the number of reactors shut down.
+percentage; both source fields are in MW. Show the calculated percentage and
+EIA's `percentOutage` from the same stored observation without match/mismatch
+labels or discrepancy flags ([ADR-0031](../adr/0031-show-national-percentages-without-discrepancy-flags.md)).
+Preserve calculation precision; present percentages to two decimals with
+halfway values rounded up. This measures capacity, not the number of reactors shut down.
 The proposed prepared dataset is `fleet_offline_share_daily`, available
 under the existing national-data role policy.
 
 [ADR-0006](../adr/0006-daily-fleet-offline-share.md) records the accepted
 meaning and calculation, verified fields and three actual sample dates.
-It partially resolves Q3; broader validation and edge-case policies remain.
+ADR-0027 resolves required national values and positive-capacity handling;
+ADR-0031 resolves percentage presentation. Broader validation remains open.
+
+The first national verification effort uses the fixed recorded interval
+September 1–30, 2026, inclusive ([ADR-0033](../adr/0033-fixed-national-verification-period.md)).
+Account for every date's usable result or coverage gap without live retrieval
+or invented values. Capacity is constant in this sample, limiting historical
+claims. This baseline does not set the product's supported dates or the later
+live ingestion/refresh window.
+
+EIA is authoritative for reported national values. If otherwise valid records
+for one date conflict within a retrieval, the last record in recorded source
+order wins; retain one modeled row and the source evidence
+([ADR-0034](../adr/0034-last-national-record-wins.md)). Invalid records remain
+excluded under ADR-0027. This fallback does not assert source revision timing.
 
 ### Decisions requiring real-data investigation
 
 - Natural keys, required fields, types, and relationships for each grain.
-- Detailed capacity-basis and partial-output semantics, missing/zero/invalid
-  denominator handling, comparison tolerance and historical metric checks.
+- Detailed capacity-basis and partial-output semantics, remaining value
+  validation rules and historical metric checks.
 - Missing parent facilities, mismatched sums, actual anomalies, and evidence
   supporting explanations for discrepancies.
 - Source revisions and available periods that inform refresh semantics.
 
 Broad DuckDB analytical feature support is selected in ADR-0012; compatibility
-and reference discovery need verification. ECS launch type, SQLite persistence
+and reference discovery need verification. ECS launch type, RDS configuration
 and exact memory/disk budgets remain open. ADR-0013 accepts initial query
 controls: one analytical worker, retryable busy responses, 10-second execution
 timeout and 1,000-row / 1-MiB output caps with explicit truncation.
@@ -195,6 +227,7 @@ do not infer a choice from the epic list.
 ## Related docs
 
 - [architecture.md](architecture.md) — system design and key structures.
+- [code-structure.md](code-structure.md) — accepted layered monolith layout and agent dependency rules (ADR-0030).
 - [conventions.md](conventions.md) — coding and process good practices.
 - [../adr/](../adr/) — architecture decision records (the "why" behind choices).
 
