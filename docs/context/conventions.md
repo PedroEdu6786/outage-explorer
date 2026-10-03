@@ -37,7 +37,8 @@ is wrong, propose a change here rather than silently deviating.
 - Every new commit follows Conventional Commits as defined below.
 - Keep commits small, focused, and incremental. Do not squash or rewrite
   history; fixes and reverts belong in subsequent commits.
-- Branch per feature/fix; no direct pushes to main once collaboration starts.
+- Work directly on `main` for this project. Commit and push approved changes to
+  `main`; do not create additional branches unless the user explicitly requests one.
 - TODO: PR review expectations.
 
 ### Commit message structure
