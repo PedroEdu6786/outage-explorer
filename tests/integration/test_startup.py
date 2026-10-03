@@ -23,6 +23,15 @@ def test_imports_and_factory_do_not_start_work():
                 for module in pkgutil.walk_packages(outage_explorer.__path__, "outage_explorer."):
                     importlib.import_module(module.name)
 
+            from outage_explorer.infrastructure.recorded_evidence import LocalRecordedEvidence
+            from outage_explorer.infrastructure.verification_report import LocalReportWriter
+            with patch.object(LocalRecordedEvidence, "load", side_effect=AssertionError("Construction loaded evidence")):
+                with patch.object(LocalReportWriter, "write", side_effect=AssertionError("Construction wrote report")):
+                    from outage_explorer.bootstrap import build_national_verifier, build_facility_verifier, build_generator_verifier
+                    assert build_national_verifier() is not None
+                    assert build_facility_verifier() is not None
+                    assert build_generator_verifier() is not None
+
             from outage_explorer.infrastructure.clock import SystemClock
             from outage_explorer.entrypoints.http.startup import create_app
             with patch.object(SystemClock, "now", side_effect=AssertionError("Factory ran probe")):

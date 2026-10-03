@@ -47,9 +47,11 @@ registration, a frontend, or an automatic refresh schedule.
   collapse and latest-valid-value replacement. Exact field/key contracts and
   report format/storage remain pending. ADR-0025 accepts a visible quality
   summary in the Admin refresh outcome with counts and exclusion reasons.
-  ADR-0026 assumes valid initial analytical data is seeded, keeps existing data
-  when every incoming row is excluded and retains older valid rows when their
-  replacements are invalid; report these outcomes and reasons.
+  ADR-0026 keeps existing data when every incoming row is excluded and retains
+  older valid rows when their replacements are invalid. ADR-0037 defines initial
+  live loading for April 2–October 1, 2026 inclusive, requiring usable output in
+  all three grains. Later refreshes retain absent keys and wholly excluded routes
+  while publishing other valid updates; report each retention reason separately.
 - **Data model:** define keys, relationships, and types; implement daily fleet
   capacity offline share; reconcile at least 30 days across the three grains
   and document at least three real anomalies with reproducible evidence.
@@ -131,7 +133,11 @@ percentage; both source fields are in MW. Show the calculated percentage and
 EIA's `percentOutage` from the same stored observation without match/mismatch
 labels or discrepancy flags ([ADR-0031](../adr/0031-show-national-percentages-without-discrepancy-flags.md)).
 Preserve calculation precision; present percentages to two decimals with
-halfway values rounded up. This measures capacity, not the number of reactors shut down.
+halfway values rounded up. The accepted meaning is the daily share of
+EIA-reported nuclear capacity out of service, including full outages and
+partial output reductions ([ADR-0035](../adr/0035-national-outage-capacity-meaning.md)).
+It describes daily reported status; it does not establish reactor shutdown
+counts, full-day average output, lost energy, outage duration or cause.
 The proposed prepared dataset is `fleet_offline_share_daily`, available
 under the existing national-data role policy.
 
@@ -140,7 +146,7 @@ meaning and calculation, verified fields and three actual sample dates.
 ADR-0027 resolves required national values and positive-capacity handling;
 ADR-0031 resolves percentage presentation. Broader validation remains open.
 
-The first national verification effort uses the fixed recorded interval
+The implemented offline national verification uses the fixed recorded interval
 September 1–30, 2026, inclusive ([ADR-0033](../adr/0033-fixed-national-verification-period.md)).
 Account for every date's usable result or coverage gap without live retrieval
 or invented values. Capacity is constant in this sample, limiting historical
@@ -156,8 +162,9 @@ excluded under ADR-0027. This fallback does not assert source revision timing.
 ### Decisions requiring real-data investigation
 
 - Natural keys, required fields, types, and relationships for each grain.
-- Detailed capacity-basis and partial-output semantics, remaining value
-  validation rules and historical metric checks.
+- Remaining value validation rules and historical metric checks. National
+  partial-output meaning is accepted in ADR-0035; exact historical capacity-data
+  vintage remains an evidence limitation, and reported national capacity is used.
 - Missing parent facilities, mismatched sums, actual anomalies, and evidence
   supporting explanations for discrepancies.
 - Source revisions and available periods that inform refresh semantics.
@@ -246,3 +253,13 @@ implementation exists yet.
 ADR-0016 confirms application-owned authorization tables: identity comes from
 the selected sign-in mechanism, while all product roles, permissions and policy attributes are controlled
 by our operational database. Concrete row/column restrictions remain open.
+
+## Facility and generator verification
+
+The user's 2026-10-02 extension is implemented alongside national verification:
+separate offline commands replay the fixed recorded baselines, use per-entity
+natural keys, apply the shared policies, and write deterministic reports. See
+[the contracts and findings](../specs/facility-generator-verification/verification.md).
+Facility's advertised total differs from received rows; observed-entity date
+coverage is explicit and does not prove upstream completeness. Runtime delivery
+and cross-grain reconciliation remain pending.

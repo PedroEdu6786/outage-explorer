@@ -101,6 +101,104 @@ authorization, publication safety, or SQL isolation, which remain unimplemented.
 
 ## Source exploration
 
+### Verify the national baseline offline
+
+The fixed September 1–30, 2026 national verification is implemented. From the
+repository root, run:
+
+```sh
+.venv/bin/python -m outage_explorer.entrypoints.cli.startup
+```
+
+It writes `build/national-verification/report.json` and `report.md`. After
+`make setup`, the equivalent command is `.venv/bin/verify-national-data`.
+Use `--output-directory PATH` to choose another report directory and
+`--evidence-bundle PATH/manifest.json` for an explicitly identified test bundle.
+The default uses the [versioned evidence bundle](data/verification/national-2026-09/manifest.json);
+it requires no API key, network, database or clock-dependent date selection.
+
+The reports show both percentages, exact calculations, source positions,
+exclusions, all 30 dates and evidence limits. A difference between the displayed
+percentages does not fail verification. Evidence-integrity, contract and
+arithmetic failures return a nonzero exit status. Existing report files at the
+destination are replaced on success; source evidence cannot be an output target.
+
+See the [observation contract](docs/specs/national-data-verification/contract.md)
+and [verification findings](docs/specs/national-data-verification/verification.md).
+This contributor workflow establishes national processing behavior; backend
+data delivery, live refresh and product authorization remain pending.
+
+### Verify facility and generator baselines offline
+
+The same verification is available per facility and per facility-scoped generator:
+
+```sh
+.venv/bin/python -m outage_explorer.entrypoints.cli.facility_startup
+.venv/bin/python -m outage_explorer.entrypoints.cli.generator_startup
+```
+
+After `make setup`, use `.venv/bin/verify-facility-data` and
+`.venv/bin/verify-generator-data`. Both accept `--evidence-bundle` and
+`--output-directory` and default to their versioned September 2026 bundles.
+Reports are written to `build/facility-verification/` and
+`build/generator-verification/` as `report.json` and `report.md`.
+
+They reuse national validation, exact arithmetic and last-valid-record selection,
+with separate facility/date and facility/generator/date identities. Reports show
+source names and identifiers, both percentages, row dispositions and every date
+for each observed entity. Missing entity-days remain unavailable, distinct from
+valid zero outage. All 1,650 facility and 2,850 generator rows are usable in this
+baseline, covering 55 facilities and 95 facility/generator pairs over 30 days.
+
+**Evidence limitation:** the facility response reports 2,850 total rows while
+returning 1,650. Both counts remain visible; observed-entity coverage does not
+prove upstream completeness. These are offline contributor reports; live ingestion,
+cross-grain reconciliation and authenticated product delivery remain pending.
+See the [detail contracts](docs/specs/facility-generator-verification/contract.md)
+and [verification findings](docs/specs/facility-generator-verification/verification.md).
+
+### Data connector implementation design
+
+The [connector specification](docs/specs/data-connector/spec.md) and
+[implementation plan](docs/specs/data-connector/plan.md) develop the next slice:
+live retrieval for all three routes, raw/modeled Parquet, generation evidence,
+and safe refresh/publication using the verified observation policies.
+Implementation includes the bounded pure transformation in
+`domain/refresh.py`: per-grain validation and selection, provenance-preserving
+replacement/retention, and quality accounting. Inputs must already be sanitized;
+these helpers operate on complete bounded groups, not accumulated history.
+The local Parquet adapters now preserve raw pages/observations, modeled values,
+dispositions and merge ledgers using explicit versioned schemas. They build
+date-partitioned candidates, retain original evidence, and verify hashes, schemas,
+counts, exact values and cross-file keys against replayed source data. Immutable
+JSON manifests can be reloaded with a new local store instance.
+
+See the [task breakdown](docs/specs/data-connector/tasks.md) for progress and
+remaining work. These are programmatic local storage adapters; live retrieval,
+S3 storage, authorized durable refresh and publication are still pending.
+Investigation of the known facility row-count discrepancy remains
+deferred and separate from failed-page and storage-integrity handling.
+
+The development [AWS setup record](docs/specs/data-connector/aws-setup.md)
+documents the confirmed `outage-explorer` profile and `s3://arkham-outage-explorer/data/`
+target, successful S3 Parquet round-trip checks, and deferred RDS/Cognito setup. Nonsecret
+configuration placeholders are in `.env.example`; the cloud adapters remain
+unimplemented.
+
+[ADR-0037](docs/adr/0037-connector-initial-load-and-retention.md) records the
+initial live interval (April 2–October 1, 2026 inclusive), retention of absent
+keys and wholly excluded refresh datasets, and the requirement for usable output
+in all three datasets before first publication. The pure foundation tests these
+transformation rules and local Parquet candidates; end-to-end publication remains
+to be implemented. `make setup` installs pinned PyArrow 25.0.1. Run the storage
+and replay checks with:
+
+```sh
+.venv/bin/python -m pytest tests/integration/test_connector_evidence.py tests/integration/test_connector_parquet.py
+```
+
+### Recorded source profile
+
 Initial live [EIA metadata snapshots](data/exploration/eia-metadata/) describe
 the national, facility, and generator routes. The configured personal API key
 subsequently succeeded for all three data routes. The
@@ -109,7 +207,11 @@ parameters, retrieval timestamps, snapshot hashes, field types, candidate-key
 checks, and daily comparisons for September 1–30, 2026. Sanitized response
 snapshots are stored locally in Git-ignored `data/exploration/eia-samples/`;
 they exclude EIA's echoed request credentials. These exploratory JSON files
-are evidence for modeling; the Parquet ingestion pipeline remains unimplemented.
+are evidence for modeling and local Parquet regression tests; live ingestion
+and durable publication remain unimplemented.
+All three snapshots and supporting documents have byte-identical versioned
+copies in `data/verification/{national,facility,generator}-2026-09/` for
+clean-checkout replay.
 
 | Dataset | Retrieved rows | Candidate key, unique in this sample |
 | --- | ---: | --- |
@@ -128,8 +230,8 @@ Facility and generator capacity/outage sums equal national values on all
 30 sampled dates. However, the facility response advertises `total=2850`
 while returning 1,650 rows (55 per day). Pagination and completeness semantics
 must be investigated before relying on that total; matching sums alone do
-not prove completeness. No discrepancy explanation or final model contract
-has been accepted from this initial exploration.
+not prove completeness. The bounded verification contracts now define these sample schemas; historical
+contracts and the facility-total explanation remain unverified.
 
 Codex session devlogs are configured in `.codex/hooks.json`. Review and trust
 the two hooks through `/hooks` to enable them. See

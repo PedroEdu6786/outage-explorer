@@ -1,8 +1,8 @@
 # Layered Flask monolith structure
 
 Status: **accepted structure**, [ADR-0030](../adr/0030-layered-flask-monolith.md).
-The initial health scaffold is implemented; product data use cases remain
-pending. This guide governs application code and refactors;
+The health scaffold and offline national/facility/generator verification are implemented; product
+data delivery remains pending. This guide governs application code and refactors;
 [AGENTS.md](../../AGENTS.md) makes its rules discoverable to agents.
 
 Operational storage uses [PostgreSQL on Amazon RDS](../adr/0032-postgresql-on-rds.md).
@@ -25,7 +25,7 @@ src/outage_explorer/
     access.py                   # permission rules and policy types
     datasets.py                 # schema and generation contracts
     validation.py               # observation validity and exclusion rules
-    revisions.py                # duplicate/replacement policies
+    refresh.py                  # bounded connector modeling/merge and provenance
     metrics.py                  # national offline share
   application/
     services/
@@ -178,10 +178,13 @@ placement cannot prove those guarantees.
 fixtures in `tests/architecture/`, and CI in `.github/workflows/ci.yml` are
 implemented. Checks resolve absolute/relative imports, inspect re-exports,
 reject wildcard/dynamic loading patterns, constrain inner-layer external imports,
-and detect module cycles. The sole current startup exception is
+and detect module cycles. The HTTP startup exception is
 `entrypoints/http/startup.py`, structurally restricted to a factory forwarding
-to `bootstrap.build_http_app`. Other modules cannot import that wrapper.
-New startup wrappers require explicit checker coverage.
+to `bootstrap.build_http_app`. The additional `entrypoints/cli/startup.py`
+exception is structurally restricted to passing `build_national_verifier()` to
+the CLI command and its executable guard. `facility_startup.py` and
+`generator_startup.py` have the same exact-AST restriction for their dedicated
+bootstrap builders. Other modules cannot import these wrappers. Further startup wrappers require explicit checker coverage.
 
 `GET /health` follows HTTP route → application service → clock port, with a UTC
 clock adapter injected by bootstrap. There is no domain rule or persistence in
@@ -191,3 +194,39 @@ tests guard against import-time app construction, network/process/thread startup
 and factory-time probe execution. These checks do not establish runtime purity,
 authorization, publication correctness, or analytical isolation; their behavior
 tests are still required as the corresponding use cases are implemented.
+
+Offline national verification follows CLI → application evidence service →
+pure national policies and recorded-evidence/report ports. Infrastructure reads
+the hashed local evidence bundle and writes deterministic JSON/Markdown.
+`Fraction` is a reviewed pure dependency; CLI transport imports (`argparse`,
+`sys`) are allowed only in its command module. The baseline verifier is a
+contributor command, with no product-data authorization claim. See its
+[contract](../specs/national-data-verification/contract.md).
+
+The connector foundation in `domain/refresh.py` reuses the observation policies
+for explicitly bounded groups with caller-supplied limits. It models source
+positions, preserves origin references during valid replacement/invalid retention,
+and reports quality and transformation eligibility. Under
+[ADR-0037](../adr/0037-connector-initial-load-and-retention.md), absent keys retain
+their prior rows, wholly excluded routes retain prior data during refresh, and
+initial loading requires usable output in all three grains. It accepts sanitized input and
+performs no I/O, authorization or publication.
+
+`application/ports/artifacts.py` and `candidates.py` define artifact and candidate
+contracts without Arrow types. `infrastructure/parquet/` implements explicit
+schemas, bounded evidence replay, complete date-group modeling and history scans,
+immutable local objects, and persisted manifests. Verification replays expected
+rows/ledgers, checks cross-file uniqueness and exact values, and binds retained
+rows to inherited evidence and the pinned base manifest. No whole-history row
+collection is required; manifest metadata, day groups and batches have explicit
+caller budgets. Read-only verification trades repeated sequential scans for
+bounded memory. Local tests do not establish measured production resource limits
+or AWS guarantees. Raw evidence sanitization, S3, authorized durable refresh and
+publication remain work in the [connector tasks](../specs/data-connector/tasks.md).
+
+Facility and generator verification reuse `domain/observations.py` (national's
+API remains in `domain/national.py`) and the shared evidence service/adapters,
+with explicit grain contracts and entity/date coverage. Their separate commands
+remain offline contributor tools. The source-total difference is reported as
+unresolved evidence; this does not establish live pagination completeness or
+product authorization. See the [detail contract](../specs/facility-generator-verification/contract.md).

@@ -1,0 +1,30 @@
+{
+  "bundle_version": 1,
+  "contract_version": 1,
+  "report_version": 1,
+  "bundle_id": "eia-national-september-2026",
+  "evidence_kind": "recorded",
+  "start": "2026-09-01",
+  "end": "2026-09-30",
+  "source_url": "https://api.eia.gov/v2/nuclear-outages/us-nuclear-outages/data/",
+  "parameters": {
+    "frequency": "daily",
+    "data[0]": "capacity",
+    "data[1]": "outage",
+    "data[2]": "percentOutage",
+    "start": "2026-09-01",
+    "end": "2026-09-30",
+    "sort[0][column]": "period",
+    "sort[0][direction]": "asc",
+    "offset": 0,
+    "length": 5000
+  },
+  "retrieved_at_utc": "2026-10-02T01:57:00.264611+00:00",
+  "snapshot": "national.json",
+  "artifacts": {
+    "national.json": "b140ed2d61813f500089704506a52518914cc3bce7c1859f90ab04c50ad54e9c",
+    "metadata.json": "c6063711ff8fdb3697f2acc4ffe82ae6ef44fcf9d8c2926b16f38f2cfafe2d6c",
+    "profile.json": "c8c7aa2d542a72c0c1bdce8ad66c7c7d80daee51dc77bb4e4531abd9706ed6c9",
+    "capacity-semantics.json": "3bd938aef4608888681e9b036d7d46f00e7ca97a14d4ce8e4fd13d2712252d38"
+  }
+}

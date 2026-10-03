@@ -1,9 +1,31 @@
 # Architecture
 
-Status: **layered Flask monolith accepted; health scaffold implemented**.
+Status: **layered Flask monolith accepted; health and offline national/facility/generator verification implemented**.
 The liveness endpoint and import-boundary checks exercise initial composition.
 Product use cases, runtime, storage, and execution mechanisms retain their
 explicit accepted/proposed status and are not proven by liveness.
+
+Connector implementation has started with pure, bounded per-grain modeling,
+provenance-preserving merge and quality accounting in `domain/refresh.py`.
+The local Parquet adapters now write/replay raw evidence, build date-partitioned
+candidates and verify modeled rows and ledgers against source and prior-generation
+evidence. Hash-addressed local files and persisted manifests are a test/staging
+implementation; S3 remains the accepted authoritative store. Live retrieval,
+refresh authorization and durable publication remain pending. See the
+[implementation tasks](../specs/data-connector/tasks.md).
+
+[ADR-0037](../adr/0037-connector-initial-load-and-retention.md) selects an initial
+live load for April 2–October 1, 2026 inclusive through the refresh validation
+pipeline. First publication requires usable output for all three grains. Later
+refreshes retain absent keys and wholly excluded routes while other valid updates
+proceed; an entirely excluded refresh leaves the active generation unchanged.
+
+The offline national, facility and generator contributor commands replay their
+versioned September 2026 evidence through domain policies and an application service, with local evidence
+and report adapters wired at startup. They verify per-grain processing and
+arithmetic without live retrieval, product endpoints or database changes. See
+the [national findings](../specs/national-data-verification/verification.md) and
+[facility/generator findings](../specs/facility-generator-verification/verification.md).
 
 ## Accepted application structure
 
@@ -98,8 +120,8 @@ EIA observations are modeled as analytical datasets with versioned schema
 contracts, as accepted in [ADR-0002](../adr/0002-analytical-dataset-contracts.md).
 The contracts define row meaning, columns, types, units, nullability, verified
 keys and source mappings. Raw and validated modeled Parquet live in S3;
-DuckDB exposes authorized modeled data under stable SQL names. Exact EIA
-schemas remain unverified. Operational entities have separate persistence.
+DuckDB exposes authorized modeled data under stable SQL names. Bounded September 2026 verification contracts are implemented for all three
+grains; historical schemas remain unverified. Operational entities have separate persistence.
 The [integrity design](../specs/outage-explorer-backend/plan.md#duplicate-prevention-and-data-integrity)
 records accepted invalid-row exclusion, identical-duplicate collapse and
 latest-valid-value replacement (ADR-0023/0024). Required fields follow API
@@ -107,8 +129,9 @@ documentation, falling back to consistently recurring and identifying source
 attributes. For national same-date conflicts within one retrieval, the last
 valid record in recorded source order wins under
 [ADR-0034](../adr/0034-last-national-record-wins.md); preserve source evidence
-and its order for replay. Exact contracts, other-grain conflict rules and
-report format/storage remain open.
+and its order for replay. ADR-0036 extends this fallback to facility/date and
+facility/generator/date keys in the detail verification contracts. Historical
+contracts and product quality-report storage remain open.
 ADR-0026 assumes initial analytical data is seeded: all-excluded refreshes keep
 the active data unchanged; invalid replacements retain older valid rows with
 original provenance, and the quality report explains both fallback outcomes. ADR-0025 accepts
@@ -129,8 +152,13 @@ calculation precision and round to two decimals for presentation, with halfway
 values rounded up ([ADR-0031](../adr/0031-show-national-percentages-without-discrepancy-flags.md)).
 ADR-0027 requires usable national values and positive capacity. See
 [ADR-0006](../adr/0006-daily-fleet-offline-share.md) for the accepted formula;
-capacity-basis semantics, remaining validation details and historical checks
-remain open.
+ADR-0035 defines the measure as the daily share of EIA-reported nuclear capacity
+out of service, including full outages and partial output reductions. Use the
+reported national MW values without reconstructing the historical capacity
+basis. Exact capacity-data vintage remains an evidence limitation. The bounded
+[national contract v1](../specs/national-data-verification/contract.md) implements
+the accepted validation rules; broader historical checks remain open. This is not a full-day
+average, lost-energy, outage-duration or cause measure.
 The Admin starts a background refresh and checks its outcome. Successful
 completion automatically makes the updated data active; current data stays
 available while it runs or if it fails. There is no separate review or publish

@@ -13,6 +13,29 @@ from outage_explorer.bootstrap import build_http_app
 def create_app() -> Flask:
     return build_http_app()
 """
+CLI_STARTUP = f"{ROOT}.entrypoints.cli.startup"
+CLI_STARTUP_SOURCE = """
+from outage_explorer.bootstrap import build_national_verifier
+from outage_explorer.entrypoints.cli.command import run
+
+def main() -> int:
+    return run(build_national_verifier())
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+"""
+CLI_WRAPPERS = {
+    CLI_STARTUP: ("build_national_verifier", CLI_STARTUP_SOURCE),
+    **{
+        f"{ROOT}.entrypoints.cli.{grain}_startup": (
+            f"build_{grain}_verifier",
+            CLI_STARTUP_SOURCE.replace(
+                "build_national_verifier", f"build_{grain}_verifier"
+            ),
+        )
+        for grain in ("facility", "generator")
+    },
+}
 PURE_IMPORTS = {
     "__future__",
     "abc",
@@ -22,6 +45,7 @@ PURE_IMPORTS = {
     "decimal",
     "enum",
     "functools",
+    "fractions",
     "itertools",
     "math",
     "operator",
@@ -62,7 +86,7 @@ def imports(tree: ast.AST, package: str) -> list[tuple[int, str]]:
     return result
 
 
-def is_startup_wrapper(tree: ast.Module) -> bool:
+def is_startup_wrapper(tree: ast.Module, expected: str = STARTUP_SOURCE) -> bool:
     body = [
         node
         for node in tree.body
@@ -73,14 +97,21 @@ def is_startup_wrapper(tree: ast.Module) -> bool:
         )
     ]
     actual = ast.Module(body=body, type_ignores=[])
-    return ast.dump(actual) == ast.dump(ast.parse(STARTUP_SOURCE))
+    return ast.dump(actual) == ast.dump(ast.parse(expected))
 
 
 def allowed_dependency(source: str, target: str) -> bool:
-    if under(target, STARTUP):
+    if under(target, STARTUP) or any(
+        under(target, wrapper) for wrapper in CLI_WRAPPERS
+    ):
         return False  # Startup must never become a service locator or re-export.
     if source == STARTUP and target == f"{ROOT}.bootstrap.build_http_app":
         return True  # Its entire AST is separately constrained to forwarding.
+    if (
+        source in CLI_WRAPPERS
+        and target == f"{ROOT}.bootstrap.{CLI_WRAPPERS[source][0]}"
+    ):
+        return True
     layer = source.removeprefix(ROOT + ".").split(".")[0]
     if layer == "bootstrap":
         return True
@@ -95,7 +126,12 @@ def allowed_dependency(source: str, target: str) -> bool:
         return external in PURE_IMPORTS
     if layer == "entrypoints":
         # Add reviewed transport dependencies here as new entry points arrive.
-        return external in PURE_IMPORTS | {"flask"}
+        transport = (
+            {"argparse", "sys"}
+            if source == f"{ROOT}.entrypoints.cli.command"
+            else set()
+        )
+        return external in PURE_IMPORTS | {"flask"} | transport
     return layer in {"infrastructure", "settings"}
 
 
@@ -141,6 +177,12 @@ def violations(package_root: Path) -> list[str]:
     for module, (path, tree, package) in modules.items():
         if module == STARTUP and not is_startup_wrapper(tree):
             errors.append(f"{module}: startup may only forward to build_http_app")
+        if module in CLI_WRAPPERS and not is_startup_wrapper(
+            tree, CLI_WRAPPERS[module][1]
+        ):
+            errors.append(
+                f"{module}: startup may only compose the verification command"
+            )
         for node in ast.walk(tree):
             if isinstance(node, ast.Name) and node.id in {"__import__", "exec", "eval"}:
                 errors.append(f"{module}:{node.lineno}: dynamic loading is forbidden")

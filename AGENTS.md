@@ -57,6 +57,10 @@ ADR-0030; the independent-services example is explanatory, not selected.
 5. Keep refresh outside request/import/app-factory lifecycles. Publish only a
    fully verified generation; preserve previous data and accepted invalid-row,
    duplicate, revision, and retained-valid-row policies.
+   [ADR-0037](docs/adr/0037-connector-initial-load-and-retention.md) retains absent
+   prior keys and wholly excluded routes while allowing other valid updates.
+   Initial live loading requires usable output in all three grains; its explicit
+   initial interval is April 2–October 1, 2026 inclusive.
 6. Inject concrete dependencies at startup. Avoid module-import side effects,
    circular imports, catch-all utilities, generic CRUD hierarchies, and live
    database connections shared across processes.

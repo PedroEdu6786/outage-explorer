@@ -1,0 +1,40 @@
+{
+  "source_url": "https://api.eia.gov/v2/nuclear-outages/facility-nuclear-outages/",
+  "retrieved_at_utc": "2026-10-02T00:06:50.337434+00:00",
+  "credential_mode": "public_demo_key",
+  "apiVersion": "2.1.14",
+  "response": {
+    "id": "facility-nuclear-outages",
+    "name": "Facility Level Nuclear Outages",
+    "description": "Facility level nuclear outages with capacity, outages, and percent outage.  \n        Source:   Nuclear Regulatory Commission's Power Reactor Status Report.  \n        Interactive data report:  Daily Status of Nuclear Reactors.",
+    "frequency": [
+      {
+        "id": "daily",
+        "description": "One data point for each day.",
+        "query": "D",
+        "format": "YYYY-MM-DD"
+      }
+    ],
+    "facets": [
+      {
+        "id": "facility",
+        "description": "Plant code"
+      }
+    ],
+    "data": {
+      "capacity": {
+        "units": "megawatts"
+      },
+      "outage": {
+        "units": "megawatts"
+      },
+      "percentOutage": {
+        "units": "percent"
+      }
+    },
+    "startPeriod": "2007-01-01",
+    "endPeriod": "2026-10-01",
+    "defaultDateFormat": "YYYY-MM-DD",
+    "defaultFrequency": "daily"
+  }
+}

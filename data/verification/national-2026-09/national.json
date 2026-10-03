@@ -1,0 +1,295 @@
+{
+  "source_url": "https://api.eia.gov/v2/nuclear-outages/us-nuclear-outages/data/",
+  "parameters": {
+    "frequency": "daily",
+    "data[0]": "capacity",
+    "data[1]": "outage",
+    "data[2]": "percentOutage",
+    "start": "2026-09-01",
+    "end": "2026-09-30",
+    "sort[0][column]": "period",
+    "sort[0][direction]": "asc",
+    "offset": 0,
+    "length": 5000
+  },
+  "retrieved_at_utc": "2026-10-02T01:57:00.264611+00:00",
+  "apiVersion": "2.1.14",
+  "response": {
+    "total": "30",
+    "dateFormat": "YYYY-MM-DD",
+    "frequency": "daily",
+    "data": [
+      {
+        "period": "2026-09-01",
+        "capacity": "97620.5",
+        "outage": "2714.245",
+        "percentOutage": "2.78",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-02",
+        "capacity": "97620.5",
+        "outage": "1932.896",
+        "percentOutage": "1.98",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-03",
+        "capacity": "97620.5",
+        "outage": "1507.338",
+        "percentOutage": "1.54",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-04",
+        "capacity": "97620.5",
+        "outage": "2378.877",
+        "percentOutage": "2.44",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-05",
+        "capacity": "97620.5",
+        "outage": "4239.256",
+        "percentOutage": "4.34",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-06",
+        "capacity": "97620.5",
+        "outage": "4654.453",
+        "percentOutage": "4.77",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-07",
+        "capacity": "97620.5",
+        "outage": "4317.038",
+        "percentOutage": "4.42",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-08",
+        "capacity": "97620.5",
+        "outage": "5262.849",
+        "percentOutage": "5.39",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-09",
+        "capacity": "97620.5",
+        "outage": "5490.444",
+        "percentOutage": "5.62",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-10",
+        "capacity": "97620.5",
+        "outage": "4926.242",
+        "percentOutage": "5.05",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-11",
+        "capacity": "97620.5",
+        "outage": "5185.627",
+        "percentOutage": "5.31",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-12",
+        "capacity": "97620.5",
+        "outage": "7332.429",
+        "percentOutage": "7.51",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-13",
+        "capacity": "97620.5",
+        "outage": "9060.809",
+        "percentOutage": "9.28",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-14",
+        "capacity": "97620.5",
+        "outage": "8104.254",
+        "percentOutage": "8.3",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-15",
+        "capacity": "97620.5",
+        "outage": "7572.636",
+        "percentOutage": "7.76",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-16",
+        "capacity": "97620.5",
+        "outage": "7973.344",
+        "percentOutage": "8.17",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-17",
+        "capacity": "97620.5",
+        "outage": "8147.401",
+        "percentOutage": "8.35",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-18",
+        "capacity": "97620.5",
+        "outage": "7765.245",
+        "percentOutage": "7.95",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-19",
+        "capacity": "97620.5",
+        "outage": "9651.017",
+        "percentOutage": "9.89",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-20",
+        "capacity": "97620.5",
+        "outage": "8240.592",
+        "percentOutage": "8.44",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-21",
+        "capacity": "97620.5",
+        "outage": "7720.402",
+        "percentOutage": "7.91",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-22",
+        "capacity": "97620.5",
+        "outage": "7745.638",
+        "percentOutage": "7.93",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-23",
+        "capacity": "97620.5",
+        "outage": "7696.766",
+        "percentOutage": "7.88",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-24",
+        "capacity": "97620.5",
+        "outage": "7670.921",
+        "percentOutage": "7.86",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-25",
+        "capacity": "97620.5",
+        "outage": "7545.427",
+        "percentOutage": "7.73",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-26",
+        "capacity": "97620.5",
+        "outage": "9165.132",
+        "percentOutage": "9.39",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-27",
+        "capacity": "97620.5",
+        "outage": "9313.997",
+        "percentOutage": "9.54",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-28",
+        "capacity": "97620.5",
+        "outage": "10384.982",
+        "percentOutage": "10.64",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-29",
+        "capacity": "97620.5",
+        "outage": "11565.58",
+        "percentOutage": "11.85",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-30",
+        "capacity": "97620.5",
+        "outage": "11602.559",
+        "percentOutage": "11.89",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      }
+    ],
+    "description": "Nuclear outages daily with capacity, outages, and percent outage.  \n        Source:   Nuclear Regulatory Commission's Power Reactor Status Report.  \n        Interactive data report:  Daily Status of Nuclear Reactors."
+  }
+}

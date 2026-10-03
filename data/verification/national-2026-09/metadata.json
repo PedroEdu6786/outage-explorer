@@ -1,0 +1,35 @@
+{
+  "source_url": "https://api.eia.gov/v2/nuclear-outages/us-nuclear-outages/",
+  "retrieved_at_utc": "2026-10-02T00:06:50.339363+00:00",
+  "credential_mode": "public_demo_key",
+  "apiVersion": "2.1.14",
+  "response": {
+    "id": "us-nuclear-outages",
+    "name": "U.S. Nuclear Outages",
+    "description": "Nuclear outages daily with capacity, outages, and percent outage.  \n        Source:   Nuclear Regulatory Commission's Power Reactor Status Report.  \n        Interactive data report:  Daily Status of Nuclear Reactors.",
+    "frequency": [
+      {
+        "id": "daily",
+        "description": "One data point for each day.",
+        "query": "D",
+        "format": "YYYY-MM-DD"
+      }
+    ],
+    "facets": [],
+    "data": {
+      "capacity": {
+        "units": "megawatts"
+      },
+      "outage": {
+        "units": "megawatts"
+      },
+      "percentOutage": {
+        "units": "percent"
+      }
+    },
+    "startPeriod": "2007-01-01",
+    "endPeriod": "2026-10-01",
+    "defaultDateFormat": "YYYY-MM-DD",
+    "defaultFrequency": "daily"
+  }
+}

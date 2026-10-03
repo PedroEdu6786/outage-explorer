@@ -8,7 +8,12 @@ version = "0.1.0"
 description = "Layered Flask backend for exploring U.S. nuclear outage data"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = ["Flask>=3.1,<4", "python-dotenv>=1.1,<2"]
+dependencies = ["Flask>=3.1,<4", "python-dotenv>=1.1,<2", "pyarrow==25.0.1"]
+
+[project.scripts]
+verify-national-data = "outage_explorer.entrypoints.cli.startup:main"
+verify-facility-data = "outage_explorer.entrypoints.cli.facility_startup:main"
+verify-generator-data = "outage_explorer.entrypoints.cli.generator_startup:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10", "ruff>=0.14,<1", "mypy>=1.18,<2", "build>=1,<2", "hatchling>=1.27,<2", "editables>=0.5,<1"]

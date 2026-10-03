@@ -1,0 +1,1012 @@
+{
+  "start": "2026-09-01",
+  "end": "2026-09-30",
+  "routes": {
+    "us": {
+      "source_url": "https://api.eia.gov/v2/nuclear-outages/us-nuclear-outages/data/",
+      "parameters": {
+        "frequency": "daily",
+        "data[0]": "capacity",
+        "data[1]": "outage",
+        "data[2]": "percentOutage",
+        "start": "2026-09-01",
+        "end": "2026-09-30",
+        "sort[0][column]": "period",
+        "sort[0][direction]": "asc",
+        "offset": 0,
+        "length": 5000
+      },
+      "retrieved_at_utc": "2026-10-02T01:57:00.264611+00:00",
+      "snapshot": "data/exploration/eia-samples/us.json",
+      "sha256": "b140ed2d61813f500089704506a52518914cc3bce7c1859f90ab04c50ad54e9c",
+      "total": "30",
+      "reported_total_matches_rows": true,
+      "rows": 30,
+      "days": 30,
+      "fields": {
+        "capacity": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        },
+        "capacity-units": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        },
+        "outage": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        },
+        "outage-units": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        },
+        "percentOutage": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        },
+        "percentOutage-units": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        },
+        "period": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        }
+      },
+      "units": {
+        "capacity-units": [
+          "megawatts"
+        ],
+        "outage-units": [
+          "megawatts"
+        ],
+        "percentOutage-units": [
+          "percent"
+        ]
+      },
+      "candidate_key": [
+        "period"
+      ],
+      "duplicate_key_groups": 0,
+      "duplicate_excess_rows": 0,
+      "duplicate_examples": [],
+      "identical_duplicate_excess_rows": 0,
+      "invalid_numeric_counts": {
+        "capacity": 0,
+        "outage": 0,
+        "percentOutage": 0
+      },
+      "sample": [
+        {
+          "period": "2026-09-01",
+          "capacity": "97620.5",
+          "outage": "2714.245",
+          "percentOutage": "2.78",
+          "capacity-units": "megawatts",
+          "outage-units": "megawatts",
+          "percentOutage-units": "percent"
+        },
+        {
+          "period": "2026-09-02",
+          "capacity": "97620.5",
+          "outage": "1932.896",
+          "percentOutage": "1.98",
+          "capacity-units": "megawatts",
+          "outage-units": "megawatts",
+          "percentOutage-units": "percent"
+        }
+      ],
+      "facility_count": null,
+      "generator_ids": null,
+      "warnings": {},
+      "rows_per_day": {
+        "2026-09-01": 1,
+        "2026-09-02": 1,
+        "2026-09-03": 1,
+        "2026-09-04": 1,
+        "2026-09-05": 1,
+        "2026-09-06": 1,
+        "2026-09-07": 1,
+        "2026-09-08": 1,
+        "2026-09-09": 1,
+        "2026-09-10": 1,
+        "2026-09-11": 1,
+        "2026-09-12": 1,
+        "2026-09-13": 1,
+        "2026-09-14": 1,
+        "2026-09-15": 1,
+        "2026-09-16": 1,
+        "2026-09-17": 1,
+        "2026-09-18": 1,
+        "2026-09-19": 1,
+        "2026-09-20": 1,
+        "2026-09-21": 1,
+        "2026-09-22": 1,
+        "2026-09-23": 1,
+        "2026-09-24": 1,
+        "2026-09-25": 1,
+        "2026-09-26": 1,
+        "2026-09-27": 1,
+        "2026-09-28": 1,
+        "2026-09-29": 1,
+        "2026-09-30": 1
+      },
+      "numeric_ranges": {
+        "capacity": {
+          "minimum": "97620.5",
+          "maximum": "97620.5",
+          "max_observed_decimal_places": 1
+        },
+        "outage": {
+          "minimum": "1507.338",
+          "maximum": "11602.559",
+          "max_observed_decimal_places": 3
+        },
+        "percentOutage": {
+          "minimum": "1.54",
+          "maximum": "11.89",
+          "max_observed_decimal_places": 2
+        }
+      },
+      "zero_capacity_rows": 0,
+      "negative_outage_rows": 0,
+      "outage_exceeds_capacity_rows": 0
+    },
+    "facility": {
+      "source_url": "https://api.eia.gov/v2/nuclear-outages/facility-nuclear-outages/data/",
+      "parameters": {
+        "frequency": "daily",
+        "data[0]": "capacity",
+        "data[1]": "outage",
+        "data[2]": "percentOutage",
+        "start": "2026-09-01",
+        "end": "2026-09-30",
+        "sort[0][column]": "period",
+        "sort[0][direction]": "asc",
+        "offset": 0,
+        "length": 5000
+      },
+      "retrieved_at_utc": "2026-10-02T01:57:01.302085+00:00",
+      "snapshot": "data/exploration/eia-samples/facility.json",
+      "sha256": "a0bae3e25ff11c0ed4e7721ecb0c79b4f4c798f95aa1e4111460157eec5376e9",
+      "total": "2850",
+      "reported_total_matches_rows": false,
+      "rows": 1650,
+      "days": 30,
+      "fields": {
+        "capacity": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        },
+        "capacity-units": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        },
+        "facility": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        },
+        "facilityName": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        },
+        "outage": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        },
+        "outage-units": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        },
+        "percentOutage": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        },
+        "percentOutage-units": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        },
+        "period": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        }
+      },
+      "units": {
+        "capacity-units": [
+          "megawatts"
+        ],
+        "outage-units": [
+          "megawatts"
+        ],
+        "percentOutage-units": [
+          "percent"
+        ]
+      },
+      "candidate_key": [
+        "period",
+        "facility"
+      ],
+      "duplicate_key_groups": 0,
+      "duplicate_excess_rows": 0,
+      "duplicate_examples": [],
+      "identical_duplicate_excess_rows": 0,
+      "invalid_numeric_counts": {
+        "capacity": 0,
+        "outage": 0,
+        "percentOutage": 0
+      },
+      "sample": [
+        {
+          "period": "2026-09-01",
+          "facility": "46",
+          "facilityName": "Browns Ferry",
+          "capacity": "3661.7",
+          "outage": "749.168",
+          "percentOutage": "20.46",
+          "capacity-units": "megawatts",
+          "outage-units": "megawatts",
+          "percentOutage-units": "percent"
+        },
+        {
+          "period": "2026-09-01",
+          "facility": "204",
+          "facilityName": "Clinton Power Station",
+          "capacity": "1082.9",
+          "outage": "0",
+          "percentOutage": "0",
+          "capacity-units": "megawatts",
+          "outage-units": "megawatts",
+          "percentOutage-units": "percent"
+        }
+      ],
+      "facility_count": 55,
+      "generator_ids": null,
+      "warnings": {},
+      "rows_per_day": {
+        "2026-09-01": 55,
+        "2026-09-02": 55,
+        "2026-09-03": 55,
+        "2026-09-04": 55,
+        "2026-09-05": 55,
+        "2026-09-06": 55,
+        "2026-09-07": 55,
+        "2026-09-08": 55,
+        "2026-09-09": 55,
+        "2026-09-10": 55,
+        "2026-09-11": 55,
+        "2026-09-12": 55,
+        "2026-09-13": 55,
+        "2026-09-14": 55,
+        "2026-09-15": 55,
+        "2026-09-16": 55,
+        "2026-09-17": 55,
+        "2026-09-18": 55,
+        "2026-09-19": 55,
+        "2026-09-20": 55,
+        "2026-09-21": 55,
+        "2026-09-22": 55,
+        "2026-09-23": 55,
+        "2026-09-24": 55,
+        "2026-09-25": 55,
+        "2026-09-26": 55,
+        "2026-09-27": 55,
+        "2026-09-28": 55,
+        "2026-09-29": 55,
+        "2026-09-30": 55
+      },
+      "numeric_ranges": {
+        "capacity": {
+          "minimum": "578.8",
+          "maximum": "4530",
+          "max_observed_decimal_places": 1
+        },
+        "outage": {
+          "minimum": "0",
+          "maximum": "1597.6",
+          "max_observed_decimal_places": 3
+        },
+        "percentOutage": {
+          "minimum": "0",
+          "maximum": "100",
+          "max_observed_decimal_places": 2
+        }
+      },
+      "zero_capacity_rows": 0,
+      "negative_outage_rows": 0,
+      "outage_exceeds_capacity_rows": 0
+    },
+    "generator": {
+      "source_url": "https://api.eia.gov/v2/nuclear-outages/generator-nuclear-outages/data/",
+      "parameters": {
+        "frequency": "daily",
+        "data[0]": "capacity",
+        "data[1]": "outage",
+        "data[2]": "percentOutage",
+        "start": "2026-09-01",
+        "end": "2026-09-30",
+        "sort[0][column]": "period",
+        "sort[0][direction]": "asc",
+        "offset": 0,
+        "length": 5000
+      },
+      "retrieved_at_utc": "2026-10-02T01:57:02.624328+00:00",
+      "snapshot": "data/exploration/eia-samples/generator.json",
+      "sha256": "9f58a9cb19f19a585181f14c6d570d73b8de25310eefbfbdf041b1affeb23d93",
+      "total": "2850",
+      "reported_total_matches_rows": true,
+      "rows": 2850,
+      "days": 30,
+      "fields": {
+        "capacity": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        },
+        "capacity-units": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        },
+        "facility": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        },
+        "facilityName": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        },
+        "generator": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        },
+        "outage": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        },
+        "outage-units": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        },
+        "percentOutage": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        },
+        "percentOutage-units": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        },
+        "period": {
+          "json_types": [
+            "str"
+          ],
+          "null_or_missing": 0
+        }
+      },
+      "units": {
+        "capacity-units": [
+          "megawatts"
+        ],
+        "outage-units": [
+          "megawatts"
+        ],
+        "percentOutage-units": [
+          "percent"
+        ]
+      },
+      "candidate_key": [
+        "period",
+        "facility",
+        "generator"
+      ],
+      "duplicate_key_groups": 0,
+      "duplicate_excess_rows": 0,
+      "duplicate_examples": [],
+      "identical_duplicate_excess_rows": 0,
+      "invalid_numeric_counts": {
+        "capacity": 0,
+        "outage": 0,
+        "percentOutage": 0
+      },
+      "sample": [
+        {
+          "period": "2026-09-01",
+          "facility": "46",
+          "facilityName": "Browns Ferry",
+          "generator": "1",
+          "capacity": "1227.4",
+          "outage": "24.548",
+          "percentOutage": "2",
+          "capacity-units": "megawatts",
+          "outage-units": "megawatts",
+          "percentOutage-units": "percent"
+        },
+        {
+          "period": "2026-09-01",
+          "facility": "46",
+          "facilityName": "Browns Ferry",
+          "generator": "2",
+          "capacity": "1207.7",
+          "outage": "724.62",
+          "percentOutage": "60",
+          "capacity-units": "megawatts",
+          "outage-units": "megawatts",
+          "percentOutage-units": "percent"
+        }
+      ],
+      "facility_count": 55,
+      "generator_ids": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "warnings": {},
+      "rows_per_day": {
+        "2026-09-01": 95,
+        "2026-09-02": 95,
+        "2026-09-03": 95,
+        "2026-09-04": 95,
+        "2026-09-05": 95,
+        "2026-09-06": 95,
+        "2026-09-07": 95,
+        "2026-09-08": 95,
+        "2026-09-09": 95,
+        "2026-09-10": 95,
+        "2026-09-11": 95,
+        "2026-09-12": 95,
+        "2026-09-13": 95,
+        "2026-09-14": 95,
+        "2026-09-15": 95,
+        "2026-09-16": 95,
+        "2026-09-17": 95,
+        "2026-09-18": 95,
+        "2026-09-19": 95,
+        "2026-09-20": 95,
+        "2026-09-21": 95,
+        "2026-09-22": 95,
+        "2026-09-23": 95,
+        "2026-09-24": 95,
+        "2026-09-25": 95,
+        "2026-09-26": 95,
+        "2026-09-27": 95,
+        "2026-09-28": 95,
+        "2026-09-29": 95,
+        "2026-09-30": 95
+      },
+      "numeric_ranges": {
+        "capacity": {
+          "minimum": "519",
+          "maximum": "1396.7",
+          "max_observed_decimal_places": 1
+        },
+        "outage": {
+          "minimum": "0",
+          "maximum": "1247",
+          "max_observed_decimal_places": 3
+        },
+        "percentOutage": {
+          "minimum": "0",
+          "maximum": "100",
+          "max_observed_decimal_places": 0
+        }
+      },
+      "zero_capacity_rows": 0,
+      "negative_outage_rows": 0,
+      "outage_exceeds_capacity_rows": 0
+    }
+  },
+  "daily_raw_sum_comparisons": [
+    {
+      "period": "2026-09-01",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "2714.245",
+      "facility_raw_sum_outage": "2714.245",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "2714.245",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "2.780404730563764783011764947",
+      "source_percentOutage": "2.78"
+    },
+    {
+      "period": "2026-09-02",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "1932.896",
+      "facility_raw_sum_outage": "1932.896",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "1932.896",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "1.980010346187532331836038537",
+      "source_percentOutage": "1.98"
+    },
+    {
+      "period": "2026-09-03",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "1507.338",
+      "facility_raw_sum_outage": "1507.338",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "1507.338",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "1.544079368575248026797650084",
+      "source_percentOutage": "1.54"
+    },
+    {
+      "period": "2026-09-04",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "2378.877",
+      "facility_raw_sum_outage": "2378.877",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "2378.877",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "2.436862134490194170281856782",
+      "source_percentOutage": "2.44"
+    },
+    {
+      "period": "2026-09-05",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "4239.256",
+      "facility_raw_sum_outage": "4239.256",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "4239.256",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "4.342587878570587120533084752",
+      "source_percentOutage": "4.34"
+    },
+    {
+      "period": "2026-09-06",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "4654.453",
+      "facility_raw_sum_outage": "4654.453",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "4654.453",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "4.767905306774704083670950261",
+      "source_percentOutage": "4.77"
+    },
+    {
+      "period": "2026-09-07",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "4317.038",
+      "facility_raw_sum_outage": "4317.038",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "4317.038",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "4.422265815069580672092439600",
+      "source_percentOutage": "4.42"
+    },
+    {
+      "period": "2026-09-08",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "5262.849",
+      "facility_raw_sum_outage": "5262.849",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "5262.849",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "5.391130961222284253819638293",
+      "source_percentOutage": "5.39"
+    },
+    {
+      "period": "2026-09-09",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "5490.444",
+      "facility_raw_sum_outage": "5490.444",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "5490.444",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "5.624273590075854968987046778",
+      "source_percentOutage": "5.62"
+    },
+    {
+      "period": "2026-09-10",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "4926.242",
+      "facility_raw_sum_outage": "4926.242",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "4926.242",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "5.046319164519747389124210591",
+      "source_percentOutage": "5.05"
+    },
+    {
+      "period": "2026-09-11",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "5185.627",
+      "facility_raw_sum_outage": "5185.627",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "5185.627",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "5.312026674725083358515885495",
+      "source_percentOutage": "5.31"
+    },
+    {
+      "period": "2026-09-12",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "7332.429",
+      "facility_raw_sum_outage": "7332.429",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "7332.429",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "7.511156980347365563585517386",
+      "source_percentOutage": "7.51"
+    },
+    {
+      "period": "2026-09-13",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "9060.809",
+      "facility_raw_sum_outage": "9060.809",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "9060.809",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "9.281666248380207026188146957",
+      "source_percentOutage": "9.28"
+    },
+    {
+      "period": "2026-09-14",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "8104.254",
+      "facility_raw_sum_outage": "8104.254",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "8104.254",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "8.301795217193110053728468918",
+      "source_percentOutage": "8.3"
+    },
+    {
+      "period": "2026-09-15",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "7572.636",
+      "facility_raw_sum_outage": "7572.636",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "7572.636",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "7.757219026741309458566592058",
+      "source_percentOutage": "7.76"
+    },
+    {
+      "period": "2026-09-16",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "7973.344",
+      "facility_raw_sum_outage": "7973.344",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "7973.344",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "8.167694285524044642262639507",
+      "source_percentOutage": "8.17"
+    },
+    {
+      "period": "2026-09-17",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "8147.401",
+      "facility_raw_sum_outage": "8147.401",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "8147.401",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "8.345993925456231017050721928",
+      "source_percentOutage": "8.35"
+    },
+    {
+      "period": "2026-09-18",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "7765.245",
+      "facility_raw_sum_outage": "7765.245",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "7765.245",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "7.954522871732883974165262419",
+      "source_percentOutage": "7.95"
+    },
+    {
+      "period": "2026-09-19",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "9651.017",
+      "facility_raw_sum_outage": "9651.017",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "9651.017",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "9.886260570269564282092388382",
+      "source_percentOutage": "9.89"
+    },
+    {
+      "period": "2026-09-20",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "8240.592",
+      "facility_raw_sum_outage": "8240.592",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "8240.592",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "8.441456456379551426186098207",
+      "source_percentOutage": "8.44"
+    },
+    {
+      "period": "2026-09-21",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "7720.402",
+      "facility_raw_sum_outage": "7720.402",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "7720.402",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "7.908586823464333823326043198",
+      "source_percentOutage": "7.91"
+    },
+    {
+      "period": "2026-09-22",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "7745.638",
+      "facility_raw_sum_outage": "7745.638",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "7745.638",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "7.934437951045118597015995616",
+      "source_percentOutage": "7.93"
+    },
+    {
+      "period": "2026-09-23",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "7696.766",
+      "facility_raw_sum_outage": "7696.766",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "7696.766",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "7.884374695888670924652096640",
+      "source_percentOutage": "7.88"
+    },
+    {
+      "period": "2026-09-24",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "7670.921",
+      "facility_raw_sum_outage": "7670.921",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "7670.921",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "7.857899723930936637284176992",
+      "source_percentOutage": "7.86"
+    },
+    {
+      "period": "2026-09-25",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "7545.427",
+      "facility_raw_sum_outage": "7545.427",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "7545.427",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "7.729346807279208772747527415",
+      "source_percentOutage": "7.73"
+    },
+    {
+      "period": "2026-09-26",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "9165.132",
+      "facility_raw_sum_outage": "9165.132",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "9165.132",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "9.388532121839162880747384002",
+      "source_percentOutage": "9.39"
+    },
+    {
+      "period": "2026-09-27",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "9313.997",
+      "facility_raw_sum_outage": "9313.997",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "9313.997",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "9.541025706690705333408454167",
+      "source_percentOutage": "9.54"
+    },
+    {
+      "period": "2026-09-28",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "10384.982",
+      "facility_raw_sum_outage": "10384.982",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "10384.982",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "10.63811596949411240466910126",
+      "source_percentOutage": "10.64"
+    },
+    {
+      "period": "2026-09-29",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "11565.58",
+      "facility_raw_sum_outage": "11565.580",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "11565.580",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "11.84749104952340952976065478",
+      "source_percentOutage": "11.85"
+    },
+    {
+      "period": "2026-09-30",
+      "national_capacity": "97620.5",
+      "facility_raw_sum_capacity": "97620.5",
+      "facility_minus_national_capacity": "0.0",
+      "generator_raw_sum_capacity": "97620.5",
+      "generator_minus_national_capacity": "0.0",
+      "national_outage": "11602.559",
+      "facility_raw_sum_outage": "11602.559",
+      "facility_minus_national_outage": "0.000",
+      "generator_raw_sum_outage": "11602.559",
+      "generator_minus_national_outage": "0.000",
+      "calculated_offline_percent": "11.88537141276678566489620520",
+      "source_percentOutage": "11.89"
+    }
+  ],
+  "limitations": [
+    "One 30-day retrieval; not a simultaneous upstream snapshot or full-history validation.",
+    "Facility reported total differs from returned rows; pagination/completeness semantics remain unverified even though cross-grain sums match.",
+    "Candidate keys and numeric storage types are not final contracts; no deduplication applied."
+  ],
+  "relationships": {
+    "generator_rows_without_same_day_facility": 0,
+    "facility_rows_without_generators": 0,
+    "generator_to_facility_sum_mismatches": {
+      "capacity": 0,
+      "outage": 0
+    },
+    "distinct_facility_generator_pairs": 95
+  }
+}

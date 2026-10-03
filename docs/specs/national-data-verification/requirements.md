@@ -1,5 +1,5 @@
 # Requirements: Trustworthy national outage data and daily offline share
-> Status: draft · Slug: national-data-verification
+> Status: agreed · Slug: national-data-verification
 
 ## Problem statement
 
@@ -48,6 +48,16 @@ meaning and quality rules without independently guessing what is valid.
   offline capacity divided by reported national capacity. Its percentage is
   distinguishable from its fractional value and from the proportion of reactors
   shut down.
+- Describe the measure as the daily share of EIA-reported nuclear capacity out
+  of service, including full outages and partial output reductions. Use the
+  reported national values in MW. It describes daily reported status, not how
+  many hours a reduction lasted, energy lost throughout the day, or its cause.
+  [ADR-0035](../../adr/0035-national-outage-capacity-meaning.md) records this
+  meaning and its [supporting evidence](../../../data/exploration/eia-capacity-semantics.json).
+- Explain the evidence boundary: EIA documents generator-capacity and reactor
+  status inputs, but the exact capacity-data vintage for every historical API
+  row is unverified. Preserve EIA's reported capacity rather than reconstructing
+  or replacing it with another capacity estimate.
 - Each calculated result is traceable to its recorded national inputs and can
   be independently reproduced without contacting EIA.
 - Show the calculated percentage and EIA's reported percentage together for
@@ -106,5 +116,4 @@ meaning and quality rules without independently guessing what is valid.
 
 ## Open questions
 
-- What source-supported qualifications about reported capacity and partial
-  output are needed to explain the measure accurately?
+_None._
