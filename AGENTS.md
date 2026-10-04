@@ -8,9 +8,6 @@ Read [code structure](docs/context/code-structure.md),
 under `docs/specs/` and accepted ADRs. Read `CLAUDE.md` and
 `.claude/CLAUDE.md` if present. Current user instructions take precedence.
 
-Use the `palace-knowledge` skill and matching project knowledge when recalling
-prior work. Search Engram under `outage-explorer` before architectural changes;
-revalidate historical claims and save significant decisions with their rationale.
 Do not apply another project's conventions to this repository.
 
 ## Accepted structure
@@ -26,6 +23,18 @@ SQLite-specific EC2/EBS proposal. Use `infrastructure/postgresql/`; local
 development and integration tests use PostgreSQL, while unit tests may use
 fakes. Do not reintroduce SQLite as an implicit development fallback. RDS does
 not change the one-replica limit or make query-ID metadata durable.
+
+Deployment targets **Amazon EC2**, replacing ECS under
+[ADR-0038](docs/adr/0038-ec2-deployment-local-development.md). Development runs
+locally with configured RDS, Cognito and S3 resources as needed. An EC2 instance
+is not required for local development; provisioning and deployment decisions
+must not block independent local implementation or testing.
+
+Local connector configuration follows [ADR-0041](docs/adr/0041-connector-defaults-and-json-configuration.md):
+typed resource defaults with optional `--config PATH` JSON overrides; explicit
+run flags take precedence over file values. `EIA_API_KEY` remains environment-only;
+do not reintroduce mandatory `OUTAGE_CONNECTOR_*` budget variables. Defaults are
+initial limits, not measured live/production budgets.
 
 - `domain/`: pure policies and types; no framework, engine, SDK, database, or I/O.
 - `application/`: use cases, authorization, transaction orchestration, DTOs,
@@ -77,7 +86,7 @@ and `.github/workflows/ci.yml`. Preserve their negative fixtures and narrow
 startup exception. Run Ruff, mypy, and pytest as documented in README.
 Static checks and liveness do not prove runtime authorization or isolation.
 
-ECS launch/storage, sandbox launcher, session mapping, and measured budgets
+EC2 deployment/storage, sandbox launcher, session mapping, and measured budgets
 remain open. One WSGI process is a proposal, not an accepted runtime mandate.
 Do not invent source schemas, resource measurements, or test results to close
 these gaps. Documentation work does not authorize deployment or publication.

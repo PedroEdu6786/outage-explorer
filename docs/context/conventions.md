@@ -30,7 +30,9 @@ is wrong, propose a change here rather than silently deviating.
   standard-library checks and is excluded from Ruff to avoid unrelated rewrites.
 - Tests accompany every behavior change. No Flask/AWS/database dependencies in
   pure use-case tests; inject application ports.
-- Never commit secrets; config via environment variables.
+- Never commit secrets; supply credentials through the environment. Connector
+  resource limits use typed defaults with optional `--config PATH` JSON overrides,
+  not `OUTAGE_CONNECTOR_*` variables ([ADR-0041](../adr/0041-connector-defaults-and-json-configuration.md)).
 
 ## Git practices
 
@@ -123,8 +125,14 @@ changed by this setup.
 
 - **Stop:** buffers the final assistant summary after each completed turn in
   gitignored `.devlog-state/`. It does not append to the journal yet.
-- **SessionEnd:** appends buffered summaries to `docs/devlog/YYYY-MM-DD.md`,
-  using the machine's local date/time. Existing notes remain intact.
+- **PreToolUse (Bash):** before a literal `git commit` command, appends pending
+  summaries from this repository’s buffered sessions to `docs/devlog/YYYY-MM-DD.md`,
+  using the machine’s local date/time. This includes sessions already closed.
+  Existing notes remain intact. Session close no longer writes the journal.
+- When new notes are appended, the hook blocks that tool call and tells Codex
+  to review and stage the notes, then retry the commit. It does not require user
+  confirmation, stage files itself, or create commits. Retries do not duplicate
+  notes or block again when there are no new summaries.
 - Repeated callbacks are deduplicated, including across session resumes;
   a writer lock serializes this script's concurrent invocations.
 - Only final assistant text is retained, capped at 2,000 characters per turn.
@@ -134,13 +142,20 @@ changed by this setup.
 - Automatic entries report what the assistant said, not independently verified
   findings. Include verification, blockers, and gotchas in final summaries
   when relevant. Continue recording decisions and Engineering Notes explicitly.
-- Session-end writes depend on prior Stop events. Empty sessions write nothing.
-  Failed writes report a hook error and leave buffered notes for a later retry.
+- Writes depend on prior Stop events. Work in the current unfinished turn has
+  no final summary yet; Codex should record that work explicitly before committing.
+  Empty buffers write nothing. Failed pre-commit writes block the command and
+  preserve recoverable notes for retry.
+- Detection covers literal `git commit`, Git global options and shell command
+  chains. Non-commit commands and `git commit --dry-run` do not flush notes.
+  This is a Codex tool hook, not a native Git hook: commits made outside Codex,
+  through aliases, wrapper scripts or dynamically constructed shell commands
+  are not covered. Run commits for this repository from its working tree.
 
-Codex emits `SessionEnd` on normal close, archiving/deleting an open thread,
-or after a thread is idle and not open in any client for 30 minutes. Switching
-tabs or finishing a reply alone does not end a session. A force-killed process
-may not emit the event. See the [official hook documentation](https://learn.chatgpt.com/docs/hooks).
+After changing the configuration, review and enable **PreToolUse** in `/hooks`
+(and keep **Stop** enabled), then start or resume a session to load it. The old
+SessionEnd trust entry does not enable the new event. See the
+[official hook documentation](https://learn.chatgpt.com/docs/hooks).
 
 The existing `.opencode/plugins/devlog.ts` remains a separate OpenCode
 integration; its `session.idle` callback logs turns with different behavior.

@@ -3,13 +3,28 @@
 
 ## Approach
 
-Build a separately supervised refresh entry point inside the accepted layered
-Flask monolith, using application-owned ports for EIA, bounded Parquet work,
-immutable S3 artifacts and PostgreSQL coordination. Reuse the existing pure
-observation policies, preserve replayable evidence, and publish one manifest
-covering all three grains through a short operational transaction. Implement
-recorded/synthetic cases first; live pagination evidence and measured limits gate
-live enablement, while the deferred facility total discrepancy does not block work.
+Connect the completed source, validation and Parquet components into a runnable
+local connector that produces a verified candidate and a clear execution report.
+Then add verified S3 persistence and controlled live evidence; these deliver the
+connector portion of the [challenge](../../challenge/README.md). Reuse this same
+pipeline later inside authorized, separately supervised backend refresh, where
+PostgreSQL coordinates active-generation publication. Local candidate development
+does not depend on PostgreSQL, Cognito or an EC2 instance.
+
+**Implementation scope (2026-10-04):** phases 1–4 are implemented locally; phase 5 below is the
+next connector-only increment. The [task manifest](tasks.md) and phase-4/5/6 sheets now decompose this
+connector-only sequence; completed phase-1/2/3 sheets and their evidence remain
+unchanged. This plan changes sequencing, not accepted architecture or the
+full specification's eventual publication/authorization requirements. It does
+not authorize implementation, live requests or cloud writes.
+
+**Current implementation:** Python domain policies perform validation, selection
+and arithmetic; PyArrow writes and verifies Parquet. The bounded EIA adapter is
+tested with controlled transports. Bootstrap now composes the runnable contributor
+connector, explicit settings, transport lifecycle, local candidates and bounded reports. DuckDB remains the selected analytical SQL engine and is not
+implemented; adding SQL execution or rewriting these policies is not required to
+finish the connector pipeline. S3 remains essential for authoritative storage;
+local candidate files are development/staging output. (FR4–FR16; TR1–TR4)
 
 **Decision status:** structures and mechanisms below are proposals, not additional
 accepted ADRs. ADR-0001/0002/0003/0023–0027/0030–0037 and the spec constrain them.
@@ -26,9 +41,10 @@ cloud adapters and runtime mechanisms remain subject to their later gates. No de
   `present_percentage`; add only interval-independent merge/accounting policies
   where behavior requires them. Keep `VerifyBaseline` and its September constants,
   report formats and evidence contracts unchanged. (FR7–FR13; TR2–TR4, TR8)
-- **Application refresh services and DTOs** — authorize admission/status, orchestrate
-  retrieval, modeling and publication, and produce durable bounded outcomes.
-  Application owns transaction boundaries and policy gates. (FR1–FR20)
+- **Application connector service and DTOs** — compose source retrieval, evidence
+  writing, candidate construction/verification and a sanitized execution report
+  through ports. Backend refresh later reuses this service and owns authorization,
+  transaction boundaries and publication outcomes. (FR1–FR20)
 - **Application ports** — access checks, source pages, candidate construction,
   artifact storage and refresh repository contracts; no SDK/framework types cross
   these interfaces. (FR1–FR6, FR17–FR20; TR1, TR4–TR5)
@@ -40,11 +56,12 @@ cloud adapters and runtime mechanisms remain subject to their later gates. No de
 - **S3 infrastructure** — immutable uploads, explicit object verification and
   manifest retrieval; authoritative data never depends on local staging.
   (FR17–FR20; TR1, TR10)
-- **PostgreSQL infrastructure** — run/outcome records, idempotent admission, fenced
+- **PostgreSQL infrastructure, deferred backend integration** — run/outcome records, idempotent admission, fenced
   ownership and atomic active-generation publication. (FR2–FR3, FR17–FR20; TR1)
-- **Entrypoints and bootstrap** — thin Admin HTTP admission/status, controlled initial-load
-  CLI and supervised refresh worker; startup constructs dependencies without
-  fetching EIA or starting refresh in imports/app factories. (FR1–FR3; TR1, TR9)
+- **Entrypoints and bootstrap** — first a thin local candidate CLI with explicit
+  typed defaults/optional JSON configuration and dependency construction; later Admin HTTP
+  admission/status, controlled initial-load CLI and supervised refresh worker.
+  Imports/app factories never fetch EIA or start refresh. (FR1–FR6; TR1, TR4–TR5, TR9)
 
 ## Data model changes
 
@@ -141,7 +158,7 @@ fields/JSON depth, batch and row-group rows/bytes, file bytes and cumulative
 session objects/bytes. One bounded file buffer can coexist with the bounded
 Arrow batch; these are operational guards, not measured production process/RSS
 limits. Exceeding a cap fails explicitly. Failed candidate staging is local and
-unpublished; durable failed-run evidence/lifecycle handling remains phase 4.
+unpublished; durable failed-run evidence and lifecycle handling remain later integration work.
 
 Candidate construction stages bounded raw batches into date partitions, then
 selects complete bounded day groups in authoritative source-position order. It
@@ -169,7 +186,7 @@ decision. No API endpoint, active pointer, S3 upload, PostgreSQL write or initia
 live load is performed here. An immutable local manifest is replay evidence,
 not authoritative production publication.
 
-### Operational metadata (FR2–FR3, FR16–FR20; TR1, TR9–TR10)
+### Operational metadata — deferred backend integration (FR2–FR3, FR16–FR20; TR1, TR9–TR10)
 
 | Record | Proposed fields/invariants |
 | --- | --- |
@@ -192,7 +209,55 @@ separately from active counts when no publication occurs. (FR16; AC15)
 
 ## Interfaces & contracts
 
-### Admission, execution and outcomes (FR1–FR3, FR17–FR20)
+### Local connector candidate (implemented locally; FR4–FR16; TR1–TR9)
+
+- A local application use case accepts explicit inclusive dates, configured
+  source/artifact/modeling bounds, generated execution identities and an optional
+  exact reference to a previously verified local candidate. It retrieves all
+  three routes sequentially, persists sanitized evidence, checks terminal source
+  quality, builds the candidate and verifies its full reference graph. Ports
+  expose evidence writing, manifest loading and reporting without infrastructure
+  imports; existing source and candidate contracts remain reusable.
+- The thin CLI takes dates, staging, an optional prior and optional `--config PATH`.
+  Typed defaults supply bounds; the JSON file overrides individual fields and may
+  supply run arguments. Explicit run flags win over file values. The EIA key stays
+  environment-only; `OUTAGE_CONNECTOR_*` variables are no longer read. Unknown or
+  duplicate fields and invalid values fail before storage/transport construction.
+  See [ADR-0041](../../adr/0041-connector-defaults-and-json-configuration.md).
+  Bootstrap owns HTTP transport
+  construction and cleanup. No credential command-line argument, credential in
+  logs, implicit network call during import, or automatic execution is introduced.
+  Invalid configuration fails before retrieval. Fixtures use injected transports;
+  any live run is an explicit contributor operation, not an Admin refresh endpoint.
+- Output is an exact persisted manifest reference plus a bounded sanitized report:
+  interval, execution identity, stage, per-grain source and modeled quality,
+  limitations, and `candidate_verified`, `retained_all_excluded` or `failed`.
+  Progress logs identify stages/counts and safe error codes without raw exceptions
+  or request URLs. Document nonzero exit on failure and explicit no-publication
+  semantics on every outcome; report-write failure cannot claim completion.
+- Reruns use an explicitly pinned, verified prior candidate; no implicit local
+  active pointer or mutable dataset replaces PostgreSQL. Repeated input must not
+  duplicate modeled keys; changed valid values replace them, invalid/absent values
+  preserve the original provenance. All-excluded input reports retention without
+  declaring a new publication. Separate immutable run output preserves earlier
+  verified candidates after failed retrieval, modeling, verification or reporting.
+  Equal inputs need not produce byte-identical manifests because run identities
+  and retrieval timestamps are evidence.
+- Candidate-only runs may use small explicit intervals to validate the pipeline.
+  They do not establish the product's initial live load: that remains April 2–
+  October 1, 2026, through the later authorized publication lifecycle. With no
+  prior candidate, usable output in every grain remains required. The CLI grants
+  no product data permissions and is not exposed as an unauthenticated refresh API.
+
+Implementation: `build-connector-candidate` uses typed defaults and optional JSON file overrides,
+`application/services/connector.py` and existing EIA/Parquet adapters. It verifies
+pinned ancestry, persists/reopens candidates and writes immutable per-run JSON
+progress/final reports. Exact prior references use `SHA256:BYTE_COUNT`; no active
+pointer exists. HTTP transport cleanup and help/import inactivity have controlled
+tests. The [phase-4 checkpoint](tasks/phase-4.md) records actual checks and limits;
+local evidence does not close full-spec publication or live acceptance criteria.
+
+### Admission, execution and outcomes — deferred backend integration (FR1–FR3, FR17–FR20)
 
 - `RequestRefresh(principal, start_date, end_date, idempotency_key)` returns
   `RefreshReceipt(run_id, state, status_reference)` after application-owned Admin
@@ -238,8 +303,14 @@ separately from active counts when no publication occurs. (FR16; AC15)
 
 - Use allowlisted `us-nuclear-outages`, `facility-nuclear-outages` and
   `generator-nuclear-outages`, daily frequency, all three measurements, explicit
-  start/end, offset and length. Propose ascending period then opaque facility then
-  generator sorting as applicable. EIA documents offset/length, multi-column sort
+  start/end, offset and length. Request ascending period, facility and generator
+  sorting as applicable. A bounded live probe on October 4 returned facility IDs
+  `46` then `204`: validate digit-only facility ordering by numeric magnitude
+  without converting or rewriting stored opaque identifiers. Nondigit facility
+  values use text ordering after digit-only values; generator IDs retain text
+  ordering. Mixed/nondigit live collation remains unverified. Source ordering
+  identity v2 records this comparator correction; recorded source positions still
+  determine duplicate winners. EIA documents offset/length, multi-column sort
   and at most 5,000 JSON rows; route-specific paging stability is still a live
   evidence gate, not established by general [API documentation](https://www.eia.gov/opendata/documentation.php).
 - Retrieve routes/pages sequentially initially. Assign each accepted page a stable
@@ -269,6 +340,40 @@ separately from active counts when no publication occurs. (FR16; AC15)
   blindly; reject redirects away from the allowlisted host. Cap request/page bytes,
   rows, pages, attempts, elapsed time, interval days and staging/output bytes.
   A killed resource-bounded worker becomes interrupted on recovery. (FR5; TR5)
+
+### Source adapter implementation (phase 3, 2026-10-03)
+
+`application/ports/source.py` supplies transport-independent request, page,
+metadata, quality and explicit per-retrieval bounds. `infrastructure/eia/` uses
+**HTTPX 0.28.1** with a caller-owned transport; no live transport, refresh endpoint
+or network work is constructed at import/startup. Dependency resolution is pinned
+in `requirements-dev.txt`. Local development needs no EC2 instance (ADR-0038).
+
+Requests use only the three allowlisted routes, daily frequency, explicit dates
+and the proposed ordering identity. Accepted pages advance by received count
+through a recorded empty terminator. Failed attempts do not advance source
+positions. Retries cover connection/read errors, 429 and 5xx with bounded
+Retry-After/backoff and jitter. All redirects and compressed response bodies are
+rejected; source-body bytes, requests, rows, pages, attempts, output, JSON
+complexity and elapsed time have explicit caller caps. These testable guards are
+not measured process memory or production budgets.
+
+Bounded recursive sanitization covers credential keys and configured values,
+including encoded echoes and key paths. Modified observations are marked and
+excluded by the existing observation contract rather than acquiring a new
+modeled meaning. Safe failures omit raw transport errors. A context-local filter
+suppresses HTTPX/httpcore wire logs during the request/read/close scope without
+muting unrelated concurrent requests; controlled real-transport tests cover this.
+
+Quality reports preserve each advertised total separately from received counts,
+observed dates/entities and upstream completeness, which remains unverified.
+Numeric total comparisons normalize leading zeros while evidence keeps source
+strings. The facility mismatch is diagnostic regardless of its literal values;
+national/generator inconsistencies and any failed page still fail retrieval.
+Fixture tests exercise source ordering, redaction and exact Parquet replay.
+Live paging/ordering applicability and measured connector bounds remain phase-6
+gates; durable publication belongs to deferred backend integration. The adapter
+grants no authorization.
 
 ### Modeling, merge and initial live load (FR7–FR16; TR2–TR3, TR6, TR8–TR9)
 
@@ -306,7 +411,7 @@ separately from active counts when no publication occurs. (FR16; AC15)
   bundles remain offline regression evidence, not mandatory initial product data.
   (TR6, TR9; ADR-0037)
 
-### Publication and recovery (FR3, FR17–FR20; TR1, TR10)
+### Publication and recovery — deferred backend integration (FR3, FR17–FR20; TR1, TR10)
 
 - The worker heartbeats a database-time lease; every durable transition checks the
   owner/run/epoch. Reclaiming expired ownership increments the epoch. Old workers
@@ -342,40 +447,76 @@ separately from active counts when no publication occurs. (FR16; AC15)
 
 ## Implementation phases
 
-1. **Contract-preserving transformation** — exact Parquet schemas, replay, bounded
-   selection/merge/accounting with recorded and synthetic data; existing verifier
-   outputs remain stable. Unambiguous cases work; policy gates are explicit.
-   (FR6–FR16; TR1–TR4, TR6, TR8–TR10)
-2. **Bounded source adapter** — fixture-backed multipage/retry/sanitization behavior,
-   explicit request/termination contract; collect separate live evidence before
-   claiming route guarantees. Facility total diagnosis is not a prerequisite.
-   (FR4–FR6, FR14–FR15; TR5, TR7–TR8)
-3. **Durable refresh and generation commit** — PostgreSQL integration migrations,
-   fenced coordination, immutable artifact verification, publication and crash
-   reconciliation; local/controlled adapter tests precede cloud proof.
-   (FR2–FR3, FR17–FR20; TR1, TR10)
-4. **Authorized orchestration and initial live load** — direct use-case authorization tests,
-   independent supervised worker, thin transport and explicit initial-load rehearsal;
-   connect verified application identity/permission ports before exposing refresh.
-   (FR1–FR3, FR9–FR11, FR16–FR20; TR9)
-5. **Live enablement evidence** — measure supported >=30-day reconciliation windows
-   and budgets, including the accepted initial interval; validate live paging/order
-   and applicability before enabling those paths. Rehearse replacement with EIA
-   unavailable and complete relevant Ruff, mypy and pytest checks. (TR5–TR9; AC18)
+Numbering follows the executable phases 1–3; the regenerated task manifest and
+phase-4/5/6 sheets use these same six phase numbers. The backend design above is retained
+for later integration, rather than being a prerequisite for phase 4.
+
+1. **Pure merge, provenance and accounting — complete.** Reusable validation,
+   selection, exact arithmetic, retention and quality policies. (FR7–FR16;
+   TR2–TR4, TR6, TR8–TR10)
+2. **Local Parquet evidence and candidate verification — complete.** Explicit
+   schemas, bounded evidence replay, immutable local manifests and complete
+   candidate integrity checks. These are local guarantees. (FR6–FR16;
+   TR1–TR4, TR6, TR8–TR10)
+3. **Bounded source adapter — complete with controlled transports.** Paging,
+   retries, sanitization, termination checks and source quality feed existing
+   Parquet contracts. Live source guarantees remain unproven. (FR4–FR6,
+   FR14–FR15; TR5, TR7–TR8)
+4. **Runnable local connector — implemented locally.** Connect all three source routes to the
+   existing evidence/modeling/verification pipeline through an application service
+   and CLI. Use typed defaults with optional JSON configuration and environment-only
+   credentials (ADR-0041), safe progress/error logs and a final
+   report, explicit previous-candidate input, and rerun/failure integration tests.
+   Done means one documented command can produce and reopen verified local raw
+   and modeled Parquet plus its manifest/report with controlled source inputs.
+   No S3, PostgreSQL, Cognito or EC2 connection is required for those tests. This
+   completes the local pipeline, not live acceptance or backend publication.
+   (FR4–FR16; TR1–TR9; local portions of AC3–AC15, AC17)
+5. **Durable connector artifacts in S3.** Store the verified candidate's complete
+   dependency graph under immutable application-generated keys; verify bounded
+   readback, hashes, schemas and manifest dependencies, including inherited data.
+   Return an exact durable manifest reference, never an active-generation pointer.
+   Done means reconstruction in empty local staging works with EIA disabled;
+   conflicting writes, partial upload and corrupt readback fail without replacing
+   previous objects. Controlled adapter tests precede separately authorized cloud
+   checks. S3 is required for authoritative connector output; a saved candidate
+   still does not satisfy product publication. (FR6, FR17–FR20 storage portions;
+   TR1, TR4–TR5, TR10; artifact portions of AC5, AC17–AC18)
+6. **Controlled live connector validation.** Validate all routes' paging,
+   termination/order and contract applicability; measure interval, memory, disk
+   and output limits using the runnable pipeline. Exercise a small explicit
+   interval first, then supported >=30-day reconciliation and accepted initial
+   interval candidates when supported. Record actual quality, rerun/failure
+   behavior and reproducible usage; never claim upstream completeness from a
+   roster or advertised total. Live requests/cloud writes need their applicable
+   authorization; no EC2 deployment is required. (FR4–FR16; TR5–TR9; live portions
+   of AC3–AC15)
+
+**Deferred backend integration, outside the immediate connector work:** add
+PostgreSQL run/outcome records, admission/leases/fencing and atomic publication;
+then authorized HTTP/initial-load entrypoints and independently supervised
+refresh reusing the candidate pipeline. Verify reader pinning, uncertain commits,
+restart recovery and deployed resource enforcement before product enablement.
+These remain required by FR1–FR3, FR17–FR20 and the product portions of TR9,
+AC1–AC2, AC10–AC11, AC16–AC18. Completing phases 4–6 does not mark the entire
+connector specification complete. Backend integration needs its own task
+breakdown when that work resumes.
 
 ## Dependencies & integrations
 
-- Pin **PyArrow 25.0.1** for explicit Parquet schemas and bounded batch/row-group I/O;
-  phase 2 verifies exact round trips locally. Its
-  [Parquet documentation](https://arrow.apache.org/docs/python/parquet.html) describes
-  these capabilities. The implementation pins the runtime and development dependency. (TR1, TR3, TR5)
-- EIA credential, configured HTTP adapter; S3 SDK/bucket; PostgreSQL driver,
-  migration tooling and local PostgreSQL must be selected/pinned before adapter
-  implementation. Existing project has health/offline verification only. (TR1)
-- Existing authorization/session work supplies verified identity and authoritative
-  permissions; ECS supervision and resource enforcement remain runtime gates.
-  Fake ports support independent implementation, never proof of production access
-  checks, RDS, S3 or process limits. (FR1–FR3; TR5)
+- **Phase 4:** existing Python policies, **PyArrow 25.0.1**, **HTTPX 0.28.1**,
+  application ports and local immutable store. Supply the EIA key at explicit
+  live startup; fixture integration requires no credentials or AWS access.
+  Define test/development bounds honestly without calling them measured production
+  limits. DuckDB SQL execution is separate analytical/backend work. (TR1–TR5)
+- **Phase 5:** select/pin the S3 SDK and verify its immutable-write/readback
+  behavior; use the configured bucket/prefix for authorized cloud checks. Local
+  staging remains disposable once complete S3 recovery is verified. (TR1, TR10)
+- **Backend integration:** PostgreSQL driver/migrations, application identity and
+  permissions, and refresh supervision/resource enforcement remain dependencies
+  of publication rather than candidate construction. Reported RDS/Cognito setup
+  does not implement those adapters. EC2 is the deployment target, not a local
+  development prerequisite (ADR-0038). (FR1–FR3, FR17–FR20; TR5)
 
 ## Risks & tradeoffs
 
@@ -405,6 +546,20 @@ separately from active counts when no publication occurs. (FR16; AC15)
   supervision; the latter adds infrastructure outside accepted scope. (FR2; TR1)
 
 ## Test strategy
+
+**Next-phase gate:** test the CLI-to-application-to-real-Parquet path using
+controlled multipage EIA transports across all grains. Reopen the manifest with
+EIA disabled; rerun against an explicit prior candidate and assert uniqueness,
+valid replacement and retained provenance. Inject page, budget, corrupt artifact
+and report failures; assert earlier candidates remain usable and no result says
+published. Check configuration failure before staging/transport construction and
+secret-free logs/reports. Cover typed defaults without budget environment variables,
+partial/full JSON overrides, explicit flag precedence, unknown/duplicate fields,
+invalid types, bounded file reads, missing files and credential-free help.
+These cover local portions of AC3–AC15/AC17, not backend/cloud acceptance.
+
+The full-spec strategies below remain scheduled across the later phases and
+deferred backend integration; none is marked complete by this replan.
 
 - **AC1–AC2:** direct application calls with denied roles and fake I/O spies;
   PostgreSQL competing admissions/claims, stale epoch and lease-expiry races;
@@ -460,9 +615,9 @@ separately from active counts when no publication occurs. (FR16; AC15)
   accepted >=30-day reconciliation use case without inventing measurements.
 - **Q3–Q4:** validate route-specific termination, ordering/ties, source drift and
   contract applicability beyond September. No recency or upstream-completeness
-  claim follows from recorded order. Facility total investigation stays deferred.
-- Pin adapter libraries/PostgreSQL tooling and verify proposed implementation
-  mechanisms during their affected phases; session mapping and ECS resource
+  claim follows from recorded order. Facility total investigation is not a prerequisite.
+- Pin the S3 adapter in phase 5 and PostgreSQL tooling during backend integration;
+  verify proposed mechanisms in those stages; session mapping and EC2 resource
   enforcement remain separate runtime integration work. No new auth design,
   deletion subsystem or cloud deployment is selected here. Verify the concrete
   numeric physical widths/scales before publication; typed decimals plus source

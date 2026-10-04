@@ -1,30 +1,33 @@
 # Connector AWS setup
 
-Status: **S3 development setup verified; RDS and Cognito deferred by user**.
-Observed October 3, 2026 through the AWS MCP using `outage-explorer`.
-These are development/demo resources, confirmed by the user. Revalidate this
-inventory before provisioning; observations do not establish runtime acceptance.
-The user selected “Continue with S3 and defer RDS/Cognito”; the discovery-policy
-attachment and database provisioning below are future work, not current blockers
-for the S3 setup or fixture-based connector implementation.
+Status: **S3 development setup verified; Cognito setup and RDS connection
+completed per user confirmation on October 3, 2026**.
+Earlier AWS observations below used the `outage-explorer` profile. The user's
+later confirmation supersedes the earlier RDS/Cognito deferral and empty regional
+inventory; no new agent-run RDS/Cognito check is claimed.
+
+Development runs locally with the configured resources. EC2 replaces ECS as the
+deployment target under [ADR-0038](../../adr/0038-ec2-deployment-local-development.md).
+No EC2 instance is required for local development, and deployment choices do not
+block local connector implementation or testing. Application integration and
+runtime acceptance remain separate from resource setup completion.
 
 ## Confirmed target
 
 | Setting | Value |
 | --- | --- |
-| Account | `596447731027` |
+| Account | `[REDACTED AWS account]` |
 | Local AWS profile | `outage-explorer` |
-| Verified IAM principal | `arn:aws:iam::596447731027:user/pedroeducruz` |
+| Verified IAM principal | `[REDACTED IAM principal]` |
 | Region | `us-east-1` |
 | S3 bucket | `arkham-outage-explorer` |
 | S3 prefix | `data/` — user confirmed, no leading slash |
-| Cognito pool | Not configured; previous identifier removed at user request |
-| Cognito app client | Not yet identified |
-| RDS endpoint/database credentials | Not yet provisioned |
+| Cognito pool/app client | Setup completed per user; identifiers remain in local configuration |
+| RDS connection | Completed per user; connection settings and secrets remain local |
 
 The nonsecret S3 target values are in `.env.example` and the local ignored `.env`.
-The Cognito pool setting is blank; its earlier value was removed from project
-files, saved memories and accessible local logs at the user's request.
+Use the current local Cognito configuration; do not reconstruct the previously
+removed pool identifier from historical context.
 The connector adapters do not yet consume these settings. `AWS_PROFILE` is for
 local development; deployed application/refresh processes should receive their
 own role, while analytical workers receive no cloud/database credentials.
@@ -54,7 +57,7 @@ its value. No EIA retrieval or dataset publication was performed here.
   versions or delete markers under the synthetic probe prefix.
 
 This proves the tested principal can perform these operations on the probe.
-It does not prove the future task role's permissions, production adapter
+It does not prove the future deployed role's permissions, production adapter
 verification, multipart behavior, or publication/recovery correctness. Versioning
 alone does not prevent overwrites; the adapter must use conditional creation and
 verify same-key retries. No bucket policy enforces that requirement currently.
@@ -63,7 +66,11 @@ or authoritative-object cleanup as part of connector implementation.
 
 See [AWS conditional-write behavior](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html).
 
-## Deferred RDS/Cognito permission prerequisite
+## Historical RDS/Cognito discovery limitations
+
+These earlier denials are retained as evidence, not current setup blockers.
+The user subsequently completed setup; policy attachment is not a prerequisite
+for local implementation. Revisit discovery access only if a specific task needs it.
 
 The current principal received `AccessDenied` for:
 
@@ -73,8 +80,8 @@ The current principal received `AccessDenied` for:
 
 An account administrator can attach
 [`infra/aws/setup-discovery-policy.json`](../../../infra/aws/setup-discovery-policy.json)
-as an inline policy named `OutageExplorerSetupDiscovery` to `pedroeducruz`:
-IAM → Users → pedroeducruz → Add permissions → Create inline policy → JSON.
+as an inline policy named `OutageExplorerSetupDiscovery` to `[REDACTED IAM user]`:
+IAM → Users → [REDACTED IAM user] → Add permissions → Create inline policy → JSON.
 It now grants only RDS engine/instance-option discovery in `us-east-1`.
 The pool-specific Cognito statement was removed with the identifier. A fresh
 pool configuration and scoped discovery permission would be needed if that work
@@ -87,7 +94,10 @@ has been parsed locally; it has not been attached or validated by IAM.
 AWS denial of discovery does not prove creation is denied: creation permissions
 have not been tested. Do not switch to an unrelated AWS profile to bypass this.
 
-## RDS preparation and remaining choices
+## Historical RDS preparation proposal
+
+The following inventory and sizing proposal predate the user's completed RDS
+connection. They do not describe the current resource or request a second database.
 
 `DescribeDBInstances`, `DescribeDBClusters`, and `DescribeDBSubnetGroups` returned
 empty lists in `us-east-1`. This is a regional observation, not an account-wide
@@ -117,15 +127,14 @@ and the exact available engine version remain pending discovery access.
 
 ## Next verification
 
-1. Continue phase 3 fixture-based retrieval and S3 adapter implementation using
-   the confirmed target. The S3 setup is available; the adapter still needs its
-   bounded upload/readback, integrity and failure/retry tests.
-2. When RDS/Cognito work resumes, attach the discovery policy and repeat the
-   denied reads. Return only
-   nonsecret app-client settings; `DescribeUserPoolClient` can contain a secret.
-3. Finalize and provision the development RDS connection path and resource
-   configuration; verify actual TLS/database connectivity and role separation.
-   Cloud provisioning does not block real local PostgreSQL adapter tests.
+1. Continue from the implemented fixture-tested EIA source adapter to durable
+   refresh and S3 integration using the confirmed target. The S3 adapter still
+   needs its bounded upload/readback, integrity and failure/retry tests.
+2. Implement and test application adapters against the configured services,
+   including verified TLS, database role separation, token/session mapping and
+   application-owned permissions. Setup completion does not prove these behaviors.
+3. Continue local development without EC2. Plan deployed connectivity, supervision,
+   IAM access and resource bounds separately when preparing EC2 deployment.
 4. Rehearse cloud adapters, durable publication, authorization and replacement
-   recovery before marking phase 6 acceptance. ECS/sandbox/resource-budget
+   recovery before marking phase 6 acceptance. EC2/sandbox/resource-budget
    decisions remain separate; this setup does not close them.

@@ -33,9 +33,11 @@ a separate object-storage bucket as the durable home for Parquet and then
 selected Amazon S3 with DuckDB as the query engine. Backend analytical disk is
 disposable; [ADR-0008](../adr/0008-local-parquet-file-cache.md) selects a
 bounded local disk cache of modeled Parquet for DuckDB scans.
-Python/Flask, PostgreSQL on Amazon RDS, and ECS hosting are accepted.
-ADR-0032 replaces SQLite and its ECS file-storage proposal; launch type, RDS
-configuration and connectivity remain open. Seeded
+Python/Flask, PostgreSQL on Amazon RDS, and EC2 deployment are accepted.
+[ADR-0038](../adr/0038-ec2-deployment-local-development.md) replaces ECS and
+keeps development local without an EC2 prerequisite. ADR-0032 replaces SQLite.
+The user confirmed Cognito setup and the RDS connection complete; application
+integration and EC2 deployment configuration remain open. Seeded
 challenge accounts remain sufficient; this clarification does not request
 registration, a frontend, or an automatic refresh schedule.
 
@@ -60,15 +62,19 @@ registration, a frontend, or an automatic refresh schedule.
   and Admin-only refresh with an outcome.
 
 The technical challenge remains the requirements source for these three parts.
-Frontend work is deferred by the user's instruction. It remains part of the
-original challenge, so this scope does not represent the complete submission.
+On October 4, the user requested a handoff for a separate UI repository using
+React, Next.js, TypeScript, Tailwind, atomic components and an existing Figma
+design ([ADR-0039](../adr/0039-separate-ui-client-atomic-design.md)). The
+[Astra context pack](ui-client/README.md) captures expected behavior and pending
+integration contracts. UI implementation stays outside this backend repository
+and remains pending, so this scope does not represent the complete submission.
 Outage-type classification and event reconstruction are unverified ideas,
 not current requirements.
 
 ## Epic outcomes
 
-"In scope" identifies planned work, not completed implementation. E7 is
-retained for traceability to the original challenge and remains deferred.
+"In scope" identifies planned work, not completed implementation. E7 now has
+a separate-repository handoff; its implementation remains pending.
 
 The initial [health scaffold](../specs/health-endpoint/spec.md) is implemented:
 an unauthenticated liveness endpoint, layered composition, local Python setup,
@@ -83,7 +89,7 @@ refresh, and analytical execution capabilities in the table remain planned.
 | E4 — Discovery and preview | Show permitted schemas and support filtered, backend-paginated previews | In scope |
 | E5 — Read-only SQL | Support broad DuckDB analytical SQL with table authorization, result limits and documented compatibility exceptions | In scope |
 | E6 — Controlled refresh | Let Admins refresh data and receive a clear outcome | In scope |
-| E7 — Minimal web experience | Login, browse datasets, filter records, and run SQL through a web UI | Deferred |
+| E7 — Minimal web experience | Login, browse datasets, filter records, and run SQL through a web UI | Separate repository; context prepared, implementation pending |
 | E8 — Reproducible delivery | Runnable setup, tests, required documentation, incremental commits, and live-session readiness | In scope from the beginning |
 
 ## Requirements and decision status
@@ -170,7 +176,7 @@ excluded under ADR-0027. This fallback does not assert source revision timing.
 - Source revisions and available periods that inform refresh semantics.
 
 Broad DuckDB analytical feature support is selected in ADR-0012; compatibility
-and reference discovery need verification. ECS launch type, RDS configuration
+and reference discovery need verification. EC2 deployment configuration, deployed RDS connectivity
 and exact memory/disk budgets remain open. ADR-0013 accepts initial query
 controls: one analytical worker, retryable busy responses, 10-second execution
 timeout and 1,000-row / 1-MiB output caps with explicit truncation.
@@ -199,9 +205,9 @@ do not infer a choice from the epic list.
   file caching is selected in ADR-0008. Broad analytical SQL was
   separately selected by the user and is now required. The mandatory
   access-control promise applies to every supported query path.
-- Frontend work, including the challenge's core E7 web experience, remains
-  deferred under the current repository scope. E7 is required by the full
-  challenge, rather than being an optional challenge extra.
+- Frontend implementation, including the challenge's core E7 web experience,
+  belongs to the separate client repository under ADR-0039. E7 is required by
+  the full challenge; its handoff is prepared and implementation remains pending.
 
 ## Domain glossary
 
@@ -226,8 +232,9 @@ do not infer a choice from the epic list.
 
 ## Out of scope (for now)
 
-- Frontend implementation, UI framework selection, login screens, browser
-  tables, SQL editor UI, and visualizations are deferred for now.
+- Frontend implementation, login screens, browser tables, SQL editor UI and
+  any scoped visualizations belong to the separate UI repository. Its framework
+  and atomic component direction are selected in ADR-0039.
 - Backend authentication, authorization, preview pagination, SQL execution,
   and refresh remain in scope independently of any future frontend.
 

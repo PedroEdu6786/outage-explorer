@@ -1,0 +1,1232 @@
+{
+  "scope": "Recorded September 1–30, 2026 plus eight October 3 live probes",
+  "sources": {
+    "national": {
+      "snapshot": "data/verification/national-2026-09/national.json",
+      "sha256": "b140ed2d61813f500089704506a52518914cc3bce7c1859f90ab04c50ad54e9c",
+      "retrieved_at_utc": "2026-10-02T01:57:00.264611+00:00",
+      "api_version": "2.1.14"
+    },
+    "facility": {
+      "snapshot": "data/verification/facility-2026-09/facility.json",
+      "sha256": "a0bae3e25ff11c0ed4e7721ecb0c79b4f4c798f95aa1e4111460157eec5376e9",
+      "retrieved_at_utc": "2026-10-02T01:57:01.302085+00:00",
+      "api_version": "2.1.14"
+    },
+    "generator": {
+      "snapshot": "data/verification/generator-2026-09/generator.json",
+      "sha256": "9f58a9cb19f19a585181f14c6d570d73b8de25310eefbfbdf041b1affeb23d93",
+      "retrieved_at_utc": "2026-10-02T01:57:02.624328+00:00",
+      "api_version": "2.1.14"
+    }
+  },
+  "counts": {
+    "national": {
+      "advertised_total": 30,
+      "received_rows": 30,
+      "unique_keys": 30,
+      "observed_entities": 1,
+      "missing_days_within_observed_roster": 0
+    },
+    "facility": {
+      "advertised_total": 2850,
+      "received_rows": 1650,
+      "unique_keys": 1650,
+      "observed_entities": 55,
+      "missing_days_within_observed_roster": 0
+    },
+    "generator": {
+      "advertised_total": 2850,
+      "received_rows": 2850,
+      "unique_keys": 2850,
+      "observed_entities": 95,
+      "missing_days_within_observed_roster": 0
+    }
+  },
+  "facility_advertised_minus_received": 1200,
+  "generator_groups": 1650,
+  "generator_rows_without_parent": 0,
+  "missing_parent_keys": [],
+  "facility_keys_without_generators": [],
+  "generator_to_facility_differences": [],
+  "daily_reconciliation": [
+    {
+      "period": "2026-09-01",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "2714.245"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "2714.245"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "2714.245"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-02",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "1932.896"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "1932.896"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "1932.896"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-03",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "1507.338"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "1507.338"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "1507.338"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-04",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "2378.877"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "2378.877"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "2378.877"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-05",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "4239.256"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "4239.256"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "4239.256"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-06",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "4654.453"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "4654.453"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "4654.453"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-07",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "4317.038"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "4317.038"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "4317.038"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-08",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "5262.849"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "5262.849"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "5262.849"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-09",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "5490.444"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "5490.444"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "5490.444"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-10",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "4926.242"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "4926.242"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "4926.242"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-11",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "5185.627"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "5185.627"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "5185.627"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-12",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "7332.429"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "7332.429"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "7332.429"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-13",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "9060.809"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "9060.809"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "9060.809"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-14",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "8104.254"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "8104.254"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "8104.254"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-15",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "7572.636"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "7572.636"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "7572.636"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-16",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "7973.344"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "7973.344"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "7973.344"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-17",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "8147.401"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "8147.401"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "8147.401"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-18",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "7765.245"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "7765.245"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "7765.245"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-19",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "9651.017"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "9651.017"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "9651.017"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-20",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "8240.592"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "8240.592"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "8240.592"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-21",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "7720.402"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "7720.402"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "7720.402"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-22",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "7745.638"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "7745.638"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "7745.638"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-23",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "7696.766"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "7696.766"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "7696.766"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-24",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "7670.921"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "7670.921"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "7670.921"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-25",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "7545.427"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "7545.427"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "7545.427"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-26",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "9165.132"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "9165.132"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "9165.132"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-27",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "9313.997"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "9313.997"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "9313.997"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-28",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "10384.982"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "10384.982"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "10384.982"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-29",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "11565.58"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "11565.580"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "11565.580"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    },
+    {
+      "period": "2026-09-30",
+      "facility_rows": 55,
+      "generator_rows": 95,
+      "national": {
+        "capacity": "97620.5",
+        "outage": "11602.559"
+      },
+      "detail_sums": {
+        "facility": {
+          "capacity": "97620.5",
+          "outage": "11602.559"
+        },
+        "generator": {
+          "capacity": "97620.5",
+          "outage": "11602.559"
+        }
+      },
+      "gaps_from_national": {
+        "facility": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        },
+        "generator": {
+          "capacity": "0.0",
+          "outage": "0.000"
+        }
+      },
+      "facilities_by_generator_count": {
+        "1": 20,
+        "2": 31,
+        "3": 3,
+        "4": 1
+      }
+    }
+  ],
+  "live_evidence": {
+    "path": "data/investigations/facility-row-count/live-probes.json",
+    "sha256": "1e8e485a23b799a88d641b4f757ace59b80d93991e422cadfaa2c1e0878ff311",
+    "checks": {
+      "paged_union_equals_full_day": true,
+      "full_day_equals_recorded_baseline": true,
+      "browns_ferry_generators_equal_baseline": true,
+      "browns-ferry-facility_equals_baseline": true,
+      "clinton-facility_equals_baseline": true
+    },
+    "probes": [
+      {
+        "id": "facility-day",
+        "http_status": 200,
+        "api_version": "2.1.14",
+        "retrieved_at_utc": "2026-10-03T20:07:13.727469+00:00",
+        "advertised_total": 95,
+        "received_rows": 55
+      },
+      {
+        "id": "browns-ferry-facility",
+        "http_status": 200,
+        "api_version": "2.1.14",
+        "retrieved_at_utc": "2026-10-03T20:07:17.815555+00:00",
+        "advertised_total": 3,
+        "received_rows": 1
+      },
+      {
+        "id": "browns-ferry-generators",
+        "http_status": 200,
+        "api_version": "2.1.14",
+        "retrieved_at_utc": "2026-10-03T20:07:21.278868+00:00",
+        "advertised_total": 3,
+        "received_rows": 3
+      },
+      {
+        "id": "clinton-facility",
+        "http_status": 200,
+        "api_version": "2.1.14",
+        "retrieved_at_utc": "2026-10-03T20:07:24.356507+00:00",
+        "advertised_total": 1,
+        "received_rows": 1
+      },
+      {
+        "id": "facility-day-offset-55",
+        "http_status": 200,
+        "api_version": "2.1.14",
+        "retrieved_at_utc": "2026-10-03T20:07:27.133747+00:00",
+        "advertised_total": 95,
+        "received_rows": 0
+      },
+      {
+        "id": "facility-day-page-1",
+        "http_status": 200,
+        "api_version": "2.1.14",
+        "retrieved_at_utc": "2026-10-03T20:07:29.317853+00:00",
+        "advertised_total": 95,
+        "received_rows": 50
+      },
+      {
+        "id": "facility-day-page-2",
+        "http_status": 200,
+        "api_version": "2.1.14",
+        "retrieved_at_utc": "2026-10-03T20:07:30.923901+00:00",
+        "advertised_total": 95,
+        "received_rows": 5
+      },
+      {
+        "id": "facility-month-offset-1650",
+        "http_status": 200,
+        "api_version": "2.1.14",
+        "retrieved_at_utc": "2026-10-03T20:07:32.784483+00:00",
+        "advertised_total": 2850,
+        "received_rows": 0
+      }
+    ]
+  },
+  "browns_ferry_example": {
+    "facility": {
+      "period": "2026-09-01",
+      "facility": "46",
+      "facilityName": "Browns Ferry",
+      "capacity": "3661.7",
+      "outage": "749.168",
+      "percentOutage": "20.46",
+      "capacity-units": "megawatts",
+      "outage-units": "megawatts",
+      "percentOutage-units": "percent"
+    },
+    "generators": [
+      {
+        "period": "2026-09-01",
+        "facility": "46",
+        "facilityName": "Browns Ferry",
+        "generator": "1",
+        "capacity": "1227.4",
+        "outage": "24.548",
+        "percentOutage": "2",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-01",
+        "facility": "46",
+        "facilityName": "Browns Ferry",
+        "generator": "2",
+        "capacity": "1207.7",
+        "outage": "724.62",
+        "percentOutage": "60",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      {
+        "period": "2026-09-01",
+        "facility": "46",
+        "facilityName": "Browns Ferry",
+        "generator": "3",
+        "capacity": "1226.6",
+        "outage": "0",
+        "percentOutage": "0",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      }
+    ]
+  }
+}

@@ -149,8 +149,12 @@ inputs and enforced limits, without application secrets or operational data.
 HTTP request lifetime cannot own refresh. Import-time jobs, global database
 connections, and implicit worker startup in `create_app` are forbidden.
 
+Development runs locally without an EC2 instance under
+[ADR-0038](../adr/0038-ec2-deployment-local-development.md); deployment choices
+do not block independent local implementation or testing.
+
 These rules implement existing requirements. WSGI process count, worker launcher,
-ECS launch/storage, session integration, and resource sizes still require their
+EC2 deployment/storage, session integration, and resource sizes still require their
 own decisions and feasibility evidence. Do not treat the earlier topology
 recommendation as a settled implementation contract.
 
@@ -221,8 +225,25 @@ rows to inherited evidence and the pinned base manifest. No whole-history row
 collection is required; manifest metadata, day groups and batches have explicit
 caller budgets. Read-only verification trades repeated sequential scans for
 bounded memory. Local tests do not establish measured production resource limits
-or AWS guarantees. Raw evidence sanitization, S3, authorized durable refresh and
-publication remain work in the [connector tasks](../specs/data-connector/tasks.md).
+or AWS guarantees. The source contract in `application/ports/source.py` and
+adapters in `infrastructure/eia/` now supply bounded sequential retrieval,
+sanitized evidence and source-quality reconciliation. HTTPX stays in
+infrastructure; an explicit injected transport enables controlled tests without
+network access or import-time construction. A context-local transport logging
+filter covers wire reads and closes without retaining secrets or suppressing
+unrelated concurrent logs. The contributor CLI now composes these adapters through
+`application/services/connector.py`, with typed default budgets and optional JSON
+file overrides through `--config` (ADR-0041), exact
+prior-manifest input, sequential terminal-quality checks and bounded separate-run
+JSON progress/final reports. `infrastructure/parquet/connector.py` reopens and
+verifies the complete bounded ancestry before retrieval and after candidate
+persistence. `bootstrap.execute_connector` validates configuration, constructs
+adapters and closes the transport; `entrypoints/cli/connector_startup.py` only
+passes that callable to the command so help performs no connector work. Its exact
+AST exception and negative fixtures preserve startup restrictions. The command
+has no publication capability or mutable active pointer. S3, authorized durable
+refresh, publication and live enablement remain work in the
+[connector tasks](../specs/data-connector/tasks.md).
 
 Facility and generator verification reuse `domain/observations.py` (national's
 API remains in `domain/national.py`) and the shared evidence service/adapters,

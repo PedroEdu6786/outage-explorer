@@ -1,12 +1,18 @@
 # Resolved on Python 3.14 for local setup and the Python 3.12/3.14 CI matrix.
 # Update in a clean venv with: pip install -e '.[dev]'
 # Then regenerate with: pip freeze --exclude-editable
+anyio==4.15.1
 blinker==1.9.0
 build==1.6.1
+certifi==2026.7.22
 click==8.5.0
 editables==0.6
 Flask==3.1.3
+h11==0.16.0
 hatchling==1.32.4
+httpcore==1.0.9
+httpx==0.28.1
+idna==3.20
 iniconfig==2.3.0
 itsdangerous==2.2.0
 Jinja2==3.1.6
@@ -17,11 +23,11 @@ mypy_extensions==1.1.0
 packaging==26.3
 pathspec==1.1.1
 pluggy==1.6.0
-Pygments==2.21.0
 pyarrow==25.0.1
+Pygments==2.21.0
 pyproject_hooks==1.3.3
-python-dotenv==1.2.4
 pytest==9.1.1
+python-dotenv==1.2.4
 ruff==0.16.10
 tomlkit==0.15.1
 trove-classifiers==2026.9.21.13

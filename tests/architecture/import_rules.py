@@ -24,7 +24,21 @@ def main() -> int:
 if __name__ == "__main__":
     raise SystemExit(main())
 """
+CONNECTOR_STARTUP_SOURCE = """
+from outage_explorer.bootstrap import execute_connector
+from outage_explorer.entrypoints.cli.connector import run
+
+def main() -> int:
+    return run(execute_connector)
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+"""
 CLI_WRAPPERS = {
+    f"{ROOT}.entrypoints.cli.connector_startup": (
+        "execute_connector",
+        CONNECTOR_STARTUP_SOURCE,
+    ),
     CLI_STARTUP: ("build_national_verifier", CLI_STARTUP_SOURCE),
     **{
         f"{ROOT}.entrypoints.cli.{grain}_startup": (
@@ -128,7 +142,8 @@ def allowed_dependency(source: str, target: str) -> bool:
         # Add reviewed transport dependencies here as new entry points arrive.
         transport = (
             {"argparse", "sys"}
-            if source == f"{ROOT}.entrypoints.cli.command"
+            if source
+            in {f"{ROOT}.entrypoints.cli.command", f"{ROOT}.entrypoints.cli.connector"}
             else set()
         )
         return external in PURE_IMPORTS | {"flask"} | transport

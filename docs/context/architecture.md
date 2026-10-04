@@ -10,9 +10,23 @@ provenance-preserving merge and quality accounting in `domain/refresh.py`.
 The local Parquet adapters now write/replay raw evidence, build date-partitioned
 candidates and verify modeled rows and ledgers against source and prior-generation
 evidence. Hash-addressed local files and persisted manifests are a test/staging
-implementation; S3 remains the accepted authoritative store. Live retrieval,
-refresh authorization and durable publication remain pending. See the
+implementation; S3 remains the accepted authoritative store. The bounded EIA
+source adapter is implemented with controlled HTTP transports, sanitization and
+Parquet replay checks. A contributor CLI now joins source, evidence, candidate
+verification and bounded reports through application ports. Explicit-prior reruns
+verify all inherited local dependencies before retrieval; successful candidates
+are reopened before the final report. Typed budget defaults accept optional
+`--config` JSON overrides; run flags override file values and the EIA key stays
+environment-only ([ADR-0041](../adr/0041-connector-defaults-and-json-configuration.md)).
+Configuration is validated before staging/transport construction and bootstrap
+owns transport cleanup. Imports, help and HTTP construction start no
+connector work. These local results never activate a generation. Live retrieval
+validation, refresh authorization and durable publication remain pending. See the
 [implementation tasks](../specs/data-connector/tasks.md).
+
+The [connector flow diagrams](../specs/data-connector/diagrams.md) distinguish
+the planned publication workflow from the implemented local components and
+show their calling sequence.
 
 [ADR-0037](../adr/0037-connector-initial-load-and-retention.md) selects an initial
 live load for April 2–October 1, 2026 inclusive through the refresh validation
@@ -46,7 +60,7 @@ compares alternatives and describes query/refresh flows, state ownership, and
 an independent-services example. The latter is not selected for implementation.
 Flask replaces FastAPI under [ADR-0028](../adr/0028-python-flask-backend.md).
 One WSGI application process with threads and separately supervised refresh
-remains a runtime proposal. Capacity, ECS storage, session mapping, and the
+remains a runtime proposal. Capacity, EC2 deployment storage, session mapping, and the
 isolated query launcher still require decisions and feasibility evidence.
 
 ## System context (C4 level 1)
@@ -63,8 +77,12 @@ isolated query launcher still require decisions and feasibility evidence.
 The deployed backend serves its own persistently stored EIA data to all
 authorized clients. “Local” is relative to the application, not the Admin's
 computer. The connector fetches upstream
-data for the model. This repository currently covers these three parts;
-frontend work is deferred by the user's instruction on 2026-10-01.
+data for the model. This repository currently covers these three parts.
+On October 4, the user selected a separate React/Next.js, TypeScript and
+Tailwind client repository with atomic components and an existing Figma design
+([ADR-0039](../adr/0039-separate-ui-client-atomic-design.md)). The
+[UI handoff](ui-client/README.md) records the context; client implementation
+and concrete API/session integration remain pending.
 
 The user explicitly corrected the earlier laptop-only deployment assumption.
 Development must reproduce a realistic shared backend deployment. Data and
@@ -80,9 +98,11 @@ and results are accepted in [ADR-0007](../adr/0007-bounded-parquet-query-executi
 Full-dataset in-memory import is not required. Workers scan only authorized
 cached files without network or S3 credentials; exact isolation runtime and
 cache/resource budgets remain open. Python/Flask and PostgreSQL on Amazon RDS
-are accepted in ADR-0028 and ADR-0032. Amazon ECS remains selected in ADR-0011;
-its SQLite-specific EC2/EBS storage proposal is replaced by RDS. ECS launch type,
-RDS configuration and connectivity remain open. Refresh coordination, SQL isolation runtime
+are accepted in ADR-0028 and ADR-0032. EC2 deployment is selected in
+[ADR-0038](../adr/0038-ec2-deployment-local-development.md), replacing ECS.
+Development runs locally without an EC2 instance. The user confirmed Cognito
+setup and the RDS connection completed; application integration and EC2
+deployment configuration remain open. Refresh coordination, SQL isolation runtime
 and availability target remain undecided.
 Query worker/process counts are separate from API replicas. ADR-0013 accepts
 one analytical query at a time initially, retryable busy responses, a 10-second
@@ -93,7 +113,7 @@ The user has confirmed seeded database accounts and broad read-only analytical
 SQL, including joins, CTEs, subqueries, aggregations, and window functions.
 OAuth2 and granular authorization remain required; ADR-0017 removes required
 OIDC. ADR-0018 selects Cognito User Pools with managed login and OAuth2
-Authorization Code with PKCE. Client configuration, token/session mapping and
+Authorization Code with PKCE. Setup is user-confirmed complete; token/session mapping and
 concrete row/column policies remain open. ADR-0012 targets broad DuckDB analytical features, with evidence-led exclusions.
 Engine version, reference authorization and execution boundaries need verification.
 
@@ -112,7 +132,7 @@ revision. This behavior is specified, not implemented.
 
 The council's draft spec and design discussion are under
 `docs/specs/outage-explorer-backend/`; only explicitly accepted decisions
-(including current, nonsuperseded decisions through ADR-0032) are settled.
+(including current, nonsuperseded decisions through ADR-0038) are settled.
 ADR-0030 replaces the proposed structure in ADR-0029; remaining implementation
 mechanisms keep their documented proposal status.
 
@@ -173,11 +193,11 @@ Scheduling and an Admin UI remain deferred; job execution details remain open.
 | EIA datasets | required by brief | Daily `us-nuclear-outages`, `facility-nuclear-outages`, and `generator-nuclear-outages` |
 | Backend | **Python/Flask health scaffold implemented** | Python >=3.12, Flask 3.1; pinned development dependencies in `requirements-dev.txt`; product integrations pending |
 | Analytical model | **schema contracts confirmed** | See ADR-0002; source fields, keys and relationships await EIA investigation |
-| Frontend | **deferred** | Outside current repository scope; no UI choice needed now |
-| Analytical storage | **Amazon S3 + Parquet confirmed** | Separate persistent bucket; region/security configuration pending; retention/recovery policy deferred; see ADR-0001 |
+| Frontend | **separate repository selected; implementation pending** | React/Next.js, TypeScript, Tailwind, Figma and atomic components; see ADR-0039 and the UI handoff |
+| Analytical storage | **Amazon S3 + Parquet confirmed** | Development bucket access verified; deployed-role verification pending; retention/recovery policy deferred; see ADR-0001 |
 | Query engine | **DuckDB with local Parquet cache confirmed** | ADR-0007/0008; broad analytical SQL selected in ADR-0012; budgets and isolation need verification |
-| Operational storage | **PostgreSQL on Amazon RDS confirmed** | ADR-0032; sizing, connectivity and operational configuration remain open; recovery-policy work deferred |
-| Deployment | **one replica on ECS confirmed** | ADR-0011; launch type, RDS connectivity and query runtime remain open |
+| Operational storage | **PostgreSQL on Amazon RDS confirmed** | ADR-0032; connection completed per user; application integration and deployed connectivity remain open; recovery-policy work deferred |
+| Deployment | **one replica on EC2 confirmed** | ADR-0038; no EC2 instance needed for local development; deployment configuration and query runtime remain open |
 
 ## Key data-flow questions to resolve first
 
@@ -203,6 +223,7 @@ Scheduling and an Admin UI remain deferred; job execution details remain open.
   [ADR-0003 — Admin refresh publication](../adr/0003-admin-refresh-publication.md).
   [ADR-0028 — Python/Flask](../adr/0028-python-flask-backend.md).
   [ADR-0032 — PostgreSQL on RDS](../adr/0032-postgresql-on-rds.md).
+  [ADR-0038 — EC2 deployment and local development](../adr/0038-ec2-deployment-local-development.md).
   [ADR-0006 — Daily fleet offline share](../adr/0006-daily-fleet-offline-share.md).
   [ADR-0007 — Bounded queries](../adr/0007-bounded-parquet-query-execution.md).
   [ADR-0008 — Local Parquet cache](../adr/0008-local-parquet-file-cache.md).
@@ -219,7 +240,7 @@ permissions and policy attributes. The selected sign-in mechanism supplies verif
 groups/roles do not independently confer product data access. ADR-0017 removes
 the earlier OIDC-specific identity assumptions.
 
-Cognito runs as a managed AWS service outside ECS. It owns login credentials
+Cognito runs as a managed AWS service outside the EC2 application host. It owns login credentials
 and token issuance; the Flask identity adapter validates access tokens, binds issuer/subject to
 local users and applies PostgreSQL authorization tables. Configure seeded Cognito
 accounts with public registration disabled. Application logout enforcement

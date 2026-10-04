@@ -3,7 +3,10 @@ __pycache__/
 .env
 .env.*
 !.env.example
-data/exploration/eia-samples/
+# Downloaded source data, local candidates and investigation runs stay local.
+# Existing tracked data/verification bundles are required regression fixtures.
+/data/
+.DS_Store
 .venv/
 .pytest_cache/
 .ruff_cache/

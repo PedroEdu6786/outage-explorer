@@ -1,0 +1,11 @@
+{
+  "start": "2026-09-01",
+  "end": "2026-09-01",
+  "staging": "data/connector-local",
+  "source": {
+    "page_rows": 100,
+    "timeout_seconds": 10,
+    "attempts": 3,
+    "elapsed_seconds": 120
+  }
+}

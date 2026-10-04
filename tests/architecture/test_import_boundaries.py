@@ -190,3 +190,56 @@ def test_detail_startup_cannot_be_imported_as_service_locator(tmp_path, grain, s
 def test_command_cannot_use_detail_bootstrap_directly(tmp_path, grain):
     code = f"from outage_explorer.bootstrap import build_{grain}_verifier"
     assert violations(source_tree(tmp_path, {"entrypoints/cli/command.py": code}))
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "entrypoints/cli/connector.py",
+        "entrypoints/http/routes/bad.py",
+        "application/services/bad.py",
+    ],
+)
+def test_connector_startup_cannot_be_used_as_service_locator(tmp_path, path):
+    assert violations(
+        source_tree(
+            tmp_path,
+            {
+                path: "from outage_explorer.entrypoints.cli.connector_startup import main"
+            },
+        )
+    )
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "from outage_explorer.bootstrap import execute_connector",
+        "from outage_explorer.infrastructure.eia.source import EiaSource",
+        "from outage_explorer.settings import connector_settings",
+    ],
+)
+def test_connector_command_cannot_construct_infrastructure(tmp_path, source):
+    assert violations(source_tree(tmp_path, {"entrypoints/cli/connector.py": source}))
+
+
+@pytest.mark.parametrize(
+    "addition",
+    [
+        "\nexecute_connector(None)\n",
+        "\ndef handler():\n    return execute_connector(None)\n",
+        "\nimport pathlib\n",
+    ],
+)
+def test_connector_startup_exception_remains_exact(tmp_path, addition):
+    from .import_rules import CONNECTOR_STARTUP_SOURCE
+
+    assert violations(
+        source_tree(
+            tmp_path,
+            {
+                "entrypoints/cli/connector_startup.py": CONNECTOR_STARTUP_SOURCE
+                + addition
+            },
+        )
+    )
