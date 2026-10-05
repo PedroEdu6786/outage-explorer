@@ -19,7 +19,8 @@ SCOPES = tuple(
 REFRESH = tuple(
     operation
     for operation in AccessOperation
-    if operation is not AccessOperation.ANALYTICAL
+    if operation
+    not in (AccessOperation.ANALYTICAL, AccessOperation.ANALYTICAL_EXPRESSION)
 )
 
 
@@ -64,3 +65,13 @@ def test_refresh_initiation_outcome_diagnostics_admin_only(role, operation):
 )
 def test_unsupported_untrusted_and_ambiguous_inputs_deny(role, operation, grains):
     assert permits_scope(role, operation, grains) is False
+
+
+@pytest.mark.parametrize("role", list(Role))
+def test_reference_free_expression_deliberate_scope(role):
+    assert permits_scope(role, AccessOperation.ANALYTICAL_EXPRESSION, frozenset())
+    assert not permits_scope(
+        role,
+        AccessOperation.ANALYTICAL_EXPRESSION,
+        frozenset({AnalyticalGrain.NATIONAL}),
+    )

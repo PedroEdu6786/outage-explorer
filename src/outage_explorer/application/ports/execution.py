@@ -5,6 +5,7 @@ from datetime import date
 from typing import Protocol
 
 from outage_explorer.application.ports.analytical_inputs import ApprovedFile
+from outage_explorer.application.ports.query_results import QueryOutput
 from outage_explorer.domain.datasets import Dataset
 
 
@@ -41,9 +42,16 @@ class PreviewRows:
     has_more: bool
 
 
+@dataclass(frozen=True)
+class QueryRead:
+    sql: str
+    relations: tuple[tuple[Dataset, tuple[ApprovedFile, ...]], ...]
+
+
 class ExecutionReservation(Protocol):
     def check_preparation(self) -> None: ...
     def preview(self, request: PreviewRead) -> PreviewRows: ...
+    def query(self, request: QueryRead) -> QueryOutput: ...
     def close(self) -> None: ...
 
 

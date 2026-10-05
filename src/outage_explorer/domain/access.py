@@ -41,6 +41,7 @@ class LoginAttempt:
 
 class AccessOperation(StrEnum):
     ANALYTICAL = "analytical"
+    ANALYTICAL_EXPRESSION = "analytical_expression"
     REFRESH_INITIATE = "refresh_initiate"
     REFRESH_OUTCOME = "refresh_outcome"
     REFRESH_DIAGNOSTIC = "refresh_diagnostic"
@@ -65,6 +66,8 @@ def permits_scope(
         or any(not isinstance(grain, AnalyticalGrain) for grain in grains)
     ):
         return False
+    if operation is AccessOperation.ANALYTICAL_EXPRESSION:
+        return not grains
     if operation is AccessOperation.ANALYTICAL:
         return bool(grains) and (
             role in (Role.ANALYST, Role.ADMIN)

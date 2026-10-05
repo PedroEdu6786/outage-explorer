@@ -383,3 +383,16 @@ fixtures exercise real DuckDB in a separate process, without asserting OS
 isolation. The product launcher remains fail-closed until the reviewed T1.7
 runtime is supplied. HTTP integration and explicit runtime lifecycle composition
 remain Phase 6; see the [Phase 4 checkpoint](../specs/data-api/tasks/phase-4.md).
+
+
+Data API Phase 5 adds `application/services/queries.py`, explicit reference-free
+expression authorization, bounded process-owned query metadata/private spools,
+reader leases and autonomous cleanup lifecycle. Query output is materialized
+once through the isolated port, then arbitrary/revisited numbered pages read
+immutable row offsets with current roles and original-owner checks. SQL input
+pins release after confirmed reaping; query metadata never enters PostgreSQL.
+Bootstrap constructs inert lifecycle resources for explicit start/close. This
+store rejects incompatible multiple-process ownership without selecting the
+final WSGI topology. Controlled integration evidence is in the
+[Phase 5 checkpoint](../specs/data-api/tasks/phase-5.md); product execution stays
+fail-closed pending T1.7 Linux launcher evidence and HTTP remains Phase 6.

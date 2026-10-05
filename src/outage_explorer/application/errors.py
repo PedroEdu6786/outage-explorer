@@ -96,3 +96,27 @@ class RuntimeUnavailableError(Exception):
 
 class PreviewCapacityError(Exception):
     """Independent ephemeral preview metadata capacity exhausted."""
+
+
+class QueryUnavailableError(Exception):
+    """Unknown, foreign or lost result; no ownership information disclosed."""
+
+
+class QueryExpiredError(Exception):
+    """A known owned result has reached its fixed expiration."""
+
+
+class ResultCapacityError(Exception):
+    def __init__(self, *, per_user: bool) -> None:
+        self.per_user = per_user
+        super().__init__("Retained result capacity exhausted")
+
+
+class QueryPageError(InvalidRequestError):
+    def __init__(self, code: str, identity: object | None = None) -> None:
+        self.code, self.identity = code, identity
+        super().__init__("Invalid retained result page")
+
+
+class AnalyticalTimeoutError(Exception):
+    """Execution deadline exceeded; runtime still must terminate and reap."""

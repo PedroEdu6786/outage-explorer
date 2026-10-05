@@ -15,6 +15,10 @@ class EncodingLimit(ValueError):
     """Safe resource failure (query_resource_limit)."""
 
 
+class EncodingCellLimit(EncodingLimit):
+    """A single cell exceeds the bounded byte scratch capacity."""
+
+
 class UnsupportedValue(ValueError):
     """No implicit string conversion or precision loss is permitted."""
 
@@ -94,7 +98,7 @@ def encode_cell(value: object, value_type: ValueType, bounds: EncodingBounds) ->
     def charge(size: int) -> None:
         remaining_bytes[0] -= size
         if remaining_bytes[0] < 0:
-            raise EncodingLimit("Cell exceeds encoding bounds")
+            raise EncodingCellLimit("Cell exceeds encoding bounds")
 
     def encode(item: object, kind: ValueType, depth: int) -> object:
         remaining[0] -= 1
@@ -106,12 +110,12 @@ def encode_cell(value: object, value_type: ValueType, bounds: EncodingBounds) ->
         result: object
         if kind.kind == "integer" and type(item) is int:
             if item.bit_length() > bounds.max_cell_bytes * 3:
-                raise EncodingLimit("Cell exceeds encoding bounds")
+                raise EncodingCellLimit("Cell exceeds encoding bounds")
             result = str(item)
         elif kind.kind == "decimal" and isinstance(item, Decimal) and item.is_finite():
             parts = item.as_tuple()
             if len(parts.digits) + abs(int(parts.exponent)) + 3 > bounds.max_cell_bytes:
-                raise EncodingLimit("Cell exceeds encoding bounds")
+                raise EncodingCellLimit("Cell exceeds encoding bounds")
             result = format(item, "f")
         elif kind.kind == "float" and type(item) is float:
             result = (
@@ -127,7 +131,7 @@ def encode_cell(value: object, value_type: ValueType, bounds: EncodingBounds) ->
             result = item
         elif kind.kind == "string" and type(item) is str:
             if len(item) > bounds.max_cell_bytes:
-                raise EncodingLimit("Cell exceeds encoding bounds")
+                raise EncodingCellLimit("Cell exceeds encoding bounds")
             result = item
         elif kind.kind == "date" and type(item) is date:
             # DuckDB maps +/-infinity to these same finite Python sentinels.
@@ -153,7 +157,7 @@ def encode_cell(value: object, value_type: ValueType, bounds: EncodingBounds) ->
             result = item.astimezone(UTC).isoformat().replace("+00:00", "Z")
         elif kind.kind == "binary" and type(item) is bytes:
             if len(item) * 4 // 3 > bounds.max_cell_bytes:
-                raise EncodingLimit("Cell exceeds encoding bounds")
+                raise EncodingCellLimit("Cell exceeds encoding bounds")
             result = base64.b64encode(item).decode("ascii")
         elif (
             kind.kind == "list"
@@ -316,7 +320,15 @@ def retain_result(
         encoded: list[object] = []
         size = 2 + bool(retained)
         for value, col in zip(row, columns, strict=True):
-            cell = encode_cell(value, col.value_type, bounds)
+            try:
+                cell = encode_cell(value, col.value_type, bounds)
+            except EncodingCellLimit:
+                # When scratch can cover the entire accepted document, an
+                # over-scratch cell cannot fit this row. Preserve the prefix.
+                if bounds.max_cell_bytes < max_bytes:
+                    raise
+                size = max_bytes + 1
+                break
             size += len(canonical_json(cell)) + bool(encoded)
             if used + size > max_bytes:
                 break

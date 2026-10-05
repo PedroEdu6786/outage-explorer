@@ -86,3 +86,22 @@ were added after full-suite collection; the final affected encoding/engine suite
 was run separately (22 passed), with final Ruff/format/mypy/diff checks clean.
 The earlier focused contract/projection/parser/encoding/engine/architecture run
 passed 222 tests. This evidence does not close T1.7 or claim live endpoint behavior.
+
+
+## Phase 5 retained-result adapter evidence
+
+Phase 5 reuses the unchanged-SQL inspection seam and bounded canonical encoder
+inside a controlled DuckDB subprocess. Private spools contain the complete
+canonical document once; a bounded offset index serves numbered/revisited pages
+without engine work. Oversized cells that exceed a scratch bound at least as
+large as the whole result cap produce an explicit byte-truncated prefix. Smaller
+scratch budgets, unsupported representations, depth/item/schema failures still
+fail explicitly rather than masquerading as byte truncation.
+
+Fixed completion expiry, original ownership, current roles, reservations,
+reader leases and autonomous expiry/dead-process cleanup are independently tested
+with disposable PostgreSQL and local files. The owner advisory lock is a
+process-liveness proof for private orphan cleanup, not an isolation mechanism.
+No launcher is configured by this implementation; controlled deadline/busy/reap
+contracts do not close actual Linux worker-tree, resource or network denial gates.
+See the [Phase 5 checkpoint](tasks/phase-5.md) for exact verification results.

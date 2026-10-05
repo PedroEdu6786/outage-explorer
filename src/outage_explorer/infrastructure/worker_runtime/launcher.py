@@ -7,13 +7,16 @@ from typing import Protocol
 from outage_explorer.application.errors import (
     AnalyticalBusyError,
     AnalyticalResourceError,
+    AnalyticalTimeoutError,
     RuntimeUnavailableError,
 )
 from outage_explorer.application.ports.execution import (
     ExecutionBounds,
     PreviewRead,
     PreviewRows,
+    QueryRead,
 )
+from outage_explorer.application.ports.query_results import QueryOutput
 
 
 class ReviewedRuntime(Protocol):
@@ -26,6 +29,9 @@ class ReviewedRuntime(Protocol):
     def preview(
         self, request: PreviewRead, bounds: ExecutionBounds, deadline: float
     ) -> PreviewRows: ...
+    def query(
+        self, request: QueryRead, bounds: ExecutionBounds, deadline: float
+    ) -> QueryOutput: ...
     def terminate_and_reap(self) -> None: ...
 
 
@@ -73,6 +79,17 @@ class _Reservation:
         result = self._runtime.preview(request, self._bounds, deadline)
         if monotonic() >= deadline:
             raise AnalyticalResourceError("Analytical execution deadline exceeded")
+        return result
+
+    def query(self, request: QueryRead) -> QueryOutput:
+        self.check_preparation()
+        deadline = min(
+            self._started + self._bounds.overall_seconds,
+            monotonic() + self._bounds.execution_seconds,
+        )
+        result = self._runtime.query(request, self._bounds, deadline)
+        if monotonic() >= deadline:
+            raise AnalyticalTimeoutError("Analytical execution deadline exceeded")
         return result
 
     def close(self) -> None:

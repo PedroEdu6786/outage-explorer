@@ -92,6 +92,11 @@ from outage_explorer.infrastructure.postgresql.pool import BoundedPostgresqlPool
 from outage_explorer.infrastructure.postgresql.publication import (
     PostgresqlPublicationStore,
 )
+from outage_explorer.infrastructure.query_results.cleanup import QueryCleanup
+from outage_explorer.infrastructure.query_results.store import (
+    BoundedQueryResults,
+    ResultBounds,
+)
 from outage_explorer.infrastructure.recorded_evidence import LocalRecordedEvidence
 from outage_explorer.infrastructure.refresh_worker import (
     RenewableRefreshLease,
@@ -621,3 +626,14 @@ def build_refresh_worker(
     execution = RefreshExecution(store, store, connector)
     worker = RefreshWorker(store, execution, lease, str(uuid4()))
     return SupervisedRefreshProcess(worker.tick, pool.close)
+
+
+def build_query_result_lifecycle(
+    root: Path,
+    bounds: "ResultBounds",
+    *,
+    cleanup_interval_seconds: float,
+) -> tuple["BoundedQueryResults", "QueryCleanup"]:
+    """Construct inert process-owned resources; caller explicitly starts/closes."""
+    store = BoundedQueryResults(root, SystemClock(), bounds)
+    return store, QueryCleanup(store, interval_seconds=cleanup_interval_seconds)
