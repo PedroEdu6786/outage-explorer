@@ -5,10 +5,39 @@ The health scaffold and offline national/facility/generator verification are imp
 data delivery remains pending. This guide governs application code and refactors;
 [AGENTS.md](../../AGENTS.md) makes its rules discoverable to agents.
 
+Under [ADR-0051](../adr/0051-configured-http-refresh-range.md), HTTP refresh
+admission resolves a configured inclusive interval and records it for background
+execution; routes accept no caller date overrides. Configuration wiring belongs
+in bootstrap/settings and admission orchestration in the application layer.
+
 Operational storage uses [PostgreSQL on Amazon RDS](../adr/0032-postgresql-on-rds.md).
 Use PostgreSQL for local development and integration tests as well; pure unit
-tests may substitute application ports with fakes. The engine version, driver,
-migration tooling, and local setup remain to be selected.
+tests may substitute application ports with fakes. User-access Phase 1 now has
+PostgreSQL repositories, explicit Alembic migrations and controlled local seeding
+using Psycopg 3. Disposable PostgreSQL 18.6 tests verify storage/setup; the deployed
+RDS version and live account linkage remain unverified. Integration and tooling
+records remain proposed in ADR-0046/0047. See the
+[Phase 1 checkpoint](../specs/user-access/tasks/phase-1.md).
+Phase 2 adds injected login/access services, cryptographic material and bounded
+Cognito access-token/JWKS adapters. Atomic attempt consumption precedes provider
+exchange; sessions resolve current local roles and invalidate only their own digest.
+Controlled provider and real PostgreSQL tests prove fixed expiry and committed
+logout without connector access; live provider readiness remains pending. See the [Phase 2 checkpoint](../specs/user-access/tasks/phase-2.md).
+Phase 3 adds trusted authorization operation/grain enums and a pure role matrix.
+The access service returns a local principal and exact approved grain set only after
+fresh session/role checks. Downstream harnesses verify denial before data/execution
+on direct and later pages; actual SQL reference extraction, result ownership and
+catalog/SQL/refresh integration remain downstream responsibilities. See the
+[Phase 3 checkpoint](../specs/user-access/tasks/phase-3.md).
+Phase 4 registers opt-in thin auth routes with injected login/access services,
+HTTP schemas and host-only cookie/origin transport. Cryptographic CSRF checks stay
+in the application/security seam. Bootstrap owns lazy process-bound PostgreSQL
+and Cognito resources with explicit shutdown; imports/factories start no requests,
+connections, migrations or threads. Health remains independent. The
+[HTTP contract](../specs/user-access/http-contract.md) and
+[Phase 4 checkpoint](../specs/user-access/tasks/phase-4.md) distinguish controlled
+verification from pending browser/live-provider readiness.
+
 
 Use one application organized by technical layer. Keep business policies
 independent of Flask and storage through small application-owned interfaces.
@@ -133,6 +162,12 @@ Avoid a command bus or one repository per analytical row type.
 
 ## State and execution rules
 
+Under [ADR-0043](../adr/0043-seeded-users-and-role-only-access.md), seed local
+users, roles and assignments with essential Cognito identity linkage. Keep
+credentials in Cognito. Registration and Admin user management are excluded
+throughout implementation; access is role-only, without separate read/write/delete
+permissions, per-user grants, ABAC or row/column restrictions for current scope.
+
 Keep operational PostgreSQL on Amazon RDS (ADR-0032) separate from analytical Parquet and from ephemeral
 query-ID state. PostgreSQL owns permissions, application-session state, refresh
 outcomes, and the active publication reference. Query metadata stays bounded,
@@ -251,3 +286,43 @@ with explicit grain contracts and entity/date coverage. Their separate commands
 remain offline contributor tools. The source-total difference is reported as
 unresolved evidence; this does not establish live pagination completeness or
 product authorization. See the [detail contract](../specs/facility-generator-verification/contract.md).
+
+Phase 5 adds `application/services/connector_artifacts.py` for exact graph
+persistence/recovery and `infrastructure/s3/artifacts.py` for conditional bounded
+SDK storage. The explicit connector CLI operations reuse graph export/restoration
+in `infrastructure/parquet/connector.py`; bootstrap constructs credential
+providers for default durable candidate runs and explicit persist/recover. Controlled recovery verifies full replay
+without EIA. Active publication and PostgreSQL outcomes remain pending.
+
+[ADR-0042](../adr/0042-connector-cli-default-s3-persistence.md) makes candidate CLI
+runs durable by default. `CreateDurableConnectorCandidate` coordinates injected
+local creation and persistence use cases, retaining the local outcome/reference
+when persistence fails. `bootstrap.execute_connector_to_s3` checks S3 target
+configuration before source work and composes the existing adapters; the CLI
+selects it unless `--local-only` is explicit. Its startup wrapper has a narrow
+exact-AST exception for these dedicated composition functions. Default success
+requires a verified S3 receipt; local reports remain candidate-only records.
+
+
+Phase 6 implements injected bounded scheduling in `application/ports/connector_workers.py`
+and `infrastructure/connector_workers.py`. Canonical endpoint page consumption remains ordered;
+independent collection/evidence and S3 dependency PUT/GET operations can overlap
+with separately configurable 1–3 workers (sequential defaults). Application
+coordinators own reports, deterministic combined models/manifests and receipts.
+Source/store/SDK accounting is shared; failure stops admission and joins workers.
+Cooperative storage checks cover cancellation/deadlines during repeated replay.
+Controlled overlap/equivalence and configured-bucket inherited reconstruction
+passed. All six connector phases are complete: the full initial live candidate
+and its exact configured-S3 source-disabled reconstruction verified successfully.
+Earlier interrupted attempts remain historical evidence. Product authorization,
+activation and operational outcomes remain separate backend obligations. See [resource evidence](../specs/data-connector/resource-evidence.md).
+
+
+ADR-0049 adds independently configured1–3 page fetch workers within a route.
+Bounded speculative windows preserve every sanitized response as an immutable
+transport JSON dependency, including unused lookahead; canonical raw/page
+Parquet keeps received-count offsets and one terminal. Exact graph export,
+recovery and bounded-window replay verify those dependencies and their canonical
+raw values. CLI/Make fetch/S3 overrides win JSON, with endpoint default1 unchanged.
+Shared source bounds count all fetched rows/pages, including unused lookahead;
+logical admission includes endpoint*page buffers. Modeling stays coordinated.

@@ -181,3 +181,26 @@ def test_direct_request_validates_bounds_without_ports():
         ConnectorRequest(
             INTERVAL, "run", "generation", replace(BOUNDS, interval_days=1)
         )
+
+
+def test_diagnostic_failure_does_not_change_candidate_outcome():
+    service, request, _, _, builder, _, _, _ = setup()
+    observer = Mock()
+    observer.emit.side_effect = RuntimeError("diagnostics unavailable")
+    service.events = observer
+    result = service.run(request)
+    assert result.report.outcome == "candidate_verified"
+    builder.verify.assert_called_once()
+
+
+def test_failure_event_contains_only_safe_stage_and_code():
+    service, request, _, evidence, _, _, _, _ = setup(REFERENCE)
+    observer = Mock()
+    service.events = observer
+    evidence.reopen.side_effect = ArtifactError("secret upstream error")
+    result = service.run(request)
+    assert result.report.error == "prior_integrity"
+    observer.emit.assert_any_call(
+        "candidate_failed", run="run", stage="prior", code="prior_integrity"
+    )
+    assert "secret upstream error" not in repr(observer.emit.call_args_list)

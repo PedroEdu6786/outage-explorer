@@ -8,12 +8,15 @@ here and imports do not configure logging or perform I/O.
 
 import hashlib
 import json
+import logging
 import random
 import time
 from collections.abc import Callable, Iterator
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import UTC, date, datetime
 from email.utils import parsedate_to_datetime
+from functools import partial
+from threading import RLock
 from uuid import uuid4
 
 import httpx
@@ -29,9 +32,13 @@ from outage_explorer.application.ports.source import (
     SourceRequest,
 )
 from outage_explorer.domain.refresh import Origin
+from outage_explorer.infrastructure.connector_workers import BoundedConnectorWorkers
+from outage_explorer.infrastructure.eia.budget import SourceRunBudget
 from outage_explorer.infrastructure.eia.quality import reconcile
 from outage_explorer.infrastructure.eia.sanitization import Sanitizer, parse_json
 from outage_explorer.infrastructure.eia.transport import source_response
+
+_LOG = logging.getLogger("outage_explorer.connector.eia")
 
 _BASE = "https://api.eia.gov/v2/nuclear-outages/"
 _MEASUREMENTS = ("capacity", "outage", "percentOutage")
@@ -65,6 +72,15 @@ def _facility_order(value: str) -> tuple[int, int, str]:
     return (1, 0, value)
 
 
+@dataclass(frozen=True)
+class _Fetched:
+    offset: int
+    parameters: dict[str, str]
+    result: tuple[dict[str, object], int, tuple[str, ...], tuple[str, ...]]
+    request_id: str
+    received_at: datetime
+
+
 class EiaSource:
     """Single-use, sequential retrieval with caller-supplied measured/test budgets."""
 
@@ -76,11 +92,19 @@ class EiaSource:
         api_key: str,
         *,
         other_secrets: tuple[str, ...] = (),
+        budget: SourceRunBudget | None = None,
+        page_workers: int = 1,
         monotonic: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], None] = time.sleep,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
         jitter: Callable[[], float] = random.random,
     ) -> None:
+        self._lock = RLock()
+        self._fetch_count = self._fetched_rows = 0
+        self._page_workers = BoundedConnectorWorkers(
+            page_workers, None if budget is None else budget.cancelled
+        )
+        self.budget = budget
         self.request = request
         self.bounds = bounds
         self._transport = transport
@@ -122,7 +146,10 @@ class EiaSource:
         return self._quality
 
     def _remaining(self) -> float:
+        self._page_workers.check()
         remaining = self._deadline - self._clock()
+        if self.budget is not None:
+            remaining = min(remaining, self.budget.remaining())
         if remaining <= 0:
             raise SourceLimitError("Exceeded retrieval deadline")
         return remaining
@@ -133,7 +160,10 @@ class EiaSource:
         self._remaining()
 
     def _count_output(self, value: object) -> None:
-        self._output += len(_encoded(value))
+        size = len(_encoded(value))
+        if self.budget is not None:
+            self.budget.charge("output_bytes", size)
+        self._output += size
         if self._output > self.bounds.output_bytes:
             raise SourceLimitError("Exceeded sanitized output bytes")
         self._remaining()
@@ -159,9 +189,12 @@ class EiaSource:
         )
         for chunk in chunks:
             self._remaining()
-            self._bytes += len(chunk)
-            if self._bytes > self.bounds.total_bytes:
-                raise SourceLimitError("Exceeded total source bytes")
+            if self.budget is not None:
+                self.budget.charge("total_bytes", len(chunk))
+            with self._lock:
+                self._bytes += len(chunk)
+                if self._bytes > self.bounds.total_bytes:
+                    raise SourceLimitError("Exceeded total source bytes")
             if len(result) + len(chunk) > self.bounds.response_bytes:
                 raise SourceLimitError("Exceeded source response bytes")
             result.extend(chunk)
@@ -198,10 +231,21 @@ class EiaSource:
         failures: list[str] = []
         for attempt in range(1, self.bounds.attempts + 1):
             self._remaining()
-            self._requests += 1
-            if self._requests > self.bounds.requests:
-                raise SourceLimitError("Exceeded source requests")
+            if self.budget is not None:
+                self.budget.charge("requests", 1)
+            with self._lock:
+                self._requests += 1
+                if self._requests > self.bounds.requests:
+                    raise SourceLimitError("Exceeded source requests")
             timeout = min(self.bounds.timeout_seconds, self._remaining())
+            _LOG.info(
+                "eia_request run=%s route=%s kind=%s offset=%s attempt=%d",
+                self.request.run_id,
+                self.request.route,
+                "page" if parameters else "metadata",
+                parameters.get("offset", "none"),
+                attempt,
+            )
             wire = httpx.Request(
                 "GET",
                 _BASE + path,
@@ -245,6 +289,13 @@ class EiaSource:
                 failures.append(f"http_{status}")
             if attempt == self.bounds.attempts:
                 raise SourceLimitError("Exceeded source attempts") from None
+            _LOG.warning(
+                "eia_retry run=%s route=%s attempt=%d reason=%s",
+                self.request.run_id,
+                self.request.route,
+                attempt,
+                failures[-1],
+            )
             self._delay(attempt, retry_after)
         raise AssertionError("Positive attempt bound required")
 
@@ -306,6 +357,11 @@ class EiaSource:
                 self._identity(), self._now(), attempt, saved, paths
             )
             self._metadata = metadata
+            _LOG.info(
+                "eia_metadata_verified run=%s route=%s",
+                self.request.run_id,
+                self.request.route,
+            )
             return metadata
         except SourceError:
             self._failed = True
@@ -389,16 +445,25 @@ class EiaSource:
             self._quality = None
             raise
 
-    def _fetch_page(self, page: PageRequest) -> SanitizedPage:
+    def _fetch_page(
+        self,
+        page: PageRequest,
+        fetched: _Fetched | None = None,
+        transport: tuple[object, ...] = (),
+    ) -> SanitizedPage:
         self._active()
         if page.offset != self._position or page.page_index != self._page_index:
             raise SourceError("Nonsequential source page request")
         if self._page_index >= self.bounds.pages:
             raise SourceLimitError("Exceeded source pages")
+        if fetched is None and self.budget is not None:
+            self.budget.charge("pages", 1)
         metadata = self.fetch_metadata()
         parameters = self._parameters(page)
-        envelope, attempt, failures, paths = self._get(
-            self.request.route + "/data/", parameters
+        envelope, attempt, failures, paths = (
+            self._get(self.request.route + "/data/", parameters)
+            if fetched is None
+            else fetched.result
         )
         response, version = self._envelope(envelope)
         values, total = response.get("data"), response.get("total")
@@ -418,33 +483,14 @@ class EiaSource:
             or self._position + len(values) > self.bounds.rows
         ):
             raise SourceLimitError("Exceeded source rows")
+        if fetched is None and self.budget is not None:
+            self.budget.charge("rows", len(values))
         digest = hashlib.sha256(_encoded(values)).hexdigest()
         if values and digest in self._digests:
             raise SourceError("Repeated source page payload")
         self._digests.add(digest)
-        # Paths use positional object indices, so even a credential in a key
-        # cannot leak through path diagnostics. Every modified observation gets
-        # an unexpected attribute: the existing contract excludes it explicitly.
-        response_index = list(envelope).index("response")
-        data_index = list(response).index("data")
-        prefix = f"$/@{response_index}/value/@{data_index}/value/"
-        for index, value in enumerate(values):
-            row_prefix = prefix + str(index)
-            row_paths = [
-                path
-                for path in paths
-                if path == row_prefix or path.startswith(row_prefix + "/")
-            ]
-            if row_paths:
-                if isinstance(value, dict):
-                    if "_source_redacted_paths" in value:
-                        raise SourceError("Reserved source redaction marker")
-                    value["_source_redacted_paths"] = row_paths
-                else:
-                    values[index] = {
-                        "_source_redacted_paths": row_paths,
-                        "_source_redacted_value": value,
-                    }
+        if fetched is None:
+            self._mark_rows(envelope, paths)
         self._observe(values)
         self._totals.append(total)
         quality = None
@@ -477,9 +523,9 @@ class EiaSource:
             self.request.grain,
             self.request.run_id,
             self.request.retrieval_id,
+            self._identity() if fetched is None else fetched.request_id,
             self._identity(),
-            self._identity(),
-            self._now(),
+            self._now() if fetched is None else fetched.received_at,
             page.page_index,
             0,
             page.offset,
@@ -499,6 +545,7 @@ class EiaSource:
             saved_metadata,
             version,
             tuple(values),
+            transport,
         )
         self._count_output(
             {"parameters": parameters, "metadata": saved_metadata, "values": values}
@@ -506,8 +553,148 @@ class EiaSource:
         self._position += len(values)
         self._page_index += 1
         self._quality = quality
+        _LOG.info(
+            "eia_page_collected run=%s route=%s page=%d offset=%d rows=%d terminal=%s",
+            self.request.run_id,
+            self.request.route,
+            page.page_index,
+            page.offset,
+            len(values),
+            quality is not None,
+        )
+        if quality is not None:
+            _LOG.info(
+                "eia_route_complete run=%s route=%s received=%d total_mismatch=%s total_changed=%s",
+                self.request.run_id,
+                self.request.route,
+                quality.received,
+                quality.count_mismatch,
+                quality.totals_changed,
+            )
         return result
 
+    def _mark_rows(self, envelope: dict[str, object], paths: tuple[str, ...]) -> None:
+        response = envelope["response"]
+        assert isinstance(response, dict)
+        values = response["data"]
+        assert isinstance(values, list)
+        # Paths use positional object indices, so even a credential in a key
+        # cannot leak through path diagnostics. Every modified observation gets
+        # an unexpected attribute: the existing contract excludes it explicitly.
+        response_index = list(envelope).index("response")
+        data_index = list(response).index("data")
+        prefix = f"$/@{response_index}/value/@{data_index}/value/"
+        for index, value in enumerate(values):
+            row_prefix = prefix + str(index)
+            row_paths = [
+                path
+                for path in paths
+                if path == row_prefix or path.startswith(row_prefix + "/")
+            ]
+            if row_paths:
+                if isinstance(value, dict):
+                    if "_source_redacted_paths" in value:
+                        raise SourceError("Reserved source redaction marker")
+                    value["_source_redacted_paths"] = row_paths
+                else:
+                    values[index] = {
+                        "_source_redacted_paths": row_paths,
+                        "_source_redacted_value": value,
+                    }
+
+    def _prefetch(self, page: PageRequest) -> _Fetched:
+        with self._lock:
+            if self._fetch_count >= self.bounds.pages:
+                raise SourceLimitError("Exceeded source pages including lookahead")
+            self._fetch_count += 1
+        if self.budget is not None:
+            self.budget.charge("pages", 1)
+        parameters = self._parameters(page)
+        request_id = self._identity()
+        result = self._get(self.request.route + "/data/", parameters)
+        envelope, _, _, _ = result
+        response, _ = self._envelope(envelope)
+        values, total = response.get("data"), response.get("total")
+        if (
+            not isinstance(values, list)
+            or not isinstance(total, str)
+            or not total
+            or not total.isascii()
+            or not total.isdecimal()
+            or response.get("frequency") != "daily"
+            or ("id" in response and response["id"] != self.request.route)
+            or ("offset" in response and str(response["offset"]) != str(page.offset))
+        ):
+            raise SourceError("Unusable prefetched source page envelope")
+        if len(values) > self.bounds.page_rows:
+            raise SourceLimitError("Exceeded prefetched page rows")
+        with self._lock:
+            self._fetched_rows += len(values)
+            if self._fetched_rows > self.bounds.rows:
+                raise SourceLimitError("Exceeded fetched rows including lookahead")
+        if self.budget is not None:
+            self.budget.charge("rows", len(values))
+        self._mark_rows(envelope, result[3])
+        return _Fetched(page.offset, parameters, result, request_id, self._now())
+
     def pages(self) -> Iterator[SanitizedPage]:
-        while self._quality is None:
-            yield self.fetch_page(PageRequest(self._position, self._page_index))
+        if self._page_workers.workers == 1:
+            while self._quality is None:
+                yield self.fetch_page(PageRequest(self._position, self._page_index))
+            return
+        try:
+            self.fetch_metadata()
+            while self._quality is None:
+                self._active()
+                # A bounded window is joined before any canonical evidence yield.
+                window = self._page_workers.run(
+                    partial(
+                        self._prefetch,
+                        PageRequest(
+                            self._position + index * self.bounds.page_rows,
+                            self._page_index + index,
+                        ),
+                    )
+                    for index in range(self._page_workers.workers)
+                )
+                used = []
+                for response in window:
+                    used.append(response.offset)
+                    envelope = response.result[0]
+                    data = envelope["response"]
+                    assert isinstance(data, dict)
+                    values = data["data"]
+                    assert isinstance(values, list)
+                    if len(values) < self.bounds.page_rows:
+                        break
+                audit = tuple(
+                    {
+                        "version": 1,
+                        "offset": response.offset,
+                        "parameters": response.parameters,
+                        "request_id": response.request_id,
+                        "received_at": response.received_at.isoformat(),
+                        "attempt": response.result[1],
+                        "failures": list(response.result[2]),
+                        "redacted_paths": list(response.result[3]),
+                        "envelope": response.result[0],
+                        "used": response.offset in used,
+                    }
+                    for response in window
+                )
+                # Charge supplemental output, even when it cannot become modeled rows.
+                for item in audit:
+                    self._count_output(item)
+                for index, response in enumerate(window):
+                    if response.offset not in used:
+                        continue
+                    yield self._fetch_page(
+                        PageRequest(self._position, self._page_index),
+                        response,
+                        audit if index == 0 else (),
+                    )
+        except BaseException:
+            self._page_workers.cancelled.set()
+            self._failed = True
+            self._quality = None
+            raise

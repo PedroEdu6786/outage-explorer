@@ -61,3 +61,28 @@ class ArtifactStore(Protocol):
     def read(self, reference: StoredObject) -> Iterator[bytes]: ...
 
     def verify(self, reference: StoredObject) -> None: ...
+
+
+@dataclass(frozen=True)
+class TransferBounds:
+    """Network transfer caps, including retries and verification reads."""
+
+    attempts: int = 3
+    elapsed_seconds: int = 1_800
+    timeout_seconds: int = 10
+    wire_bytes: int = 1_600_000_000
+    chunk_bytes: int = 65536
+    requests: int = 100_000
+    temporary_bytes: int = 100_000_000
+
+    def __post_init__(self) -> None:
+        if any(type(value) is not int or value <= 0 for value in vars(self).values()):
+            raise ValueError("Transfer bounds must be positive integers")
+
+
+class ExactArtifactStore(Protocol):
+    """Application-generated identities, scoped to configured storage only."""
+
+    def put_exact(self, reference: StoredObject, chunks: Iterable[bytes]) -> None: ...
+
+    def read(self, reference: StoredObject) -> Iterator[bytes]: ...

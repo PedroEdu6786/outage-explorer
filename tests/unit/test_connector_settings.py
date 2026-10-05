@@ -34,10 +34,10 @@ def settings(config_path=None, **changes):
 
 def test_only_credentials_required_for_typed_defaults():
     value = settings()
-    assert value.source.interval_days == 30
-    assert value.source.page_rows == 2
-    assert value.artifact.total_bytes == 100_000_000
-    assert value.model.output_rows == 10_000
+    assert value.source.interval_days == 183
+    assert value.source.page_rows == 500
+    assert value.artifact.total_bytes == 256_000_000
+    assert value.model.output_rows == 30_000
     assert value.report_bytes == 1_000_000
     with pytest.raises(FrozenInstanceError):
         value.source.rows = 1
@@ -65,19 +65,29 @@ def test_partial_file_overrides_keep_other_defaults_and_do_not_mutate_them(confi
         )
     )
     value = settings(config_path)
-    assert value.source.page_rows == 10 and value.source.rows == 10_000
+    assert value.source.page_rows == 10 and value.source.rows == 30_000
     assert value.artifact.batch_rows == 5 and value.artifact.objects == 10_000
-    assert value.model.interval_days == 7 and value.model.output_rows == 10_000
+    assert value.model.interval_days == 7 and value.model.output_rows == 30_000
     assert value.report_bytes == 2_000_000
-    assert settings().source.page_rows == 2
+    assert settings().source.page_rows == 500
 
 
-@pytest.mark.parametrize(
-    "document", [{}, {"source": {}, "artifact": {}, "model": {}}, configuration()]
-)
+@pytest.mark.parametrize("document", [{}, {"source": {}, "artifact": {}, "model": {}}])
 def test_empty_or_complete_file_is_supported(config_path, document):
     config_path.write_text(json.dumps(document))
     assert settings(config_path) == settings()
+
+
+def test_explicit_small_profile_keeps_its_limits(config_path):
+    profile = configuration()
+    config_path.write_text(json.dumps(profile))
+    value = settings(config_path)
+    assert value.source.interval_days == 30
+    assert value.source.page_rows == 2
+    assert value.source.elapsed_seconds == 60
+    assert value.artifact.total_bytes == 100_000_000
+    assert value.model.interval_days == 30
+    assert value.model.output_rows == 10_000
 
 
 def test_file_run_arguments_and_explicit_flag_precedence(config_path):
@@ -259,3 +269,63 @@ def test_secret_not_in_settings_representation_or_errors():
     with pytest.raises(ValueError) as error:
         settings(staging=SECRET)
     assert SECRET not in str(error.value)
+
+
+def test_default_interval_overrun_still_fails_before_construction(tmp_path):
+    wire = Mock()
+    root = tmp_path / "never-created"
+    with (
+        patch(
+            "outage_explorer.bootstrap.LocalParquetStore",
+            side_effect=AssertionError("storage"),
+        ),
+        patch(
+            "outage_explorer.bootstrap.httpx.HTTPTransport",
+            side_effect=AssertionError("transport"),
+        ),
+        pytest.raises(ConnectorConfigurationError),
+    ):
+        execute_connector(
+            ConnectorInput("2026-04-02", "2026-10-02", str(root)),
+            environment=environment(),
+            transport=wire,
+        )
+    wire.close.assert_called_once()
+    assert not root.exists()
+
+
+@pytest.mark.parametrize("field", ["endpoint_workers", "s3_workers"])
+@pytest.mark.parametrize("value", [0, -1, 4, True, "3"])
+def test_worker_counts_fail_closed(config_path, field, value):
+    config_path.write_text(json.dumps({"workers": {field: value}}))
+    with pytest.raises(ValueError, match="Invalid connector configuration"):
+        settings(config_path)
+
+
+def test_sequential_defaults_and_independent_worker_overrides(config_path):
+    default = settings()
+    assert default.workers.endpoint_workers == default.workers.s3_workers == 1
+    config_path.write_text(
+        json.dumps({"workers": {"endpoint_workers": 3, "s3_workers": 2}})
+    )
+    configured = settings(config_path)
+    assert configured.workers.endpoint_workers == 3
+    assert configured.workers.s3_workers == 2
+
+
+def test_explicit_fetch_and_transfer_counts_override_json(config_path):
+    config_path.write_text(
+        json.dumps({"workers": {"page_workers": 1, "s3_workers": 1}})
+    )
+    value = connector_settings(
+        "2026-09-01", "2026-09-02", "local", None, environment(), str(config_path), 3, 2
+    )
+    assert value.workers.page_workers == 3 and value.workers.s3_workers == 2
+    assert value.workers.endpoint_workers == 1
+
+
+@pytest.mark.parametrize("count", [0, 4, True, "3"])
+def test_invalid_page_worker_count_rejected_before_storage(config_path, count):
+    config_path.write_text(json.dumps({"workers": {"page_workers": count}}))
+    with pytest.raises(ValueError):
+        settings(config_path)

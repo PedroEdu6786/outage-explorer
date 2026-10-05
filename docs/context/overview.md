@@ -247,10 +247,11 @@ do not infer a choice from the epic list.
 
 ### Authentication and browsing refinement
 
-ADR-0017 retains OAuth2 and removes required OIDC. Granular RBAC/ABAC with
-applicable row/column policies remains required. ADR-0018 selects Cognito
+ADR-0017 retains OAuth2 and removes required OIDC. ADR-0043 narrows authorization to
+role-based access with seeded users; registration, Admin user management and
+separate read/write/delete permissions are excluded. ADR-0018 selects Cognito
 managed login and OAuth2 Authorization Code with PKCE; exact client setup,
-identity/session mapping and concrete restrictions remain open. Seeded personas retain local operational records. The accepted experience
+identity/session mapping, essential user fields remain open; each user has exactly one role (ADR-0044). Seeded personas retain local operational records. The accepted experience
 uses one-hour application sessions, re-login on expiry, no automatic renewal
 initially and current-session logout. ADR-0015 accepts preview pages of 100 rows
 by default (initial configurable maximum 500), snapshot-bound cursors and a
@@ -258,8 +259,8 @@ fixed 15-minute browsing expiry. Cognito handles login and OAuth2 token issuance
 implementation exists yet.
 
 ADR-0016 confirms application-owned authorization tables: identity comes from
-the selected sign-in mechanism, while all product roles, permissions and policy attributes are controlled
-by our operational database. Concrete row/column restrictions remain open.
+the selected sign-in mechanism, while seeded local users, roles and assignments are controlled
+by our operational database. ADR-0043 supersedes the earlier granular-policy scope.
 
 ## Facility and generator verification
 

@@ -5,6 +5,33 @@ The liveness endpoint and import-boundary checks exercise initial composition.
 Product use cases, runtime, storage, and execution mechanisms retain their
 explicit accepted/proposed status and are not proven by liveness.
 
+The product HTTP refresh action uses a configured inclusive interval under
+[ADR-0051](../adr/0051-configured-http-refresh-range.md), with no request date
+overrides. Admission records that interval for the complete all-grain background
+run; later configuration changes cannot change it. Initial-load policy and CLI
+date overrides remain unchanged. The [data API contract](../specs/data-api/http-contract.md)
+records proposed transport details; product HTTP implementation remains pending.
+
+User-access Phases 1–4 implement PostgreSQL users/roles, fixed sessions and
+single-use browser-bound login attempts, explicit migrations, controlled seeding,
+Cognito code exchange/access-token verification and current-session logout.
+Controlled provider and disposable PostgreSQL checks verify identity binding,
+current role lookup, immutable one-hour expiry, replay denial and committed
+invalidation. Pure role policy and an application authorization seam now cover Viewer national-only,
+Analyst/Admin all-grain and Admin-only refresh initiation/outcome/diagnostics.
+Downstream spies verify fresh authorization before direct and later-page work;
+Opt-in HTTP login/callback/session/logout composition now has host-only fixed-expiry
+cookies, application-owned CSRF, exact origin/CORS checks and sanitized errors.
+Configured construction is inert; process resources have explicit cleanup and
+health remains dependency-independent. Actual analytical/refresh use cases,
+configured-provider readiness and real browser reopening remain later work;
+no live users or RDS schema were provisioned. See the
+[Phase 2](../specs/user-access/tasks/phase-2.md) and
+[Phase 3](../specs/user-access/tasks/phase-3.md) and
+[Phase 4 checkpoints](../specs/user-access/tasks/phase-4.md), plus the
+[HTTP contract](../specs/user-access/http-contract.md); ADR-0046/0047 remain
+proposed integration/tooling records.
+
 Connector implementation has started with pure, bounded per-grain modeling,
 provenance-preserving merge and quality accounting in `domain/refresh.py`.
 The local Parquet adapters now write/replay raw evidence, build date-partitioned
@@ -18,6 +45,10 @@ verify all inherited local dependencies before retrieval; successful candidates
 are reopened before the final report. Typed budget defaults accept optional
 `--config` JSON overrides; run flags override file values and the EIA key stays
 environment-only ([ADR-0041](../adr/0041-connector-defaults-and-json-configuration.md)).
+[ADR-0048](../adr/0048-initial-interval-connector-defaults.md) increases bounded
+contributor defaults to admit the 183-day initial interval with a 1,800-second
+candidate budget and separate 1,800-second S3 transfer/replay budget. Full initial
+verification and measured production limits remain open.
 Configuration is validated before staging/transport construction and bootstrap
 owns transport cleanup. Imports, help and HTTP construction start no
 connector work. These local results never activate a generation. Live retrieval
@@ -109,12 +140,14 @@ one analytical query at a time initially, retryable busy responses, a 10-second
 execution timeout and 1,000-row / 1-MiB results with explicit truncation.
 Memory/disk sizes and the separate preparation deadline require measurement.
 
-The user has confirmed seeded database accounts and broad read-only analytical
-SQL, including joins, CTEs, subqueries, aggregations, and window functions.
-OAuth2 and granular authorization remain required; ADR-0017 removes required
+The user requires seeded database accounts; provisioning is not yet verified.
+Accepted analytical SQL includes joins, CTEs, subqueries, aggregations, and
+window functions.
+OAuth2 and role-based authorization remain required; ADR-0043 excludes granular
+permissions, registration and Admin user management for current implementation; ADR-0017 removes required
 OIDC. ADR-0018 selects Cognito User Pools with managed login and OAuth2
 Authorization Code with PKCE. Setup is user-confirmed complete; token/session mapping and
-concrete row/column policies remain open. ADR-0012 targets broad DuckDB analytical features, with evidence-led exclusions.
+essential user fields remain open; each user has exactly one role (ADR-0044). ADR-0012 targets broad DuckDB analytical features, with evidence-led exclusions.
 Engine version, reference authorization and execution boundaries need verification.
 
 ADR-0020 supersedes ADR-0019: paginate the result of one SQL execution without
@@ -236,7 +269,7 @@ ADR-0015 accepts preview pages of 100 rows by default (initial maximum 500),
 with snapshot-bound cursors expiring 15 minutes after the first page.
 
 ADR-0016 makes our PostgreSQL authorization tables authoritative for roles,
-permissions and policy attributes. The selected sign-in mechanism supplies verified identity; external
+seeded users and role assignments under ADR-0043. The selected sign-in mechanism supplies verified identity; external
 groups/roles do not independently confer product data access. ADR-0017 removes
 the earlier OIDC-specific identity assumptions.
 
@@ -245,3 +278,38 @@ and token issuance; the Flask identity adapter validates access tokens, binds is
 local users and applies PostgreSQL authorization tables. Configure seeded Cognito
 accounts with public registration disabled. Application logout enforcement
 and concrete OAuth client/session integration remain design work (ADR-0018).
+
+Connector Phase 5 now implements configured S3 persistence and fresh local
+recovery of complete immutable contributor graphs, including inherited evidence
+and ancestor manifests. Controlled SDK/Parquet tests verify integrity and replay;
+configured-bucket and deployed-role checks remain separate authorized work.
+The returned exact manifest receipt does not activate a backend generation or
+persist refresh outcomes. Under [ADR-0042](../adr/0042-connector-cli-default-s3-persistence.md),
+the default connector CLI now composes local candidate creation and complete S3
+persistence/readback verification. `--local-only` preserves AWS-independent
+creation. S3 configuration is checked before EIA; persistence failures preserve
+local artifacts and return a failed durable outcome for explicit retry.
+
+
+Phase 6 implements injected bounded scheduling in `application/ports/connector_workers.py`
+and `infrastructure/connector_workers.py`. Canonical endpoint page consumption remains ordered;
+independent collection/evidence and S3 dependency PUT/GET operations can overlap
+with separately configurable 1–3 workers (sequential defaults). Application
+coordinators own reports, deterministic combined models/manifests and receipts.
+Source/store/SDK accounting is shared; failure stops admission and joins workers.
+Cooperative storage checks cover cancellation/deadlines during repeated replay.
+Controlled overlap/equivalence and configured-bucket inherited reconstruction
+passed. All six connector phases are complete: the full initial live candidate
+and its exact configured-S3 source-disabled reconstruction verified successfully.
+Earlier interrupted attempts remain historical evidence. Product authorization,
+activation and operational outcomes remain separate backend obligations. See [resource evidence](../specs/data-connector/resource-evidence.md).
+
+
+ADR-0049 adds independently configured1–3 page fetch workers within a route.
+Bounded speculative windows preserve every sanitized response as an immutable
+transport JSON dependency, including unused lookahead; canonical raw/page
+Parquet keeps received-count offsets and one terminal. Exact graph export,
+recovery and bounded-window replay verify those dependencies and their canonical
+raw values. CLI/Make fetch/S3 overrides win JSON, with endpoint default1 unchanged.
+Shared source bounds count all fetched rows/pages, including unused lookahead;
+logical admission includes endpoint*page buffers. Modeling stays coordinated.

@@ -11,12 +11,17 @@ class ConnectorConfigurationError(ValueError):
     """Invalid explicit configuration; messages contain no supplied values."""
 
 
+class ConnectorDependencyError(Exception):
+    """AWS SDK login support is missing; never exposes SDK exception text."""
+
+
 class ConnectorReportError(Exception):
     """Progress or final report could not be persisted within its bounds."""
 
 
 ConnectorFailure = Literal[
     "configuration",
+    "aws_dependency",
     "prior_integrity",
     "retrieval",
     "resource",
@@ -27,3 +32,31 @@ ConnectorFailure = Literal[
     "interrupted",
     "internal",
 ]
+
+
+class AccessConfigurationError(ValueError):
+    """Invalid setup/input; never includes supplied credentials or values."""
+
+
+class AccessStoreError(Exception):
+    """Operational store unavailable; callers must fail closed."""
+
+
+class SeedConflictError(Exception):
+    """Existing provisioned identity differs; transaction was rolled back."""
+
+
+class UnauthenticatedError(Exception):
+    """Missing or invalid verified identity/session."""
+
+
+class ForbiddenError(Exception):
+    """Recognized identity lacks the required role."""
+
+
+class LoginAttemptLimitError(Exception):
+    """Transient login admission bound reached."""
+
+
+class InvalidRequestError(ValueError):
+    """Invalid transport input; contains no supplied values."""

@@ -8,9 +8,10 @@ version = "0.1.0"
 description = "Layered Flask backend for exploring U.S. nuclear outage data"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = ["Flask>=3.1,<4", "python-dotenv>=1.1,<2", "pyarrow==25.0.1", "httpx==0.28.1"]
+dependencies = ["Flask>=3.1,<4", "python-dotenv>=1.1,<2", "pyarrow==25.0.1", "httpx==0.28.1", "boto3[crt]==1.43.108", "psycopg[binary,pool]==3.3.6", "alembic==1.20.0", "SQLAlchemy==2.1.3", "Authlib==1.8.0", "PyJWT==2.15.1", "cryptography==50.0.2"]
 
 [project.scripts]
+access-setup = "outage_explorer.entrypoints.cli.access_startup:main"
 build-connector-candidate = "outage_explorer.entrypoints.cli.connector_startup:main"
 verify-national-data = "outage_explorer.entrypoints.cli.startup:main"
 verify-facility-data = "outage_explorer.entrypoints.cli.facility_startup:main"
@@ -35,6 +36,8 @@ extend-exclude = ["scripts/devlog_hook.py", "tests/test_devlog_hook.py"]
 select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
 
 [tool.mypy]
+# Alembic dynamically loads these scripts; avoid a namespace collision with migrations.py.
+exclude = ["infrastructure/postgresql/migrations/"]
 python_version = "3.12"
 files = ["src/outage_explorer"]
 strict = true

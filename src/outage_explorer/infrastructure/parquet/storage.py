@@ -6,10 +6,11 @@ import math
 import os
 import re
 import tempfile
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
+from threading import RLock
 from typing import Any, cast
 
 import pyarrow as pa  # type: ignore[import-untyped]
@@ -85,14 +86,22 @@ class _LimitedBuffer(io.BytesIO):
 class LocalParquetStore:
     """An explicitly bounded write session; limits are not production defaults."""
 
-    def __init__(self, root: Path, bounds: ArtifactBounds) -> None:
+    def __init__(
+        self,
+        root: Path,
+        bounds: ArtifactBounds,
+        check: Callable[[], None] | None = None,
+    ) -> None:
+        self.check: Callable[[], None] = (lambda: None) if check is None else check
         self.root = root
         self.bounds = bounds
+        self._lock = RLock()
         self._bytes = 0
         self._objects: set[str] = set()
         root.mkdir(parents=True, exist_ok=True)
 
     def _path(self, reference: StoredObject) -> Path:
+        self.check()
         if (
             not re.fullmatch(r"[0-9a-f]{64}", reference.key)
             or reference.sha256 != reference.key
@@ -111,6 +120,7 @@ class LocalParquetStore:
     def put_immutable(self, chunks: Iterable[bytes]) -> StoredObject:
         data = _LimitedBuffer(self.bounds.file_bytes)
         for chunk in chunks:
+            self.check()
             if not isinstance(chunk, bytes):
                 raise ArtifactError("Object chunks must be bytes")
             data.write(chunk)
@@ -120,33 +130,34 @@ class LocalParquetStore:
         digest = hashlib.sha256(payload).hexdigest()
         reference = StoredObject(digest, digest, len(payload))
         path = self._path(reference)
-        if digest not in self._objects:
-            if len(self._objects) >= self.bounds.objects:
-                raise ArtifactLimitError("Exceeded object count")
-            if self._bytes + len(payload) > self.bounds.total_bytes:
-                raise ArtifactLimitError("Exceeded total bytes")
-            temporary: Path | None = None
-            try:
-                with tempfile.NamedTemporaryFile(
-                    dir=self.root, prefix=".staging-", delete=False
-                ) as target:
-                    temporary = Path(target.name)
-                    target.write(payload)
-                    target.flush()
-                    os.fsync(target.fileno())
+        with self._lock:
+            if digest not in self._objects:
+                if len(self._objects) >= self.bounds.objects:
+                    raise ArtifactLimitError("Exceeded object count")
+                if self._bytes + len(payload) > self.bounds.total_bytes:
+                    raise ArtifactLimitError("Exceeded total bytes")
+                temporary: Path | None = None
                 try:
-                    os.link(temporary, path)
-                except FileExistsError:
-                    self.verify_object(reference)
-            except OSError as exc:
-                raise ArtifactError("Cannot persist immutable object") from exc
-            finally:
-                if temporary is not None:
-                    temporary.unlink(missing_ok=True)
-            self._objects.add(digest)
-            self._bytes += len(payload)
-        else:
-            self.verify_object(reference)
+                    with tempfile.NamedTemporaryFile(
+                        dir=self.root, prefix=".staging-", delete=False
+                    ) as target:
+                        temporary = Path(target.name)
+                        target.write(payload)
+                        target.flush()
+                        os.fsync(target.fileno())
+                    try:
+                        os.link(temporary, path)
+                    except FileExistsError:
+                        self.verify_object(reference)
+                except OSError as exc:
+                    raise ArtifactError("Cannot persist immutable object") from exc
+                finally:
+                    if temporary is not None:
+                        temporary.unlink(missing_ok=True)
+                self._objects.add(digest)
+                self._bytes += len(payload)
+            else:
+                self.verify_object(reference)
         return reference
 
     def verify_object(self, reference: StoredObject) -> None:
@@ -171,6 +182,7 @@ class LocalParquetStore:
         self.verify_object(reference)
         with self._path(reference).open("rb") as source:
             while chunk := source.read(min(65536, self.bounds.file_bytes)):
+                self.check()
                 yield chunk
 
     def write(
@@ -185,6 +197,7 @@ class LocalParquetStore:
         batch_bytes = 0
         refs: list[ArtifactRef] = []
         for record in rows:
+            self.check()
             size = value_size(record, self.bounds)
             if size > self.bounds.row_group_bytes:
                 raise ArtifactLimitError("Exceeded row-group bytes")
@@ -276,6 +289,7 @@ class LocalParquetStore:
                 ):
                     if batch.nbytes > self.bounds.row_group_bytes:
                         raise ArtifactLimitError("Decoded batch exceeds bytes")
+                    self.check()
                     for record in batch.to_pylist():
                         value_size(record, self.bounds)
                     count += batch.num_rows
@@ -291,4 +305,5 @@ class LocalParquetStore:
             for batch in source.iter_batches(
                 batch_size=self.bounds.batch_rows, use_threads=False
             ):
+                self.check()
                 yield from cast(list[dict[str, object]], batch.to_pylist())

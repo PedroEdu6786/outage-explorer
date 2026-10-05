@@ -25,16 +25,30 @@ if __name__ == "__main__":
     raise SystemExit(main())
 """
 CONNECTOR_STARTUP_SOURCE = """
-from outage_explorer.bootstrap import execute_connector
+from outage_explorer.bootstrap import execute_connector, execute_connector_artifacts, execute_connector_to_s3
 from outage_explorer.entrypoints.cli.connector import run
 
 def main() -> int:
-    return run(execute_connector)
+    return run(execute_connector, execute_artifacts=execute_connector_artifacts, execute_durable=execute_connector_to_s3)
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+"""
+ACCESS_STARTUP_SOURCE = """
+from outage_explorer.bootstrap import execute_access_setup
+from outage_explorer.entrypoints.cli.access_setup import run
+
+def main() -> int:
+    return run(execute_access_setup)
 
 if __name__ == "__main__":
     raise SystemExit(main())
 """
 CLI_WRAPPERS = {
+    f"{ROOT}.entrypoints.cli.access_startup": (
+        "execute_access_setup",
+        ACCESS_STARTUP_SOURCE,
+    ),
     f"{ROOT}.entrypoints.cli.connector_startup": (
         "execute_connector",
         CONNECTOR_STARTUP_SOURCE,
@@ -121,9 +135,16 @@ def allowed_dependency(source: str, target: str) -> bool:
         return False  # Startup must never become a service locator or re-export.
     if source == STARTUP and target == f"{ROOT}.bootstrap.build_http_app":
         return True  # Its entire AST is separately constrained to forwarding.
-    if (
-        source in CLI_WRAPPERS
-        and target == f"{ROOT}.bootstrap.{CLI_WRAPPERS[source][0]}"
+    if source in CLI_WRAPPERS and (
+        target == f"{ROOT}.bootstrap.{CLI_WRAPPERS[source][0]}"
+        or (
+            source == f"{ROOT}.entrypoints.cli.connector_startup"
+            and target
+            in {
+                f"{ROOT}.bootstrap.execute_connector_artifacts",
+                f"{ROOT}.bootstrap.execute_connector_to_s3",
+            }
+        )
     ):
         return True
     layer = source.removeprefix(ROOT + ".").split(".")[0]
@@ -142,10 +163,21 @@ def allowed_dependency(source: str, target: str) -> bool:
         # Add reviewed transport dependencies here as new entry points arrive.
         transport = (
             {"argparse", "sys"}
+            | ({"logging"} if source == f"{ROOT}.entrypoints.cli.connector" else set())
             if source
-            in {f"{ROOT}.entrypoints.cli.command", f"{ROOT}.entrypoints.cli.connector"}
+            in {
+                f"{ROOT}.entrypoints.cli.command",
+                f"{ROOT}.entrypoints.cli.connector",
+                f"{ROOT}.entrypoints.cli.access_setup",
+            }
             else set()
         )
+        if source == f"{ROOT}.entrypoints.cli.access_setup":
+            transport |= {"json", "pathlib"}
+        if source == f"{ROOT}.entrypoints.http.auth_transport":
+            transport |= {"logging"}
+        if source == f"{ROOT}.entrypoints.http.errors":
+            transport |= {"werkzeug"}
         return external in PURE_IMPORTS | {"flask"} | transport
     return layer in {"infrastructure", "settings"}
 

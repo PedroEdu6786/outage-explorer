@@ -146,7 +146,7 @@ def test_initial_requires_usable_output_for_every_grain(tmp_path, grain, unusabl
         ("model_budget", "resource"),
         ("representation", "representation"),
         ("interrupted", "interrupted"),
-        ("write", "artifact_integrity"),
+        ("write", "prior_integrity"),
         ("report", "report"),
     ],
 )
@@ -260,8 +260,7 @@ def test_interrupted_immutable_link_leaves_prior_readable_and_no_final_success(
     ):
         result, _ = execute(tmp_path, prior=reference)
     assert (
-        result.report.error == "artifact_integrity"
-        and result.report.outcome == "failed"
+        result.report.error == "prior_integrity" and result.report.outcome == "failed"
     )
     assert result.report_written
     assert not list((tmp_path / "objects").glob(".staging-*"))

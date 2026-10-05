@@ -1,5 +1,5 @@
 # Plan: EIA data connector
-> Status: draft · Slug: data-connector · Spec: ./spec.md
+> Status: six connector phases implemented and verified; backend portions deferred · Slug: data-connector · Spec: ./spec.md
 
 ## Approach
 
@@ -219,6 +219,13 @@ separately from active counts when no publication occurs. (FR16; AC15)
   expose evidence writing, manifest loading and reporting without infrastructure
   imports; existing source and candidate contracts remain reusable.
 - The thin CLI takes dates, staging, an optional prior and optional `--config PATH`.
+  Under [ADR-0042](../../adr/0042-connector-cli-default-s3-persistence.md), default
+  candidate execution composes local creation with complete S3 persistence and
+  verified readback; `--local-only` is the AWS-independent opt-out. S3 target
+  configuration is checked before source work. Failed persistence retains the
+  local reference/report for explicit retry and returns a nonzero durable result.
+  `CreateDurableConnectorCandidate` owns that orchestration through injected
+  application use cases; bootstrap wires `execute_connector_to_s3`.
   Typed defaults supply bounds; the JSON file overrides individual fields and may
   supply run arguments. Explicit run flags win over file values. The EIA key stays
   environment-only; `OUTAGE_CONNECTOR_*` variables are no longer read. Unknown or
@@ -256,6 +263,75 @@ progress/final reports. Exact prior references use `SHA256:BYTE_COUNT`; no activ
 pointer exists. HTTP transport cleanup and help/import inactivity have controlled
 tests. The [phase-4 checkpoint](tasks/phase-4.md) records actual checks and limits;
 local evidence does not close full-spec publication or live acceptance criteria.
+
+[ADR-0048](../../adr/0048-initial-interval-connector-defaults.md) revises contributor
+defaults to admit the 183-day initial interval without a configuration profile:
+500-row pages, 30,000 source/model rows, a 1,800-second candidate budget,
+256-MB artifact storage and 256/600-MB logical buffer/staging admission. S3 has
+a separate 1,800-second budget, 10-second timeouts and 1.6-GB attempted wire cap.
+Sequential defaults and optional explicit JSON limits remain. Full-interval
+completion under these allowances remains unverified; T6.4/T6.C stay open.
+
+### Bounded endpoint concurrency — implemented controlled Phase 6 (TR11; AC19)
+
+Measure the existing sequential pipeline first, then support one to three
+endpoint workers for national, facility and generator retrieval/evidence
+processing. Each endpoint retains canonical pagination and recorded source
+positions. Independent per-grain modeling may overlap where measured budgets
+support it; thread/process placement follows the baseline rather than a guessed
+CPU speedup. This stays inside the layered monolith, without new services or a
+broker. Configuration follows typed defaults/optional JSON overrides (ADR-0041).
+Sequential execution remains available for baseline comparison and troubleshooting.
+
+A coordinator owns aggregate resource accounting, reports, worker cleanup and
+one combined candidate manifest. Worker transports/staging have explicit safe
+ownership; the current shared mutable adapters cannot simply be run in threads.
+Failures/interruptions stop new work and cooperatively cancel/join workers;
+partial endpoint completion cannot become a verified candidate or durable receipt.
+All three endpoints must reach terminal quality checks before combined full graph
+verification. S3 dependencies still precede the final manifest, followed by complete
+readback/replay. Task completion order never determines duplicate/conflict winners.
+
+Controlled tests must demonstrate real overlap, unchanged exact modeled values,
+source-order selection, retained original provenance and quality, including reversed
+completion order and failures. Compare against identical recorded inputs; new run
+identities/timestamps may differ. Record elapsed time and aggregate peak resources
+for sequential/concurrent runs; evidence selects supported concurrency/defaults,
+with no assumed speedup or production limits. See [T6.2a](tasks/phase-6.md).
+
+### Bounded S3 transfer concurrency — implemented controlled Phase 6 (TR12; AC20)
+
+Alongside endpoint processing, add an independently configured S3 transfer worker
+limit and retain sequential mode. Connector documents here mean immutable
+raw/modeled Parquet, page evidence, ledgers and manifest dependencies. Verify the
+local graph first; independent dependency uploads and their verified readback may
+overlap. Create the final root manifest only after all dependencies have verified;
+complete graph readback and schema/value/provenance/quality/ledger replay still
+precede any durable receipt. Default candidate-to-S3 runs and explicit
+persist/recover operations use this setting.
+
+Recovery may fetch known dependency objects concurrently after exact manifest and
+ancestry discovery; prefix listing is not a discovery mechanism. Current S3/local
+store counters are mutable and need coordinated accounting or safe worker-owned
+adapters before parallel use. Share one aggregate deadline and wire/retry, graph,
+memory and staging/temporary-disk limits across workers; worker counts cannot
+multiply the caller's budgets. Deduplicate exact references safely and reject
+conflicting descriptors. Keep conditional create and actual hash/byte checks on
+every attempt, including existing objects; no overwrites or deletions are added.
+
+On failure/interruption, stop new work, cancel/join remaining workers and close
+bodies. Completed immutable objects remain, but partial completion cannot create
+the final root or confirm success. Keep per-object progress/retry/skip/failure logs
+correlated and sanitized. Verify SDK client suitability from official docs before
+selecting worker placement; retain explicit bounded SDK operations rather than
+silently introducing multipart/transfer-manager behavior.
+
+Controlled tests must prove PUT/GET overlap, reversed-order equivalence, inherited
+reconstruction, conditional collisions, aggregate-budget races, failed
+uploads/readback/final manifests and cleanup. Measure sequential/concurrent upload
+and readback time plus aggregate resources; distinguish new uploads from identical
+retries. Live configured-bucket comparisons require their applicable authorization.
+See [T6.2b](tasks/phase-6.md); no performance gain is assumed in advance.
 
 ### Admission, execution and outcomes — deferred backend integration (FR1–FR3, FR17–FR20)
 
@@ -313,7 +389,7 @@ local evidence does not close full-spec publication or live acceptance criteria.
   determine duplicate winners. EIA documents offset/length, multi-column sort
   and at most 5,000 JSON rows; route-specific paging stability is still a live
   evidence gate, not established by general [API documentation](https://www.eia.gov/opendata/documentation.php).
-- Retrieve routes/pages sequentially initially. Assign each accepted page a stable
+- Retrieve routes/pages sequentially initially; Phase 6 adds bounded concurrency between routes while canonical page consumption within each route remains ordered; ADR-0049 additionally permits bounded page fetching. Assign each accepted page a stable
   index and each received row a monotonically increasing route-local source
   position before modeling. Retry the same offset without appending failed attempts
   as new rows. Original page/row sequence defines the fallback winner, not task
@@ -484,12 +560,14 @@ for later integration, rather than being a prerequisite for phase 4.
    TR1, TR4–TR5, TR10; artifact portions of AC5, AC17–AC18)
 6. **Controlled live connector validation.** Validate all routes' paging,
    termination/order and contract applicability; measure interval, memory, disk
-   and output limits using the runnable pipeline. Exercise a small explicit
+   and output limits using a sequential baseline. Then implement bounded endpoint
+   and independent S3 upload/readback concurrency, preserving route-local ordering and one coordinated candidate,
+   and compare elapsed time/aggregate resources and controlled-input equivalence. Exercise a small explicit
    interval first, then supported >=30-day reconciliation and accepted initial
    interval candidates when supported. Record actual quality, rerun/failure
    behavior and reproducible usage; never claim upstream completeness from a
    roster or advertised total. Live requests/cloud writes need their applicable
-   authorization; no EC2 deployment is required. (FR4–FR16; TR5–TR9; live portions
+   authorization; no EC2 deployment is required. (FR4–FR20 connector/storage portions; TR5–TR12; AC19–AC20 and live portions
    of AC3–AC15)
 
 **Deferred backend integration, outside the immediate connector work:** add
@@ -632,3 +710,110 @@ deferred backend integration; none is marked complete by this replan.
   usable output from all three datasets before first publication, and complete
   prior-dataset retention for partially all-excluded refreshes. All-three-excluded
   input retains the active generation without publication.
+
+### Phase 5 implementation — configured immutable S3 graphs (2026-10-04)
+
+Selected **Boto3 1.43.108**, with resolved Botocore 1.43.108 and S3transfer
+0.19.2 in `requirements-dev.txt`. [Package metadata](https://pypi.org/project/boto3/1.43.108/)
+requires Python >=3.10,
+compatible with this project's Python >=3.12; the local checkpoint uses 3.14.
+No PostgreSQL driver or DuckDB dependency is added.
+
+The [official PutObject SDK contract](https://docs.aws.amazon.com/boto3/latest/reference/services/s3/client/put_object.html)
+supports `IfNoneMatch="*"` and `ChecksumSHA256`. Existing-object 412 responses
+require full byte verification; 409 conflicts permit bounded conditional retries.
+The [S3 conditional-write guide](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html)
+also describes current-version/delete-marker semantics. Every write keeps the
+condition; there is no unconditional retry, deletion or multipart operation.
+The [GetObject contract](https://docs.aws.amazon.com/boto3/latest/reference/services/s3/client/get_object.html)
+provides a streaming body and content length. The adapter compares streamed
+SHA-256 and exact byte count, closes bodies on failures and ignores ETag for
+content identity. These documented behaviors were checked on 2026-10-04;
+controlled SDK tests are separate from configured-bucket evidence.
+
+The [Botocore Config reference](https://docs.aws.amazon.com/botocore/latest/reference/config.html)
+defines `total_max_attempts=1` as disabling SDK retries. Composition uses that
+setting, 10-second connect/read timeouts and one connection pool slot by default.
+Application transfer defaults cap each operation at three attempts and the session at
+1,800 seconds, 1,600,000,000 attempted upload/readback bytes and 65,536-byte read
+chunks. Deadline checks run before SDK calls, around stream reads and before
+acceptance; a blocking socket call is bounded by SDK timeouts, so those checks
+are not a hard process-kill deadline. Interrupted stream reads fail explicitly.
+No backoff/supervisor or measured live budget is claimed. Single PUT staging
+uses a temporary disk file capped by the artifact file limit and S3's 5-GB
+single-object ceiling. Artifact object/total byte caps also bound graph traversal.
+Defaults are initial contributor limits, not measured cloud/production budgets.
+
+Logical exact references remain `SHA256:BYTE_COUNT`; configured physical keys
+are `<OUTAGE_S3_PREFIX>objects/<SHA256>` inside `OUTAGE_S3_BUCKET`. No URL, listing
+or active pointer is accepted. Traversal includes all ancestors, inherited raw
+and page evidence, dispositions, ledgers, base/unchanged modeled dependencies
+and the final manifest. Local verification precedes AWS client construction.
+Persistence conditionally writes and verifies every dependency before the root
+manifest, then restores the durable graph into temporary fresh staging and runs
+schema/count/exact-value/ledger/full replay verification before returning a
+receipt. Recovery accepts fresh staging only and constructs no EIA transport.
+Credential resolution is injected at composition through a session provider;
+local AWS profiles and deployed SDK role resolution use the same boundary.
+An incomplete transfer produces no receipt; existing objects stay untouched.
+The root object can exist after a failed final verification, but only successful
+complete replay yields a verified receipt. Retrying persistence rechecks bytes;
+a failed recovery requires a fresh staging location.
+
+See [recovery evidence](recovery-verification.md) and
+[configured-bucket checks](aws-setup.md). This adds storage durability only;
+backend activation, authorization, reader pinning, uncertain PostgreSQL commits
+and durable refresh outcomes remain deferred.
+
+
+### AWS login profile compatibility correction (October 4, 2026)
+
+The local profile uses `login_session` from `aws login`. Offline client
+construction exposed `MissingDependencyException` with plain Boto3. The pinned
+runtime requirement is now `boto3[crt]==1.43.108`; the resolved development
+requirement includes `awscrt==0.36.0`, required by the pinned Botocore CRT extra.
+The installed wheel supports the local Python 3.14/macOS environment. Official
+[Boto3 login credential documentation](https://docs.aws.amazon.com/boto3/latest/guide/credentials.html#login-with-console-credentials)
+and [CRT installation instructions](https://docs.aws.amazon.com/boto3/latest/guide/quickstart.html#using-the-aws-common-runtime-crt)
+require CRT for console login profiles. No authentication cache contents, raw
+SDK errors or credentials are logged. Bootstrap translates a missing dependency
+into the safe `aws_dependency` code with `make setup` guidance, preserving the
+local candidate for persistence retry. Installed-login-profile tests use synthetic
+cached credentials with networking forbidden; successful offline construction
+of the configured local profile does not prove token freshness or S3 permissions.
+
+
+## Phase 6 measured implementation status — October 4, 2026
+
+Bounded thread windows implement independent endpoint collection/evidence and
+S3 dependency transfers/recovery; modeling and replay remain coordinated. Typed
+worker settings preserve sequential defaults and aggregate budgets/cancellation.
+Controlled equivalence, live one-day/September candidates and configured-bucket
+inherited source-disabled replay passed. [Resource evidence](resource-evidence.md)
+records environment, inputs, exact references, times/RSS/disk and limitations.
+The earlier300-second initial attempt failed during repeated replay; its evidence
+is preserved. ADR-0050 corrected per-day rescans. Live run
+`de9648fcb92149a98d66aba51e4f667f` then verified the full initial interval, and
+exact configured-S3 source-disabled recovery confirmed its entire durable graph.
+T6.4/T6.C and all six connector phases are complete. See the recorded
+[closure measurement](evidence/2026-10-04/initial-interval-recovery.json).
+Backend authorization/publication/outcomes/operational recovery remain deferred.
+
+## User-directed page-fetch extension (ADR-0049)
+
+Bounded speculative windows fetch offset+k*page_length concurrently and validate
+all admitted responses before canonical consumption. Coordinator pages retain
+received-count offsets/source positions. Short pages end the window and repair
+from the actual received count; unused lookahead remains audited transport JSON
+objects, referenced in optional evidence dependencies with full integrity/recovery.
+Endpoint/page buffering is admitted jointly. Explicit `--fetch-workers` and
+`--s3-workers` flags flow through typed DTO/settings/bootstrap, with Make forwarding
+`FETCH_WORKERS`/`S3_WORKERS`. Preserve endpoint compatibility/sequential defaults,
+current183-day allowances and coordinator-owned models/manifests. Controlled
+single-route overlap/equivalence/fault/repair/recovery checks precede final make check.
+
+October 4 stall correction (ADR-0050): rebuild bounded replay-derived day indexes
+once per bundle during verification and inherited-origin binding. Preserve exact
+semantic verification; log grain and periodic day progress. Verification may write
+derived immutable local staging within existing aggregate limits, including during
+recovery. Derived partitions are excluded from the durable manifest graph.

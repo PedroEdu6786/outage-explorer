@@ -104,8 +104,8 @@ def incoming_day(
             for record in store.records(ref):
                 yield raw_from_record(record)
         return
-    # Verification is read-only. Re-scan bounded batches for one complete day;
-    # trade extra sequential I/O for no whole-history/entity-row index in RAM.
+    # Unindexed fallback for callers without derived staging; candidate verification
+    # rebuilds bounded day indexes from fresh replay instead of rescanning per day.
     for row in replay_evidence(store, bundle):
         actual_day = row_day(row)
         if actual_day is not None and not bundle.interval.contains(actual_day):

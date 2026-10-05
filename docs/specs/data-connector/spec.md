@@ -47,7 +47,12 @@ bounded refresh with an explainable outcome.
 - **TR9:** Without a previous generation, fetch the initial interval live through the same validation and publication pipeline as refresh; all three datasets must produce usable output before initial publication. With previous data, retain complete prior datasets for nonempty entirely excluded routes and publish other valid updates; all-three-excluded input retains the active generation without publication. Empty/failed retrieval remains failure. Q5 is resolved by ADR-0037, superseding only ADR-0026's prior-seed assumption.
 - **TR10:** Keep published snapshots and findings inputs available; automated authoritative-data deletion, historical browsing and recovery-policy design remain deferred (ADR-0010). Missing source keys and excluded replacement rows are different cases.
 
+- **TR11:** Contributor execution SHALL support sequential mode and configurable bounded concurrency across up to three independent source endpoints. Pages within an endpoint SHALL be consumed in canonical offset/row order (TR13 permits concurrent fetching); endpoint completion order SHALL not change source-order selection, exact modeled values, retained provenance or quality. Enforce aggregate resource limits and coordinated failure/cleanup before confirming one complete candidate or durable graph receipt. Sequential/concurrent measurements SHALL establish supported settings; concurrency grants no publication rights. (User-approved Phase 6 addition, October 4, 2026.)
+
+- **TR12:** Contributor storage SHALL support sequential mode and independently configurable bounded parallel S3 PUT/GET operations for exact connector graph dependencies. Conditional creation and hash/byte verification SHALL hold for every object; the final root manifest SHALL be created only after all dependency uploads verify, and a durable receipt SHALL require full graph readback/replay. Enforce shared aggregate transfer/resource limits, deterministic reference accounting and coordinated failure/cleanup; retain earlier objects without overwrite/deletion. (User-approved Phase 6 addition, October 4, 2026.)
+
 ## Inputs & Outputs
+- The candidate CLI stores the complete verified graph in S3 by default (ADR-0042); `--local-only` explicitly selects AWS-independent local creation. Default success requires durable readback/replay. Failed persistence preserves the local candidate/reference for explicit retry; its local report does not confirm durability or publication.
 - Contributor configuration follows [ADR-0041](../../adr/0041-connector-defaults-and-json-configuration.md): typed resource defaults with optional partial `--config PATH` JSON overrides; explicit date/staging/prior flags win over file values. Effective dates/staging and the environment-only `EIA_API_KEY` remain required. Budget environment overrides are removed. Invalid or unknown configuration fails before storage/transport construction; defaults do not establish measured live limits.
 - Inputs: an authorized refresh request; selected inclusive dates; current published observations and provenance; EIA metadata and daily response pages; configured resource bounds; versioned grain contracts.
 - National natural key: `period`. Required source attributes: `period`, `capacity`, `outage`, `percentOutage`, `capacity-units`, `outage-units`, `percentOutage-units`.
@@ -77,22 +82,26 @@ bounded refresh with an explainable outcome.
 ## Acceptance Criteria
 - [ ] **AC1:** Direct use-case requests from Viewer, Analyst and an unassigned identity cannot admit refresh or read its outcome; denied requests perform no retrieval. An authorized Admin can request both. (FR1)
 - [ ] **AC2:** Disconnecting the initiating client does not cancel admitted work; running and terminal outcomes remain observable. Competing or stale refresh owners cannot publish over the current owner. (FR2, FR3)
-- [ ] **AC3:** A bounded multipage fixture for each route retrieves the selected interval without dropping page-boundary observations; live verification separately records the established pagination/termination contract. (FR4; TR7)
+- [x] **AC3:** A bounded multipage fixture for each route retrieves the selected interval without dropping page-boundary observations; live verification separately records the established pagination/termination contract. (FR4; TR7)
 - [ ] **AC4:** Failed pages, repeated nonprogressing pages, invalid envelopes and exhaustion of each configured retrieval bound yield a run failure and preserve the active generation. The report does not count these as ordinary excluded rows. (FR5; TR5)
-- [ ] **AC5:** Raw-artifact replay reproduces row positions, selection, validation and derived values across page boundaries; source strings and request/retrieval identities survive. Credential-bearing echoed requests are sanitized and no output artifact or outcome exposes their secrets. (FR6; TR4)
-- [ ] **AC6:** Invalid required fields, units, identifiers, dates, numbers and unexpected attributes produce the established exclusions while valid zero-outage observations remain usable. (FR7; TR2)
-- [ ] **AC7:** Identical repeats and A/B/A conflicts across pages select one reproducible winner under the declared order; processing completion order does not change it and a later invalid record cannot displace it. The result makes no revision-recency claim. (FR8; TR8)
-- [ ] **AC8:** A newly retrieved valid value replaces an older stored value for the same key; repeating that refresh does not create duplicate modeled keys. (FR9, FR12)
-- [ ] **AC9:** A mixed refresh retains identifiable older valid rows where no usable incoming replacement exists and separately retains prior keys absent from successfully retrieved input; both preserve original provenance and allow other valid updates. Invalid unknown keys are not matched by guesswork; retained-invalid and retained-absent counts are distinct. (FR10)
+- [x] **AC5:** Raw-artifact replay reproduces row positions, selection, validation and derived values across page boundaries; source strings and request/retrieval identities survive. Credential-bearing echoed requests are sanitized and no output artifact or outcome exposes their secrets. (FR6; TR4)
+- [x] **AC6:** Invalid required fields, units, identifiers, dates, numbers and unexpected attributes produce the established exclusions while valid zero-outage observations remain usable. (FR7; TR2)
+- [x] **AC7:** Identical repeats and A/B/A conflicts across pages select one reproducible winner under the declared order; processing completion order does not change it and a later invalid record cannot displace it. The result makes no revision-recency claim. (FR8; TR8)
+- [x] **AC8:** A newly retrieved valid value replaces an older stored value for the same key; repeating that refresh does not create duplicate modeled keys. (FR9, FR12)
+- [x] **AC9:** A mixed refresh retains identifiable older valid rows where no usable incoming replacement exists and separately retains prior keys absent from successfully retrieved input; both preserve original provenance and allow other valid updates. Invalid unknown keys are not matched by guesswork; retained-invalid and retained-absent counts are distinct. (FR10)
 - [ ] **AC10:** With previous valid data and every incoming row excluded across all three routes, the active generation remains unchanged and the outcome explicitly reports no publication and exclusion reasons. If only some nonempty routes are entirely excluded, their complete previous data survives while valid updates from other routes publish. Without previous data, the live initial interval uses the same pipeline and publishes only when each dataset has usable output; a missing usable dataset, empty route or failed retrieval prevents publication. (FR11; TR6, TR9)
 - [ ] **AC11:** A candidate containing duplicate natural keys across output files or retained/new rows cannot publish until modeled uniqueness holds. (FR12, FR17)
-- [ ] **AC12:** All three grains retain their source observations independently; the national share uses the selected national capacity/outage and never facility sums. Exact inputs survive storage, zero is distinct from unavailable data, and percentages follow the existing presentation rule without comparison flags. (FR13; TR3)
-- [ ] **AC13:** Coverage reports distinguish observed entities and usable dates from upstream completeness, retain missing/excluded gaps without zero filling, and expose source totals and received counts. (FR14)
-- [ ] **AC14:** The recorded facility 2,850/1,650 discrepancy remains visible and does not alone block the connector or a candidate otherwise satisfying publication checks; known failed pages still prevent publication and no missing observations are invented. (FR15; TR7)
-- [ ] **AC15:** Quality counts reconcile received rows into selected, excluded, duplicate and superseded dispositions; retained-invalid, retained-absent and carried-outside-interval counts are mutually exclusive and distinct from newly selected rows. Their sum with selected rows equals the final modeled total when publication is eligible; multiple reasons do not inflate excluded-row counts. (FR16)
+- [x] **AC12:** All three grains retain their source observations independently; the national share uses the selected national capacity/outage and never facility sums. Exact inputs survive storage, zero is distinct from unavailable data, and percentages follow the existing presentation rule without comparison flags. (FR13; TR3)
+- [x] **AC13:** Coverage reports distinguish observed entities and usable dates from upstream completeness, retain missing/excluded gaps without zero filling, and expose source totals and received counts. (FR14)
+- [x] **AC14:** The recorded facility 2,850/1,650 discrepancy remains visible and does not alone block the connector or a candidate otherwise satisfying publication checks; known failed pages still prevent publication and no missing observations are invented. (FR15; TR7)
+- [x] **AC15:** Quality counts reconcile received rows into selected, excluded, duplicate and superseded dispositions; retained-invalid, retained-absent and carried-outside-interval counts are mutually exclusive and distinct from newly selected rows. Their sum with selected rows equals the final modeled total when publication is eligible; multiple reasons do not inflate excluded-row counts. (FR16)
 - [ ] **AC16:** A complete verified generation becomes active automatically; new readers see all three datasets from that generation, while an existing reader still sees its prior generation. (FR17, FR19)
 - [ ] **AC17:** Corrupt/unreadable or incomplete artifacts, partial uploads, interruption and an uncertain publication outcome never expose a partial generation or report unconfirmed success. (FR18)
 - [ ] **AC18:** Published data and refresh outcomes remain recoverable after application replacement with EIA unavailable; published snapshots and pinned findings inputs are not automatically deleted. (FR20; TR10)
+
+- [x] **AC19:** Controlled runs demonstrate endpoint overlap and sequential/concurrent equivalence under identical recorded inputs, including cross-page conflicts/retention and reversed completion order; shared-budget overruns, failed routes and interruptions cannot confirm partial success and workers are cleaned up. Record measured elapsed time and aggregate peak resources for supported settings; generated execution IDs/timestamps may differ.
+
+- [x] **AC20:** Controlled storage tests demonstrate overlapping dependency uploads and GET/readback, sequential/concurrent graph/receipt equivalence and exact inherited reconstruction. Dependency failure prevents final-root creation in that attempt; corrupt/conflicting objects, partial transfers, aggregate-budget exhaustion and interruption cannot return verified success. Workers/bodies are cleaned up and prior objects remain intact. Record measured duration and aggregate peak resources for supported transfer settings; live AWS evidence is separate.
 
 ## Open Clarifications
 - **Q1:** Establish measured connector resource limits and supported maximum interval before enabling production refresh.
@@ -103,3 +112,43 @@ bounded refresh with an explainable outcome.
 
 - **Q2:** Initial interval is 2026-04-02 through 2026-10-01 inclusive, with explicit dates and no automatic rolling policy. Retain absent prior keys and publish other valid changes (ADR-0037).
 - **Q5:** Initial live loading uses the refresh pipeline and requires usable output from all three datasets. Partial entirely-excluded routes retain complete prior data while other valid changes publish; all-three-excluded input preserves the active generation (ADR-0037).
+
+
+## Phase 6 acceptance evidence — October 4, 2026
+
+See [live verification](live-verification.md), [resource evidence](resource-evidence.md)
+and [recovery verification](recovery-verification.md). Controlled concurrency
+establishes endpoint/PUT/GET overlap, deterministic source-order values/quality,
+unchanged retained origins, failure/interrupt cleanup, aggregate accounting,
+final-root ordering and source-disabled inherited reconstruction (AC19–AC20).
+Live one-day and September candidates add bounded AC3/AC5–AC15 evidence; actual
+configured S3 integrity/recovery covers storage portions of AC17–AC18. AC4's
+active-generation preservation, AC10–AC11 publication and AC17–AC18 backend
+outcomes/replacement remain deferred. After the earlier interrupted initial run,
+ADR-0050 corrected replay cost; the fresh full initial live candidate and exact
+configured-S3 source-disabled recovery now passed. All six connector phases are
+complete. AC3/AC5–AC9/AC12–AC15 and AC19–AC21 are checked within their demonstrated
+source/model/storage scope. Backend-containing acceptance remains unchecked.
+
+## User-directed page-fetch extension — October 4, 2026
+
+**TR13:** Support independently configurable1–3 concurrent page requests within
+one route, canonical received-count offset order, bounded short-page repair and
+one canonical empty terminator. Advertised totals do not determine completeness.
+Every admitted failed request fails the run; preserve sanitized unused successful
+lookahead as bounded immutable replayable graph evidence. Shared budgets and
+cancellation/join include nested endpoint/page workers. Explicit fetch/S3 CLI flags
+and Make overrides win JSON; no profile or budget environment variable is required.
+
+- [x] **AC21:** Controlled transport proves overlapping page requests within one
+  route, reversed completion equivalence, cross-page conflicts/retained origins,
+  short/empty-page repair with misleading totals, supplemental evidence integrity
+  and source-disabled graph recovery, aggregate overruns/failures/interruption
+  cleanup, and explicit CLI/Make override precedence. No unsupported live or
+  synchronous-model speedup claim follows. See ADR-0049.
+
+Verification performance correction (ADR-0050): each candidate verification must
+validate raw evidence and reconstruct bounded day indexes once per bundle, then
+retain exact value/origin/quality/ledger checks without per-day whole-source
+rescans. Emit secret-free grain and periodic day progress. Local immutable derived
+staging writes share configured limits; durable graph references remain exact.

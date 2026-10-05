@@ -28,8 +28,10 @@ runtime acceptance remain separate from resource setup completion.
 The nonsecret S3 target values are in `.env.example` and the local ignored `.env`.
 Use the current local Cognito configuration; do not reconstruct the previously
 removed pool identifier from historical context.
-The connector adapters do not yet consume these settings. `AWS_PROFILE` is for
-local development; deployed application/refresh processes should receive their
+Default connector CLI runs and explicit Phase 5 persist/recover operations now
+consume these S3 settings (ADR-0042); `--local-only` opts out of AWS.
+its configured-bucket checks remain separate from historical setup probes.
+`AWS_PROFILE` is for local development; deployed application/refresh processes should receive their
 own role, while analytical workers receive no cloud/database credentials.
 The existing `EIA_API_KEY` entry was preserved without displaying or validating
 its value. No EIA retrieval or dataset publication was performed here.
@@ -129,7 +131,8 @@ and the exact available engine version remain pending discovery access.
 
 1. Continue from the implemented fixture-tested EIA source adapter to durable
    refresh and S3 integration using the confirmed target. The S3 adapter still
-   needs its bounded upload/readback, integrity and failure/retry tests.
+   has controlled bounded upload/readback, integrity and failure/retry tests;
+   configured-bucket verification remains separately authorized.
 2. Implement and test application adapters against the configured services,
    including verified TLS, database role separation, token/session mapping and
    application-owned permissions. Setup completion does not prove these behaviors.
@@ -138,3 +141,67 @@ and the exact available engine version remain pending discovery access.
 4. Rehearse cloud adapters, durable publication, authorization and replacement
    recovery before marking phase 6 acceptance. EC2/sandbox/resource-budget
    decisions remain separate; this setup does not close them.
+
+## Phase 5 follow-up: configured-bucket connector checks
+
+These are **not executed Phase 5 evidence**. Phase 6 requires separate explicit
+authorization for configured-bucket reads/writes and live EIA retrieval. This
+page describes checks against an existing configured target; it provisions
+nothing and selects no deployment, lifecycle, versioning or retention policy.
+
+Configure `OUTAGE_S3_BUCKET`, `OUTAGE_S3_PREFIX` (nonempty relative prefix ending
+in `/`) and `AWS_REGION`. Local `AWS_PROFILE` selects the credential provider;
+otherwise the SDK resolves credentials, including workload roles. Supply
+credentials outside the repository. `.env.example` is a template and is not
+automatically loaded. No caller endpoint/URL or CLI credential flag is accepted.
+The provider needs `s3:PutObject` and `s3:GetObject` for the configured prefix,
+plus any encryption permissions required by the existing bucket configuration.
+No bucket-list, delete, provisioning or retention permissions are required by
+the adapter. Role connectivity and bucket encryption policy remain to verify.
+
+After authorization, use a bounded **verified** local candidate and its exact
+manifest reference. Record effective artifact/model limits, SDK versions,
+configured bucket/prefix, date, credential-provider kind (no credential values),
+object count/bytes, returned receipts and sanitized failure outcomes.
+
+1. Persist the complete graph with the README command. Confirm every physical
+   key lies under the configured prefix and all dependency verification finishes
+   before the final manifest is written. Record full fresh readback/replay success.
+2. Repeat persistence with the same reference; confirm identical bytes are
+   verified, without replacing objects. For precondition/conflict fault checks,
+   use isolated authorized test objects and controlled competing writes. Do not
+   mutate or delete authoritative artifacts to simulate corruption.
+3. Use a new empty local staging path, unset `EIA_API_KEY` and forbid EIA egress.
+   Recover by the saved exact reference with the same target configuration.
+   Compare manifests, per-grain exact values/origins/quality and source replay.
+4. Repeat recovery in another empty path after application/local staging
+   replacement. Test missing/corrupt/partial graph failures through controlled
+   SDK tests, or separately authorized isolated test fixtures; never delete
+   published snapshots or pinned findings inputs. Record limitations and failures.
+
+These checks establish configured-target storage behavior only. Initial live
+loading still uses April 2–October 1, 2026 inclusive and requires verified usable
+output in all three grains, measured resource budgets and contract applicability.
+Backend activation, PostgreSQL outcomes/uncertain commit reconciliation,
+authorization, reader pinning, runtime supervision and deployed EC2 role access
+remain separate work. No connector receipt says that data was published.
+
+## Phase 6 configured-bucket evidence — October 4, 2026
+
+User-authorized bounded contributor checks against the existing bucket/prefix
+passed conditional persistence, full readback/replay and EIA-disabled empty-staging
+reconstruction in sequential and three-worker modes. Exact references, graph
+sizes, durations and distinctions between new uploads and identical retries are
+in [recovery verification](recovery-verification.md) and
+[resource evidence](resource-evidence.md). Clients used the existing local credential
+provider; no credentials are recorded. No bucket configuration, role, publication
+reference or retained object was modified/deleted. Deployed-role permissions,
+EC2 runtime and durable backend outcomes remain unverified.
+
+October4 final initial gate: GET-only exact-reference CLI recovery with3 S3 workers
+against the existing configured bucket/profile passed for
+`f74027258fdbf78ba040128b4761166c15249177365df4eba7db1bd5f5232cd0:563052`:
+2054objects/63,420,955bytes with full source-disabled semantic replay. No PUT,
+object deletion or infrastructure change was performed for this closure.
+See [recovery evidence](recovery-verification.md) and
+[tracked measurement](evidence/2026-10-04/initial-interval-recovery.json).

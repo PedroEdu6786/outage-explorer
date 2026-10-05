@@ -1,5 +1,6 @@
 """Local bounded Parquet candidates; no activation, retrieval or publication."""
 
+import logging
 from collections import Counter
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
@@ -38,6 +39,7 @@ from outage_explorer.infrastructure.parquet.manifests import (
 )
 from outage_explorer.infrastructure.parquet.partitions import (
     DayMerge,
+    PartitionIndex,
     day_sequence,
     incoming_day,
     index_modeled,
@@ -49,6 +51,8 @@ from outage_explorer.infrastructure.parquet.schemas import (
     modeled_record,
 )
 from outage_explorer.infrastructure.parquet.storage import LocalParquetStore
+
+_LOG = logging.getLogger("outage_explorer.connector.parquet")
 
 
 @dataclass
@@ -194,10 +198,12 @@ class ParquetCandidateBuilder:
         ledger: list[ArtifactRef] = []
         summaries = []
         for bundle in bundles:
+            _LOG.info("grain_build_started grain=%s", bundle.grain)
             staged = stage_dates(self.store, bundle)
             previous = index_modeled(base, bundle.grain)
             account = _Accounting(bundle.grain)
-            for day in day_sequence(bundle.interval, previous):
+            for position, day in enumerate(day_sequence(bundle.interval, previous)):
+                _progress("grain_build_progress", bundle, position, day)
                 part = merge_day(self.store, bundle, day, previous, bounds, staged)
                 account.add(part, bounds)
                 dispositions.extend(
@@ -226,6 +232,7 @@ class ParquetCandidateBuilder:
                         )
                     )
             summaries.append(account.summary())
+            _LOG.info("grain_build_complete grain=%s", bundle.grain)
         outcome = _outcome(tuple(summaries), prior is None)
         candidate = CandidateManifest(
             generation_id,
@@ -289,15 +296,23 @@ class ParquetCandidateBuilder:
                 raise ArtifactError("Base references disagree with pinned manifest")
         summaries = []
         for bundle in bundles:
+            _LOG.info("grain_verify_started grain=%s", bundle.grain)
+            staged = stage_dates(self.store, bundle)
+            history = tuple(
+                (dependency, stage_dates(self.store, dependency))
+                for dependency in candidate.inherited_evidence
+                if dependency.grain == bundle.grain
+            )
             previous = index_modeled(candidate.base_modeled, bundle.grain)
             actual = index_modeled(candidate.modeled, bundle.grain)
             expected_dates = set(previous)
             account = _Accounting(bundle.grain)
-            for day in day_sequence(bundle.interval, previous):
+            for position, day in enumerate(day_sequence(bundle.interval, previous)):
+                _progress("grain_verify_progress", bundle, position, day)
                 expected_dates.add(day)
-                part = merge_day(self.store, bundle, day, previous, bounds)
+                part = merge_day(self.store, bundle, day, previous, bounds, staged)
                 account.add(part, bounds)
-                self._bind_history(part.old, candidate.inherited_evidence, bounds)
+                self._bind_history(part.old, history, bounds)
                 self._equal_records(
                     actual.get(day, ()),
                     (modeled_record(row) for row in part.merged.rows),
@@ -320,6 +335,7 @@ class ParquetCandidateBuilder:
                 ):
                     raise ArtifactError("Unexpected artifact partition")
             summaries.append(account.summary())
+            _LOG.info("grain_verify_complete grain=%s", bundle.grain)
         if tuple(summaries) != candidate.summaries:
             raise ArtifactError("Manifest quality or coverage does not reconcile")
         outcome = _outcome(tuple(summaries), candidate.base_generation_id is None)
@@ -377,7 +393,7 @@ class ParquetCandidateBuilder:
     def _bind_history(
         self,
         rows: tuple[ModeledRow, ...],
-        evidence: tuple[EvidenceBundle, ...],
+        evidence: tuple[tuple[EvidenceBundle, PartitionIndex], ...],
         bounds: RefreshBounds,
     ) -> None:
         if not rows:
@@ -386,12 +402,12 @@ class ParquetCandidateBuilder:
         if len(pending) != len(rows):
             raise ArtifactError("Repeated modeled origin")
         day = rows[0].observation.day
-        for bundle in evidence:
+        for bundle, staged in evidence:
             if bundle.grain != rows[0].origin.grain or not bundle.interval.contains(
                 day
             ):
                 continue
-            incoming = incoming_day(self.store, bundle, day, None)
+            incoming = incoming_day(self.store, bundle, day, staged)
             first = next(incoming, None)
             if first is None:
                 continue
@@ -429,3 +445,16 @@ def _refs(
     return tuple(
         ref for ref in references if ref.grain == grain and ref.partition == day
     )
+
+
+def _progress(
+    event: str, bundle: EvidenceBundle, position: int, day: date | None
+) -> None:
+    if position % 14 == 0 or day == bundle.interval.end:
+        _LOG.info(
+            "%s grain=%s partition=%s completed_partitions=%d",
+            event,
+            bundle.grain,
+            day,
+            position,
+        )

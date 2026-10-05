@@ -32,6 +32,7 @@ class SanitizedPage:
     metadata: object
     api_version: str
     values: tuple[object, ...]
+    transport: tuple[object, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -40,6 +41,7 @@ class EvidenceBundle:
     interval: Interval
     raw: tuple[ArtifactRef, ...]
     pages: tuple[ArtifactRef, ...]
+    transport: tuple[StoredObject, ...] = ()
 
 
 @dataclass(frozen=True)

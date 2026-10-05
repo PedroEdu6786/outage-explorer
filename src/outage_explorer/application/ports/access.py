@@ -1,0 +1,49 @@
+"""Access contracts owned by the application; transactions stay short."""
+
+from datetime import datetime
+from typing import Protocol
+
+from outage_explorer.application.dto import SeedIdentity, VerifiedIdentity
+from outage_explorer.domain.access import LoginAttempt, SeededUser, Session
+
+
+class IdentityProvider(Protocol):
+    def authorization_url(
+        self, callback_uri: str, state: str, challenge: str
+    ) -> str: ...
+    def exchange(
+        self, code: str, verifier: str, callback_uri: str
+    ) -> VerifiedIdentity: ...
+
+
+class UserStore(Protocol):
+    def seed(self, identities: tuple[SeedIdentity, ...]) -> int: ...
+    def find_user(self, issuer: str, subject: str) -> SeededUser | None: ...
+
+
+class SessionStore(Protocol):
+    def create_session(
+        self,
+        token_digest: str,
+        user_id: str,
+        established_at: datetime,
+        expires_at: datetime,
+    ) -> None: ...
+    def resolve_session(self, token_digest: str, now: datetime) -> Session | None: ...
+    def revoke_session(self, token_digest: str, now: datetime) -> None: ...
+
+
+class AttemptStore(Protocol):
+    def create_attempt(self, attempt: LoginAttempt, now: datetime) -> None: ...
+    def consume_attempt(
+        self, state_digest: str, browser_binding_digest: str, now: datetime
+    ) -> LoginAttempt | None: ...
+    def cleanup(self, now: datetime) -> tuple[int, int]: ...
+
+
+class SecurityMaterial(Protocol):
+    def random_token(self) -> str: ...
+    def digest(self, token: str) -> str: ...
+    def pkce_challenge(self, verifier: str) -> str: ...
+    def csrf_token(self, session_token: str) -> str: ...
+    def verify_csrf(self, session_token: str, supplied: str) -> bool: ...

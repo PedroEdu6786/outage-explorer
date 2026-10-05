@@ -68,6 +68,10 @@ def validate_manifest(manifest: CandidateManifest) -> None:
         if bundle.grain not in IDENTITY_FIELDS:
             raise ArtifactError("Invalid evidence grain")
         refs.extend((*bundle.raw, *bundle.pages))
+        for supplemental in bundle.transport:
+            integer(supplemental.byte_count, 1)
+            identifier(supplemental.key)
+            identifier(supplemental.sha256)
     for ref in refs:
         if (
             ref.grain not in IDENTITY_FIELDS
@@ -89,6 +93,11 @@ def validate_manifest(manifest: CandidateManifest) -> None:
 def manifest_bytes(manifest: CandidateManifest) -> bytes:
     validate_manifest(manifest)
     value = asdict(replace(manifest, manifest_object=None))
+    # Preserve byte-for-byte canonical legacy manifests when the extension is absent.
+    for name in ("evidence", "inherited_evidence"):
+        for bundle in value[name]:
+            if not bundle["transport"]:
+                bundle.pop("transport")
     return json.dumps(
         value, sort_keys=True, separators=(",", ":"), default=_date
     ).encode()
@@ -133,6 +142,7 @@ def _bundle(value: dict[str, Any]) -> EvidenceBundle:
         _interval(value["interval"]),
         tuple(_ref(ref) for ref in value["raw"]),
         tuple(_ref(ref) for ref in value["pages"]),
+        tuple(StoredObject(**ref) for ref in value.get("transport", [])),
     )
 
 

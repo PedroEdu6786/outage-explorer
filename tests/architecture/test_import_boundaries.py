@@ -52,6 +52,23 @@ def test_application_obeys_import_boundaries():
         ("entrypoints/http/routes/bad.py", "from ....bootstrap import build_http_app"),
         ("entrypoints/http/routes/bad.py", "from ..startup import create_app"),
         ("entrypoints/http/routes/bad.py", "import duckdb"),
+        (
+            "entrypoints/http/routes/access.py",
+            "from ....infrastructure.security import RandomSecurityMaterial",
+        ),
+        (
+            "entrypoints/http/routes/access.py",
+            "from ....infrastructure.cognito.identity import CognitoIdentityProvider",
+        ),
+        (
+            "entrypoints/http/routes/access.py",
+            "from ....infrastructure.postgresql.access import PostgresqlAccessStore",
+        ),
+        ("entrypoints/http/routes/access.py", "import psycopg"),
+        ("entrypoints/http/routes/access.py", "import jwt"),
+        ("application/services/access.py", "import hmac"),
+        ("application/services/login.py", "import secrets"),
+        ("domain/access.py", "import hashlib"),
         ("entrypoints/http/app.py", "from ...bootstrap import build_http_app"),
         ("__init__.py", "from .infrastructure.clock import SystemClock"),
         ("application/dto.py", "from ...outside import helper"),
@@ -243,3 +260,52 @@ def test_connector_startup_exception_remains_exact(tmp_path, addition):
             },
         )
     )
+
+
+@pytest.mark.parametrize(
+    "addition",
+    [
+        "",
+        "\nexecute_access_setup(None)\n",
+        "\ndef handler():\n    return execute_access_setup(None)\n",
+    ],
+)
+def test_access_startup_exception_remains_exact(tmp_path, addition):
+    from .import_rules import ACCESS_STARTUP_SOURCE
+
+    errors = violations(
+        source_tree(
+            tmp_path,
+            {"entrypoints/cli/access_startup.py": ACCESS_STARTUP_SOURCE + addition},
+        )
+    )
+    assert bool(errors) == bool(addition)
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "from outage_explorer.bootstrap import execute_access_setup",
+        "from outage_explorer.infrastructure.postgresql.pool import BoundedPostgresqlPool",
+        "from outage_explorer.entrypoints.cli.access_startup import main",
+    ],
+)
+def test_access_setup_exception_cannot_construct_adapters(tmp_path, source):
+    assert violations(
+        source_tree(tmp_path, {"entrypoints/cli/access_setup.py": source})
+    )
+
+
+def test_auth_routes_allow_only_inward_services_and_transport_helpers(tmp_path):
+    root = source_tree(
+        tmp_path,
+        {
+            "entrypoints/http/routes/access.py": "from ....application.services.access import AccessService\nfrom ..auth_transport import AuthTransport",
+            "entrypoints/http/auth_transport.py": "import logging\nimport re\nfrom flask import request",
+            "entrypoints/http/errors.py": "from werkzeug.exceptions import HTTPException\nfrom ...application.errors import UnauthenticatedError",
+            "infrastructure/security.py": "import hmac\nimport secrets\nimport hashlib",
+            "infrastructure/cognito/identity.py": "import jwt\nimport httpx",
+            "entrypoints/http/startup.py": STARTUP_SOURCE,
+        },
+    )
+    assert violations(root) == []

@@ -1,19 +1,30 @@
 # Backend integration contract and gaps
 
+The current [data API requirements](../../specs/data-api/requirements.md) and
+[proposed HTTP contract](../../specs/data-api/http-contract.md) capture the
+subsequent endpoint discussion. Shared `/api/query` pagination, configured
+all-grain background refresh, date-only initial browsing, and SQL page size/
+lifetime are user-selected there. Earlier open items below are historical
+integration notes; the new draft takes precedence where they differ.
+
 The UI consumes the Outage Explorer backend. This document captures required
 semantics, not a complete OpenAPI specification. Revalidate availability against
 the backend version used for integration.
 
 ## Verified implementation status on October 4 2026
 
-The Flask application currently registers only `GET /health`. It returns
+The Flask application always registers `GET /health`. It returns
 `status`, `service` and `checked_at` and sets `Cache-Control: no-store`.
 It is unauthenticated liveness; it does not prove data, auth or SQL readiness.
 
 Offline verification for all three grains, connector modeling, local Parquet
 verification and EIA adapter work exist. Those are not product HTTP APIs.
-Authentication, authorized catalog/preview/metrics, SQL execution/pagination
-and Admin refresh HTTP integration are pending. Cognito and RDS setup were
+User-access Phase 4 now registers opt-in login/callback/session/logout routes,
+with controlled HTTP/startup/architecture verification. See the
+[authentication contract](../../specs/user-access/http-contract.md). Transport
+choices remain draft in ADR-0046/0047; live Cognito and browser reopening checks
+remain Phase 5. Authorized catalog/preview/metrics, SQL execution/pagination and
+Admin refresh HTTP integration are pending. Cognito and RDS setup were
 user-confirmed, but end-to-end application integration is not thereby verified.
 
 The backend stack is a layered Flask monolith, PostgreSQL on RDS for operational
@@ -28,8 +39,8 @@ or finalized method/type declarations.
 
 | Operation | Semantics/information needed | Still open |
 | --- | --- | --- |
-| Resolve session | Authenticated identity, current capabilities and expiry | Transport, endpoint and exact shape |
-| Login/callback/logout | Cognito code flow, session establishment, current-session invalidation | Code-exchange owner, callback URLs, session/token mapping |
+| Resolve session | Current identity, assigned role, fixed expiry and session-bound CSRF | Implemented `/api/auth/session`; live/browser readiness pending |
+| Login/callback/logout | Flask-owned PKCE, opaque cookie, current-session invalidation | Implemented auth contract; concrete provider/URL readiness pending |
 | List datasets/schema | Only permitted datasets, columns/types and applicable filters/coverage | Dataset IDs/SQL names, routes and payloads |
 | Preview records | Dataset and filters; bounded rows, ordering, snapshot and opaque continuation cursor | Request/response schema, cursor transport, previous-page navigation |
 | Read fleet metric | National date, source MW and reported/calculated percentages with precision | Catalog dataset versus dedicated route; encoding |
@@ -48,16 +59,25 @@ Seeded accounts are sufficient and public registration is disabled. Application
 permissions belong to PostgreSQL, and the backend must enforce them on every
 operation, including subsequent preview/result pages.
 
-Choose browser-to-Flask versus a thin Next.js server-side bridge together with
-the session integration. Define code exchange, credential storage, cookie/token
-forwarding, CORS, CSRF protection where applicable, allowed callbacks and logout
-behavior before connecting protected screens. Do not assume an opaque cookie,
-bearer-only session, ID-token API access or refresh-token renewal is already
-approved. Do not store credentials in browser localStorage by default. No
-backend/AWS secrets may enter client bundles or public environment variables.
+The implemented draft contract uses browser-to-Flask calls: Flask owns PKCE
+exchange/callback and opaque persistent HttpOnly cookies. Use a same-origin proxy
+for local UI development, or explicitly configure a same-site UI origin and send
+credentialed fetch requests. Read `/api/auth/session` for role, original expiry
+and CSRF; send `X-CSRF-Token` and the exact configured Origin on logout. The
+[HTTP contract](../../specs/user-access/http-contract.md) records routes, cookies,
+errors and environment inputs. Cross-site origins cannot bypass SameSite=Lax
+through CORS alone; use a same-origin proxy or revisit the draft transport choice.
 
-The one-hour application session, provider token lifetime and Cognito SSO session
-are different concepts. Sign-out must invalidate the current application session
+Do not introduce a Next.js token bridge, bearer/ID-token API alternative,
+localStorage credentials or automatic renewal. Provider tokens never enter the
+browser API contract. No backend/AWS secrets may enter client bundles or public
+environment variables. ADR-0046/0047 retain proposed status; implementation tests
+are not live-provider or browser-readiness evidence.
+
+ADR-0045 keeps a fixed one-hour application session with no automatic renewal.
+Browser reopening within a valid session preserves sign-in; special recovery
+across backend restarts/outages is outside scope. The application session,
+provider token lifetime and Cognito SSO session are different concepts. Sign-out must invalidate the current application session
 on the backend; clearing client state alone is not completion. Unknown or
 unassigned identities receive no product permissions.
 

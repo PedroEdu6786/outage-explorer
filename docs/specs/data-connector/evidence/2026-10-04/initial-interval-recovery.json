@@ -1,0 +1,90 @@
+{
+  "source_run": "de9648fcb92149a98d66aba51e4f667f",
+  "operation": "recover",
+  "s3_workers": 3,
+  "eia": "disabled",
+  "seconds": 93.15439524999238,
+  "peak_rss_bytes": 154238976,
+  "staging": "/var/folders/mj/1jkw87w51xs_5tt45xj8jvtr0000gp/T/outage-phase6-close-omjac2pb/recovered",
+  "staging_bytes": 80516102,
+  "local_objects": 2857,
+  "manifest": {
+    "key": "f74027258fdbf78ba040128b4761166c15249177365df4eba7db1bd5f5232cd0",
+    "sha256": "f74027258fdbf78ba040128b4761166c15249177365df4eba7db1bd5f5232cd0",
+    "byte_count": 563052
+  },
+  "objects": 2054,
+  "graph_bytes": 63420955,
+  "model_summaries": [
+    {
+      "grain": "national",
+      "quality": {
+        "received": 183,
+        "selected": 183,
+        "excluded": 0,
+        "duplicate": 0,
+        "superseded": 0,
+        "reason_counts": []
+      },
+      "active_count": 0,
+      "candidate_count": 183,
+      "retained_invalid": 0,
+      "retained_absent": 0,
+      "carried_outside_interval": 0,
+      "observed_entities": 1,
+      "observed_dates": 183,
+      "usable_dates": 183
+    },
+    {
+      "grain": "facility",
+      "quality": {
+        "received": 10065,
+        "selected": 10065,
+        "excluded": 0,
+        "duplicate": 0,
+        "superseded": 0,
+        "reason_counts": []
+      },
+      "active_count": 0,
+      "candidate_count": 10065,
+      "retained_invalid": 0,
+      "retained_absent": 0,
+      "carried_outside_interval": 0,
+      "observed_entities": 55,
+      "observed_dates": 183,
+      "usable_dates": 183
+    },
+    {
+      "grain": "generator",
+      "quality": {
+        "received": 17385,
+        "selected": 17385,
+        "excluded": 0,
+        "duplicate": 0,
+        "superseded": 0,
+        "reason_counts": []
+      },
+      "active_count": 0,
+      "candidate_count": 17385,
+      "retained_invalid": 0,
+      "retained_absent": 0,
+      "carried_outside_interval": 0,
+      "observed_entities": 95,
+      "observed_dates": 183,
+      "usable_dates": 183
+    }
+  ],
+  "interval": {
+    "end": "2026-10-01",
+    "start": "2026-04-02"
+  },
+  "source_report": "data/connector-local/runs/de9648fcb92149a98d66aba51e4f667f/report.json",
+  "checks": {
+    "cli_exit": 0,
+    "exact_graph_and_semantic_replay": true,
+    "summaries_equal_local_report": true,
+    "eia_requests": 0,
+    "s3_puts": 0,
+    "deletions": 0
+  }
+}

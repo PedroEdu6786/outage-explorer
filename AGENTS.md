@@ -36,6 +36,13 @@ run flags take precedence over file values. `EIA_API_KEY` remains environment-on
 do not reintroduce mandatory `OUTAGE_CONNECTOR_*` budget variables. Defaults are
 initial limits, not measured live/production budgets.
 
+Connector CLI candidate runs persist their complete verified graph to S3 by
+default under [ADR-0042](docs/adr/0042-connector-cli-default-s3-persistence.md).
+Explicit `--local-only` (Make: `LOCAL_ONLY=1`) remains AWS-independent. Validate
+S3 target configuration before source work; default success requires full durable
+readback/replay, with no local-only fallback after S3 failure. Preserve local
+artifacts for explicit persistence retries; a durable receipt is not publication.
+
 - `domain/`: pure policies and types; no framework, engine, SDK, database, or I/O.
 - `application/`: use cases, authorization, transaction orchestration, DTOs,
   and ports; depends on domain, not concrete infrastructure or Flask.
@@ -53,11 +60,22 @@ ADR-0030; the independent-services example is explanatory, not selected.
 
 ## Boundaries agents must preserve
 
+Product HTTP refresh uses a configured inclusive date range, without caller
+date overrides, under [ADR-0051](docs/adr/0051-configured-http-refresh-range.md).
+Record the resolved interval at admission; later configuration changes must
+not change a run. Initial-load dates and connector CLI behavior remain governed
+by their existing ADRs.
+
 1. No storage/SDK/engine calls or business rules in Flask routes. No Flask
    context (`request`, `g`, `current_app`) in domain or application code.
 2. Enforce permissions in application use cases before analytical data access;
    route decorators alone are insufficient. Cognito supplies identity;
-   application-owned PostgreSQL tables determine permissions.
+   application-owned PostgreSQL users and role assignments determine access.
+   Under ADR-0043, users and roles are seeded; registration and Admin user
+   management are excluded throughout implementation. Each user has exactly
+   one role under ADR-0044. Access is role-only;
+   do not introduce per-role read/write/delete permissions, per-user grants,
+   ABAC or row/column policies for current scope.
 3. Execute user SQL only through the isolated execution boundary, with authorized
    inputs and bounded resources. No API-process DuckDB fallback or worker
    access to operational PostgreSQL, cloud credentials, or unrestricted cache files.

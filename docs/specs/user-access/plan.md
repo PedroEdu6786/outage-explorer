@@ -1,0 +1,110 @@
+# Plan: Seeded users, login, and role access
+> Status: draft · Slug: user-access · Spec: ./spec.md
+
+## Approach
+
+Use Flask-owned Cognito Authorization Code with PKCE login, followed by an opaque browser cookie backed by an application session in PostgreSQL. Validate the provider identity when establishing the session; thereafter resolve session validity and the current seeded role from PostgreSQL on every protected use-case invocation. Keep the expiry fixed at establishment plus one hour, discard provider tokens after validation, and invalidate only the current session on logout. These are draft integration recommendations within ADR-0018/0030/0032/0043–0045, not evidence of configured resources or implemented authentication. (FR1–FR20, TR1–TR4)
+
+## Components affected
+
+- **Domain access policy** — recognized single roles, analytical-grain decisions, Admin-only refresh decisions, and fixed session validity; pure types/policies without I/O. (FR3, FR7–FR18)
+- **Application access services and DTOs** — begin/complete login, resolve identity, authorize operations, logout, and controlled seed orchestration through injected ports. Use existing clock convention and transport-independent failures. (FR1–FR20, TR1–TR4)
+- **Cognito infrastructure** — authorization URL/code exchange and maintained-library access-token validation with configured issuer/client and bounded signing-key retrieval. (FR2, FR5, FR19, TR1–TR3)
+- **PostgreSQL infrastructure** — migrations, users/roles, short session/login-attempt transactions, and seed reconciliation. No PostgreSQL adapter currently exists. (FR1, FR3–FR6, FR12–FR18, TR1)
+- **HTTP access entry points** — thin login/callback/session/logout routes, cookie transport, input validation, CSRF/origin checks and sanitized errors; current app registers only unauthenticated `/health`. (FR2, FR4, FR12–FR20)
+- **Bootstrap/settings and operator CLI** — explicit configuration, lifecycle-owned adapters, separate migrations and seeding commands; factory/imports perform no database, provider or connector work. (FR1, FR2, TR1, TR4)
+- **Downstream authorization seam** — reusable application access checks for catalog, preview, SQL preparation/execution/results and refresh, without implementing those features here. (FR7–FR12, FR20, TR4)
+- **UI integration contract and verification** — proposed browser-to-Flask contract and tests/harness; separate UI implementation remains excluded. (FR2, FR4, FR13–FR20, TR4)
+
+## Data model changes
+
+All names below are proposed; timestamps are timezone-aware UTC (`timestamptz`). PostgreSQL also holds migration-tool revision metadata, separate from product data.
+
+| Entity | Essential fields and constraints | Relationship/purpose |
+| --- | --- | --- |
+| `roles` | `code` text primary key constrained to `viewer`, `analyst`, `admin` | Seed exactly three recognized roles; no permission catalog. |
+| `users` | `id` UUID primary key; `identity_issuer` text; `identity_subject` text; `email` text; `role_code` non-null foreign key to roles; unique `(identity_issuer, identity_subject)`; non-empty linkage/email | One user has exactly one role; multiple users share roles. Email is provider-provisioned login information, never the identity binding key. |
+| `application_sessions` | `token_digest` primary key; `user_id` non-null foreign key; `established_at`; immutable `expires_at`; nullable `revoked_at`; expiry strictly after establishment; index on expiry | Many independent sessions per user. Store only a digest of a cryptographically random 256-bit cookie token; no passwords or provider tokens. |
+| `login_attempts` | `state_digest` primary key; browser-binding digest; PKCE verifier; fixed configured callback and allowed return-path reference; `created_at`; `expires_at` | Transient, single-use pre-login state; default ten-minute TTL, atomic consumption, bounded admission and explicit expired-record cleanup. Not profile data or another user-management feature. |
+
+- Application session creation fixes expiry to injected clock time plus configured lifetime (default 3,600 seconds); resolution never writes a new expiry. A missing user, role, session or valid binding denies access. Role lookup is joined with session resolution each time, with no stale authorization cache. (FR3–FR6, FR12–FR18)
+- No user-role junction, profile/permission/grant tables, local credentials, retained ID/access/refresh tokens, query IDs, or analytical records. Session/login-attempt records belong to operational state rather than user-profile information. (TR1, TR3)
+- Use Psycopg 3 parameterized repositories and bounded process-owned pools; recommend Alembic migrations with SQLAlchemy used only for migration infrastructure, not a domain ORM. Apply serialized migrations explicitly before seeds, never during import, HTTP factory or login. The [Psycopg pool documentation](https://www.psycopg.org/psycopg3/docs/advanced/pool.html) and [Alembic tutorial](https://alembic.sqlalchemy.org/en/latest/tutorial.html) ground these tooling proposals. (FR1, FR12, TR4)
+- Seed roles and the three initial users in one short PostgreSQL transaction from an explicit manifest of provisioned issuer/subject/email/role records. Exact reruns are idempotent; conflicting bindings/roles fail visibly rather than silently reassigning access. Role constraints permit additional seeded users sharing an existing role. (FR1, FR3, FR5, TR1)
+- Cognito provisioning is a separate controlled setup operation: provision/confirm the three email-login accounts and credential delivery through provider tooling, then capture trusted subjects for the manifest. Never match an arbitrary callback email to create/link a local user, provision users at login, or store passwords in the manifest. A partial setup does not grant access or claim readiness. No cloud/database writes are part of this planning work. (FR1, FR2, FR5, TR1, TR2)
+
+## Interfaces & contracts
+
+### Browser and HTTP boundary
+
+- Recommend browser-to-Flask calls for this module; Flask owns both callback and code exchange. A same-origin development proxy can expose `/api/` to the separate UI without a Next.js credential bridge. If local UI and backend use different origins, allow only the configured UI origin, explicit credentialed requests and exact origin checks; never wildcard credentialed CORS. Deployment URLs remain configuration, not a deployment prerequisite. (FR2, FR15, TR4)
+- Persistent host-only cookie: `HttpOnly`, `SameSite=Lax`, production `Secure`, explicit absolute expiry matching the session; production cookie uses the `__Host-` prefix and path `/`. Local HTTP uses an explicitly development-only unprefixed/insecure-cookie setting. Browser receives no Cognito tokens or stored passwords; no localStorage token transport or bearer-only API alternative is introduced. Cookie possession alone never replaces server-side validity checks. (FR12–FR18, TR1–TR3)
+- **`GET /api/auth/login`** — optional allowlisted relative `return_to`; creates bounded login-attempt state and a short-lived browser-binding cookie, then redirects to configured Cognito managed email login. Credentials are entered at Cognito. PKCE uses S256; random state and browser binding protect the callback. No arbitrary redirect/JWKS URL input. (FR2, FR19, TR1, TR2)
+- **`GET /api/auth/callback`** — code/state or provider error; requires the matching unexpired browser-bound attempt, consumes it once, exchanges the code, validates the access token, resolves seeded issuer/subject and creates a fresh application session. Redirects to the allowlisted UI path without credentials/tokens in the redirect; failed callbacks establish no session. A login may replace the browser cookie but must not revoke other established sessions. (FR2, FR5, FR13, FR18, FR19, TR2, TR3)
+- **`GET /api/auth/session`** — cookie input; `200` returns `{user: {id, email, role}, expires_at, csrf_token}`. CSRF token is cryptographically bound to the current application session; protected mutation requests supply it via `X-CSRF-Token` and pass configured origin checks. No capability/permission catalog is exposed. Missing, revoked or expired sessions return `401`. (FR4, FR6, FR12–FR16, FR20)
+- **`POST /api/auth/logout`** — cookie, origin and session-bound CSRF token; commits current-session invalidation before reporting `204` and expires its cookie. Repeating logout for an already-invalid session clears its cookie without changing other sessions. Failed database invalidation returns service failure and must not claim successful logout. Do not call provider global sign-out/revoke other sessions or equate provider SSO state with this application's logout. (FR17–FR20)
+- Every auth response uses `Cache-Control: no-store`. Proposed JSON failures use `{error: {code, message}}`: `401 unauthenticated`, `403 forbidden`, `400 login_failed`/`invalid_request`, `503 service_unavailable`. Provider callback failures can redirect with only a generic failure marker. No account-existence information, token, code, raw provider exception, SQL text or protected payload is emitted or logged. Provider-side invalid-credential messaging also requires verification for generic behavior. (FR19, FR20)
+
+### Application-owned seams
+
+- **Identity provider port** — authorization request from callback URI/state/challenge; exchange code and verifier into a verified `{issuer, subject}` identity. Infrastructure handles tokens internally, checks RS256 signature, fixed issuer, `token_use=access`, expiry and expected client/resource where configured, and rejects ID tokens as access proof. JWKS endpoints derive only from trusted configuration; cache keys with bounded retrieval and rotation handling. [AWS JWT verification guidance](https://docs.aws.amazon.com/cognito/latest/developerguide/amazon-cognito-user-pools-using-tokens-verifying-a-jwt.html) describes the relevant checks. (FR2, FR5, FR19, TR1, TR2)
+- **User/session store ports** — resolve seeded user by verified issuer/subject; create session; resolve current session/user/role at a supplied time; invalidate one token digest; create/consume login attempt; seed identities transactionally. Failures remain application-level categories, not driver/HTTP exceptions. No transaction spans provider calls or analytical work. (FR1, FR3–FR6, FR12–FR18, TR1)
+- **Clock and security-material ports** — reuse the existing UTC `Clock`; inject random token creation/digests and session-bound CSRF validation with infrastructure implementations. Domain/application never use Flask context or concrete network/database/security libraries. (FR12–FR18, TR4)
+- **Access service** — inputs: session credential plus a trusted operation enum and complete server-derived analytical-grain set when relevant; output: authenticated principal and permitted analytical scope, or an unauthenticated/forbidden/dependency failure. Viewer permits national only; Analyst/Admin permit national/facility/generator; refresh initiation/outcomes/diagnostics require Admin. Empty analytical scopes, unsupported operation/grain values and malformed session inputs do not yield broad access. (FR4–FR12, FR20)
+- Downstream application services call the access service before protected retrieval/execution on every invocation, including preview continuations and SQL result pages. SQL validation supplies the full referenced-dataset set; never trust a browser dataset label or pre-existing query ID as authorization. Query/result ownership remains a downstream contract, not a user-table addition. Workers receive only already-authorized inputs, never session credentials, user tables or PostgreSQL access. (FR7–FR12, TR4)
+- Provider token validation establishes a separate one-hour application session; access-token expiry does not silently shorten or extend that session because provider tokens are neither retained nor accepted for subsequent product requests. Re-login explicitly starts a new provider flow after application expiry; no silent callback/refresh polling. Cognito's existing SSO cookie may let that new flow complete without re-entering credentials, as ADR-0045 permits. [AWS authorization guidance](https://docs.aws.amazon.com/cognito/latest/developerguide/authorization-endpoint.html) and [token-endpoint guidance](https://docs.aws.amazon.com/cognito/latest/developerguide/token-endpoint.html) distinguish the provider flow from our session lease. (FR13–FR18, TR2, TR3)
+
+## Implementation phases
+
+1. **Storage and controlled account linkage** — migrations, essential users/roles, transient/session constraints and repeatable seed reconciliation verified with real PostgreSQL and provider fakes; document actual provider provisioning inputs. (FR1, FR3, FR5, TR1, TR4)
+2. **Provider verification and fixed sessions** — login-attempt lifecycle, verified issuer/subject linkage, clock-based expiry, current identity and isolated session invalidation through application ports. (FR2, FR4–FR6, FR13–FR19, TR2, TR3)
+3. **Reusable role authorization** — complete national/detail/Admin decision matrix and guard contract, with spy ports proving denied callers cause no downstream access. No analytical or refresh implementation is needed. (FR7–FR12, FR20, TR4)
+4. **HTTP composition and browser transport** — login/callback/session/logout endpoints, cookies, CSRF/origin/error behavior and injected wiring; agree the proposed UI contract without implementing the separate client. (FR2, FR4, FR12–FR20, TR1–TR4)
+5. **Independent acceptance and provider readiness** — PostgreSQL integration, browser harness and all-persona Cognito smoke checks, seed/configuration runbook and architecture/quality gates; distinguish mocked verification from actual configured-provider evidence. (FR1–FR20, TR1–TR4)
+
+## Dependencies & integrations
+
+- Existing Flask/HTTPX and UTC clock seam; recommend Authlib's HTTPX OAuth client for PKCE and a maintained JOSE validator in the Cognito adapter, with refresh disabled and unused token responses discarded. Choose compatible stable pins during dependency implementation, not guessed versions. Authlib documents PKCE support in its [HTTP client integration](https://docs.authlib.org/en/stable/oauth2/client/http/index.html). (FR2, FR19, TR2, TR3)
+- Psycopg 3/pool and Alembic/SQLAlchemy migration dependencies, narrowly permitted in infrastructure/explicit setup entry points by architecture checks. Pool connection creation is deferred to explicit runtime use, bounded, and owned/closed per process; no global or fork-inherited connection. (FR1, FR12, TR4)
+- Configured Cognito pool/issuer, client/domain, callback, OAuth scopes and client authentication where applicable; public registration disabled and email login/seeded users verified. Use explicit configured scopes, with no application role derived from scopes. Credentials remain server/provider-side and outside source control. Setup is user-confirmed; this plan has not inspected the running configuration. (FR1, FR2, FR6, FR19, TR1, TR2)
+- Configured PostgreSQL for local integration and RDS for operational development; verified TLS for RDS, runtime least-privilege credentials, separate migration/seed privileges, bounded connection/statement/lock waits. No SQLite fallback. No EC2 provisioning, connector completion, S3 or analytical engine is needed for module tests. (FR1, FR12, TR4)
+
+## Risks & tradeoffs
+
+- **Provider and local seed mismatch** — trust issuer/subject from controlled provisioning; fail closed on unknown identities and conflicting seed reruns. Provider account creation and local transaction cannot be one atomic transaction. (FR1, FR5, TR1, TR2)
+- **Session versus provider lifetime confusion** — local session is authoritative after verified login, with no raw bearer fallback, renewal or provider global logout. Provider account disabling is not an immediate local revocation feature in this reduced scope. Record this integration recommendation before implementation; do not advertise forced credential re-entry or provider-wide logout. (FR13–FR18, TR2, TR3)
+- **Cookie/callback integration failures** — verify same-site behavior across local ports, callback state/binding, allowlisted redirects, production Secure cookies and session-bound CSRF; use a real browser harness. (FR2, FR12, FR15, FR17)
+- **Database outages and logout races** — all checks fail closed on operational-store failure; logout acknowledgement follows committed invalidation. Requests already authorized/in flight need not be retroactively cancelled, but new checks after logout must deny; connection budgets bound waits. (FR12, FR17, FR20)
+- **Downstream bypasses** — central application guard and denied-access spies establish the seam; require feature-specific enforcement tests when catalog/SQL/refresh are later delivered. Module completion cannot claim those absent routes are secure. (FR7–FR12, TR4)
+- **Unbounded transient records or secret leakage** — cap login-attempt admission, expire/clean attempts and sessions explicitly, redact callback/provider wire logging and never retain full token responses. Limits are configurable initial controls, not measured production budgets. (FR12, FR19, FR20, TR1, TR3)
+
+### Alternatives considered
+
+- Browser-owned tokens or a Next.js token bridge — unnecessary extra credential ownership for the independent Flask module; opaque cookies give backend-enforced current-session logout. (FR15, FR17, TR4)
+- Stateless signed-cookie/JWT sessions — alone cannot immediately invalidate one replayed session while retaining other sessions. (FR17, FR18)
+- In-memory session registry — less infrastructure, but PostgreSQL already owns application-session state under ADR-0032; no special restart recovery guarantee is added by storing it there. (FR13–FR18)
+- Cognito global sign-out and refresh lifecycle — wider session effects and renewal behavior conflict with reduced scope. (FR18, TR3)
+
+## Test strategy
+
+- **AC1, AC3, AC21** — real PostgreSQL migration/constraint and seed-rerun tests; invalid/missing/multiple role representation, unknown roles, duplicate issuer/subject and conflicting bindings rejected. Inspect persisted essential fields and absence of credentials; real provider provisioning smoke verifies the initial personas separately.
+- **AC2, AC5, AC6, AC19** — controlled Cognito/JWKS/code-exchange integration plus fake-port use-case tests for valid login, wrong signature/issuer/client/purpose, expiry, unknown key rotation, provider errors, unlinked subjects and supplied groups/roles. Test state/browser-binding mismatch, expiry and replay. Configured Cognito smoke verifies all three email logins and generic invalid-credential presentation.
+- **AC4** — application/HTTP tests expose only the seeded identity and current single role; provider/caller role claims never affect the response.
+- **AC7–AC11** — table-driven pure policy/application tests across all three roles, each analytical grain, mixed-grain requests, refresh initiation/outcome/diagnostic operations and callers without sessions.
+- **AC12, AC20** — protected test use cases with spy data/execution ports prove direct/repeated/page requests authorize before access and emit no protected data on denial. Cover unknown/expired/revoked credentials, absent roles and database failure; test HTTP CSRF/origin failures. Later feature tests must additionally cover actual SQL-reference extraction and all page routes.
+- **AC13, AC14, AC16** — injected-clock tests at establishment, just before expiry and exactly/after expiry; repeated activity never moves expiry. Spy provider client proves no refresh calls and no retained refresh-token state.
+- **AC15** — browser harness uses the proposed endpoints independently of the separate UI: close/reopen the same persistent browser profile, retain an unexpired cookie, and confirm fixed expiry; expired/revoked cookies deny. Also check cookie scope/flags and production transport configuration.
+- **AC17, AC18** — PostgreSQL-backed tests establish two independent sessions, logout one, replay its old cookie and confirm the other still works. Include repeated logout, failed invalidation, concurrent post-commit checks and provider global-logout absence.
+- **AC22** — run domain/application suites with fakes and PostgreSQL/HTTP/browser tests without connector/S3/data access; provider smoke only requires Cognito plus operational storage. Keep `/health` independent of authentication/DB readiness and factory/imports free of I/O. Run documented Ruff, mypy, pytest and import-boundary checks at implementation phases.
+
+## Assumptions
+
+- Latest spec has no open product clarifications. Named routes, tables, cookie transport, provider-to-session mapping and tooling are recommendations in this draft; accepted architectural boundaries remain unchanged.
+- Provider/RDS setup was user-confirmed, but account provisioning, email login, generic login messaging, OAuth scopes/client configuration and actual callbacks still need verification before a live readiness claim. Missing concrete identifiers block live smoke checks, not fake-based implementation.
+- Independent browser sessions use separate cookie stores/profiles; tabs in one profile normally share the same application cookie. Browser reopening assumes the user/browser retains persistent cookies; clearing cookies requires new login. (FR15, FR18)
+- Durable session rows may survive a restart, but no recovery/continuity promise or additional restart machinery is introduced. Explicit login remains the fallback for interruptions. (FR13–FR18)
+- A documentation plan executes no migrations, seeds, provider changes, deployment, tests or live login. Verification above is proposed, not reported as passed.
+
+## Open decisions
+
+_None blocking the design._ Draft transport/session/tooling recommendations should be recorded as proposed ADR decisions before implementation under repository conventions. Actual provider identifiers, callback/UI origins, account seed values, PostgreSQL version compatibility and compatible dependency pins are implementation inputs to verify; no additional product scope is required.

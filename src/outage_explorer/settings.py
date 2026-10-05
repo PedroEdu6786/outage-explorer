@@ -1,7 +1,7 @@
 """Typed local defaults and optional JSON overrides, loaded only at startup.
 
 Bootstrap translates these settings to validated application contracts. Defaults
-are initial conservative limits, not measured live limits. No dotenv is loaded.
+are bounded contributor allowances, not measured live limits. No dotenv is loaded.
 """
 
 import json
@@ -16,21 +16,21 @@ CONFIG_MAX_BYTES = 64 * 1024
 
 @dataclass(frozen=True)
 class SourceSettings:
-    interval_days: int = 30
-    page_rows: int = 2
-    rows: int = 10_000
+    interval_days: int = 183
+    page_rows: int = 500
+    rows: int = 30_000
     pages: int = 100
     requests: int = 200
-    attempts: int = 1
+    attempts: int = 3
     request_bytes: int = 4_000
-    response_bytes: int = 100_000
-    total_bytes: int = 1_000_000
-    output_bytes: int = 5_000_000
+    response_bytes: int = 1_000_000
+    total_bytes: int = 30_000_000
+    output_bytes: int = 40_000_000
     json_depth: int = 20
     json_nodes: int = 20_000
     field_bytes: int = 20_000
-    elapsed_seconds: int = 60
-    timeout_seconds: int = 3
+    elapsed_seconds: int = 1_800
+    timeout_seconds: int = 10
     backoff_seconds: int = 1
 
 
@@ -40,7 +40,7 @@ class ArtifactSettings:
     row_group_rows: int = 100
     row_group_bytes: int = 1_000_000
     file_bytes: int = 2_000_000
-    total_bytes: int = 100_000_000
+    total_bytes: int = 256_000_000
     objects: int = 10_000
     field_bytes: int = 100_000
     json_depth: int = 25
@@ -48,16 +48,31 @@ class ArtifactSettings:
 
 @dataclass(frozen=True)
 class ModelSettings:
-    incoming_rows: int = 10_000
-    prior_rows: int = 10_000
-    output_rows: int = 10_000
+    incoming_rows: int = 30_000
+    prior_rows: int = 30_000
+    output_rows: int = 30_000
     fields_per_row: int = 30
     field_chars: int = 10_000
     coefficient_digits: int = 100
     absolute_exponent: int = 100
     source_index: int = 100_000
-    interval_days: int = 30
+    interval_days: int = 183
     reason_occurrences: int = 100_000
+
+
+@dataclass(frozen=True)
+class WorkerSettings:
+    endpoint_workers: int = 1
+    page_workers: int = 1
+    s3_workers: int = 1
+    memory_bytes: int = 256_000_000
+    temporary_bytes: int = 600_000_000
+
+    def __post_init__(self) -> None:
+        if any(type(value) is not int or value <= 0 for value in vars(self).values()):
+            raise ValueError("Worker settings must be positive integers")
+        if self.endpoint_workers > 3 or self.page_workers > 3 or self.s3_workers > 3:
+            raise ValueError("Worker count cannot exceed three")
 
 
 @dataclass(frozen=True)
@@ -72,6 +87,7 @@ class ConnectorSettings:
     report_bytes: int = 1_000_000
     prior_digest: str | None = None
     prior_bytes: int | None = None
+    workers: WorkerSettings = field(default_factory=WorkerSettings)
 
 
 def _unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
@@ -103,6 +119,7 @@ def _document(path: str | None) -> dict[str, object]:
         "artifact",
         "model",
         "report_bytes",
+        "workers",
     }:
         raise ValueError
     for name in ("start", "end", "staging", "prior"):
@@ -138,6 +155,8 @@ def connector_settings(
     prior: str | None,
     environment: Mapping[str, str],
     config_path: str | None = None,
+    fetch_workers: int | None = None,
+    s3_workers: int | None = None,
 ) -> ConnectorSettings:
     try:
         document = _document(config_path)
@@ -190,6 +209,210 @@ def connector_settings(
             report_bytes,
             digest,
             size,
+            worker_settings(document, fetch_workers, s3_workers),
         )
     except (ValueError, TypeError, KeyError, OverflowError, OSError, RecursionError):
         raise ValueError("Invalid connector configuration") from None
+
+
+@dataclass(frozen=True)
+class S3Settings:
+    bucket: str
+    prefix: str
+    region: str
+    profile: str | None = field(default=None, repr=False)
+
+
+def s3_settings(environment: Mapping[str, str]) -> S3Settings:
+    """Validate the durable target without credentials, source or storage I/O."""
+    try:
+        bucket, prefix = (
+            environment["OUTAGE_S3_BUCKET"],
+            environment["OUTAGE_S3_PREFIX"],
+        )
+        region = environment["AWS_REGION"]
+        if (
+            not re.fullmatch(r"[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]", bucket)
+            or not re.fullmatch(r"[A-Za-z0-9_/-]+/", prefix)
+            or any(part in (".", "..", "") for part in prefix[:-1].split("/"))
+            or not re.fullmatch(r"[a-z]{2}(?:-[a-z]+)+-\d", region)
+        ):
+            raise ValueError
+        profile = environment.get("AWS_PROFILE")
+        if profile is not None and (
+            not profile.strip() or any(ord(char) < 32 for char in profile)
+        ):
+            raise ValueError
+        return S3Settings(bucket, prefix, region, profile)
+    except (KeyError, ValueError, TypeError):
+        raise ValueError("Invalid connector S3 configuration") from None
+
+
+def artifact_settings(
+    staging: str | None,
+    manifest: str | None,
+    environment: Mapping[str, str],
+    config_path: str | None = None,
+    s3_workers: int | None = None,
+) -> tuple[str, str, int, ArtifactSettings, ModelSettings, S3Settings, WorkerSettings]:
+    """Recovery needs no EIA key or dates. Validate before constructing clients."""
+    try:
+        document = _document(config_path)
+        root = _argument(staging, document, "staging")
+        if "\x00" in root or manifest is None:
+            raise ValueError
+        match = re.fullmatch(r"([0-9a-f]{64}):([1-9][0-9]*)", manifest)
+        if match is None:
+            raise ValueError
+        digest, size_text = match.groups()
+        size = int(size_text)
+        artifact = ArtifactSettings(
+            **_budgets(document.get("artifact", {}), asdict(ArtifactSettings()))
+        )
+        model = ModelSettings(
+            **_budgets(document.get("model", {}), asdict(ModelSettings()))
+        )
+        if size > artifact.file_bytes:
+            raise ValueError
+        s3 = s3_settings(environment)
+        return (
+            root,
+            digest,
+            size,
+            artifact,
+            model,
+            s3,
+            worker_settings(document, None, s3_workers),
+        )
+    except (KeyError, ValueError, TypeError, OSError, UnicodeError, RecursionError):
+        raise ValueError("Invalid connector artifact configuration") from None
+
+
+@dataclass(frozen=True)
+class AuthSettings:
+    database_dsn: str = field(repr=False)
+    issuer: str
+    provider_domain: str
+    client_id: str
+    scopes: tuple[str, ...]
+    callback_uri: str
+    public_origin: str
+    ui_origin: str
+    return_paths: frozenset[str]
+    development_http: bool = False
+    resource: str | None = None
+    session_seconds: int = 3600
+    attempt_seconds: int = 600
+    attempt_limit: int = 1000
+
+
+def auth_settings(environment: Mapping[str, str]) -> AuthSettings | None:
+    """Explicit opt-in: unconfigured HTTP still exposes independent health."""
+    from urllib.parse import urlsplit
+
+    enabled = environment.get("OUTAGE_AUTH_ENABLED", "false")
+    if enabled not in {"true", "false"}:
+        raise ValueError("Invalid authentication configuration")
+    if enabled == "false":
+        return None
+    try:
+        required = {
+            name: environment[name]
+            for name in (
+                "OUTAGE_ACCESS_DATABASE_DSN",
+                "COGNITO_ISSUER",
+                "COGNITO_DOMAIN",
+                "COGNITO_APP_CLIENT_ID",
+                "COGNITO_OAUTH_SCOPES",
+                "OUTAGE_AUTH_PUBLIC_ORIGIN",
+                "OUTAGE_AUTH_CALLBACK_URI",
+            )
+        }
+        if any(
+            not value or any(ord(char) < 32 for char in value)
+            for value in required.values()
+        ):
+            raise ValueError
+        mode = environment.get("OUTAGE_AUTH_DEVELOPMENT_HTTP", "false")
+        if mode not in {"true", "false"}:
+            raise ValueError
+        public = required["OUTAGE_AUTH_PUBLIC_ORIGIN"]
+        ui = environment.get("OUTAGE_AUTH_UI_ORIGIN") or public
+        development = mode == "true"
+        for origin in (public, ui):
+            parsed = urlsplit(origin)
+            if (
+                parsed.username
+                or parsed.password
+                or parsed.query
+                or parsed.fragment
+                or not parsed.hostname
+                or parsed.path
+                or parsed.scheme not in {"https", "http"}
+            ):
+                raise ValueError
+            if development and parsed.hostname not in {"localhost", "127.0.0.1", "::1"}:
+                raise ValueError
+            if parsed.scheme == "http" and (
+                not development
+                or parsed.hostname not in {"localhost", "127.0.0.1", "::1"}
+            ):
+                raise ValueError
+            if any(char.isspace() for char in origin):
+                raise ValueError
+            _ = parsed.port  # validate numeric/range constraints
+        if required["OUTAGE_AUTH_CALLBACK_URI"] != public + "/api/auth/callback":
+            raise ValueError
+        paths = environment.get("OUTAGE_AUTH_RETURN_PATHS", "/").split(",")
+        if not paths or any(
+            not path.startswith("/")
+            or path.startswith("//")
+            or any(char in path for char in "\\?#%")
+            or any(ord(char) < 32 for char in path)
+            for path in paths
+        ):
+            raise ValueError
+        values = [
+            int(environment.get(name, str(default)))
+            for name, default in (
+                ("OUTAGE_AUTH_SESSION_SECONDS", 3600),
+                ("OUTAGE_AUTH_ATTEMPT_SECONDS", 600),
+                ("OUTAGE_AUTH_ATTEMPT_LIMIT", 1000),
+            )
+        ]
+        if (
+            not 1 <= values[0] <= 86400
+            or not 1 <= values[1] <= 3600
+            or not 1 <= values[2] <= 100000
+        ):
+            raise ValueError
+        scopes = tuple(required["COGNITO_OAUTH_SCOPES"].split())
+        if not scopes:
+            raise ValueError
+        return AuthSettings(
+            required["OUTAGE_ACCESS_DATABASE_DSN"],
+            required["COGNITO_ISSUER"],
+            required["COGNITO_DOMAIN"],
+            required["COGNITO_APP_CLIENT_ID"],
+            scopes,
+            required["OUTAGE_AUTH_CALLBACK_URI"],
+            public,
+            ui,
+            frozenset(paths),
+            development,
+            environment.get("COGNITO_RESOURCE") or None,
+            *values,
+        )
+    except (KeyError, ValueError, TypeError):
+        raise ValueError("Invalid authentication configuration") from None
+
+
+def worker_settings(
+    document: dict[str, object], fetch: int | None, s3: int | None
+) -> WorkerSettings:
+    values = _budgets(document.get("workers", {}), asdict(WorkerSettings()))
+    if fetch is not None:
+        values["page_workers"] = fetch
+    if s3 is not None:
+        values["s3_workers"] = s3
+    return WorkerSettings(**values)

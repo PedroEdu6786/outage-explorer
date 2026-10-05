@@ -207,6 +207,9 @@ def test_cli_multipage_replay_exact_values_and_quality(tmp_path, capsys, caplog)
         run(
             invoke,
             [
+                "--local-only",
+                "--config",
+                config_file(tmp_path, {"source": {"page_rows": 2}}),
                 "--start",
                 "2026-09-01",
                 "--end",
@@ -259,7 +262,27 @@ def test_cli_multipage_replay_exact_values_and_quality(tmp_path, capsys, caplog)
     for path in tmp_path.rglob("*"):
         if path.is_file():
             assert SECRET.encode() not in path.read_bytes()
-    assert SECRET not in caplog.text + capsys.readouterr().out
+    output = capsys.readouterr()
+    assert SECRET not in caplog.text + output.out + output.err
+    assert "api_key" not in output.err and "Exact name" not in output.err
+    steps = [
+        "candidate_started",
+        "prior_ready",
+        "collection_started",
+        "eia_metadata_verified",
+        "eia_page_collected",
+        "collection_complete",
+        "comparison_started",
+        "comparison_complete",
+        "candidate_verification_started",
+        "candidate_complete",
+    ]
+    assert [output.err.index(step) for step in steps] == sorted(
+        output.err.index(step) for step in steps
+    )
+    assert "route=facility-nuclear-outages" in output.err
+    assert "skipped_invalid=1 skipped_duplicates=1 conflicts_superseded=1" in output.err
+    assert "rows_skipped" in output.err
 
 
 @pytest.mark.parametrize("total", ["2850", "2"])
@@ -298,6 +321,7 @@ def test_cli_failure_and_configuration_exit_codes(tmp_path, capsys):
                 params, environment=environment(), transport=wire
             ),
             [
+                "--local-only",
                 "--start",
                 "2026-09-01",
                 "--end",
@@ -312,7 +336,15 @@ def test_cli_failure_and_configuration_exit_codes(tmp_path, capsys):
     assert (
         run(
             lambda params: execute_connector(params, environment={}),
-            ["--start", "bad", "--end", "2026-09-02", "--staging", str(tmp_path)],
+            [
+                "--local-only",
+                "--start",
+                "bad",
+                "--end",
+                "2026-09-02",
+                "--staging",
+                str(tmp_path),
+            ],
         )
         == 2
     )
@@ -393,7 +425,7 @@ def test_cli_file_configuration_and_run_flag_precedence(tmp_path, override_flags
         outcomes.append(result)
         return result
 
-    flags = ["--config", path]
+    flags = ["--local-only", "--config", path]
     if override_flags:
         flags += ["--end", "2026-09-02", "--staging", str(root)]
     assert run(invoke, flags) == 0
@@ -428,6 +460,7 @@ def test_bad_config_file_exits_two_without_io_or_secret_echo(
             [
                 "--config",
                 str(path),
+                "--local-only",
                 "--start",
                 "2026-09-01",
                 "--end",
@@ -448,3 +481,124 @@ def test_help_does_not_open_even_an_explicit_config_file(capsys):
         with pytest.raises(SystemExit) as error:
             run(execute_connector, ["--config", "missing.json", "--help"])
     assert error.value.code == 0 and "--config" in capsys.readouterr().out
+
+
+def test_cli_logging_restores_configuration_after_failure_and_help(capsys):
+    logger = logging.getLogger("outage_explorer.connector")
+    original = (logger.level, logger.propagate, list(logger.handlers))
+
+    def failed(_):
+        raise RuntimeError(SECRET)
+
+    assert (
+        run(failed, ["--local-only", "--start", "2026-09-01", "--end", "2026-09-01"])
+        == 1
+    )
+    output = capsys.readouterr()
+    assert "connector_failed code=internal" in output.err
+    assert SECRET not in output.err + output.out
+    assert (logger.level, logger.propagate, list(logger.handlers)) == original
+    with pytest.raises(SystemExit):
+        run(failed, ["--help"])
+    assert capsys.readouterr().err == ""
+    assert (logger.level, logger.propagate, list(logger.handlers)) == original
+
+
+def test_cli_rejects_insufficient_aggregate_worker_memory_before_source(
+    tmp_path, capsys
+):
+    root = tmp_path / "worker-limits"
+    path = config_file(root, {"workers": {"endpoint_workers": 3, "memory_bytes": 1}})
+    wire = Wire()
+    result = run(
+        lambda request: execute_connector(
+            request, environment=environment(), transport=wire
+        ),
+        [
+            "--local-only",
+            "--start",
+            "2026-09-01",
+            "--end",
+            "2026-09-02",
+            "--staging",
+            str(root),
+            "--config",
+            path,
+        ],
+    )
+    assert result == 2
+    assert wire.closed and not wire.calls and not root.exists()
+    assert SECRET not in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("flag", ["--fetch-workers", "--s3-workers"])
+@pytest.mark.parametrize("value", ["0", "4", "synthetic-secret"])
+def test_cli_worker_arguments_fail_before_executor_without_echo(flag, value, capsys):
+    with pytest.raises(SystemExit) as error:
+        run(lambda _: pytest.fail("executor invoked"), [flag, value])
+    assert error.value.code == 2
+    captured = capsys.readouterr()
+    assert "synthetic-secret" not in captured.err + captured.out
+
+
+def test_make_forwards_page_and_s3_overrides_without_json():
+    import subprocess
+
+    result = subprocess.run(
+        [
+            "make",
+            "-n",
+            "connector",
+            "START=2026-04-02",
+            "END=2026-10-01",
+            "FETCH_WORKERS=3",
+            "S3_WORKERS=3",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "--fetch-workers '3'" in result.stdout
+    assert "--s3-workers '3'" in result.stdout
+    assert "--config" not in result.stdout
+
+
+def test_cli_worker_override_dtos_for_candidate_and_recovery(tmp_path):
+    from outage_explorer.application.dto import ConnectorArtifactInput
+    from outage_explorer.application.ports.artifacts import StoredObject
+    from outage_explorer.application.ports.connector import DurableConnectorReceipt
+
+    seen = []
+    result, _ = execute(tmp_path / "candidate-input")
+
+    def candidate(request):
+        seen.append(request)
+        return result
+
+    assert (
+        run(candidate, ["--local-only", "--fetch-workers", "3", "--s3-workers", "2"])
+        == 0
+    )
+    assert seen[0].fetch_workers == 3 and seen[0].s3_workers == 2
+    reference = StoredObject("a" * 64, "a" * 64, 1)
+
+    def recover(request):
+        seen.append(request)
+        return DurableConnectorReceipt(reference, 1, 1)
+
+    assert (
+        run(
+            candidate,
+            [
+                "--operation",
+                "recover",
+                "--manifest",
+                f"{reference.key}:1",
+                "--s3-workers",
+                "3",
+            ],
+            execute_artifacts=recover,
+        )
+        == 0
+    )
+    assert isinstance(seen[1], ConnectorArtifactInput) and seen[1].s3_workers == 3

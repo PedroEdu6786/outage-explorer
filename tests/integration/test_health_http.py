@@ -78,3 +78,20 @@ def test_unknown_route_and_head():
     response = client.head("/health")
     assert response.status_code == 200
     assert response.data == b""
+
+
+def test_configured_auth_keeps_health_independent_of_dependencies(monkeypatch):
+    from tests.integration.test_user_access_http import CONFIG
+
+    for name, value in CONFIG.items():
+        monkeypatch.setenv(name, value)
+    app = start_app()
+    try:
+        assert app.test_client().get("/health").status_code == 200
+        app.extensions["outage_access_close"]()
+        client = app.test_client()
+        client.set_cookie("outage_session", "a" * 43)
+        assert client.get("/api/auth/session").status_code == 503
+        assert client.get("/health").status_code == 200
+    finally:
+        app.extensions["outage_access_close"]()

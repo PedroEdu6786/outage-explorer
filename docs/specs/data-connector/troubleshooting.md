@@ -32,8 +32,11 @@ transport failure or retryable HTTP status.
 With `EIA_API_KEY` exported, use the optional bounded test profile:
 
 ```sh
-make connector CONFIG=connector-smoke.json
+make connector LOCAL_ONLY=1 CONFIG=connector-smoke.json
 ```
+
+Under ADR-0042, omit `LOCAL_ONLY=1` only when configured S3 persistence is also
+intended; ordinary connector runs now upload and verify the graph by default.
 
 The profile specifies September 1, 2026, local staging, 100 rows/page,
 10-second request timeout, 3 attempts and a 120-second per-route deadline.
@@ -63,3 +66,31 @@ dependency validation, and wheel/sdist builds. The focused source/CLI run passed
 **172 tests**. Regressions cover metadata arrays across all grains, strict data
 echoes and route validation, cross-page numeric facility ordering, preserved
 leading-zero identities/Parquet replay, and rejection of real ordering regressions.
+
+
+## S3 fails after a verified local candidate
+
+For a profile configured by `aws login`, Boto3 requires AWS CRT support.
+`make setup` now installs pinned `boto3[crt]` and `awscrt`; an incomplete install
+reports `aws_dependency` rather than a generic `internal` result. This requirement
+is documented in [Boto3 credentials](https://docs.aws.amazon.com/boto3/latest/guide/credentials.html#login-with-console-credentials).
+
+A verified local candidate remains usable after S3 failure. Copy its
+`local_manifest=SHA256:BYTE_COUNT` into the explicit persistence command:
+
+```sh
+.venv/bin/python -m outage_explorer.entrypoints.cli.connector_startup \
+  --operation persist --staging data/connector-local \
+  --manifest 'SHA256:BYTE_COUNT'
+```
+
+This retries storage/readback without another EIA retrieval. Session expiry,
+provider availability and bucket permissions remain separate checks; installing
+CRT does not renew credentials or prove cloud access.
+
+`comparison_started` covers grain modeling and full semantic verification, not
+just a quick summary comparison. An interrupted run with no manifest is not a
+confirmed candidate. ADR-0050 removes per-day whole-evidence scans; current logs
+include `grain_build_started/complete`, `grain_verify_started/complete` and
+periodic partition counts. Verification may create bounded immutable derived
+local partitions; they remain retry staging, not authoritative graph dependencies.

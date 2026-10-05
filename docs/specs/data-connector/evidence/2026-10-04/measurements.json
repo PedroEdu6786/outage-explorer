@@ -1,0 +1,512 @@
+{
+  "environment": {
+    "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+    "python": "3.14.6",
+    "packages": {
+      "pyarrow": "25.0.1",
+      "httpx": "0.28.1",
+      "boto3": "1.43.108",
+      "botocore": "1.43.108"
+    }
+  },
+  "rss_units": "bytes: macOS ru_maxrss process high-water mark including Python/SDK/native libraries",
+  "records": [
+    {
+      "mode": "aws-inherited-parallel",
+      "seconds": 19.27617487500538,
+      "rss_bytes": 152977408,
+      "manifest": {
+        "key": "4163a962a3bc069cb72ac247a86165b394b05053c0c00d015e7877f564ef7fc4",
+        "sha256": "4163a962a3bc069cb72ac247a86165b394b05053c0c00d015e7877f564ef7fc4",
+        "byte_count": 39913
+      },
+      "objects": 150,
+      "graph_bytes": 1438271,
+      "staging_bytes": 1645655,
+      "measurement_file": "/private/tmp/outage-phase6-evidence/aws-inherited-parallel-measurement.json",
+      "configuration": {
+        "workers": {
+          "s3_workers": 3
+        }
+      }
+    },
+    {
+      "mode": "aws-inherited-parallel-recovery",
+      "seconds": 5.759702750001452,
+      "rss_bytes": 143147008,
+      "manifest": {
+        "key": "4163a962a3bc069cb72ac247a86165b394b05053c0c00d015e7877f564ef7fc4",
+        "sha256": "4163a962a3bc069cb72ac247a86165b394b05053c0c00d015e7877f564ef7fc4",
+        "byte_count": 39913
+      },
+      "objects": 150,
+      "graph_bytes": 1438271,
+      "staging_bytes": 1438271,
+      "measurement_file": "/private/tmp/outage-phase6-evidence/aws-inherited-parallel-recovery-measurement.json",
+      "configuration": {
+        "workers": {
+          "s3_workers": 3
+        }
+      }
+    },
+    {
+      "mode": "aws-parallel",
+      "seconds": 8.154006250013481,
+      "rss_bytes": 114065408,
+      "manifest": {
+        "key": "daea78aca27c24b09ef1809a3ecf3621f4845ce007f7454885be91d8f62c406d",
+        "sha256": "daea78aca27c24b09ef1809a3ecf3621f4845ce007f7454885be91d8f62c406d",
+        "byte_count": 21341
+      },
+      "objects": 75,
+      "graph_bytes": 687569,
+      "staging_bytes": 792054,
+      "measurement_file": "/private/tmp/outage-phase6-evidence/aws-parallel-measurement.json",
+      "configuration": {
+        "workers": {
+          "s3_workers": 3
+        }
+      }
+    },
+    {
+      "mode": "aws-parallel-recovery",
+      "seconds": 2.8245028750097845,
+      "rss_bytes": 112738304,
+      "manifest": {
+        "key": "daea78aca27c24b09ef1809a3ecf3621f4845ce007f7454885be91d8f62c406d",
+        "sha256": "daea78aca27c24b09ef1809a3ecf3621f4845ce007f7454885be91d8f62c406d",
+        "byte_count": 21341
+      },
+      "objects": 75,
+      "graph_bytes": 687569,
+      "staging_bytes": 687569,
+      "measurement_file": "/private/tmp/outage-phase6-evidence/aws-parallel-recovery-measurement.json",
+      "configuration": {
+        "workers": {
+          "s3_workers": 3
+        }
+      }
+    },
+    {
+      "mode": "aws-sequential",
+      "seconds": 21.95771583300666,
+      "rss_bytes": 113672192,
+      "manifest": {
+        "key": "daea78aca27c24b09ef1809a3ecf3621f4845ce007f7454885be91d8f62c406d",
+        "sha256": "daea78aca27c24b09ef1809a3ecf3621f4845ce007f7454885be91d8f62c406d",
+        "byte_count": 21341
+      },
+      "objects": 75,
+      "graph_bytes": 687569,
+      "staging_bytes": 792054,
+      "measurement_file": "/private/tmp/outage-phase6-evidence/aws-sequential-measurement.json",
+      "configuration": {
+        "workers": {
+          "s3_workers": 1
+        }
+      }
+    },
+    {
+      "mode": "aws-sequential-recovery",
+      "seconds": 6.25588779199461,
+      "rss_bytes": 111755264,
+      "manifest": {
+        "key": "daea78aca27c24b09ef1809a3ecf3621f4845ce007f7454885be91d8f62c406d",
+        "sha256": "daea78aca27c24b09ef1809a3ecf3621f4845ce007f7454885be91d8f62c406d",
+        "byte_count": 21341
+      },
+      "objects": 75,
+      "graph_bytes": 687569,
+      "staging_bytes": 687569,
+      "measurement_file": "/private/tmp/outage-phase6-evidence/aws-sequential-recovery-measurement.json",
+      "configuration": {
+        "workers": {
+          "s3_workers": 1
+        }
+      }
+    },
+    {
+      "mode": "controlled",
+      "seconds": 5.163485875003971,
+      "max_rss": 106692608,
+      "outcome": "candidate_verified",
+      "error": null,
+      "manifest": {
+        "key": "07c86f84a876f38a1712f7c5f1208179f8a698f213c28110c9505c57f09a3eba",
+        "sha256": "07c86f84a876f38a1712f7c5f1208179f8a698f213c28110c9505c57f09a3eba",
+        "byte_count": 86891
+      },
+      "sources": [
+        {
+          "grain": "national",
+          "received": 30,
+          "totals": [
+            "30"
+          ]
+        },
+        {
+          "grain": "facility",
+          "received": 30,
+          "totals": [
+            "30"
+          ]
+        },
+        {
+          "grain": "generator",
+          "received": 30,
+          "totals": [
+            "30"
+          ]
+        }
+      ],
+      "disk_bytes": 2273378,
+      "measurement_file": "/private/tmp/outage-phase6-evidence/controlled-measurement.json",
+      "configuration": {
+        "workers": {
+          "s3_workers": 3
+        }
+      }
+    },
+    {
+      "mode": "controlled-parallel",
+      "seconds": 5.186309208002058,
+      "max_rss": 101711872,
+      "outcome": "candidate_verified",
+      "error": null,
+      "manifest": {
+        "key": "f55e1c4de0193c9419addfa53167f6268d0aacac38e981c24962f450869fa079",
+        "sha256": "f55e1c4de0193c9419addfa53167f6268d0aacac38e981c24962f450869fa079",
+        "byte_count": 86891
+      },
+      "sources": [
+        {
+          "grain": "national",
+          "received": 30,
+          "totals": [
+            "30"
+          ]
+        },
+        {
+          "grain": "facility",
+          "received": 30,
+          "totals": [
+            "30"
+          ]
+        },
+        {
+          "grain": "generator",
+          "received": 30,
+          "totals": [
+            "30"
+          ]
+        }
+      ],
+      "disk_bytes": 2273665,
+      "measurement_file": "/private/tmp/outage-phase6-evidence/controlled-parallel-measurement.json",
+      "configuration": {
+        "source": {
+          "page_rows": 5,
+          "pages": 200,
+          "requests": 400,
+          "elapsed_seconds": 120,
+          "timeout_seconds": 10
+        },
+        "workers": {
+          "endpoint_workers": 3
+        }
+      }
+    },
+    {
+      "mode": "live",
+      "seconds": 14.61743079200096,
+      "max_rss": 109674496,
+      "outcome": "candidate_verified",
+      "error": null,
+      "manifest": {
+        "key": "daea78aca27c24b09ef1809a3ecf3621f4845ce007f7454885be91d8f62c406d",
+        "sha256": "daea78aca27c24b09ef1809a3ecf3621f4845ce007f7454885be91d8f62c406d",
+        "byte_count": 21341
+      },
+      "sources": [
+        {
+          "grain": "national",
+          "received": 1,
+          "totals": [
+            "1"
+          ]
+        },
+        {
+          "grain": "facility",
+          "received": 55,
+          "totals": [
+            "95"
+          ]
+        },
+        {
+          "grain": "generator",
+          "received": 95,
+          "totals": [
+            "95"
+          ]
+        }
+      ],
+      "disk_bytes": 792054,
+      "measurement_file": "/private/tmp/outage-phase6-evidence/live-measurement.json",
+      "configuration": {
+        "source": {
+          "page_rows": 5,
+          "pages": 200,
+          "requests": 400,
+          "elapsed_seconds": 120,
+          "timeout_seconds": 10
+        }
+      }
+    },
+    {
+      "mode": "live-rerun-parallel",
+      "seconds": 11.269350166010554,
+      "max_rss": 108724224,
+      "outcome": "candidate_verified",
+      "error": null,
+      "manifest": {
+        "key": "4163a962a3bc069cb72ac247a86165b394b05053c0c00d015e7877f564ef7fc4",
+        "sha256": "4163a962a3bc069cb72ac247a86165b394b05053c0c00d015e7877f564ef7fc4",
+        "byte_count": 39913
+      },
+      "sources": [
+        {
+          "grain": "national",
+          "received": 1,
+          "totals": [
+            "1"
+          ]
+        },
+        {
+          "grain": "facility",
+          "received": 55,
+          "totals": [
+            "95"
+          ]
+        },
+        {
+          "grain": "generator",
+          "received": 95,
+          "totals": [
+            "95"
+          ]
+        }
+      ],
+      "disk_bytes": 1645655,
+      "measurement_file": "/private/tmp/outage-phase6-evidence/live-rerun-parallel-measurement.json",
+      "configuration": {
+        "source": {
+          "page_rows": 5,
+          "pages": 200,
+          "requests": 400,
+          "elapsed_seconds": 120,
+          "timeout_seconds": 10
+        },
+        "workers": {
+          "endpoint_workers": 3
+        }
+      }
+    },
+    {
+      "mode": "live30",
+      "seconds": 41.38865787499526,
+      "max_rss": 107905024,
+      "outcome": "candidate_verified",
+      "error": null,
+      "manifest": {
+        "key": "f69fecf3f44a725cbf21cced6d85f463f0e7aae3ab04de733766b9d6de9488a9",
+        "sha256": "f69fecf3f44a725cbf21cced6d85f463f0e7aae3ab04de733766b9d6de9488a9",
+        "byte_count": 93220
+      },
+      "sources": [
+        {
+          "grain": "national",
+          "received": 30,
+          "totals": [
+            "30"
+          ]
+        },
+        {
+          "grain": "facility",
+          "received": 1650,
+          "totals": [
+            "2850"
+          ]
+        },
+        {
+          "grain": "generator",
+          "received": 2850,
+          "totals": [
+            "2850"
+          ]
+        }
+      ],
+      "disk_bytes": 12173312,
+      "measurement_file": "/private/tmp/outage-phase6-evidence/live30-measurement.json",
+      "configuration": {
+        "source": {
+          "page_rows": 500,
+          "pages": 200,
+          "requests": 400,
+          "elapsed_seconds": 180,
+          "timeout_seconds": 10,
+          "response_bytes": 1000000,
+          "total_bytes": 10000000,
+          "output_bytes": 20000000
+        },
+        "workers": {
+          "endpoint_workers": 1,
+          "memory_bytes": 128000000
+        }
+      }
+    },
+    {
+      "mode": "liveinitial-diagnostic-parallel",
+      "seconds": 564.4330080420041,
+      "max_rss": 110788608,
+      "outcome": "failed",
+      "error": "interrupted",
+      "manifest": null,
+      "sources": [
+        {
+          "grain": "national",
+          "received": 183,
+          "totals": [
+            "183"
+          ]
+        },
+        {
+          "grain": "facility",
+          "received": 10065,
+          "totals": [
+            "17385"
+          ]
+        },
+        {
+          "grain": "generator",
+          "received": 17385,
+          "totals": [
+            "17385"
+          ]
+        }
+      ],
+      "disk_bytes": 74229991,
+      "measurement_file": "/private/tmp/outage-phase6-evidence/liveinitial-diagnostic-parallel-measurement.json",
+      "configuration": {
+        "source": {
+          "page_rows": 500,
+          "pages": 100,
+          "requests": 200,
+          "elapsed_seconds": 300,
+          "timeout_seconds": 10,
+          "interval_days": 183,
+          "rows": 30000,
+          "response_bytes": 1000000,
+          "total_bytes": 30000000,
+          "output_bytes": 40000000
+        },
+        "workers": {
+          "endpoint_workers": 3,
+          "memory_bytes": 256000000
+        },
+        "model": {
+          "interval_days": 183,
+          "incoming_rows": 30000,
+          "prior_rows": 30000,
+          "output_rows": 30000
+        }
+      }
+    },
+    {
+      "mode": "liveinitial-parallel",
+      "seconds": 2.40871795899875,
+      "max_rss": 107675648,
+      "outcome": "failed",
+      "error": "resource",
+      "manifest": null,
+      "sources": [],
+      "disk_bytes": 686267,
+      "measurement_file": "/private/tmp/outage-phase6-evidence/liveinitial-parallel-measurement.json",
+      "configuration": {
+        "source": {
+          "page_rows": 500,
+          "pages": 100,
+          "requests": 200,
+          "elapsed_seconds": 300,
+          "timeout_seconds": 10,
+          "interval_days": 183,
+          "rows": 30000,
+          "response_bytes": 1000000,
+          "total_bytes": 30000000,
+          "output_bytes": 40000000
+        },
+        "workers": {
+          "endpoint_workers": 3,
+          "memory_bytes": 256000000
+        },
+        "model": {
+          "interval_days": 183,
+          "incoming_rows": 30000,
+          "prior_rows": 30000,
+          "output_rows": 30000
+        }
+      }
+    },
+    {
+      "mode": "storage-baseline.json",
+      "records": [
+        {
+          "label": "new_upload",
+          "seconds": 5.246553624994704,
+          "rss_bytes": 102121472,
+          "objects": 310,
+          "graph_bytes": 1925323
+        },
+        {
+          "label": "identical_retry",
+          "seconds": 5.544399958002032,
+          "rss_bytes": 102531072,
+          "objects": 310,
+          "graph_bytes": 1925323
+        },
+        {
+          "label": "recovery",
+          "seconds": 3.9179525840008864,
+          "rss_bytes": 102531072,
+          "objects": 310,
+          "graph_bytes": 1925323
+        }
+      ]
+    },
+    {
+      "mode": "storage-parallel.json",
+      "records": [
+        {
+          "label": "new_upload",
+          "seconds": 5.093454083005781,
+          "rss_bytes": 102236160,
+          "objects": 310,
+          "graph_bytes": 1925323
+        },
+        {
+          "label": "identical_retry",
+          "seconds": 5.058940832997905,
+          "rss_bytes": 102711296,
+          "objects": 310,
+          "graph_bytes": 1925323
+        },
+        {
+          "label": "recovery",
+          "seconds": 3.449441000004299,
+          "rss_bytes": 102891520,
+          "objects": 310,
+          "graph_bytes": 1925323
+        }
+      ]
+    }
+  ]
+}

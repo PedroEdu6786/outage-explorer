@@ -191,6 +191,7 @@ def write_evidence(
 ) -> EvidenceBundle:
     raw_refs: list[ArtifactRef] = []
     page_refs: list[ArtifactRef] = []
+    transport_refs: list[StoredObject] = []
     interval: Interval | None = None
     grain: Grain | None = None
     position = 0
@@ -208,7 +209,46 @@ def write_evidence(
             page, interval, grain, page_index, position, retrieval, seen
         )
         parameters = _json(page.parameters, store)
-        metadata = _json(page.metadata, store)
+        metadata_value = page.metadata
+        if page.transport:
+            if (
+                not isinstance(metadata_value, dict)
+                or "transport_refs" in metadata_value
+            ):
+                raise ArtifactError("Invalid supplemental transport metadata")
+            window_refs = []
+            for item in page.transport:
+                _json_types(item, store)
+                payload = json.dumps(
+                    item,
+                    ensure_ascii=False,
+                    allow_nan=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode()
+                ref = store.put_immutable((payload,))
+                window_refs.append(ref)
+                transport_refs.append(ref)
+            metadata_value = metadata_value | {
+                "transport_refs": [asdict(ref) for ref in window_refs],
+                "transport_counts": {
+                    "requests": len(page.transport),
+                    "fetched_rows": sum(
+                        len(
+                            cast(
+                                dict[str, dict[str, list[object]]],
+                                cast(dict[str, object], item)["envelope"],
+                            )["response"]["data"]
+                        )
+                        for item in page.transport
+                    ),
+                    "unused_responses": sum(
+                        not cast(dict[str, object], item)["used"]
+                        for item in page.transport
+                    ),
+                },
+            }
+        metadata = _json(metadata_value, store)
 
         refs = store.write("raw", grain, None, _page_rows(store, page, position))
         raw_refs.extend(refs)
@@ -232,15 +272,76 @@ def write_evidence(
         terminal = not page.values
     if interval is None or grain is None:
         raise ArtifactError("Evidence needs at least one accepted page")
-    bundle = EvidenceBundle(grain, interval, tuple(raw_refs), tuple(page_refs))
+    bundle = EvidenceBundle(
+        grain, interval, tuple(raw_refs), tuple(page_refs), tuple(transport_refs)
+    )
     verify_evidence(store, bundle)
     return bundle
+
+
+def _transport_audits(
+    store: LocalParquetStore, references: tuple[StoredObject, ...]
+) -> tuple[dict[str, dict[str, object]], dict[str, int]]:
+    audits: dict[str, dict[str, object]] = {}
+    fetched_rows = unused_responses = 0
+    for transport_ref in references:
+        payload = b"".join(store.read(transport_ref))
+        try:
+            item = json.loads(payload)
+            _json_types(item, store)
+        except (ValueError, UnicodeError, RecursionError):
+            raise ArtifactError("Invalid supplemental transport JSON") from None
+        if (
+            not isinstance(item, dict)
+            or set(item)
+            != {
+                "version",
+                "offset",
+                "parameters",
+                "request_id",
+                "received_at",
+                "attempt",
+                "failures",
+                "redacted_paths",
+                "envelope",
+                "used",
+            }
+            or item["version"] != 1
+            or type(item["version"]) is not int
+            or type(item["offset"]) is not int
+            or item["offset"] < 0
+            or type(item["attempt"]) is not int
+            or item["attempt"] <= 0
+            or type(item["used"]) is not bool
+            or not isinstance(item["request_id"], str)
+            or not isinstance(item["envelope"], dict)
+            or not isinstance(item["parameters"], dict)
+        ):
+            raise ArtifactError("Invalid supplemental transport descriptor")
+        response = item["envelope"].get("response")
+        if not isinstance(response, dict) or not isinstance(response.get("data"), list):
+            raise ArtifactError("Invalid supplemental transport envelope")
+        fetched_rows += len(response["data"])
+        unused_responses += not item["used"]
+        if item["used"]:
+            if item["request_id"] in audits:
+                raise ArtifactError("Repeated supplemental used request")
+            audits[item["request_id"]] = item
+    return audits, {
+        "requests": len(references),
+        "fetched_rows": fetched_rows,
+        "unused_responses": unused_responses,
+    }
 
 
 def _scan_evidence(
     store: LocalParquetStore, bundle: EvidenceBundle
 ) -> Iterator[IncomingRow]:
-    if not bundle.pages or len(bundle.pages) + len(bundle.raw) > store.bounds.objects:
+    if (
+        not bundle.pages
+        or len(bundle.pages) + len(bundle.raw) + len(bundle.transport)
+        > store.bounds.objects
+    ):
         raise ArtifactError("Invalid evidence object count")
     if len({ref.object.key for ref in (*bundle.pages, *bundle.raw)}) != len(
         bundle.pages
@@ -248,9 +349,13 @@ def _scan_evidence(
         raise ArtifactError("Repeated evidence object")
     if (
         sum(ref.object.byte_count for ref in (*bundle.pages, *bundle.raw))
+        + sum(ref.byte_count for ref in bundle.transport)
         > store.bounds.total_bytes
     ):
         raise ArtifactLimitError("Evidence exceeds total bytes")
+    audits: dict[str, dict[str, object]] = {}
+    referenced_transport: list[StoredObject] = []
+    matched_audits: set[str] = set()
     position = page_index = raw_index = 0
     retrieval: tuple[str, ...] | None = None
     seen: set[tuple[str, str]] = set()
@@ -300,6 +405,44 @@ def _scan_evidence(
                 retrieval,
                 seen,
             )
+            if isinstance(page.metadata, dict) and "transport_refs" in page.metadata:
+                try:
+                    refs_value = page.metadata["transport_refs"]
+                    if not isinstance(refs_value, list):
+                        raise TypeError
+                    if not 1 <= len(refs_value) <= 3:
+                        raise ArtifactError("Invalid supplemental window width")
+                    if matched_audits != set(audits):
+                        raise ArtifactError("Unmatched supplemental window")
+                    window_refs = tuple(StoredObject(**value) for value in refs_value)
+                    referenced_transport.extend(window_refs)
+                    audits, counts = _transport_audits(store, window_refs)
+                    if page.metadata.get("transport_counts") != counts:
+                        raise ArtifactError("Supplemental transport counts mismatch")
+                    matched_audits = set()
+                except (TypeError, ValueError):
+                    raise ArtifactError(
+                        "Invalid supplemental evidence reference"
+                    ) from None
+            audit = audits.get(origin.request_id)
+            if bundle.transport:
+                if (
+                    audit is None
+                    or audit["offset"] != page.offset
+                    or audit["parameters"] != page.parameters
+                    or audit["attempt"] != page.attempt
+                    or audit["received_at"] != origin.retrieved_at.isoformat()
+                ):
+                    raise ArtifactError("Supplemental canonical request mismatch")
+                audit_envelope = cast(dict[str, object], audit["envelope"])
+                audit_response = cast(dict[str, object], audit_envelope["response"])
+                audit_values = cast(list[object], audit_response["data"])
+                if (
+                    len(audit_values) != count
+                    or audit_response["total"] != page.source_total
+                ):
+                    raise ArtifactError("Supplemental canonical count mismatch")
+                matched_audits.add(origin.request_id)
             if count > page.length:
                 raise ArtifactError("Page returned more than requested")
             row_index = 0
@@ -324,6 +467,8 @@ def _scan_evidence(
                     )
                     item = raw_from_record(raw)
                     _json(item.value, store)
+                    if bundle.transport and item.value != audit_values[row_index]:
+                        raise ArtifactError("Supplemental canonical raw value mismatch")
                     if item.origin != expected:
                         raise ArtifactError("Raw page origin mismatch")
                     yield item
@@ -333,6 +478,8 @@ def _scan_evidence(
             position += count
             page_index += 1
             terminal = count == 0
+    if tuple(referenced_transport) != bundle.transport or matched_audits != set(audits):
+        raise ArtifactError("Unlinked supplemental transport evidence")
     if raw_index != len(bundle.raw):
         raise ArtifactError("Unlinked raw evidence")
 

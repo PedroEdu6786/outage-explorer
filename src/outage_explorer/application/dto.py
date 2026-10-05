@@ -1,6 +1,6 @@
 """Transport-independent application results."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal
 
@@ -12,6 +12,7 @@ from outage_explorer.application.errors import (
 from outage_explorer.application.ports.artifacts import StoredObject
 from outage_explorer.application.ports.candidates import GrainSummary
 from outage_explorer.application.ports.source import SourceQuality
+from outage_explorer.domain.access import SeededUser
 from outage_explorer.domain.observations import (
     DailyResult,
     Disposition,
@@ -81,6 +82,8 @@ class ConnectorInput:
     staging: str | None
     prior: str | None = None
     config_path: str | None = None
+    fetch_workers: int | None = None
+    s3_workers: int | None = None
 
 
 @dataclass(frozen=True)
@@ -131,3 +134,54 @@ class ConnectorReport:
 class ConnectorResult:
     report: ConnectorReport
     report_written: bool
+
+
+@dataclass(frozen=True)
+class ConnectorArtifactInput:
+    operation: Literal["persist", "recover"]
+    staging: str | None
+    manifest: str | None
+    config_path: str | None = None
+    s3_workers: int | None = None
+
+
+@dataclass(frozen=True)
+class SeedIdentity:
+    identity_issuer: str
+    identity_subject: str
+    email: str
+    role: str
+
+
+@dataclass(frozen=True)
+class VerifiedIdentity:
+    issuer: str
+    subject: str
+
+
+@dataclass(frozen=True)
+class AccessSetupInput:
+    operation: Literal["migrate", "seed", "cleanup"]
+    manifest: str | None = None
+
+
+@dataclass(frozen=True)
+class LoginRedirect:
+    authorization_url: str = field(repr=False)
+    browser_binding: str = field(repr=False)
+    expires_at: datetime
+
+
+@dataclass(frozen=True)
+class EstablishedSession:
+    token: str = field(repr=False)
+    user: SeededUser
+    expires_at: datetime
+    return_to: str
+
+
+@dataclass(frozen=True)
+class CurrentIdentity:
+    user: SeededUser
+    expires_at: datetime
+    csrf_token: str = field(repr=False)
