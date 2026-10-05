@@ -210,3 +210,13 @@ Connector budgets are already configured and bounded; verify them under backgrou
 supervision. API worker count, launcher, overall/preparation deadline, cache/spill
 quotas and production memory remain measurement/design gates. No new numerical
 production claims follow from this analysis.
+
+### Proposed refresh persistence improvement
+
+A live refresh showed ongoing S3 activity while its broad `persisting` stage
+appeared stalled to the user. The HTTP worker currently selects one persistence
+worker despite the connector's existing bounded concurrency support. See the
+[refresh persistence improvement](refresh-persistence-improvement.md) for dated
+observations, proposed instrumentation and concurrency work, and verification
+criteria. It remains a proposal; current runtime defaults and publication gates
+are unchanged.
