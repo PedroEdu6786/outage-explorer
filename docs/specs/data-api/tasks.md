@@ -18,6 +18,9 @@
 
 ## Assumptions and environment gates
 
+- The user owns T1.7 runtime validation as of 2026-10-05. Agents skip running
+  that validation step and continue independent implementation; record its
+  completion only after the user supplies results.
 - Implement the plan's selected interface choices and synchronize the spec/HTTP contract; maintain proposed status for unreviewed quotas, process topology and sandbox decisions. Accepted architecture changes require a new reviewed ADR.
 - The frontend contract artifacts are available in Phase 1; product HTTP endpoints remain Phase 6. Fixtures must identify synthetic inputs and cannot imply running endpoints or published data.
 - Linux sandbox denial/limit checks and measured cold/warm preparation, query/storage and overlapping refresh workloads require a suitable verified environment. Darwin checks or a missing Docker daemon cannot close those gates. Keep T1.7 and full T1.C open if evidence is unavailable; independent implementation continues.

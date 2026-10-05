@@ -14,6 +14,10 @@
 
 ## Checkpoint evidence
 
+- Validation ownership (2026-10-05): the user will perform T1.7 validation.
+  Agents should skip executing this validation step and continue independent
+  implementation. T1.7/T1.C remain unchecked pending the user's results;
+  assigning validation does not supply runtime evidence.
 - T1.1–T1.6 complete: selected wire vocabulary, portable OpenAPI and synthetic
   examples for all seven operations, Parquet projection parity, pinned parser/
   engine reference analysis, and bounded canonical encoding.
