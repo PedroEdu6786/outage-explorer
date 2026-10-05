@@ -3,7 +3,8 @@
 import atexit
 import logging
 import os
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterator, Mapping
+from contextlib import contextmanager
 from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any
@@ -35,6 +36,7 @@ from outage_explorer.application.ports.artifacts import (
     TransferBounds,
 )
 from outage_explorer.application.ports.connector import DurableConnectorReceipt
+from outage_explorer.application.ports.refresh_execution import RefreshConnector
 from outage_explorer.application.ports.source import ROUTES, SourceBounds
 from outage_explorer.application.services.access import AccessService
 from outage_explorer.application.services.connector import CreateConnectorCandidate
@@ -50,10 +52,16 @@ from outage_explorer.application.services.evidence import (
 )
 from outage_explorer.application.services.health import HealthService
 from outage_explorer.application.services.login import LoginService
+from outage_explorer.application.services.refresh_execution import (
+    RefreshExecution,
+    RefreshReports,
+    RefreshWorker,
+)
 from outage_explorer.application.services.seed_users import (
     SeedUsers,
     validate_identities,
 )
+from outage_explorer.domain.publication import RefreshOwner, RefreshRun
 from outage_explorer.domain.refresh import Interval, RefreshBounds
 from outage_explorer.entrypoints.cli.access_setup import read_manifest
 from outage_explorer.entrypoints.http.app import create_app
@@ -81,12 +89,22 @@ from outage_explorer.infrastructure.postgresql.credentials import (
 )
 from outage_explorer.infrastructure.postgresql.migrations import run_migrations
 from outage_explorer.infrastructure.postgresql.pool import BoundedPostgresqlPool
+from outage_explorer.infrastructure.postgresql.publication import (
+    PostgresqlPublicationStore,
+)
 from outage_explorer.infrastructure.recorded_evidence import LocalRecordedEvidence
+from outage_explorer.infrastructure.refresh_worker import (
+    RenewableRefreshLease,
+    SupervisedRefreshProcess,
+)
 from outage_explorer.infrastructure.s3.artifacts import S3ArtifactStore
 from outage_explorer.infrastructure.security import RandomSecurityMaterial
 from outage_explorer.infrastructure.verification_report import LocalReportWriter
 from outage_explorer.settings import (
+    ArtifactSettings,
     DatabaseSettings,
+    ModelSettings,
+    SourceSettings,
     artifact_settings,
     auth_settings,
     connector_settings,
@@ -464,3 +482,142 @@ def _access_pool(database: DatabaseSettings) -> BoundedPostgresqlPool:
     return BoundedPostgresqlPool(
         database.dsn, password_provider=credentials.token if credentials else None
     )
+
+
+def build_refresh_worker(
+    *,
+    environment: Mapping[str, str] | None = None,
+    transport: httpx.BaseTransport | None = None,
+    client: Any = None,
+) -> SupervisedRefreshProcess:
+    """Explicit independent process composition; construction starts no jobs/I/O."""
+    env = dict(os.environ if environment is None else environment)
+    try:
+        target = s3_settings(env)  # Fail before admitting any source work.
+        database = database_settings(env)
+        staging = env["OUTAGE_REFRESH_STAGING"]
+        api_key = env["EIA_API_KEY"]
+        if not staging or "\x00" in staging or not api_key:
+            raise ValueError
+    except (KeyError, ValueError):
+        raise ConnectorConfigurationError(
+            "Invalid refresh worker configuration"
+        ) from None
+    pool = _access_pool(database)
+    store = PostgresqlPublicationStore(pool)
+    lease = RenewableRefreshLease(store)
+
+    @contextmanager
+    def connector(run: RefreshRun, owner: RefreshOwner) -> Iterator[RefreshConnector]:
+        config = run.configuration
+        source_bounds = SourceBounds(
+            **asdict(
+                replace(
+                    SourceSettings(),
+                    interval_days=config.source_interval_days,
+                    elapsed_seconds=config.candidate_seconds,
+                )
+            )
+        )
+        model_bounds = RefreshBounds(
+            **asdict(
+                replace(
+                    ModelSettings(),
+                    interval_days=config.model_interval_days,
+                )
+            )
+        )
+        artifacts = ArtifactBounds(**asdict(ArtifactSettings()))
+        workers = BoundedConnectorWorkers(1, elapsed_seconds=config.candidate_seconds)
+
+        active_workers = workers
+
+        def check() -> None:
+            lease.check()
+            active_workers.check()
+
+        local = LocalConnectorEvidence(
+            LocalParquetStore(
+                Path(staging) / run.id / "objects",
+                artifacts,
+                check,
+            )
+        )
+        source_budget = SourceRunBudget(source_bounds, workers.cancelled)
+        wire = transport
+        sdk = client
+        owned_wire, owned_sdk = wire is None, sdk is None
+        try:
+            if wire is None:
+                wire = httpx.HTTPTransport(retries=0, trust_env=False)
+            if sdk is None:
+                sdk = boto3.Session(
+                    profile_name=target.profile, region_name=target.region
+                ).client(
+                    "s3",
+                    config=Config(
+                        connect_timeout=10,
+                        read_timeout=10,
+                        retries={"mode": "standard", "total_max_attempts": 1},
+                    ),
+                )
+            durable = S3ArtifactStore(
+                sdk,
+                target.bucket,
+                target.prefix,
+                artifacts,
+                replace(TransferBounds(), elapsed_seconds=config.candidate_seconds),
+            )
+            reports = RefreshReports(store, owner)
+            candidate = CreateConnectorCandidate(
+                lambda request: EiaSource(
+                    request, source_bounds, wire, api_key, budget=source_budget
+                ),
+                local,
+                ParquetCandidateBuilder(local.store),
+                reports,
+                workers=workers,
+            )
+
+            def persist(
+                reference: StoredObject, bounds: RefreshBounds
+            ) -> DurableConnectorReceipt:
+                nonlocal active_workers
+                # Persistence has its own frozen deadline and full readback session.
+                lease.check()
+                remote = S3ArtifactStore(
+                    sdk,
+                    target.bucket,
+                    target.prefix,
+                    artifacts,
+                    replace(
+                        TransferBounds(), elapsed_seconds=config.persistence_seconds
+                    ),
+                )
+                persistence_workers = BoundedConnectorWorkers(
+                    1, elapsed_seconds=config.persistence_seconds
+                )
+                active_workers = persistence_workers
+                return PersistConnectorArtifacts(
+                    local, remote, workers=persistence_workers
+                ).execute(reference, bounds)
+
+            yield RefreshConnector(
+                candidate,
+                local,
+                model_bounds,
+                RecoverConnectorArtifacts(local, durable).execute,
+                local.reopen,
+                persist,
+                durable.reference,
+                SystemClock(),
+            )
+        finally:
+            if owned_wire and wire is not None:
+                wire.close()
+            if owned_sdk and sdk is not None:
+                sdk.close()
+
+    execution = RefreshExecution(store, store, connector)
+    worker = RefreshWorker(store, execution, lease, str(uuid4()))
+    return SupervisedRefreshProcess(worker.tick, pool.close)

@@ -44,7 +44,21 @@ def main() -> int:
 if __name__ == "__main__":
     raise SystemExit(main())
 """
+REFRESH_STARTUP_SOURCE = """
+from outage_explorer.bootstrap import build_refresh_worker
+from outage_explorer.entrypoints.refresh_worker import run
+
+def main() -> int:
+    return run(build_refresh_worker())
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+"""
 CLI_WRAPPERS = {
+    f"{ROOT}.entrypoints.refresh_worker_startup": (
+        "build_refresh_worker",
+        REFRESH_STARTUP_SOURCE,
+    ),
     f"{ROOT}.entrypoints.cli.access_startup": (
         "execute_access_setup",
         ACCESS_STARTUP_SOURCE,
@@ -154,6 +168,14 @@ def allowed_dependency(source: str, target: str) -> bool:
         return any(
             under(target, f"{ROOT}.{prefix}") for prefix in ALLOWED.get(layer, ())
         )
+    if (
+        source == f"{ROOT}.application.ports.refresh_execution"
+        and target == "contextlib.AbstractContextManager"
+    ):
+        return True  # Type contract only; no context-manager execution helper.
+    # Pure in-memory encoding only; do not admit json file readers to inner layers.
+    if source == f"{ROOT}.application.refresh_outcomes" and target == "json.dumps":
+        return True
     external = target.split(".")[0]
     if external in {"importlib", "builtins"}:
         return False

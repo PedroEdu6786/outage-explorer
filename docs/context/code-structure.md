@@ -354,3 +354,32 @@ CI provisions its database/browser dependencies without cloud credentials.
 See the [operator runbook](../specs/user-access/setup.md) and
 [verification record](../specs/user-access/verification.md). Real managed-login
 and browser validation remain pending, so Phase 5's live checkpoint stays open.
+
+Data API Phase 3 adds admitted-run execution and quality mapping in
+`application/services/refresh_execution.py` and `application/refresh_outcomes.py`.
+A separate explicit `entrypoints/refresh_worker_startup.py` executable composes
+per-run EIA/Parquet/S3 dependencies in bootstrap, commits ownership before source
+work, renews database-time leases independently, and closes its resources.
+`application/services/refresh_recovery.py` reuses serialized PostgreSQL history
+reconciliation; interrupted unpublished work requires explicit Admin retry.
+The worker restores and replays the pinned base, verifies all-grain identity,
+persists/replays the full durable graph before publication, and reports retained
+all-excluded input without moving the pointer. Exact-AST startup checks constrain
+the new wrapper. Inner layers permit only the pure `json.dumps` status encoder
+and the `contextlib.AbstractContextManager` type contract, with negative fixtures
+rejecting file decoding and execution helpers. Controlled process restart,
+PostgreSQL/Parquet/S3 and commit-loss evidence is recorded in the
+[Phase 3 checkpoint](../specs/data-api/tasks/phase-3.md); product HTTP and actual
+preview/SQL continuations remain downstream work.
+
+
+Data API Phase 4 adds application catalog/preview services, published-input and
+isolated-execution ports, a modeled-only verified projection cache, and bounded
+snapshot cursor metadata. Workers receive exact public-column Parquet projections;
+raw/provenance dependencies never enter the analytical input grant. Preview
+metadata holds generation pins until fixed expiry and supervised cleanup; active
+reads and unproven reaping prevent premature pin release. Controlled worker
+fixtures exercise real DuckDB in a separate process, without asserting OS
+isolation. The product launcher remains fail-closed until the reviewed T1.7
+runtime is supplied. HTTP integration and explicit runtime lifecycle composition
+remain Phase 6; see the [Phase 4 checkpoint](../specs/data-api/tasks/phase-4.md).

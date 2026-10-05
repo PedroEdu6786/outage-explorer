@@ -213,6 +213,24 @@ class S3ArtifactStore:
                 reference.byte_count,
             )
 
+    def reference(self, key: str, digest: str) -> StoredObject:
+        """Bounded metadata lookup; bytes still require complete verified readback."""
+        if not re.fullmatch(r"[0-9a-f]{64}", key) or key != digest:
+            raise ArtifactError("Invalid manifest identity")
+        self._request()
+        try:
+            response = self.client.head_object(
+                Bucket=self.bucket, Key=self.prefix + "objects/" + key
+            )
+        except (ClientError, BotoCoreError, OSError):
+            raise ArtifactError("Manifest metadata unavailable") from None
+        size = response.get("ContentLength")
+        if type(size) is not int:
+            raise ArtifactError("Invalid manifest size")
+        result = StoredObject(key, digest, size)
+        self._key(result)
+        return result
+
     def read(self, reference: StoredObject) -> Iterator[bytes]:
         key = self._key(reference)
         response = None

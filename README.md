@@ -585,3 +585,31 @@ Parallel lookahead can spend extra requests/rows/bytes, subject to the same
 aggregate limits. Details: [ADR-0049](docs/adr/0049-bounded-page-prefetch-and-worker-flags.md).
 These knobs do not parallelize synchronous modeling/replay or establish a speedup,
 a verified full initial candidate, source snapshot consistency or production limits.
+
+### Run the independent refresh worker
+
+Data API Phase 3 supplies an explicit supervised worker, separate from HTTP:
+
+```sh
+.venv/bin/python -m outage_explorer.entrypoints.refresh_worker_startup
+```
+
+Configure the existing `OUTAGE_ACCESS_DATABASE_*` database settings,
+`OUTAGE_REFRESH_STAGING` for private per-run local artifacts, `EIA_API_KEY`, and
+`OUTAGE_S3_BUCKET`, `OUTAGE_S3_PREFIX` and `AWS_REGION` (optional `AWS_PROFILE`).
+The worker validates the S3 target before source work and claims only committed
+admissions. Dates and source/model interval limits, candidate deadline and
+persistence deadline come from each frozen admission, independent of current
+worker environment. Remaining connector resource bounds use typed initial defaults;
+these are not measured production allowances.
+
+The process polls durably, renews fenced database-time leases and reconstructs
+verified pinned bases from S3. Only full verified graph persistence/readback
+permits atomic all-grain publication. SIGTERM stops polling after the current
+bounded operation; explicit process shutdown closes transport/SDK/database
+resources. A lost claimed run is reconciled against publication history; confirmed
+unpublished work becomes interrupted and requires a new Admin admission, without
+automatic source retries. Imports and HTTP factories start no refresh work.
+HTTP refresh endpoints arrive in data API Phase 6. This local executable and its
+controlled tests do not authorize live publication or establish EC2 supervision,
+measured budgets or SQL sandbox readiness.

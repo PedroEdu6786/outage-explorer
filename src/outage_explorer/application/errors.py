@@ -72,3 +72,27 @@ class IdempotencyConflictError(Exception):
 
 class StaleRefreshOwnerError(Exception):
     """The worker no longer holds the unexpired fenced ownership lease."""
+
+
+class DataUnavailableError(Exception):
+    """Published data is absent or failed integrity checks."""
+
+
+class PreviewUnavailableError(Exception):
+    """Continuation is invalid, foreign, expired or lost; never restart silently."""
+
+
+class AnalyticalBusyError(Exception):
+    """Retryable contention for the one analytical slot."""
+
+
+class AnalyticalResourceError(Exception):
+    """An explicit analytical resource budget was exhausted."""
+
+
+class RuntimeUnavailableError(Exception):
+    """No reviewed isolated runtime is configured."""
+
+
+class PreviewCapacityError(Exception):
+    """Independent ephemeral preview metadata capacity exhausted."""
