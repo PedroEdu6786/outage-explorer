@@ -782,3 +782,22 @@ def build_query_result_lifecycle(
     """Construct inert process-owned resources; caller explicitly starts/closes."""
     store = BoundedQueryResults(root, SystemClock(), bounds)
     return store, QueryCleanup(store, interval_seconds=cleanup_interval_seconds)
+
+
+def build_query_worker(*, inputs_root: Path | None = None) -> Callable[[bytes], bytes]:
+    """Candidate container transport with explicit smoke-test limits only."""
+    from outage_explorer.application.ports.execution import ExecutionBounds
+    from outage_explorer.infrastructure.duckdb.previews import execute_preview
+    from outage_explorer.infrastructure.duckdb.queries import execute_query
+    from outage_explorer.infrastructure.worker_runtime.protocol import AnalyticalWorker
+
+    bounds = ExecutionBounds(30, 40, 134_217_728, 16_777_216, 1_048_576)
+    encoding = EncodingBounds(1_048_576, 16, 10_000, 100, 65_536)
+    worker = AnalyticalWorker(
+        Path("/inputs") if inputs_root is None else inputs_root,
+        lambda request: execute_preview(request, bounds),
+        lambda request: execute_query(request, bounds, encoding),
+        DuckdbSqlInspector(max_sql_bytes=65_536, max_nodes=10_000, max_depth=64),
+        PreviewEncoding(encoding),
+    )
+    return worker.execute

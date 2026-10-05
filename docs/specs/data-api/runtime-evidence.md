@@ -5,6 +5,31 @@ feasibility remains pending**. No data routes, product query executor, worker
 launcher, publication or deployment was enabled. The current API never imports
 or executes DuckDB through these additions.
 
+## Candidate Docker worker transport follow-up (2026-10-05)
+
+At the user's request, the candidate analytical image now runs one bounded
+stdin/stdout request using the existing DuckDB preview/query adapters. The
+worker constructs digest-named paths under `/inputs`, reinspects SQL references,
+preserves canonical cells, rejects malformed/duplicate/unknown input, and emits
+safe errors. A narrow exact startup exception preserves the import matrix and
+negative fixtures. See [build/run and protocol instructions](../../../infrastructure/analytical-worker/README.md).
+
+Controlled transport/subprocess/architecture checks: **130 passed**. Related
+HTTP transport/encoding regression: **75 passed**. Ruff lint/format, strict mypy
+and whitespace checks passed. The reference-free synthetic subprocess query
+returned the integer string `"42"`; a synthetic real-Parquet preview preserved
+dates/decimals and rejected a missing input. The sdist/wheel build passed.
+This is controlled transport evidence, not
+Docker isolation, live preview or deadline/termination evidence.
+
+The user previously reported successful restricted Alpine and analytical
+dependency-image smoke runs. The updated application image has not been built
+or executed by the agent. Example container/engine limits remain test settings.
+The concrete `ReviewedRuntime` launcher, bounded Docker lifecycle and typed
+response decoding, reviewed resource measurements and API `DataHttpResources`
+wiring remain pending. HTTP preview/SQL continue to fail closed; no T1.7 check
+was marked complete and no deployment or additional publication was performed.
+
 ## Controlled compatibility profile
 
 Pinned DuckDB 1.5.6, SQLGlot 30.21.0 and pytz 2026.2. Actual timestamptz fetches

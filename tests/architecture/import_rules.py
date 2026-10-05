@@ -54,7 +54,22 @@ def main() -> int:
 if __name__ == "__main__":
     raise SystemExit(main())
 """
+QUERY_STARTUP_SOURCE = """
+import sys
+from outage_explorer.bootstrap import build_query_worker
+from outage_explorer.entrypoints.query_worker import run
+
+def main() -> int:
+    return run(build_query_worker(), sys.stdin.buffer, sys.stdout.buffer)
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+"""
 CLI_WRAPPERS = {
+    f"{ROOT}.entrypoints.query_worker_startup": (
+        "build_query_worker",
+        QUERY_STARTUP_SOURCE,
+    ),
     f"{ROOT}.entrypoints.refresh_worker_startup": (
         "build_refresh_worker",
         REFRESH_STARTUP_SOURCE,
@@ -161,6 +176,8 @@ def allowed_dependency(source: str, target: str) -> bool:
         )
     ):
         return True
+    if source == f"{ROOT}.entrypoints.query_worker_startup" and target == "sys":
+        return True  # Its exact AST permits only passing stdin/stdout at startup.
     layer = source.removeprefix(ROOT + ".").split(".")[0]
     if layer == "bootstrap":
         return True
@@ -203,6 +220,8 @@ def allowed_dependency(source: str, target: str) -> bool:
         )
         if source == f"{ROOT}.entrypoints.cli.access_setup":
             transport |= {"json", "pathlib"}
+        if source == f"{ROOT}.entrypoints.query_worker":
+            transport |= {"json"}  # Bounded internal response envelope only.
         if source == f"{ROOT}.entrypoints.http.auth_transport":
             transport |= {"logging"}
         if source in {
