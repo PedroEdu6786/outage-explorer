@@ -62,6 +62,29 @@ def test_imports_and_factory_do_not_start_work():
             assert configured.test_client().get("/health").status_code == 200
             assert configured.test_client().get("/api/auth/session").status_code == 401
             configured.extensions["outage_access_close"]()
+            os.environ.pop("OUTAGE_ACCESS_DATABASE_DSN")
+            os.environ.update({
+                "OUTAGE_ACCESS_DATABASE_MODE": "iam",
+                "OUTAGE_ACCESS_DATABASE_HOST": "database.abc.us-east-1.rds.amazonaws.com",
+                "OUTAGE_ACCESS_DATABASE_USER": "outage_app",
+                "OUTAGE_ACCESS_DATABASE_NAME": "outage",
+                "OUTAGE_ACCESS_DATABASE_REGION": "us-east-1",
+                "OUTAGE_ACCESS_DATABASE_SSLROOTCERT": "/trusted/rds.pem",
+                "COGNITO_APP_CLIENT_SECRET": "CONFIDENTIAL",
+            })
+            with patch("boto3.Session", side_effect=AssertionError("Credentials acquired")), patch("multiprocessing.process.BaseProcess.start", side_effect=AssertionError("Signer started")), patch("psycopg.connect", side_effect=AssertionError("Connected")):
+                iam_app = create_app()
+                assert iam_app.test_client().get("/health").status_code == 200
+                assert iam_app.test_client().get("/api/auth/session").status_code == 401
+                iam_app.extensions["outage_access_close"]()
+                iam_app.extensions["outage_access_close"]()
+                from outage_explorer.entrypoints.cli.access_startup import main as setup_main
+                with patch.object(sys, "argv", ["access-setup", "--help"]):
+                    try:
+                        setup_main()
+                    except SystemExit as error:
+                        assert error.code == 0
+
     """)
     result = subprocess.run(
         [sys.executable, "-I", "-c", script],

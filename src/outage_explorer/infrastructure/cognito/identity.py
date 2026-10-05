@@ -5,7 +5,7 @@ import logging
 import os
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from urllib.parse import urlencode, urlsplit
 
 import httpx
@@ -38,6 +38,7 @@ class CognitoConfig:
     max_keys: int = 10
     cache_seconds: float = 300.0
     rotation_seconds: float = 5.0
+    client_secret: str | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         for value in (self.issuer, self.domain):
@@ -61,6 +62,14 @@ class CognitoConfig:
             or not 1 <= self.max_keys <= 100
             or not 1 <= self.cache_seconds <= 3600
             or not 1 <= self.rotation_seconds <= self.cache_seconds
+            or (
+                self.client_secret is not None
+                and (
+                    not self.client_secret.strip()
+                    or len(self.client_secret) > 4096
+                    or any(ord(c) < 32 for c in self.client_secret)
+                )
+            )
         ):
             raise AccessConfigurationError("Invalid provider configuration")
 
@@ -122,7 +131,12 @@ class CognitoIdentityProvider:
         _WIRE.active = True
         deadline = time.monotonic() + self._config.timeout_seconds
         try:
-            with self._client.stream(method, url, data=data) as response:
+            auth = (
+                httpx.BasicAuth(self._config.client_id, self._config.client_secret)
+                if method == "POST" and self._config.client_secret is not None
+                else None
+            )
+            with self._client.stream(method, url, data=data, auth=auth) as response:
                 if response.status_code != 200:
                     raise ValueError("Provider failure")
                 content = bytearray()

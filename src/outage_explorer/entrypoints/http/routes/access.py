@@ -2,12 +2,23 @@
 
 from flask import Blueprint, Response, jsonify, make_response, redirect, request
 
-from outage_explorer.application.errors import UnauthenticatedError
+from outage_explorer.application.dto import CurrentIdentity
 from outage_explorer.application.services.access import AccessService
 from outage_explorer.application.services.login import LoginService
+from outage_explorer.entrypoints.http.auth_helpers import (
+    authenticated,
+    csrf_protected,
+    validated_request,
+)
 from outage_explorer.entrypoints.http.auth_transport import AuthTransport
 from outage_explorer.entrypoints.http.errors import error_response
-from outage_explorer.entrypoints.http.schemas import identity_payload, query_value
+from outage_explorer.entrypoints.http.schemas import (
+    CallbackQuery,
+    LoginQuery,
+    callback_query,
+    identity_payload,
+    login_query,
+)
 
 
 def create_access_blueprint(
@@ -31,8 +42,9 @@ def create_access_blueprint(
         return None
 
     @blueprint.get("/login")
-    def login() -> Response:
-        result = login_service.begin(query_value("return_to", default="/"))
+    @validated_request(login_query)
+    def login(*, validated: LoginQuery) -> Response:
+        result = login_service.begin(validated.return_to)
         response = make_response(redirect(result.authorization_url))
         transport.set_cookie(
             response,
@@ -43,11 +55,10 @@ def create_access_blueprint(
         return response
 
     @blueprint.get("/callback")
-    def callback() -> Response:
-        if "error" in request.args:
-            raise UnauthenticatedError("Login failed")
+    @validated_request(callback_query)
+    def callback(*, validated: CallbackQuery) -> Response:
         result = login_service.complete(
-            query_value("code"), query_value("state"), transport.binding()
+            validated.code, validated.state, transport.binding()
         )
         response = make_response(redirect(transport.ui_origin + result.return_to))
         transport.set_cookie(
@@ -57,20 +68,14 @@ def create_access_blueprint(
         return response
 
     @blueprint.get("/session")
-    def session() -> Response:
-        return jsonify(
-            identity_payload(access_service.current_identity(transport.credential()))
-        )
+    @authenticated(access_service, transport)
+    def session(*, credential: str, identity: CurrentIdentity) -> Response:
+        return jsonify(identity_payload(identity))
 
     @blueprint.post("/logout")
-    def logout() -> Response:
-        csrf = transport.mutation_csrf()
-        credential = transport.credential()
-        try:
-            access_service.validate_csrf(credential, csrf)
-        except UnauthenticatedError:
-            pass
-        else:
+    @csrf_protected(access_service, transport, allow_invalid_session=True)
+    def logout(*, credential: str, csrf_validated: bool) -> Response:
+        if csrf_validated:
             access_service.logout(credential)
         response = Response(status=204)
         transport.clear_cookie(response, transport.session_cookie)

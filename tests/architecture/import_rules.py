@@ -176,6 +176,8 @@ def allowed_dependency(source: str, target: str) -> bool:
             transport |= {"json", "pathlib"}
         if source == f"{ROOT}.entrypoints.http.auth_transport":
             transport |= {"logging"}
+        if source == f"{ROOT}.entrypoints.http.schemas":
+            transport |= {"json"}  # Strict transport JSON decoding only.
         if source == f"{ROOT}.entrypoints.http.errors":
             transport |= {"werkzeug"}
         return external in PURE_IMPORTS | {"flask"} | transport

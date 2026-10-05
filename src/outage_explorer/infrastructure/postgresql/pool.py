@@ -1,12 +1,12 @@
 """Lazy process-owned bounded PostgreSQL connections."""
 
 import os
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from threading import Lock
 
 import psycopg
-from psycopg.conninfo import conninfo_to_dict
+from psycopg.conninfo import conninfo_to_dict, make_conninfo
 from psycopg.rows import DictRow, dict_row
 from psycopg_pool import ConnectionPool
 
@@ -38,13 +38,37 @@ def validate_dsn(dsn: str) -> str:
     return dsn
 
 
+class _AccessConnectionPool(ConnectionPool[psycopg.Connection[DictRow]]):
+    def _connect(self, timeout: float | None = None) -> psycopg.Connection[DictRow]:
+        try:
+            return super()._connect(timeout)
+        except Exception:
+            # Psycopg-pool logs connect failures. Never forward driver/SDK text.
+            raise AccessStoreError("PostgreSQL connection failed") from None
+
+
 class BoundedPostgresqlPool:
-    def __init__(self, dsn: str) -> None:
+    def __init__(
+        self, dsn: str, *, password_provider: Callable[[], str] | None = None
+    ) -> None:
         self._dsn = validate_dsn(dsn)
         self._owner = os.getpid()
         self._pool: ConnectionPool[psycopg.Connection[DictRow]] | None = None
         self._closed = False
         self._lock = Lock()
+        self._password_provider = password_provider
+        if password_provider is not None and "password" in conninfo_to_dict(dsn):
+            raise AccessConfigurationError("Mixed PostgreSQL credentials")
+
+    def _connection_dsn(self) -> str:
+        if os.getpid() != self._owner:
+            raise AccessStoreError("PostgreSQL resources cannot cross processes")
+        if self._password_provider is None:
+            return self._dsn
+        try:
+            return make_conninfo(self._dsn, password=self._password_provider())
+        except Exception:
+            raise AccessStoreError("PostgreSQL credentials unavailable") from None
 
     def _get_pool(self) -> ConnectionPool[psycopg.Connection[DictRow]]:
         if os.getpid() != self._owner:
@@ -53,12 +77,13 @@ class BoundedPostgresqlPool:
             if self._closed:
                 raise AccessStoreError("PostgreSQL resources are closed")
             if self._pool is None:
-                self._pool = ConnectionPool(
-                    self._dsn,
+                self._pool = _AccessConnectionPool(
+                    self._connection_dsn,
                     min_size=0,
                     max_size=4,
                     max_waiting=16,
                     timeout=3,
+                    reconnect_timeout=3,
                     kwargs={
                         "row_factory": dict_row,
                         "connect_timeout": 3,

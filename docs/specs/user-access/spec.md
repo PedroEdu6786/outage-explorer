@@ -75,18 +75,18 @@ Seeded users can sign in by email, identify their single role, and use a fixed-d
 
 ## Acceptance Criteria
 
-- [ ] **AC1:** Initial seeding establishes one account for each of the three personas. (verifies FR1)
+- [x] **AC1:** Initial seeding establishes one account for each of the three personas. (verifies FR1)
 - [ ] **AC2:** Each seeded persona can complete email-based login and obtain an authenticated application session. (verifies FR2)
-- [ ] **AC3:** Every seeded user has exactly one recognized role; more than one user may share a role. (verifies FR3)
+- [x] **AC3:** Every seeded user has exactly one recognized role; more than one user may share a role. (verifies FR3)
 - [ ] **AC4:** A signed-in user can obtain their assigned role with their current identity. (verifies FR4)
-- [ ] **AC5:** Unknown identities and identities without a valid assigned role receive no product access. (verifies FR5)
-- [ ] **AC6:** Claiming another role or supplying provider groups/scopes does not override the application's assigned role. (verifies FR6, TR2)
-- [ ] **AC7:** A valid Viewer session permits national analytical access and denies facility/generator analytical access. (verifies FR7)
-- [ ] **AC8:** Valid Analyst and Admin sessions permit national, facility, and generator analytical access. (verifies FR8)
-- [ ] **AC9:** A valid Admin session passes the refresh-initiation access check. (verifies FR9)
-- [ ] **AC10:** A valid Admin session passes protected refresh outcome and diagnostic access checks. (verifies FR10)
-- [ ] **AC11:** Viewer, Analyst, and callers without valid sessions are denied refresh initiation and protected refresh outcomes/diagnostics. (verifies FR11)
-- [ ] **AC12:** Direct protected requests and later browsing/result pages cannot bypass session and role checks; denied requests perform no protected data access or execution. (verifies FR12)
+- [x] **AC5:** Unknown identities and identities without a valid assigned role receive no product access. (verifies FR5)
+- [x] **AC6:** Claiming another role or supplying provider groups/scopes does not override the application's assigned role. (verifies FR6, TR2)
+- [x] **AC7:** A valid Viewer session permits national analytical access and denies facility/generator analytical access. (verifies FR7)
+- [x] **AC8:** Valid Analyst and Admin sessions permit national, facility, and generator analytical access. (verifies FR8)
+- [x] **AC9:** A valid Admin session passes the refresh-initiation access check. (verifies FR9)
+- [x] **AC10:** A valid Admin session passes protected refresh outcome and diagnostic access checks. (verifies FR10)
+- [x] **AC11:** Viewer, Analyst, and callers without valid sessions are denied refresh initiation and protected refresh outcomes/diagnostics. (verifies FR11)
+- [x] **AC12:** Direct protected requests and later browsing/result pages cannot bypass session and role checks; denied requests perform no protected data access or execution. (verifies FR12)
 - [ ] **AC13:** A newly established session has a default expiry exactly one hour after establishment. (verifies FR13)
 - [ ] **AC14:** Activity and browser reopening do not change the original session expiry, and no automatic token renewal occurs. (verifies FR14, TR3)
 - [ ] **AC15:** Closing and reopening the browser within the valid hour preserves sign-in unless that session has been logged out or otherwise invalidated. (verifies FR15)
@@ -94,10 +94,23 @@ Seeded users can sign in by email, identify their single role, and use a fixed-d
 - [ ] **AC17:** After logout, reuse of the logged-out session is denied. (verifies FR17)
 - [ ] **AC18:** Logging out of one independently signed-in session leaves another valid independent session usable. (verifies FR18)
 - [ ] **AC19:** Invalid login details return a generic failure without revealing whether the user exists. (verifies FR19)
-- [ ] **AC20:** Access-denial responses contain no protected data. (verifies FR20)
-- [ ] **AC21:** Local user information contains only essential identity/login linkage and one role, without a duplicate credential store. (verifies TR1)
-- [ ] **AC22:** Login, session lifecycle, and role-policy verification can complete without a finished connector or available analytical data. (verifies TR4)
+- [x] **AC20:** Access-denial responses contain no protected data. (verifies FR20)
+- [x] **AC21:** Local user information contains only essential identity/login linkage and one role, without a duplicate credential store. (verifies TR1)
+- [x] **AC22:** Login, session lifecycle, and role-policy verification can complete without a finished connector or available analytical data. (verifies TR4)
 
 ## Open Clarifications
 
 _None._
+
+
+## Verification status — 2026-10-05
+
+Checked criteria have controlled implementation evidence and/or read-only live
+seed/schema evidence in [verification.md](verification.md). AC2, AC4 and AC13–AC19
+retain unchecked overall acceptance because their required real managed-login or
+browser portions were explicitly deferred. Controlled tests verify those behaviors
+(including actual persistent Chromium reopening), but do not substitute for live
+email login, first-password completion or managed-login credential presentation.
+The verification matrix reconciles every criterion; downstream analytical/refresh
+feature implementations remain responsible for their own fresh authorization,
+reference extraction and result ownership. T5.14/T5.C and overall Phase 5 remain open.

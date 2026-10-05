@@ -1,5 +1,6 @@
 """Explicit, bounded and serialized operational schema setup."""
 
+from collections.abc import Callable
 from pathlib import Path
 
 import psycopg
@@ -16,10 +17,18 @@ from outage_explorer.infrastructure.postgresql.pool import validate_dsn
 _MIGRATION_LOCK = 803079860865001
 
 
-def run_migrations(dsn: str) -> None:
+def run_migrations(
+    dsn: str, *, password_provider: Callable[[], str] | None = None
+) -> None:
     """Upgrade explicitly; a failure rolls back revision and product DDL together."""
     checked_dsn = validate_dsn(dsn)
     try:
+        if password_provider is not None:
+            from psycopg.conninfo import conninfo_to_dict, make_conninfo
+
+            if "password" in conninfo_to_dict(checked_dsn):
+                raise ValueError
+            checked_dsn = make_conninfo(checked_dsn, password=password_provider())
         with psycopg.connect(
             checked_dsn,
             connect_timeout=5,

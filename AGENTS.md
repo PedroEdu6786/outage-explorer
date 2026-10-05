@@ -66,6 +66,11 @@ Record the resolved interval at admission; later configuration changes must
 not change a run. Initial-load dates and connector CLI behavior remain governed
 by their existing ADRs.
 
+Under [ADR-0052](docs/adr/0052-interrupted-refresh-recovery.md), a healthy refresh
+worker survives API-only restarts. Reconcile publication after worker loss;
+unpublished interrupted runs require explicit Admin retry, not automatic source
+reruns. Recovery must prevent stale owners from publishing.
+
 1. No storage/SDK/engine calls or business rules in Flask routes. No Flask
    context (`request`, `g`, `current_app`) in domain or application code.
 2. Enforce permissions in application use cases before analytical data access;

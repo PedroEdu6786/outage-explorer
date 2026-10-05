@@ -57,3 +57,18 @@ joserfc==1.7.5
 cffi==2.1.1
 pycparser==3.0
 Mako==1.4.3
+
+# Data API Phase 1 parser/engine compatibility and contract validation.
+duckdb==1.5.6
+sqlglot==30.21.0
+pytz==2026.2
+jsonschema==4.26.0
+attrs==26.1.0
+jsonschema-specifications==2025.9.1
+referencing==0.37.0
+rpds-py==2026.9.1
+
+# Controlled persistent-profile browser acceptance (no cloud credentials).
+playwright==1.63.0
+pyee==13.0.1
+greenlet==3.5.6

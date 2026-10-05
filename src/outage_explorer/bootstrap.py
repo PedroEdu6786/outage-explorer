@@ -75,6 +75,10 @@ from outage_explorer.infrastructure.parquet.candidates import ParquetCandidateBu
 from outage_explorer.infrastructure.parquet.connector import LocalConnectorEvidence
 from outage_explorer.infrastructure.parquet.storage import LocalParquetStore
 from outage_explorer.infrastructure.postgresql.access import PostgresqlAccessStore
+from outage_explorer.infrastructure.postgresql.credentials import (
+    IAMCredentials,
+    IAMTarget,
+)
 from outage_explorer.infrastructure.postgresql.migrations import run_migrations
 from outage_explorer.infrastructure.postgresql.pool import BoundedPostgresqlPool
 from outage_explorer.infrastructure.recorded_evidence import LocalRecordedEvidence
@@ -82,9 +86,11 @@ from outage_explorer.infrastructure.s3.artifacts import S3ArtifactStore
 from outage_explorer.infrastructure.security import RandomSecurityMaterial
 from outage_explorer.infrastructure.verification_report import LocalReportWriter
 from outage_explorer.settings import (
+    DatabaseSettings,
     artifact_settings,
     auth_settings,
     connector_settings,
+    database_settings,
     s3_settings,
 )
 
@@ -104,8 +110,9 @@ def build_http_app() -> Flask:
             settings.client_id,
             settings.scopes,
             resource=settings.resource,
+            client_secret=settings.client_secret,
         )
-        pool = BoundedPostgresqlPool(settings.database_dsn)
+        pool = _access_pool(settings.database or database_settings(os.environ))
     except (ValueError, TypeError):
         raise AccessConfigurationError("Invalid authentication configuration") from None
     provider = CognitoIdentityProvider(config)
@@ -410,9 +417,10 @@ def execute_connector_to_s3(
 
 def execute_access_setup(inputs: AccessSetupInput) -> int | tuple[int, int] | None:
     """Connect only on explicit operator command; never migrate during startup."""
-    dsn = os.environ.get("OUTAGE_ACCESS_DATABASE_DSN", "")
-    if not dsn:
-        raise AccessConfigurationError("Access database is not configured")
+    try:
+        database = database_settings(os.environ)
+    except ValueError:
+        raise AccessConfigurationError("Invalid PostgreSQL configuration") from None
     identities = None
     if inputs.operation == "seed":
         if inputs.manifest is None:
@@ -420,11 +428,14 @@ def execute_access_setup(inputs: AccessSetupInput) -> int | tuple[int, int] | No
         identities = read_manifest(inputs.manifest)
         validate_identities(identities)
     elif inputs.operation == "migrate":
-        run_migrations(dsn)
+        credentials = _access_credentials(database)
+        run_migrations(
+            database.dsn, password_provider=credentials.token if credentials else None
+        )
         return None
     elif inputs.operation != "cleanup":
         raise AccessConfigurationError("Invalid setup operation")
-    pool = BoundedPostgresqlPool(dsn)
+    pool = _access_pool(database)
     try:
         store = PostgresqlAccessStore(pool)
         if identities is not None:
@@ -432,3 +443,24 @@ def execute_access_setup(inputs: AccessSetupInput) -> int | tuple[int, int] | No
         return store.cleanup(SystemClock().now())
     finally:
         pool.close()
+
+
+def _access_credentials(database: DatabaseSettings) -> IAMCredentials | None:
+    if database.mode != "iam":
+        return None
+    return IAMCredentials(
+        IAMTarget(
+            database.host,
+            database.port,
+            database.user,
+            database.region,
+            database.profile,
+        )
+    )
+
+
+def _access_pool(database: DatabaseSettings) -> BoundedPostgresqlPool:
+    credentials = _access_credentials(database)
+    return BoundedPostgresqlPool(
+        database.dsn, password_provider=credentials.token if credentials else None
+    )

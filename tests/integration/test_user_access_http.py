@@ -320,6 +320,43 @@ def test_independent_logout_csrf_binding_idempotency_and_replay(http_app):
     assert provider.calls == 2
 
 
+@pytest.mark.parametrize("state", ["missing", "malformed", "expired", "revoked"])
+def test_invalid_session_logout_checks_origin_then_clears_without_csrf(http_app, state):
+    app, store, clock, _, transport = http_app
+    client = app.test_client()
+    if state == "malformed":
+        client.set_cookie(transport.session_cookie, "SECRET")
+    elif state in {"expired", "revoked"}:
+        sign_in(client)
+        if state == "expired":
+            clock.time += timedelta(hours=1)
+        else:
+            store.sessions.clear()
+    denied = client.post("/api/auth/logout", headers={"Origin": "https://evil.test"})
+    assert denied.status_code == 403 and "Set-Cookie" not in denied.headers
+    response = client.post("/api/auth/logout", headers={"Origin": UI})
+    assert response.status_code == 204 and response.data == b""
+    assert cookie(response, transport.session_cookie)["max-age"] == "0"
+
+
+@pytest.mark.parametrize(
+    "path,query",
+    [
+        ("/api/auth/login", "return_to=/&role=admin"),
+        ("/api/auth/login", "return_to=/&return_to=/"),
+        ("/api/auth/callback", "code=SECRET&state=SECRET&role=admin"),
+    ],
+)
+def test_auth_query_validation_denies_before_login_work(http_app, path, query):
+    app, store, _, provider, _ = http_app
+    response = app.test_client().get(path + "?" + query)
+    assert response.status_code == 400
+    assert response.json == {
+        "error": {"code": "invalid_request", "message": "Invalid request"}
+    }
+    assert not store.attempts and not store.sessions and provider.calls == 0
+
+
 def test_database_failures_no_logout_success_or_cookie_clear(http_app):
     app, store, _, _, _ = http_app
     client = app.test_client()

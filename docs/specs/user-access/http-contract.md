@@ -1,7 +1,7 @@
 # Browser-to-Flask authentication contract
 
 Status: **implemented and controlled-tested; integration choices remain draft**.
-ADR-0046/0047 remain proposed. This records the Phase 4 implementation without
+ADR-0046/0047 remain proposed. This records the Phases 4–5 implementation without
 claiming approval of those ADRs, configured-provider readiness or deployment.
 The separate UI and analytical/refresh endpoints are outside this phase.
 
@@ -56,7 +56,7 @@ session and never extended by requests or browser reopening.
 At or after expiry, sign in again through `/api/auth/login`. The backend retains
 no provider tokens and performs no renewal. Cognito SSO may complete a new flow
 without password re-entry; application expiry does not force provider-wide logout.
-Real persistent-browser reopening is a Phase 5 verification gate.
+Controlled persistent-browser reopening is tested; real-provider browser readiness remains a Phase 5 gate.
 
 Logout validates the origin and session-bound CSRF before invalidating a valid
 session. A CSRF token from another session fails. Repeating logout with an invalid,
@@ -101,12 +101,19 @@ credential presentation remains unverified by these controlled HTTP tests.
 `OUTAGE_AUTH_ENABLED=true` explicitly registers the routes. Without it, health-only
 construction needs no credentials. Enabled auth requires:
 
-- `OUTAGE_ACCESS_DATABASE_DSN` with an explicit local or certificate-verified remote
-  target; migrations and seeded linkage must be applied separately by an operator.
+- Shared explicit database modes: `OUTAGE_ACCESS_DATABASE_MODE` selects legacy
+  `dsn` (default), `local`, `password`, or `iam`. DSN/local/password use
+  `OUTAGE_ACCESS_DATABASE_DSN`; IAM uses trusted host/user/database/region/profile
+  and CA settings detailed in [setup.md](setup.md). IAM signs afresh immediately
+  before each new physical connection/retry; existing checkout does not sign.
+  Migrations and seeded linkage are separate explicit operator commands.
 - `COGNITO_ISSUER`, `COGNITO_DOMAIN`, `COGNITO_APP_CLIENT_ID`, explicit
   `COGNITO_OAUTH_SCOPES`; optional `COGNITO_RESOURCE` for the expected audience.
-  The current adapter uses a public PKCE app client. Actual client/account inputs
-  and configured-provider behavior require Phase 5 verification.
+  Optional server-only `COGNITO_APP_CLIENT_SECRET` selects confidential HTTP Basic
+  client authentication at the token endpoint; absent selects public PKCE. Empty
+  or invalid confidential credentials fail without public fallback. Authorization
+  URLs and browser payloads never contain the secret. Configured-provider
+  behavior still requires real Phase 5 verification.
 - `OUTAGE_AUTH_PUBLIC_ORIGIN`, `OUTAGE_AUTH_CALLBACK_URI`; optional
   `OUTAGE_AUTH_UI_ORIGIN` defaults to the public origin, including when blank.
 - Optional `OUTAGE_AUTH_RETURN_PATHS` (default `/`),
@@ -128,3 +135,19 @@ See [Flask cookie API](https://flask.palletsprojects.com/en/stable/api/#flask.Re
 and [application factories](https://flask.palletsprojects.com/en/stable/patterns/appfactories/)
 for framework behavior. The role matrix, fixed lease and seeded identity binding
 are this application's contracts, verified through its own use-case tests.
+
+## Reusable HTTP guards
+
+`authenticated(access, transport)` passes `credential` and current `identity`
+explicitly to a handler. `csrf_protected(access, transport)` checks exact origin
+and application CSRF before passing `credential` and `csrf_validated`. Only
+idempotent logout opts into invalid-session handling. `validated_request(parser)`
+passes a plain typed `validated` query/JSON value. Authentication/origin guards
+compose outside validation where denial must precede parsing. Parsers reject
+duplicate/unsupported query values and malformed/duplicate/oversized JSON.
+
+These helpers authenticate the HTTP boundary; downstream application use cases
+must independently resolve current session validity and roles before every direct
+and later-page protected operation. A previously authenticated identity does not
+grant analytical or refresh access. No product endpoint or controller framework
+is introduced by these reusable guards. See [verification.md](verification.md).

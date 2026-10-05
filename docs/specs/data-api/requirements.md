@@ -1,6 +1,10 @@
 # Requirements: Data browsing, SQL, and background refresh
 > Status: draft · Slug: data-api · Date: 2026-10-04
 
+The [formal specification](spec.md) captures this brief's requirements and
+remaining clarifications. The [HTTP contract](http-contract.md) and
+[design analysis](design-notes.md) retain the detailed transport proposals.
+
 ## Problem statement
 
 Outage Explorer needs to make its stored national, facility, and generator
@@ -35,6 +39,9 @@ throughout refresh and after failures.
   to the user's role. Viewer has national-only access.
 - Initial browsing supports date-range filters and bounded pages that stay on
   the originally selected version of the data.
+- Without date filters, tables browse all available dates, newest observations
+  first. The prepared national metric appears alongside the reported percentage
+  in the national table.
 - Users submit their own supported read-only SQL from the frontend editor.
 - Users select numbered SQL result pages through the same query endpoint.
   Later pages preserve the original execution, including duplicate rows,
@@ -50,6 +57,13 @@ throughout refresh and after failures.
 - Refresh runs in the background and continues after a browser disconnect.
 - Admin can inspect progress and a final outcome, including validation
   exclusions, retained older records, failures, and whether data was published.
+- Admin can retrieve the active/latest refresh when returning to the app without
+  keeping the original run ID.
+- A refresh with all incoming observations excluded and prior valid data reports
+  `retained`; `succeeded` means a new generation was confirmed published.
+- API-only restarts let a healthy refresh worker continue. If the worker stops,
+  reconcile publication first; confirmed published work remains successful,
+  otherwise an interrupted unpublished run requires an explicit Admin retry.
 - A complete verified generation becomes active automatically. Failure keeps
   previously published data available; existing pagination stays on its version.
 - Older valid records survive invalid replacements or absent source keys.
@@ -73,20 +87,16 @@ throughout refresh and after failures.
 
 ## Open questions
 
-Review identified these remaining user-visible choices:
+- Proposed retained-result quotas need review: the initial testing proposal
+  keeps up to three unexpired results per user and ten globally. Reaching a quota
+  would require waiting for expiry before submitting another query.
 
-- What should a table show before the user sets dates: all available dates or
-  a preset interval, and oldest or newest observations first?
-- How should an Admin rediscover an active/recent refresh after returning to
-  the app without the original run ID? The current contract only reads a known run.
-- Should the prepared national offline-capacity metric be columns of the national
-  table or a separate national-derived catalog entry? The metric itself is
-  already required; only its presentation is open.
-
-Response encoding, exact errors, retry/recovery behavior and publication-state
-representation remain design details in [http-contract.md](http-contract.md).
-These questions do not reopen accepted role access, filter scope, SQL page
-sizes/lifetime, or configured all-dataset background refresh.
+The earlier questions about initial table view, refresh rediscovery, and metric
+presentation are resolved by user acceptance of the recommendations above.
+The user also selected explicit Admin retry for unpublished interrupted refreshes.
+Publication uncertainty, response encoding, exact errors and resource budgets
+are analyzed in [design-notes.md](design-notes.md); unaccepted recommendations
+remain labeled as proposals.
 
 ## Grounding
 

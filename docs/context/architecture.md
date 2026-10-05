@@ -12,6 +12,11 @@ run; later configuration changes cannot change it. Initial-load policy and CLI
 date overrides remain unchanged. The [data API contract](../specs/data-api/http-contract.md)
 records proposed transport details; product HTTP implementation remains pending.
 
+[ADR-0052](../adr/0052-interrupted-refresh-recovery.md) accepts continued work
+through API-only restarts and publication reconciliation after worker loss.
+Unpublished interrupted runs require explicit Admin retry; recovery mechanics
+and ownership enforcement still need implementation and verification.
+
 User-access Phases 1–4 implement PostgreSQL users/roles, fixed sessions and
 single-use browser-bound login attempts, explicit migrations, controlled seeding,
 Cognito code exchange/access-token verification and current-session logout.
@@ -24,8 +29,11 @@ Opt-in HTTP login/callback/session/logout composition now has host-only fixed-ex
 cookies, application-owned CSRF, exact origin/CORS checks and sanitized errors.
 Configured construction is inert; process resources have explicit cleanup and
 health remains dependency-independent. Actual analytical/refresh use cases,
-configured-provider readiness and real browser reopening remain later work;
-no live users or RDS schema were provisioned. See the
+configured-provider readiness and real browser reopening remain later work.
+Read-only checks on October 5 verified the RDS schema and three seeded users
+with their role and Cognito identity links; live login remains unverified.
+The [updated auth plan](../specs/user-access/plan.md) records dated setup evidence
+and the pending IAM, confidential-client and HTTP-helper work. See the
 [Phase 2](../specs/user-access/tasks/phase-2.md) and
 [Phase 3](../specs/user-access/tasks/phase-3.md) and
 [Phase 4 checkpoints](../specs/user-access/tasks/phase-4.md), plus the
@@ -313,3 +321,23 @@ recovery and bounded-window replay verify those dependencies and their canonical
 raw values. CLI/Make fetch/S3 overrides win JSON, with endpoint default1 unchanged.
 Shared source bounds count all fetched rows/pages, including unused lookahead;
 logical admission includes endpoint*page buffers. Modeling stays coordinated.
+
+
+Data API Phase 1 adds shared v1 public projections in `domain/datasets.py`,
+parser reference inspection behind an application port, and bounded canonical
+encoding/type adapters in infrastructure. Portable OpenAPI and synthetic fixtures
+are in `docs/specs/data-api/`; real DuckDB compatibility runs only in a controlled
+test subprocess. Product catalog/preview/SQL/refresh routes and the isolated Linux
+launcher remain pending. See the [Phase 1 evidence](../specs/data-api/runtime-evidence.md)
+and [client handoff](../specs/data-api/client-handoff.md).
+
+User-access Phase 5 implements fresh per-physical-connection IAM signing with
+bounded credential lookup in runtime-only disposable signing subprocesses;
+construction remains inert. HTTP and explicit setup share typed database modes.
+Optional confidential Cognito client authentication retains public PKCE behavior
+and fixed application leases without provider renewal. Typed HTTP guards pass
+credentials/current identity and parsed inputs explicitly; protected application
+use cases still independently check session validity and current roles. Controlled
+PostgreSQL/provider/persistent-browser acceptance is available independently of
+connector, analytical data and the separate UI. The required real-provider login,
+logout and browser gate remains open; see [verification](../specs/user-access/verification.md).

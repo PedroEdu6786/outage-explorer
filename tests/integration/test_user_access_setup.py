@@ -107,3 +107,49 @@ def test_missing_configuration_and_failures_sanitized(monkeypatch, capsys):
     assert run(failure, ["cleanup"]) == 1
     text = capsys.readouterr().err
     assert "secret" not in text and "failed" in text
+
+
+def test_shared_iam_setup_signs_explicit_connections_without_cognito(
+    database, tmp_path, monkeypatch
+):  # noqa: F811
+    from outage_explorer.settings import DatabaseSettings
+
+    database_config = DatabaseSettings(
+        "iam", database, "controlled.test", 5432, "controlled", "us-east-1"
+    )
+    monkeypatch.setattr(
+        "outage_explorer.bootstrap.database_settings", lambda env: database_config
+    )
+    signed = []
+
+    def sign(self):
+        signed.append(len(signed))
+        return "CONTROLLED-TOKEN-" + str(len(signed))
+
+    monkeypatch.setattr("outage_explorer.bootstrap.IAMCredentials.token", sign)
+    for name in (
+        "COGNITO_ISSUER",
+        "COGNITO_DOMAIN",
+        "COGNITO_APP_CLIENT_ID",
+        "COGNITO_APP_CLIENT_SECRET",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    path = tmp_path / "seed.json"
+    path.write_text(json.dumps([asdict(item) for item in PERSONAS]))
+    assert execute_access_setup(AccessSetupInput("migrate")) is None
+    assert execute_access_setup(AccessSetupInput("seed", str(path))) == 3
+    assert execute_access_setup(AccessSetupInput("cleanup")) == (0, 0)
+    assert len(signed) == 3
+
+
+def test_setup_iam_signer_failure_is_sanitized_before_connection(monkeypatch):
+    from unittest.mock import patch
+
+    from outage_explorer.infrastructure.postgresql.migrations import run_migrations
+
+    def signer():
+        raise RuntimeError("PRIVATE-CREDENTIAL")
+
+    with patch("psycopg.connect", side_effect=AssertionError("Connected")):
+        with pytest.raises(AccessStoreError, match="^Schema migration failed$"):
+            run_migrations("host=127.0.0.1 dbname=unused", password_provider=signer)

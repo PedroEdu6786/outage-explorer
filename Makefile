@@ -18,7 +18,7 @@ PRIOR ?=
 STAGING ?= $(if $(strip $(CONFIG)),,data/connector-local)
 shell_quote = '$(subst ','"'"',$(1))'
 
-.PHONY: help setup run health connector connector-help test check check-env
+.PHONY: help setup run health connector connector-help test check check-env check-test-env test-postgres test-postgres-stop test-browser-setup
 
 help:
 	@printf '%s\n' \
@@ -32,6 +32,8 @@ help:
 	  'make connector LOCAL_ONLY=1 START=YYYY-MM-DD END=YYYY-MM-DD   Local only' \
 	  'make connector-help   Show connector CLI options without running it' \
 	  'make test    Run all tests' \
+	  'make test-postgres   Start disposable Docker PostgreSQL on port 55439' \
+	  'make test-browser-setup   Install controlled Chromium acceptance browser' \
 	  'make check   Run lint, format, type, test, and build checks' \
 	  'Overrides: make run PORT=8080; make setup PYTHON=python3.14'
 
@@ -69,13 +71,28 @@ connector: check-env
 connector-help: check-env
 	$(VENV_PYTHON) -m outage_explorer.entrypoints.cli.connector_startup --help
 
-test: check-env
-	$(VENV_PYTHON) -m pytest
+test-postgres:
+	docker run --rm --detach --name outage-explorer-test-postgres -e POSTGRES_USER=outage_test -e POSTGRES_PASSWORD=controlled-test-only -e POSTGRES_DB=postgres -p 127.0.0.1:55439:5432 postgres:18
+	@printf '%s\n' "export OUTAGE_TEST_POSTGRES_DSN='host=127.0.0.1 port=55439 dbname=postgres user=outage_test password=controlled-test-only sslmode=disable'"
+	@printf '%s\n' 'Wait for docker exec outage-explorer-test-postgres pg_isready -U outage_test -d postgres to pass.'
 
-check: check-env
+test-postgres-stop:
+	docker stop outage-explorer-test-postgres
+
+test-browser-setup: check-env
+	$(VENV_PYTHON) -m playwright install chromium
+
+check-test-env: check-env
+	@$(VENV_PYTHON) -c 'import os,sys; sys.exit(0 if os.environ.get("OUTAGE_TEST_POSTGRES_DSN") else "Required tests need OUTAGE_TEST_POSTGRES_DSN for disposable loopback PostgreSQL; see make test-postgres.")'
+	@$(VENV_PYTHON) -c 'from pathlib import Path; from playwright.sync_api import sync_playwright; p=sync_playwright().start(); installed=Path(p.chromium.executable_path).is_file(); p.stop(); assert installed, "Required browser missing; run make test-browser-setup."'
+
+test: check-test-env
+	$(VENV_PYTHON) -m pytest -m 'not live_provider'
+
+check: check-test-env
 	$(VENV_PYTHON) -m pip check
 	$(VENV_PYTHON) -m ruff check .
 	$(VENV_PYTHON) -m ruff format --check .
 	$(VENV_PYTHON) -m mypy
-	$(VENV_PYTHON) -m pytest
+	$(VENV_PYTHON) -m pytest -m 'not live_provider'
 	$(VENV_PYTHON) -m build --no-isolation

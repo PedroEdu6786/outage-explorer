@@ -60,3 +60,15 @@ class LoginAttemptLimitError(Exception):
 
 class InvalidRequestError(ValueError):
     """Invalid transport input; contains no supplied values."""
+
+
+class RefreshBusyError(Exception):
+    """An admitted or unresolved refresh already occupies coordination."""
+
+
+class IdempotencyConflictError(Exception):
+    """A scoped key is already bound to a different request identity."""
+
+
+class StaleRefreshOwnerError(Exception):
+    """The worker no longer holds the unexpired fenced ownership lease."""

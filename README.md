@@ -25,8 +25,9 @@ SQLite-specific EC2/EBS storage proposal in ADR-0011 no longer applies. See the
 Amazon Cognito User Pools is selected for managed login and OAuth2 token
 issuance through Authorization Code with PKCE. Our PostgreSQL tables own application
 permissions ([ADR-0018](docs/adr/0018-cognito-authentication.md)). The user confirmed
-Cognito setup and the RDS connection completed on October 3, 2026; application
-integration remains pending.
+Cognito setup and the RDS connection completed on October 3, 2026. Application
+authentication is implemented and controlled-tested; real managed-login acceptance
+remains pending.
 
 Current repository scope: the data connector, data model, and backend API.
 The web client will live in a separate repository using React, Next.js,
@@ -90,12 +91,31 @@ analytical readiness. No external credentials or database are needed for this
 slice. PostgreSQL remains required when operational persistence is implemented.
 Flask's local development server is not a deployment configuration.
 
-Run all quality checks, or just the tests:
+Run all quality checks, or just the tests, with disposable PostgreSQL and Chromium:
 
 ```sh
+make test-postgres
+docker exec outage-explorer-test-postgres pg_isready -U outage_test -d postgres
+export OUTAGE_TEST_POSTGRES_DSN='host=127.0.0.1 port=55439 dbname=postgres user=outage_test password=controlled-test-only sslmode=disable'
+make test-browser-setup
 make check
 make test
+make test-postgres-stop
 ```
+
+An existing disposable loopback PostgreSQL instance also works with an explicit
+test DSN. Missing database/browser setup fails required checks. CI provisions
+PostgreSQL and Chromium for Python 3.12/3.14; required tests use controlled
+provider transport and receive no cloud credentials.
+
+Configured auth now supports fresh per-physical-connection IAM signing, explicit
+DSN/local/password modes, public or confidential Cognito PKCE, and reusable
+HTTP authentication/CSRF/query-and-JSON guards. Follow the
+[user-access setup runbook](docs/specs/user-access/setup.md),
+[HTTP contract](docs/specs/user-access/http-contract.md), and
+[verification record](docs/specs/user-access/verification.md). Real three-persona
+managed login/browser acceptance remains pending; the separate UI and downstream
+analytical/refresh endpoints remain outside this auth phase.
 
 `make help` lists the available commands. The Makefile invokes tools inside
 `.venv` directly; it does not change the application startup architecture.

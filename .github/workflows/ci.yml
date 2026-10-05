@@ -13,6 +13,21 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.12", "3.14"]
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: outage_test
+          POSTGRES_PASSWORD: controlled-test-only
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U outage_test -d postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      OUTAGE_TEST_POSTGRES_DSN: host=127.0.0.1 port=5432 dbname=postgres user=outage_test password=controlled-test-only sslmode=disable
+      AWS_EC2_METADATA_DISABLED: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -25,6 +40,8 @@ jobs:
           python -m pip install -r requirements-dev.txt
           python -m pip install --no-deps --no-build-isolation -e .
           python -m pip check
+      - name: Install required controlled browser
+        run: python -m playwright install --with-deps chromium
       - name: Lint and format
         run: |
           ruff check .
@@ -33,7 +50,7 @@ jobs:
         run: mypy
       - name: Architecture boundaries and negative fixtures
         run: pytest tests/architecture
-      - name: Behavior and existing devlog tests
-        run: pytest tests/unit tests/integration tests/test_devlog_hook.py
+      - name: Behavior, PostgreSQL, HTTP and persistent browser acceptance
+        run: pytest tests/unit tests/integration tests/acceptance tests/test_devlog_hook.py -m "not live_provider"
       - name: Build distribution
         run: python -m build --no-isolation

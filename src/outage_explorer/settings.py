@@ -304,6 +304,96 @@ class AuthSettings:
     session_seconds: int = 3600
     attempt_seconds: int = 600
     attempt_limit: int = 1000
+    database: "DatabaseSettings | None" = field(default=None, repr=False)
+    client_secret: str | None = field(default=None, repr=False)
+
+
+@dataclass(frozen=True)
+class DatabaseSettings:
+    """Validated target shared by runtime and explicit setup, without AWS I/O."""
+
+    mode: str
+    dsn: str = field(repr=False)
+    host: str = ""
+    port: int = 5432
+    user: str = ""
+    region: str = ""
+    profile: str | None = field(default=None, repr=False)
+
+
+def database_settings(environment: Mapping[str, str]) -> DatabaseSettings:
+    # The driver parser belongs at the configuration boundary, never in the
+    # application/domain. Preserve libpq quoting without hand-parsing secrets.
+    from psycopg.conninfo import conninfo_to_dict, make_conninfo
+
+    try:
+        mode = environment.get("OUTAGE_ACCESS_DATABASE_MODE", "dsn")
+        iam_names = (
+            "OUTAGE_ACCESS_DATABASE_HOST",
+            "OUTAGE_ACCESS_DATABASE_PORT",
+            "OUTAGE_ACCESS_DATABASE_NAME",
+            "OUTAGE_ACCESS_DATABASE_USER",
+            "OUTAGE_ACCESS_DATABASE_REGION",
+            "OUTAGE_ACCESS_DATABASE_PROFILE",
+            "OUTAGE_ACCESS_DATABASE_SSLROOTCERT",
+        )
+        if mode not in {"dsn", "local", "password", "iam"}:
+            raise ValueError
+        if mode != "iam":
+            if any(name in environment for name in iam_names):
+                raise ValueError
+            dsn = environment["OUTAGE_ACCESS_DATABASE_DSN"]
+            values = conninfo_to_dict(dsn)
+        else:
+            if "OUTAGE_ACCESS_DATABASE_DSN" in environment:
+                raise ValueError
+            host = environment["OUTAGE_ACCESS_DATABASE_HOST"]
+            user = environment["OUTAGE_ACCESS_DATABASE_USER"]
+            region = environment["OUTAGE_ACCESS_DATABASE_REGION"]
+            name = environment["OUTAGE_ACCESS_DATABASE_NAME"]
+            root = environment["OUTAGE_ACCESS_DATABASE_SSLROOTCERT"]
+            port = int(environment.get("OUTAGE_ACCESS_DATABASE_PORT", "5432"))
+            profile = environment.get("OUTAGE_ACCESS_DATABASE_PROFILE")
+            if (
+                not re.fullmatch(r"[A-Za-z0-9.-]+", host)
+                or not host.endswith(".rds.amazonaws.com")
+                or not re.fullmatch(r"[a-z]{2}(?:-[a-z]+)+-\d", region)
+                or not 1 <= port <= 65535
+                or any(
+                    not v.strip() or any(ord(c) < 32 for c in v)
+                    for v in (user, name, root)
+                )
+                or (
+                    profile is not None
+                    and (not profile.strip() or any(ord(c) < 32 for c in profile))
+                )
+            ):
+                raise ValueError
+            dsn = make_conninfo(
+                host=host,
+                port=port,
+                user=user,
+                dbname=name,
+                sslmode="verify-full",
+                sslrootcert=root,
+            )
+            return DatabaseSettings(mode, dsn, host, port, user, region, profile)
+        host = str(values.get("host", ""))
+        local = host in {"127.0.0.1", "localhost", "::1"} or host.startswith("/")
+        if (
+            not dsn.strip()
+            or not host
+            or "," in host
+            or "service" in values
+            or "hostaddr" in values
+            or (not local and values.get("sslmode") != "verify-full")
+            or (mode == "local" and not local)
+            or (mode == "password" and not values.get("password"))
+        ):
+            raise ValueError
+        return DatabaseSettings(mode, dsn)
+    except Exception:
+        raise ValueError("Invalid PostgreSQL configuration") from None
 
 
 def auth_settings(environment: Mapping[str, str]) -> AuthSettings | None:
@@ -319,7 +409,6 @@ def auth_settings(environment: Mapping[str, str]) -> AuthSettings | None:
         required = {
             name: environment[name]
             for name in (
-                "OUTAGE_ACCESS_DATABASE_DSN",
                 "COGNITO_ISSUER",
                 "COGNITO_DOMAIN",
                 "COGNITO_APP_CLIENT_ID",
@@ -389,8 +478,14 @@ def auth_settings(environment: Mapping[str, str]) -> AuthSettings | None:
         scopes = tuple(required["COGNITO_OAUTH_SCOPES"].split())
         if not scopes:
             raise ValueError
+        database = database_settings(environment)
+        secret = environment.get("COGNITO_APP_CLIENT_SECRET")
+        if secret is not None and (
+            not secret.strip() or len(secret) > 4096 or any(ord(c) < 32 for c in secret)
+        ):
+            raise ValueError
         return AuthSettings(
-            required["OUTAGE_ACCESS_DATABASE_DSN"],
+            database.dsn,
             required["COGNITO_ISSUER"],
             required["COGNITO_DOMAIN"],
             required["COGNITO_APP_CLIENT_ID"],
@@ -401,7 +496,11 @@ def auth_settings(environment: Mapping[str, str]) -> AuthSettings | None:
             frozenset(paths),
             development,
             environment.get("COGNITO_RESOURCE") or None,
-            *values,
+            session_seconds=values[0],
+            attempt_seconds=values[1],
+            attempt_limit=values[2],
+            database=database,
+            client_secret=secret,
         )
     except (KeyError, ValueError, TypeError):
         raise ValueError("Invalid authentication configuration") from None
@@ -416,3 +515,56 @@ def worker_settings(
     if s3 is not None:
         values["s3_workers"] = s3
     return WorkerSettings(**values)
+
+
+@dataclass(frozen=True)
+class RefreshSettings:
+    """Nonsecret startup snapshot; starting limits are not measured budgets."""
+
+    start_date: date
+    end_date: date
+    max_interval_days: int = 183
+    source_interval_days: int = 183
+    model_interval_days: int = 183
+    candidate_seconds: int = 1800
+    persistence_seconds: int = 1800
+
+    def __post_init__(self) -> None:
+        limits = (
+            self.max_interval_days,
+            self.source_interval_days,
+            self.model_interval_days,
+            self.candidate_seconds,
+            self.persistence_seconds,
+        )
+        if (
+            any(type(value) is not int or value <= 0 for value in limits)
+            or self.start_date > self.end_date
+            or (self.end_date - self.start_date).days + 1 > min(limits[:3])
+            or self.max_interval_days > 183
+        ):
+            raise ValueError("Invalid refresh configuration")
+
+
+def refresh_settings(environment: Mapping[str, str]) -> RefreshSettings:
+    """Resolve strict ISO dates and coordinated positive budgets at startup."""
+    try:
+        start = environment["OUTAGE_REFRESH_START_DATE"]
+        end = environment["OUTAGE_REFRESH_END_DATE"]
+        first, last = date.fromisoformat(start), date.fromisoformat(end)
+        if first.isoformat() != start or last.isoformat() != end:
+            raise ValueError
+        values = [
+            int(environment.get(name, str(default)))
+            for name, default in (
+                ("OUTAGE_REFRESH_MAX_INTERVAL_DAYS", 183),
+                ("OUTAGE_REFRESH_SOURCE_INTERVAL_DAYS", 183),
+                ("OUTAGE_REFRESH_MODEL_INTERVAL_DAYS", 183),
+                ("OUTAGE_REFRESH_CANDIDATE_SECONDS", 1800),
+                ("OUTAGE_REFRESH_PERSISTENCE_SECONDS", 1800),
+            )
+        ]
+        result = RefreshSettings(first, last, *values)
+        return result
+    except (KeyError, ValueError, TypeError, OverflowError):
+        raise ValueError("Invalid refresh configuration") from None

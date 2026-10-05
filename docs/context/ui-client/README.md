@@ -3,7 +3,7 @@
 This portable context pack describes the web client to build in a separate
 repository. It captures the user's selected stack and component architecture,
 the product's accepted behavior, and the backend integration gaps as of
-October 4, 2026. It does not claim that the product APIs or Figma implementation
+October 5, 2026. It does not claim that the product APIs or Figma implementation
 are complete.
 
 Copy this entire folder into the new repository at `docs/context/ui-client/`,
@@ -11,6 +11,10 @@ then paste the prompt below into Astra. The six files in this folder are
 self-contained; the backend source references are optional verification material.
 Supply the Figma file/frame links when starting design implementation. No Figma
 URL or design contents were supplied for this handoff.
+
+The Phase 1 [data API handoff](../../specs/data-api/client-handoff.md) now provides
+portable OpenAPI and validated synthetic fixtures. Copy those two JSON files with
+this pack for client adapters. Data/refresh endpoints remain pending.
 
 ## Documents to load
 
@@ -66,10 +70,9 @@ pages from ONE execution with a fixed page size; explicit result expiry,
 truncation and busy states. Never rerun SQL implicitly to paginate or retry a
 failed execution. Never modify submitted SQL by adding pagination clauses.
 
-The backend currently exposes GET /health only. Product behavior is specified,
-but routes, payloads and session transport remain to be finalized. Use explicit
-fixture adapters for independent UI development; label proposed contracts and
-mock data. Never present fixtures as EIA findings or live integration.
+The backend has health and opt-in auth routes. Data/refresh endpoint runtime
+integration remains pending. Use the Phase 1 OpenAPI and synthetic fixtures for
+independent UI development; label mock data. Never present fixtures as EIA findings or live integration.
 
 The client consumes the authorized backend API. Do not access EIA, S3, RDS or
 DuckDB directly, duplicate backend authorization/ingestion, add registration or

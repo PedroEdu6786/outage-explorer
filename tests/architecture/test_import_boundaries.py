@@ -38,6 +38,22 @@ def test_application_obeys_import_boundaries():
         ("application/services/bad.py", "import sqlite3"),
         ("application/services/bad.py", "import psycopg"),
         ("application/services/bad.py", "import boto3"),
+        (
+            "application/services/bad.py",
+            "from outage_explorer.infrastructure.postgresql.credentials import IAMCredentials",
+        ),
+        (
+            "application/services/bad.py",
+            "from outage_explorer.entrypoints.http.auth_helpers import authenticated",
+        ),
+        (
+            "domain/policy.py",
+            "from outage_explorer.infrastructure.postgresql.credentials import IAMTarget",
+        ),
+        (
+            "entrypoints/http/routes/bad.py",
+            "from outage_explorer.infrastructure.postgresql.credentials import IAMCredentials",
+        ),
         ("application/services/bad.py", "from outage_explorer import helper"),
         ("application/services/bad.py", "from ..dto import *"),
         ("application/services/bad.py", "import importlib as loader"),

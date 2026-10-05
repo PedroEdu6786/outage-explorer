@@ -10,12 +10,20 @@ admission resolves a configured inclusive interval and records it for background
 execution; routes accept no caller date overrides. Configuration wiring belongs
 in bootstrap/settings and admission orchestration in the application layer.
 
+[ADR-0052](../adr/0052-interrupted-refresh-recovery.md) requires publication
+reconciliation before marking lost-worker runs interrupted, followed by explicit
+Admin retry for unpublished work. Supervision/recovery belongs outside HTTP
+request lifetimes; application ports own the durable transitions.
+
 Operational storage uses [PostgreSQL on Amazon RDS](../adr/0032-postgresql-on-rds.md).
 Use PostgreSQL for local development and integration tests as well; pure unit
 tests may substitute application ports with fakes. User-access Phase 1 now has
 PostgreSQL repositories, explicit Alembic migrations and controlled local seeding
-using Psycopg 3. Disposable PostgreSQL 18.6 tests verify storage/setup; the deployed
-RDS version and live account linkage remain unverified. Integration and tooling
+using Psycopg 3. Disposable PostgreSQL 18.6 tests verify storage/setup. October 5
+read-only checks verified Aurora PostgreSQL 17.9, the application schema and three
+seeded identity/role links; live login and pooled IAM signing remain pending.
+The [auth plan](../specs/user-access/plan.md) separates that dated evidence from
+the remaining phase 5 implementation and acceptance work. Integration and tooling
 records remain proposed in ADR-0046/0047. See the
 [Phase 1 checkpoint](../specs/user-access/tasks/phase-1.md).
 Phase 2 adds injected login/access services, cryptographic material and bounded
@@ -326,3 +334,23 @@ recovery and bounded-window replay verify those dependencies and their canonical
 raw values. CLI/Make fetch/S3 overrides win JSON, with endpoint default1 unchanged.
 Shared source bounds count all fetched rows/pages, including unused lookahead;
 logical admission includes endpoint*page buffers. Modeling stays coordinated.
+
+
+Data API Phase 1 adds shared v1 public projections in `domain/datasets.py`,
+parser reference inspection behind an application port, and bounded canonical
+encoding/type adapters in infrastructure. Portable OpenAPI and synthetic fixtures
+are in `docs/specs/data-api/`; real DuckDB compatibility runs only in a controlled
+test subprocess. Product catalog/preview/SQL/refresh routes and the isolated Linux
+launcher remain pending. See the [Phase 1 evidence](../specs/data-api/runtime-evidence.md)
+and [client handoff](../specs/data-api/client-handoff.md).
+
+User-access Phase 5 now adds shared explicit DSN/local/password/IAM settings,
+bounded runtime-only IAM signing for each physical PostgreSQL connection,
+confidential Cognito HTTP Basic token exchange with PKCE, and reusable typed HTTP
+authentication/CSRF/query-and-JSON guards. These guards pass values explicitly and
+do not replace fresh authorization in application use cases. Controlled acceptance
+uses disposable PostgreSQL, provider transports and persistent Chromium profiles;
+CI provisions its database/browser dependencies without cloud credentials.
+See the [operator runbook](../specs/user-access/setup.md) and
+[verification record](../specs/user-access/verification.md). Real managed-login
+and browser validation remain pending, so Phase 5's live checkpoint stays open.

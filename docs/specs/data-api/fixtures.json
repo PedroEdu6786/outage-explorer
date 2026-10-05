@@ -1,0 +1,3226 @@
+{
+  "contract_version": "1.0.0",
+  "synthetic": true,
+  "fixtures": [
+    {
+      "name": "catalog_viewer",
+      "operation_id": "listDatasets",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Catalog",
+      "body": {
+        "generation_id": "generation-synthetic-1",
+        "datasets": [
+          {
+            "id": "national",
+            "sql_name": "national",
+            "label": "National",
+            "schema_version": "1",
+            "columns": [
+              {
+                "index": 0,
+                "name": "period",
+                "type": "date",
+                "encoding": "iso-date",
+                "nullable": false,
+                "unit": null
+              },
+              {
+                "index": 1,
+                "name": "capacity_mw",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 38,
+                "scale": 12,
+                "nullable": false,
+                "unit": "MW"
+              },
+              {
+                "index": 2,
+                "name": "outage_mw",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 38,
+                "scale": 12,
+                "nullable": false,
+                "unit": "MW"
+              },
+              {
+                "index": 3,
+                "name": "reported_percentage",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 38,
+                "scale": 12,
+                "nullable": false,
+                "unit": "percent"
+              },
+              {
+                "index": 4,
+                "name": "calculated_percentage_rounded",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 38,
+                "scale": 2,
+                "nullable": false,
+                "unit": "percent"
+              },
+              {
+                "index": 5,
+                "name": "percentage_numerator",
+                "type": "string",
+                "encoding": "string",
+                "nullable": false,
+                "unit": null
+              },
+              {
+                "index": 6,
+                "name": "percentage_denominator",
+                "type": "string",
+                "encoding": "string",
+                "nullable": false,
+                "unit": null
+              },
+              {
+                "index": 7,
+                "name": "calculated_percentage_display",
+                "type": "string",
+                "encoding": "string",
+                "nullable": false,
+                "unit": "percent"
+              },
+              {
+                "index": 8,
+                "name": "reported_percentage_display",
+                "type": "string",
+                "encoding": "string",
+                "nullable": false,
+                "unit": "percent"
+              }
+            ],
+            "supported_filters": [
+              "start_date",
+              "end_date"
+            ],
+            "coverage": {
+              "start_date": "2026-04-02",
+              "end_date": "2026-10-01"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "catalog_analyst",
+      "operation_id": "listDatasets",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Catalog",
+      "body": {
+        "generation_id": "generation-synthetic-1",
+        "datasets": [
+          {
+            "id": "national",
+            "sql_name": "national",
+            "label": "National",
+            "schema_version": "1",
+            "columns": [
+              {
+                "index": 0,
+                "name": "period",
+                "type": "date",
+                "encoding": "iso-date",
+                "nullable": false,
+                "unit": null
+              },
+              {
+                "index": 1,
+                "name": "capacity_mw",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 38,
+                "scale": 12,
+                "nullable": false,
+                "unit": "MW"
+              },
+              {
+                "index": 2,
+                "name": "outage_mw",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 38,
+                "scale": 12,
+                "nullable": false,
+                "unit": "MW"
+              },
+              {
+                "index": 3,
+                "name": "reported_percentage",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 38,
+                "scale": 12,
+                "nullable": false,
+                "unit": "percent"
+              },
+              {
+                "index": 4,
+                "name": "calculated_percentage_rounded",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 38,
+                "scale": 2,
+                "nullable": false,
+                "unit": "percent"
+              },
+              {
+                "index": 5,
+                "name": "percentage_numerator",
+                "type": "string",
+                "encoding": "string",
+                "nullable": false,
+                "unit": null
+              },
+              {
+                "index": 6,
+                "name": "percentage_denominator",
+                "type": "string",
+                "encoding": "string",
+                "nullable": false,
+                "unit": null
+              },
+              {
+                "index": 7,
+                "name": "calculated_percentage_display",
+                "type": "string",
+                "encoding": "string",
+                "nullable": false,
+                "unit": "percent"
+              },
+              {
+                "index": 8,
+                "name": "reported_percentage_display",
+                "type": "string",
+                "encoding": "string",
+                "nullable": false,
+                "unit": "percent"
+              }
+            ],
+            "supported_filters": [
+              "start_date",
+              "end_date"
+            ],
+            "coverage": {
+              "start_date": "2026-04-02",
+              "end_date": "2026-10-01"
+            }
+          },
+          {
+            "id": "facilities",
+            "sql_name": "facilities",
+            "label": "Facilities",
+            "schema_version": "1",
+            "columns": [
+              {
+                "index": 0,
+                "name": "period",
+                "type": "date",
+                "encoding": "iso-date",
+                "nullable": false,
+                "unit": null
+              },
+              {
+                "index": 1,
+                "name": "capacity_mw",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 38,
+                "scale": 12,
+                "nullable": false,
+                "unit": "MW"
+              },
+              {
+                "index": 2,
+                "name": "outage_mw",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 38,
+                "scale": 12,
+                "nullable": false,
+                "unit": "MW"
+              },
+              {
+                "index": 3,
+                "name": "reported_percentage",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 38,
+                "scale": 12,
+                "nullable": false,
+                "unit": "percent"
+              },
+              {
+                "index": 4,
+                "name": "facility",
+                "type": "string",
+                "encoding": "string",
+                "nullable": false,
+                "unit": null
+              },
+              {
+                "index": 5,
+                "name": "facility_name",
+                "type": "string",
+                "encoding": "string",
+                "nullable": false,
+                "unit": null
+              }
+            ],
+            "supported_filters": [
+              "start_date",
+              "end_date"
+            ],
+            "coverage": {
+              "start_date": "2026-04-02",
+              "end_date": "2026-10-01"
+            }
+          },
+          {
+            "id": "generators",
+            "sql_name": "generators",
+            "label": "Generators",
+            "schema_version": "1",
+            "columns": [
+              {
+                "index": 0,
+                "name": "period",
+                "type": "date",
+                "encoding": "iso-date",
+                "nullable": false,
+                "unit": null
+              },
+              {
+                "index": 1,
+                "name": "capacity_mw",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 38,
+                "scale": 12,
+                "nullable": false,
+                "unit": "MW"
+              },
+              {
+                "index": 2,
+                "name": "outage_mw",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 38,
+                "scale": 12,
+                "nullable": false,
+                "unit": "MW"
+              },
+              {
+                "index": 3,
+                "name": "reported_percentage",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 38,
+                "scale": 12,
+                "nullable": false,
+                "unit": "percent"
+              },
+              {
+                "index": 4,
+                "name": "facility",
+                "type": "string",
+                "encoding": "string",
+                "nullable": false,
+                "unit": null
+              },
+              {
+                "index": 5,
+                "name": "facility_name",
+                "type": "string",
+                "encoding": "string",
+                "nullable": false,
+                "unit": null
+              },
+              {
+                "index": 6,
+                "name": "generator",
+                "type": "string",
+                "encoding": "string",
+                "nullable": false,
+                "unit": null
+              }
+            ],
+            "supported_filters": [
+              "start_date",
+              "end_date"
+            ],
+            "coverage": {
+              "start_date": "2026-04-02",
+              "end_date": "2026-10-01"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "catalog_admin",
+      "operation_id": "listDatasets",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Catalog",
+      "body": {
+        "generation_id": "generation-synthetic-1",
+        "datasets": [
+          {
+            "id": "national",
+            "sql_name": "national",
+            "label": "National",
+            "schema_version": "1",
+            "columns": [
+              {
+                "index": 0,
+                "name": "period",
+                "type": "date",
+                "encoding": "iso-date",
+                "nullable": false,
+                "unit": null
+              },
+              {
+                "index": 1,
+                "name": "capacity_mw",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 38,
+                "scale": 12,
+                "nullable": false,
+                "unit": "MW"
+              },
+              {
+                "index": 2,
+                "name": "outage_mw",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 38,
+                "scale": 12,
+                "nullable": false,
+                "unit": "MW"
+              },
+              {
+                "index": 3,
+                "name": "reported_percentage",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 38,
+                "scale": 12,
+                "nullable": false,
+                "unit": "percent"
+              },
+              {
+                "index": 4,
+                "name": "calculated_percentage_rounded",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 38,
+                "scale": 2,
+                "nullable": false,
+                "unit": "percent"
+              },
+              {
+                "index": 5,
+                "name": "percentage_numerator",
+                "type": "string",
+                "encoding": "string",
+                "nullable": false,
+                "unit": null
+              },
+              {
+                "index": 6,
+                "name": "percentage_denominator",
+                "type": "string",
+                "encoding": "string",
+                "nullable": false,
+                "unit": null
+              },
+              {
+                "index": 7,
+                "name": "calculated_percentage_display",
+                "type": "string",
+                "encoding": "string",
+                "nullable": false,
+                "unit": "percent"
+              },
+              {
+                "index": 8,
+                "name": "reported_percentage_display",
+                "type": "string",
+                "encoding": "string",
+                "nullable": false,
+                "unit": "percent"
+              }
+            ],
+            "supported_filters": [
+              "start_date",
+              "end_date"
+            ],
+            "coverage": {
+              "start_date": "2026-04-02",
+              "end_date": "2026-10-01"
+            }
+          },
+          {
+            "id": "facilities",
+            "sql_name": "facilities",
+            "label": "Facilities",
+            "schema_version": "1",
+            "columns": [
+              {
+                "index": 0,
+                "name": "period",
+                "type": "date",
+                "encoding": "iso-date",
+                "nullable": false,
+                "unit": null
+              },
+              {
+                "index": 1,
+                "name": "capacity_mw",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 38,
+                "scale": 12,
+                "nullable": false,
+                "unit": "MW"
+              },
+              {
+                "index": 2,
+                "name": "outage_mw",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 38,
+                "scale": 12,
+                "nullable": false,
+                "unit": "MW"
+              },
+              {
+                "index": 3,
+                "name": "reported_percentage",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 38,
+                "scale": 12,
+                "nullable": false,
+                "unit": "percent"
+              },
+              {
+                "index": 4,
+                "name": "facility",
+                "type": "string",
+                "encoding": "string",
+                "nullable": false,
+                "unit": null
+              },
+              {
+                "index": 5,
+                "name": "facility_name",
+                "type": "string",
+                "encoding": "string",
+                "nullable": false,
+                "unit": null
+              }
+            ],
+            "supported_filters": [
+              "start_date",
+              "end_date"
+            ],
+            "coverage": {
+              "start_date": "2026-04-02",
+              "end_date": "2026-10-01"
+            }
+          },
+          {
+            "id": "generators",
+            "sql_name": "generators",
+            "label": "Generators",
+            "schema_version": "1",
+            "columns": [
+              {
+                "index": 0,
+                "name": "period",
+                "type": "date",
+                "encoding": "iso-date",
+                "nullable": false,
+                "unit": null
+              },
+              {
+                "index": 1,
+                "name": "capacity_mw",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 38,
+                "scale": 12,
+                "nullable": false,
+                "unit": "MW"
+              },
+              {
+                "index": 2,
+                "name": "outage_mw",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 38,
+                "scale": 12,
+                "nullable": false,
+                "unit": "MW"
+              },
+              {
+                "index": 3,
+                "name": "reported_percentage",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 38,
+                "scale": 12,
+                "nullable": false,
+                "unit": "percent"
+              },
+              {
+                "index": 4,
+                "name": "facility",
+                "type": "string",
+                "encoding": "string",
+                "nullable": false,
+                "unit": null
+              },
+              {
+                "index": 5,
+                "name": "facility_name",
+                "type": "string",
+                "encoding": "string",
+                "nullable": false,
+                "unit": null
+              },
+              {
+                "index": 6,
+                "name": "generator",
+                "type": "string",
+                "encoding": "string",
+                "nullable": false,
+                "unit": null
+              }
+            ],
+            "supported_filters": [
+              "start_date",
+              "end_date"
+            ],
+            "coverage": {
+              "start_date": "2026-04-02",
+              "end_date": "2026-10-01"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "preview_national",
+      "operation_id": "previewDataset",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Preview",
+      "body": {
+        "dataset": "national",
+        "generation_id": "generation-synthetic-1",
+        "columns": [
+          {
+            "index": 0,
+            "name": "period",
+            "type": "date",
+            "encoding": "iso-date",
+            "nullable": false,
+            "unit": null
+          },
+          {
+            "index": 1,
+            "name": "capacity_mw",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": false,
+            "unit": "MW"
+          },
+          {
+            "index": 2,
+            "name": "outage_mw",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": false,
+            "unit": "MW"
+          },
+          {
+            "index": 3,
+            "name": "reported_percentage",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": false,
+            "unit": "percent"
+          },
+          {
+            "index": 4,
+            "name": "calculated_percentage_rounded",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 2,
+            "nullable": false,
+            "unit": "percent"
+          },
+          {
+            "index": 5,
+            "name": "percentage_numerator",
+            "type": "string",
+            "encoding": "string",
+            "nullable": false,
+            "unit": null
+          },
+          {
+            "index": 6,
+            "name": "percentage_denominator",
+            "type": "string",
+            "encoding": "string",
+            "nullable": false,
+            "unit": null
+          },
+          {
+            "index": 7,
+            "name": "calculated_percentage_display",
+            "type": "string",
+            "encoding": "string",
+            "nullable": false,
+            "unit": "percent"
+          },
+          {
+            "index": 8,
+            "name": "reported_percentage_display",
+            "type": "string",
+            "encoding": "string",
+            "nullable": false,
+            "unit": "percent"
+          }
+        ],
+        "rows": [
+          [
+            "2026-10-01",
+            "3000.000000000000",
+            "100.000000000000",
+            "3.330000000000",
+            "3.33",
+            "10",
+            "3",
+            "3.33",
+            "3.33"
+          ]
+        ],
+        "page_size": 100,
+        "page_cursor": "cursor-synthetic-first",
+        "next_cursor": null,
+        "has_more": false,
+        "expires_at": "2026-10-05T12:15:00Z"
+      }
+    },
+    {
+      "name": "preview_facilities",
+      "operation_id": "previewDataset",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Preview",
+      "body": {
+        "dataset": "facilities",
+        "generation_id": "generation-synthetic-1",
+        "columns": [
+          {
+            "index": 0,
+            "name": "period",
+            "type": "date",
+            "encoding": "iso-date",
+            "nullable": false,
+            "unit": null
+          },
+          {
+            "index": 1,
+            "name": "capacity_mw",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": false,
+            "unit": "MW"
+          },
+          {
+            "index": 2,
+            "name": "outage_mw",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": false,
+            "unit": "MW"
+          },
+          {
+            "index": 3,
+            "name": "reported_percentage",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": false,
+            "unit": "percent"
+          },
+          {
+            "index": 4,
+            "name": "facility",
+            "type": "string",
+            "encoding": "string",
+            "nullable": false,
+            "unit": null
+          },
+          {
+            "index": 5,
+            "name": "facility_name",
+            "type": "string",
+            "encoding": "string",
+            "nullable": false,
+            "unit": null
+          }
+        ],
+        "rows": [
+          [
+            "2026-10-01",
+            "1000.000000000000",
+            "0.000000000000",
+            "0.000000000000",
+            "00001",
+            "Station é"
+          ]
+        ],
+        "page_size": 100,
+        "page_cursor": "cursor-synthetic-first",
+        "next_cursor": null,
+        "has_more": false,
+        "expires_at": "2026-10-05T12:15:00Z"
+      }
+    },
+    {
+      "name": "preview_generators",
+      "operation_id": "previewDataset",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Preview",
+      "body": {
+        "dataset": "generators",
+        "generation_id": "generation-synthetic-1",
+        "columns": [
+          {
+            "index": 0,
+            "name": "period",
+            "type": "date",
+            "encoding": "iso-date",
+            "nullable": false,
+            "unit": null
+          },
+          {
+            "index": 1,
+            "name": "capacity_mw",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": false,
+            "unit": "MW"
+          },
+          {
+            "index": 2,
+            "name": "outage_mw",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": false,
+            "unit": "MW"
+          },
+          {
+            "index": 3,
+            "name": "reported_percentage",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": false,
+            "unit": "percent"
+          },
+          {
+            "index": 4,
+            "name": "facility",
+            "type": "string",
+            "encoding": "string",
+            "nullable": false,
+            "unit": null
+          },
+          {
+            "index": 5,
+            "name": "facility_name",
+            "type": "string",
+            "encoding": "string",
+            "nullable": false,
+            "unit": null
+          },
+          {
+            "index": 6,
+            "name": "generator",
+            "type": "string",
+            "encoding": "string",
+            "nullable": false,
+            "unit": null
+          }
+        ],
+        "rows": [
+          [
+            "2026-10-01",
+            "1000.000000000000",
+            "0.000000000000",
+            "0.000000000000",
+            "00001",
+            "Station é",
+            "01"
+          ]
+        ],
+        "page_size": 100,
+        "page_cursor": "cursor-synthetic-first",
+        "next_cursor": null,
+        "has_more": false,
+        "expires_at": "2026-10-05T12:15:00Z"
+      }
+    },
+    {
+      "name": "preview_empty",
+      "operation_id": "previewDataset",
+      "request": {
+        "start_date": "2026-03-01",
+        "end_date": "2026-03-02"
+      },
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Preview",
+      "body": {
+        "dataset": "generators",
+        "generation_id": "generation-synthetic-1",
+        "columns": [
+          {
+            "index": 0,
+            "name": "period",
+            "type": "date",
+            "encoding": "iso-date",
+            "nullable": false,
+            "unit": null
+          },
+          {
+            "index": 1,
+            "name": "capacity_mw",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": false,
+            "unit": "MW"
+          },
+          {
+            "index": 2,
+            "name": "outage_mw",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": false,
+            "unit": "MW"
+          },
+          {
+            "index": 3,
+            "name": "reported_percentage",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": false,
+            "unit": "percent"
+          },
+          {
+            "index": 4,
+            "name": "facility",
+            "type": "string",
+            "encoding": "string",
+            "nullable": false,
+            "unit": null
+          },
+          {
+            "index": 5,
+            "name": "facility_name",
+            "type": "string",
+            "encoding": "string",
+            "nullable": false,
+            "unit": null
+          },
+          {
+            "index": 6,
+            "name": "generator",
+            "type": "string",
+            "encoding": "string",
+            "nullable": false,
+            "unit": null
+          }
+        ],
+        "rows": [],
+        "page_size": 100,
+        "page_cursor": "cursor-synthetic-first",
+        "next_cursor": null,
+        "has_more": false,
+        "expires_at": "2026-10-05T12:15:00Z"
+      }
+    },
+    {
+      "name": "preview_first",
+      "operation_id": "previewDataset",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Preview",
+      "body": {
+        "dataset": "generators",
+        "generation_id": "generation-synthetic-1",
+        "columns": [
+          {
+            "index": 0,
+            "name": "period",
+            "type": "date",
+            "encoding": "iso-date",
+            "nullable": false,
+            "unit": null
+          },
+          {
+            "index": 1,
+            "name": "capacity_mw",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": false,
+            "unit": "MW"
+          },
+          {
+            "index": 2,
+            "name": "outage_mw",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": false,
+            "unit": "MW"
+          },
+          {
+            "index": 3,
+            "name": "reported_percentage",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": false,
+            "unit": "percent"
+          },
+          {
+            "index": 4,
+            "name": "facility",
+            "type": "string",
+            "encoding": "string",
+            "nullable": false,
+            "unit": null
+          },
+          {
+            "index": 5,
+            "name": "facility_name",
+            "type": "string",
+            "encoding": "string",
+            "nullable": false,
+            "unit": null
+          },
+          {
+            "index": 6,
+            "name": "generator",
+            "type": "string",
+            "encoding": "string",
+            "nullable": false,
+            "unit": null
+          }
+        ],
+        "rows": [
+          [
+            "2026-10-01",
+            "1000.000000000000",
+            "0.000000000000",
+            "0.000000000000",
+            "00001",
+            "Station é",
+            "01"
+          ]
+        ],
+        "page_size": 1,
+        "page_cursor": "cursor-synthetic-first",
+        "next_cursor": "cursor-synthetic-second",
+        "has_more": true,
+        "expires_at": "2026-10-05T12:15:00Z"
+      }
+    },
+    {
+      "name": "preview_revisit",
+      "operation_id": "previewDataset",
+      "request": {
+        "cursor": "cursor-synthetic-first"
+      },
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Preview",
+      "body": {
+        "dataset": "generators",
+        "generation_id": "generation-synthetic-1",
+        "columns": [
+          {
+            "index": 0,
+            "name": "period",
+            "type": "date",
+            "encoding": "iso-date",
+            "nullable": false,
+            "unit": null
+          },
+          {
+            "index": 1,
+            "name": "capacity_mw",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": false,
+            "unit": "MW"
+          },
+          {
+            "index": 2,
+            "name": "outage_mw",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": false,
+            "unit": "MW"
+          },
+          {
+            "index": 3,
+            "name": "reported_percentage",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": false,
+            "unit": "percent"
+          },
+          {
+            "index": 4,
+            "name": "facility",
+            "type": "string",
+            "encoding": "string",
+            "nullable": false,
+            "unit": null
+          },
+          {
+            "index": 5,
+            "name": "facility_name",
+            "type": "string",
+            "encoding": "string",
+            "nullable": false,
+            "unit": null
+          },
+          {
+            "index": 6,
+            "name": "generator",
+            "type": "string",
+            "encoding": "string",
+            "nullable": false,
+            "unit": null
+          }
+        ],
+        "rows": [
+          [
+            "2026-10-01",
+            "1000.000000000000",
+            "0.000000000000",
+            "0.000000000000",
+            "00001",
+            "Station é",
+            "01"
+          ]
+        ],
+        "page_size": 1,
+        "page_cursor": "cursor-synthetic-first",
+        "next_cursor": "cursor-synthetic-second",
+        "has_more": true,
+        "expires_at": "2026-10-05T12:15:00Z"
+      }
+    },
+    {
+      "name": "preview_next",
+      "operation_id": "previewDataset",
+      "request": {
+        "cursor": "cursor-synthetic-second"
+      },
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Preview",
+      "body": {
+        "dataset": "generators",
+        "generation_id": "generation-synthetic-1",
+        "columns": [
+          {
+            "index": 0,
+            "name": "period",
+            "type": "date",
+            "encoding": "iso-date",
+            "nullable": false,
+            "unit": null
+          },
+          {
+            "index": 1,
+            "name": "capacity_mw",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": false,
+            "unit": "MW"
+          },
+          {
+            "index": 2,
+            "name": "outage_mw",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": false,
+            "unit": "MW"
+          },
+          {
+            "index": 3,
+            "name": "reported_percentage",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": false,
+            "unit": "percent"
+          },
+          {
+            "index": 4,
+            "name": "facility",
+            "type": "string",
+            "encoding": "string",
+            "nullable": false,
+            "unit": null
+          },
+          {
+            "index": 5,
+            "name": "facility_name",
+            "type": "string",
+            "encoding": "string",
+            "nullable": false,
+            "unit": null
+          },
+          {
+            "index": 6,
+            "name": "generator",
+            "type": "string",
+            "encoding": "string",
+            "nullable": false,
+            "unit": null
+          }
+        ],
+        "rows": [
+          [
+            "2026-09-30",
+            "1000.000000000000",
+            "0.000000000000",
+            "0.000000000000",
+            "00001",
+            "Station é",
+            "01"
+          ]
+        ],
+        "page_size": 1,
+        "page_cursor": "cursor-synthetic-second",
+        "next_cursor": null,
+        "has_more": false,
+        "expires_at": "2026-10-05T12:15:00Z"
+      }
+    },
+    {
+      "name": "query_first",
+      "operation_id": "executeQuery",
+      "request": {
+        "sql": "SELECT * FROM (VALUES (9007199254740993::HUGEINT, 0.123456789012::DECIMAL(38,12)), (-9007199254740993::HUGEINT, 9.999999999999::DECIMAL(38,12))) AS sample(x, x_copy)",
+        "page_size": 1
+      },
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "QueryResult",
+      "body": {
+        "query_id": "query-synthetic-1",
+        "generation_id": "generation-synthetic-1",
+        "columns": [
+          {
+            "index": 0,
+            "name": "x",
+            "type": "integer",
+            "encoding": "integer-string",
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 1,
+            "name": "x",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": null,
+            "unit": null
+          }
+        ],
+        "rows": [
+          [
+            "9007199254740993",
+            "0.123456789012"
+          ]
+        ],
+        "page": 1,
+        "page_size": 1,
+        "retained_row_count": 2,
+        "total_pages": 2,
+        "has_more": true,
+        "truncated": false,
+        "truncation_reason": null,
+        "limits": {
+          "max_rows": 1000,
+          "max_bytes": 1048576
+        },
+        "expires_at": "2026-10-05T12:15:00Z"
+      }
+    },
+    {
+      "name": "query_direct_page",
+      "operation_id": "executeQuery",
+      "request": {
+        "page": 2,
+        "page_size": 1,
+        "sql": "SELECT * FROM (VALUES (9007199254740993::HUGEINT, 0.123456789012::DECIMAL(38,12)), (-9007199254740993::HUGEINT, 9.999999999999::DECIMAL(38,12))) AS sample(x, x_copy)"
+      },
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "QueryResult",
+      "body": {
+        "query_id": "query-synthetic-1",
+        "generation_id": "generation-synthetic-1",
+        "columns": [
+          {
+            "index": 0,
+            "name": "x",
+            "type": "integer",
+            "encoding": "integer-string",
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 1,
+            "name": "x",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": null,
+            "unit": null
+          }
+        ],
+        "rows": [
+          [
+            "-9007199254740993",
+            "9.999999999999"
+          ]
+        ],
+        "page": 2,
+        "page_size": 1,
+        "retained_row_count": 2,
+        "total_pages": 2,
+        "has_more": false,
+        "truncated": false,
+        "truncation_reason": null,
+        "limits": {
+          "max_rows": 1000,
+          "max_bytes": 1048576
+        },
+        "expires_at": "2026-10-05T12:15:00Z"
+      }
+    },
+    {
+      "name": "query_second",
+      "operation_id": "getQueryPage",
+      "request": {
+        "query_id": "query-synthetic-1",
+        "page": 2
+      },
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "QueryResult",
+      "body": {
+        "query_id": "query-synthetic-1",
+        "generation_id": "generation-synthetic-1",
+        "columns": [
+          {
+            "index": 0,
+            "name": "x",
+            "type": "integer",
+            "encoding": "integer-string",
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 1,
+            "name": "x",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": null,
+            "unit": null
+          }
+        ],
+        "rows": [
+          [
+            "-9007199254740993",
+            "9.999999999999"
+          ]
+        ],
+        "page": 2,
+        "page_size": 1,
+        "retained_row_count": 2,
+        "total_pages": 2,
+        "has_more": false,
+        "truncated": false,
+        "truncation_reason": null,
+        "limits": {
+          "max_rows": 1000,
+          "max_bytes": 1048576
+        },
+        "expires_at": "2026-10-05T12:15:00Z"
+      }
+    },
+    {
+      "name": "query_revisit",
+      "operation_id": "getQueryPage",
+      "request": {
+        "query_id": "query-synthetic-1",
+        "page": 1
+      },
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "QueryResult",
+      "body": {
+        "query_id": "query-synthetic-1",
+        "generation_id": "generation-synthetic-1",
+        "columns": [
+          {
+            "index": 0,
+            "name": "x",
+            "type": "integer",
+            "encoding": "integer-string",
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 1,
+            "name": "x",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": null,
+            "unit": null
+          }
+        ],
+        "rows": [
+          [
+            "9007199254740993",
+            "0.123456789012"
+          ]
+        ],
+        "page": 1,
+        "page_size": 1,
+        "retained_row_count": 2,
+        "total_pages": 2,
+        "has_more": true,
+        "truncated": false,
+        "truncation_reason": null,
+        "limits": {
+          "max_rows": 1000,
+          "max_bytes": 1048576
+        },
+        "expires_at": "2026-10-05T12:15:00Z"
+      }
+    },
+    {
+      "name": "query_empty",
+      "operation_id": "executeQuery",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "QueryResult",
+      "body": {
+        "query_id": "query-synthetic-1",
+        "generation_id": "generation-synthetic-1",
+        "columns": [
+          {
+            "index": 0,
+            "name": "x",
+            "type": "integer",
+            "encoding": "integer-string",
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 1,
+            "name": "x",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": null,
+            "unit": null
+          }
+        ],
+        "rows": [],
+        "page": 1,
+        "page_size": 1,
+        "retained_row_count": 0,
+        "total_pages": 1,
+        "has_more": false,
+        "truncated": false,
+        "truncation_reason": null,
+        "limits": {
+          "max_rows": 1000,
+          "max_bytes": 1048576
+        },
+        "expires_at": "2026-10-05T12:15:00Z"
+      }
+    },
+    {
+      "name": "query_oversized_first",
+      "operation_id": "executeQuery",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "QueryResult",
+      "body": {
+        "query_id": "query-synthetic-1",
+        "generation_id": "generation-synthetic-1",
+        "columns": [
+          {
+            "index": 0,
+            "name": "x",
+            "type": "integer",
+            "encoding": "integer-string",
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 1,
+            "name": "x",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": null,
+            "unit": null
+          }
+        ],
+        "rows": [],
+        "page": 1,
+        "page_size": 1,
+        "retained_row_count": 0,
+        "total_pages": 1,
+        "has_more": false,
+        "truncated": true,
+        "truncation_reason": "byte_limit",
+        "limits": {
+          "max_rows": 1000,
+          "max_bytes": 1048576
+        },
+        "expires_at": "2026-10-05T12:15:00Z"
+      }
+    },
+    {
+      "name": "query_byte_limit",
+      "operation_id": "executeQuery",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "QueryResult",
+      "body": {
+        "query_id": "query-synthetic-1",
+        "generation_id": "generation-synthetic-1",
+        "columns": [
+          {
+            "index": 0,
+            "name": "x",
+            "type": "integer",
+            "encoding": "integer-string",
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 1,
+            "name": "x",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": null,
+            "unit": null
+          }
+        ],
+        "rows": [
+          [
+            "9007199254740993",
+            "0.123456789012"
+          ]
+        ],
+        "page": 1,
+        "page_size": 1,
+        "retained_row_count": 2,
+        "total_pages": 2,
+        "has_more": true,
+        "truncated": true,
+        "truncation_reason": "byte_limit",
+        "limits": {
+          "max_rows": 1000,
+          "max_bytes": 1048576
+        },
+        "expires_at": "2026-10-05T12:15:00Z"
+      }
+    },
+    {
+      "name": "query_row_limit",
+      "operation_id": "executeQuery",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "QueryResult",
+      "body": {
+        "query_id": "query-synthetic-1",
+        "generation_id": "generation-synthetic-1",
+        "columns": [
+          {
+            "index": 0,
+            "name": "x",
+            "type": "integer",
+            "encoding": "integer-string",
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 1,
+            "name": "x",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": null,
+            "unit": null
+          }
+        ],
+        "rows": [
+          [
+            "9007199254740993",
+            "0.123456789012"
+          ]
+        ],
+        "page": 1,
+        "page_size": 1,
+        "retained_row_count": 2,
+        "total_pages": 2,
+        "has_more": true,
+        "truncated": true,
+        "truncation_reason": "row_limit",
+        "limits": {
+          "max_rows": 1000,
+          "max_bytes": 1048576
+        },
+        "expires_at": "2026-10-05T12:15:00Z"
+      }
+    },
+    {
+      "name": "refresh_admitted",
+      "operation_id": "admitRefresh",
+      "request": {
+        "body": {},
+        "Idempotency-Key": "synthetic-key-0001"
+      },
+      "status": 202,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Location": "/api/refresh/run-synthetic-1",
+        "Retry-After": "3"
+      },
+      "schema": "RefreshReceipt",
+      "body": {
+        "run_id": "run-synthetic-1",
+        "status": "accepted",
+        "effective_interval": {
+          "start_date": "2026-04-02",
+          "end_date": "2026-10-01"
+        },
+        "status_url": "/api/refresh/run-synthetic-1"
+      }
+    },
+    {
+      "name": "refresh_same_key",
+      "operation_id": "admitRefresh",
+      "request": {},
+      "status": 202,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Location": "/api/refresh/run-synthetic-1",
+        "Retry-After": "3"
+      },
+      "schema": "RefreshReceipt",
+      "body": {
+        "run_id": "run-synthetic-1",
+        "status": "accepted",
+        "effective_interval": {
+          "start_date": "2026-04-02",
+          "end_date": "2026-10-01"
+        },
+        "status_url": "/api/refresh/run-synthetic-1"
+      }
+    },
+    {
+      "name": "refresh_terminal_key",
+      "operation_id": "admitRefresh",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "RefreshReceipt",
+      "body": {
+        "run_id": "run-synthetic-1",
+        "status": "succeeded",
+        "effective_interval": {
+          "start_date": "2026-04-02",
+          "end_date": "2026-10-01"
+        },
+        "status_url": "/api/refresh/run-synthetic-1"
+      }
+    },
+    {
+      "name": "refresh_accepted",
+      "operation_id": "getRefresh",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "RefreshRun",
+      "body": {
+        "run_id": "run-synthetic-1",
+        "status": "accepted",
+        "stage": "queued",
+        "effective_interval": {
+          "start_date": "2026-04-02",
+          "end_date": "2026-10-01"
+        },
+        "accepted_at": "2026-10-05T12:00:00Z",
+        "started_at": null,
+        "finished_at": null,
+        "datasets": [
+          {
+            "id": "national",
+            "status": "pending",
+            "coverage": null,
+            "quality": null
+          },
+          {
+            "id": "facilities",
+            "status": "pending",
+            "coverage": null,
+            "quality": null
+          },
+          {
+            "id": "generators",
+            "status": "pending",
+            "coverage": null,
+            "quality": null
+          }
+        ],
+        "publication": {
+          "state": "pending",
+          "generation_id": null,
+          "previous_generation_id": "generation-synthetic-previous",
+          "no_publication_reason": null
+        },
+        "failure": null
+      }
+    },
+    {
+      "name": "latest_accepted",
+      "operation_id": "latestRefresh",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "LatestRefresh",
+      "body": {
+        "run": {
+          "run_id": "run-synthetic-1",
+          "status": "accepted",
+          "stage": "queued",
+          "effective_interval": {
+            "start_date": "2026-04-02",
+            "end_date": "2026-10-01"
+          },
+          "accepted_at": "2026-10-05T12:00:00Z",
+          "started_at": null,
+          "finished_at": null,
+          "datasets": [
+            {
+              "id": "national",
+              "status": "pending",
+              "coverage": null,
+              "quality": null
+            },
+            {
+              "id": "facilities",
+              "status": "pending",
+              "coverage": null,
+              "quality": null
+            },
+            {
+              "id": "generators",
+              "status": "pending",
+              "coverage": null,
+              "quality": null
+            }
+          ],
+          "publication": {
+            "state": "pending",
+            "generation_id": null,
+            "previous_generation_id": "generation-synthetic-previous",
+            "no_publication_reason": null
+          },
+          "failure": null
+        }
+      }
+    },
+    {
+      "name": "refresh_running",
+      "operation_id": "getRefresh",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "RefreshRun",
+      "body": {
+        "run_id": "run-synthetic-1",
+        "status": "running",
+        "stage": "retrieving",
+        "effective_interval": {
+          "start_date": "2026-04-02",
+          "end_date": "2026-10-01"
+        },
+        "accepted_at": "2026-10-05T12:00:00Z",
+        "started_at": "2026-10-05T12:00:01Z",
+        "finished_at": null,
+        "datasets": [
+          {
+            "id": "national",
+            "status": "processing",
+            "coverage": null,
+            "quality": null
+          },
+          {
+            "id": "facilities",
+            "status": "processing",
+            "coverage": null,
+            "quality": null
+          },
+          {
+            "id": "generators",
+            "status": "processing",
+            "coverage": null,
+            "quality": null
+          }
+        ],
+        "publication": {
+          "state": "pending",
+          "generation_id": null,
+          "previous_generation_id": "generation-synthetic-previous",
+          "no_publication_reason": null
+        },
+        "failure": null
+      }
+    },
+    {
+      "name": "latest_running",
+      "operation_id": "latestRefresh",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "LatestRefresh",
+      "body": {
+        "run": {
+          "run_id": "run-synthetic-1",
+          "status": "running",
+          "stage": "retrieving",
+          "effective_interval": {
+            "start_date": "2026-04-02",
+            "end_date": "2026-10-01"
+          },
+          "accepted_at": "2026-10-05T12:00:00Z",
+          "started_at": "2026-10-05T12:00:01Z",
+          "finished_at": null,
+          "datasets": [
+            {
+              "id": "national",
+              "status": "processing",
+              "coverage": null,
+              "quality": null
+            },
+            {
+              "id": "facilities",
+              "status": "processing",
+              "coverage": null,
+              "quality": null
+            },
+            {
+              "id": "generators",
+              "status": "processing",
+              "coverage": null,
+              "quality": null
+            }
+          ],
+          "publication": {
+            "state": "pending",
+            "generation_id": null,
+            "previous_generation_id": "generation-synthetic-previous",
+            "no_publication_reason": null
+          },
+          "failure": null
+        }
+      }
+    },
+    {
+      "name": "refresh_succeeded",
+      "operation_id": "getRefresh",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "RefreshRun",
+      "body": {
+        "run_id": "run-synthetic-1",
+        "status": "succeeded",
+        "stage": "finished",
+        "effective_interval": {
+          "start_date": "2026-04-02",
+          "end_date": "2026-10-01"
+        },
+        "accepted_at": "2026-10-05T12:00:00Z",
+        "started_at": "2026-10-05T12:00:01Z",
+        "finished_at": "2026-10-05T12:02:00Z",
+        "datasets": [
+          {
+            "id": "national",
+            "status": "succeeded",
+            "coverage": {
+              "start_date": "2026-04-02",
+              "end_date": "2026-10-01"
+            },
+            "quality": {
+              "received_rows": 3,
+              "selected_rows": 1,
+              "excluded_rows": 1,
+              "duplicates_collapsed": 1,
+              "superseded_rows": 0,
+              "retained_invalid_rows": 0,
+              "retained_absent_rows": 0,
+              "carried_outside_interval_rows": 0,
+              "modeled_rows": 1,
+              "retained_entire_dataset": false,
+              "exclusion_reasons": [
+                {
+                  "code": "invalid_capacity",
+                  "count": 1
+                }
+              ]
+            }
+          },
+          {
+            "id": "facilities",
+            "status": "succeeded",
+            "coverage": {
+              "start_date": "2026-04-02",
+              "end_date": "2026-10-01"
+            },
+            "quality": {
+              "received_rows": 3,
+              "selected_rows": 1,
+              "excluded_rows": 1,
+              "duplicates_collapsed": 1,
+              "superseded_rows": 0,
+              "retained_invalid_rows": 0,
+              "retained_absent_rows": 0,
+              "carried_outside_interval_rows": 0,
+              "modeled_rows": 1,
+              "retained_entire_dataset": false,
+              "exclusion_reasons": [
+                {
+                  "code": "invalid_capacity",
+                  "count": 1
+                }
+              ]
+            }
+          },
+          {
+            "id": "generators",
+            "status": "succeeded",
+            "coverage": {
+              "start_date": "2026-04-02",
+              "end_date": "2026-10-01"
+            },
+            "quality": {
+              "received_rows": 3,
+              "selected_rows": 1,
+              "excluded_rows": 1,
+              "duplicates_collapsed": 1,
+              "superseded_rows": 0,
+              "retained_invalid_rows": 0,
+              "retained_absent_rows": 0,
+              "carried_outside_interval_rows": 0,
+              "modeled_rows": 1,
+              "retained_entire_dataset": false,
+              "exclusion_reasons": [
+                {
+                  "code": "invalid_capacity",
+                  "count": 1
+                }
+              ]
+            }
+          }
+        ],
+        "publication": {
+          "state": "published",
+          "generation_id": "generation-synthetic-1",
+          "previous_generation_id": "generation-synthetic-previous",
+          "no_publication_reason": null
+        },
+        "failure": null
+      }
+    },
+    {
+      "name": "latest_succeeded",
+      "operation_id": "latestRefresh",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "LatestRefresh",
+      "body": {
+        "run": {
+          "run_id": "run-synthetic-1",
+          "status": "succeeded",
+          "stage": "finished",
+          "effective_interval": {
+            "start_date": "2026-04-02",
+            "end_date": "2026-10-01"
+          },
+          "accepted_at": "2026-10-05T12:00:00Z",
+          "started_at": "2026-10-05T12:00:01Z",
+          "finished_at": "2026-10-05T12:02:00Z",
+          "datasets": [
+            {
+              "id": "national",
+              "status": "succeeded",
+              "coverage": {
+                "start_date": "2026-04-02",
+                "end_date": "2026-10-01"
+              },
+              "quality": {
+                "received_rows": 3,
+                "selected_rows": 1,
+                "excluded_rows": 1,
+                "duplicates_collapsed": 1,
+                "superseded_rows": 0,
+                "retained_invalid_rows": 0,
+                "retained_absent_rows": 0,
+                "carried_outside_interval_rows": 0,
+                "modeled_rows": 1,
+                "retained_entire_dataset": false,
+                "exclusion_reasons": [
+                  {
+                    "code": "invalid_capacity",
+                    "count": 1
+                  }
+                ]
+              }
+            },
+            {
+              "id": "facilities",
+              "status": "succeeded",
+              "coverage": {
+                "start_date": "2026-04-02",
+                "end_date": "2026-10-01"
+              },
+              "quality": {
+                "received_rows": 3,
+                "selected_rows": 1,
+                "excluded_rows": 1,
+                "duplicates_collapsed": 1,
+                "superseded_rows": 0,
+                "retained_invalid_rows": 0,
+                "retained_absent_rows": 0,
+                "carried_outside_interval_rows": 0,
+                "modeled_rows": 1,
+                "retained_entire_dataset": false,
+                "exclusion_reasons": [
+                  {
+                    "code": "invalid_capacity",
+                    "count": 1
+                  }
+                ]
+              }
+            },
+            {
+              "id": "generators",
+              "status": "succeeded",
+              "coverage": {
+                "start_date": "2026-04-02",
+                "end_date": "2026-10-01"
+              },
+              "quality": {
+                "received_rows": 3,
+                "selected_rows": 1,
+                "excluded_rows": 1,
+                "duplicates_collapsed": 1,
+                "superseded_rows": 0,
+                "retained_invalid_rows": 0,
+                "retained_absent_rows": 0,
+                "carried_outside_interval_rows": 0,
+                "modeled_rows": 1,
+                "retained_entire_dataset": false,
+                "exclusion_reasons": [
+                  {
+                    "code": "invalid_capacity",
+                    "count": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "publication": {
+            "state": "published",
+            "generation_id": "generation-synthetic-1",
+            "previous_generation_id": "generation-synthetic-previous",
+            "no_publication_reason": null
+          },
+          "failure": null
+        }
+      }
+    },
+    {
+      "name": "refresh_retained",
+      "operation_id": "getRefresh",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "RefreshRun",
+      "body": {
+        "run_id": "run-synthetic-1",
+        "status": "retained",
+        "stage": "finished",
+        "effective_interval": {
+          "start_date": "2026-04-02",
+          "end_date": "2026-10-01"
+        },
+        "accepted_at": "2026-10-05T12:00:00Z",
+        "started_at": "2026-10-05T12:00:01Z",
+        "finished_at": "2026-10-05T12:02:00Z",
+        "datasets": [
+          {
+            "id": "national",
+            "status": "retained",
+            "coverage": {
+              "start_date": "2026-04-02",
+              "end_date": "2026-10-01"
+            },
+            "quality": null
+          },
+          {
+            "id": "facilities",
+            "status": "retained",
+            "coverage": {
+              "start_date": "2026-04-02",
+              "end_date": "2026-10-01"
+            },
+            "quality": null
+          },
+          {
+            "id": "generators",
+            "status": "retained",
+            "coverage": {
+              "start_date": "2026-04-02",
+              "end_date": "2026-10-01"
+            },
+            "quality": null
+          }
+        ],
+        "publication": {
+          "state": "not_published",
+          "generation_id": null,
+          "previous_generation_id": "generation-synthetic-previous",
+          "no_publication_reason": "all_incoming_rows_excluded"
+        },
+        "failure": null
+      }
+    },
+    {
+      "name": "latest_retained",
+      "operation_id": "latestRefresh",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "LatestRefresh",
+      "body": {
+        "run": {
+          "run_id": "run-synthetic-1",
+          "status": "retained",
+          "stage": "finished",
+          "effective_interval": {
+            "start_date": "2026-04-02",
+            "end_date": "2026-10-01"
+          },
+          "accepted_at": "2026-10-05T12:00:00Z",
+          "started_at": "2026-10-05T12:00:01Z",
+          "finished_at": "2026-10-05T12:02:00Z",
+          "datasets": [
+            {
+              "id": "national",
+              "status": "retained",
+              "coverage": {
+                "start_date": "2026-04-02",
+                "end_date": "2026-10-01"
+              },
+              "quality": null
+            },
+            {
+              "id": "facilities",
+              "status": "retained",
+              "coverage": {
+                "start_date": "2026-04-02",
+                "end_date": "2026-10-01"
+              },
+              "quality": null
+            },
+            {
+              "id": "generators",
+              "status": "retained",
+              "coverage": {
+                "start_date": "2026-04-02",
+                "end_date": "2026-10-01"
+              },
+              "quality": null
+            }
+          ],
+          "publication": {
+            "state": "not_published",
+            "generation_id": null,
+            "previous_generation_id": "generation-synthetic-previous",
+            "no_publication_reason": "all_incoming_rows_excluded"
+          },
+          "failure": null
+        }
+      }
+    },
+    {
+      "name": "refresh_failed",
+      "operation_id": "getRefresh",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "RefreshRun",
+      "body": {
+        "run_id": "run-synthetic-1",
+        "status": "failed",
+        "stage": "finished",
+        "effective_interval": {
+          "start_date": "2026-04-02",
+          "end_date": "2026-10-01"
+        },
+        "accepted_at": "2026-10-05T12:00:00Z",
+        "started_at": "2026-10-05T12:00:01Z",
+        "finished_at": "2026-10-05T12:02:00Z",
+        "datasets": [
+          {
+            "id": "national",
+            "status": "failed",
+            "coverage": null,
+            "quality": null
+          },
+          {
+            "id": "facilities",
+            "status": "failed",
+            "coverage": null,
+            "quality": null
+          },
+          {
+            "id": "generators",
+            "status": "failed",
+            "coverage": null,
+            "quality": null
+          }
+        ],
+        "publication": {
+          "state": "not_published",
+          "generation_id": null,
+          "previous_generation_id": "generation-synthetic-previous",
+          "no_publication_reason": null
+        },
+        "failure": {
+          "code": "refresh_failed",
+          "message": "Refresh did not publish"
+        }
+      }
+    },
+    {
+      "name": "latest_failed",
+      "operation_id": "latestRefresh",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "LatestRefresh",
+      "body": {
+        "run": {
+          "run_id": "run-synthetic-1",
+          "status": "failed",
+          "stage": "finished",
+          "effective_interval": {
+            "start_date": "2026-04-02",
+            "end_date": "2026-10-01"
+          },
+          "accepted_at": "2026-10-05T12:00:00Z",
+          "started_at": "2026-10-05T12:00:01Z",
+          "finished_at": "2026-10-05T12:02:00Z",
+          "datasets": [
+            {
+              "id": "national",
+              "status": "failed",
+              "coverage": null,
+              "quality": null
+            },
+            {
+              "id": "facilities",
+              "status": "failed",
+              "coverage": null,
+              "quality": null
+            },
+            {
+              "id": "generators",
+              "status": "failed",
+              "coverage": null,
+              "quality": null
+            }
+          ],
+          "publication": {
+            "state": "not_published",
+            "generation_id": null,
+            "previous_generation_id": "generation-synthetic-previous",
+            "no_publication_reason": null
+          },
+          "failure": {
+            "code": "refresh_failed",
+            "message": "Refresh did not publish"
+          }
+        }
+      }
+    },
+    {
+      "name": "refresh_interrupted",
+      "operation_id": "getRefresh",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "RefreshRun",
+      "body": {
+        "run_id": "run-synthetic-1",
+        "status": "interrupted",
+        "stage": "finished",
+        "effective_interval": {
+          "start_date": "2026-04-02",
+          "end_date": "2026-10-01"
+        },
+        "accepted_at": "2026-10-05T12:00:00Z",
+        "started_at": "2026-10-05T12:00:01Z",
+        "finished_at": "2026-10-05T12:02:00Z",
+        "datasets": [
+          {
+            "id": "national",
+            "status": "failed",
+            "coverage": null,
+            "quality": null
+          },
+          {
+            "id": "facilities",
+            "status": "failed",
+            "coverage": null,
+            "quality": null
+          },
+          {
+            "id": "generators",
+            "status": "failed",
+            "coverage": null,
+            "quality": null
+          }
+        ],
+        "publication": {
+          "state": "not_published",
+          "generation_id": null,
+          "previous_generation_id": "generation-synthetic-previous",
+          "no_publication_reason": null
+        },
+        "failure": {
+          "code": "refresh_interrupted",
+          "message": "Refresh did not publish"
+        }
+      }
+    },
+    {
+      "name": "latest_interrupted",
+      "operation_id": "latestRefresh",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "LatestRefresh",
+      "body": {
+        "run": {
+          "run_id": "run-synthetic-1",
+          "status": "interrupted",
+          "stage": "finished",
+          "effective_interval": {
+            "start_date": "2026-04-02",
+            "end_date": "2026-10-01"
+          },
+          "accepted_at": "2026-10-05T12:00:00Z",
+          "started_at": "2026-10-05T12:00:01Z",
+          "finished_at": "2026-10-05T12:02:00Z",
+          "datasets": [
+            {
+              "id": "national",
+              "status": "failed",
+              "coverage": null,
+              "quality": null
+            },
+            {
+              "id": "facilities",
+              "status": "failed",
+              "coverage": null,
+              "quality": null
+            },
+            {
+              "id": "generators",
+              "status": "failed",
+              "coverage": null,
+              "quality": null
+            }
+          ],
+          "publication": {
+            "state": "not_published",
+            "generation_id": null,
+            "previous_generation_id": "generation-synthetic-previous",
+            "no_publication_reason": null
+          },
+          "failure": {
+            "code": "refresh_interrupted",
+            "message": "Refresh did not publish"
+          }
+        }
+      }
+    },
+    {
+      "name": "refresh_publication_unknown",
+      "operation_id": "getRefresh",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "RefreshRun",
+      "body": {
+        "run_id": "run-synthetic-1",
+        "status": "publication_unknown",
+        "stage": "publishing",
+        "effective_interval": {
+          "start_date": "2026-04-02",
+          "end_date": "2026-10-01"
+        },
+        "accepted_at": "2026-10-05T12:00:00Z",
+        "started_at": "2026-10-05T12:00:01Z",
+        "finished_at": null,
+        "datasets": [
+          {
+            "id": "national",
+            "status": "pending",
+            "coverage": null,
+            "quality": null
+          },
+          {
+            "id": "facilities",
+            "status": "pending",
+            "coverage": null,
+            "quality": null
+          },
+          {
+            "id": "generators",
+            "status": "pending",
+            "coverage": null,
+            "quality": null
+          }
+        ],
+        "publication": {
+          "state": "unknown",
+          "generation_id": null,
+          "previous_generation_id": "generation-synthetic-previous",
+          "no_publication_reason": null
+        },
+        "failure": null
+      }
+    },
+    {
+      "name": "latest_publication_unknown",
+      "operation_id": "latestRefresh",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "LatestRefresh",
+      "body": {
+        "run": {
+          "run_id": "run-synthetic-1",
+          "status": "publication_unknown",
+          "stage": "publishing",
+          "effective_interval": {
+            "start_date": "2026-04-02",
+            "end_date": "2026-10-01"
+          },
+          "accepted_at": "2026-10-05T12:00:00Z",
+          "started_at": "2026-10-05T12:00:01Z",
+          "finished_at": null,
+          "datasets": [
+            {
+              "id": "national",
+              "status": "pending",
+              "coverage": null,
+              "quality": null
+            },
+            {
+              "id": "facilities",
+              "status": "pending",
+              "coverage": null,
+              "quality": null
+            },
+            {
+              "id": "generators",
+              "status": "pending",
+              "coverage": null,
+              "quality": null
+            }
+          ],
+          "publication": {
+            "state": "unknown",
+            "generation_id": null,
+            "previous_generation_id": "generation-synthetic-previous",
+            "no_publication_reason": null
+          },
+          "failure": null
+        }
+      }
+    },
+    {
+      "name": "latest_no_run",
+      "operation_id": "latestRefresh",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "LatestRefresh",
+      "body": {
+        "run": null
+      }
+    },
+    {
+      "name": "error_400_invalid_request",
+      "operation_id": "executeQuery",
+      "request": {},
+      "status": 400,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Error400",
+      "body": {
+        "error": {
+          "code": "invalid_request",
+          "message": "Request could not be completed"
+        }
+      }
+    },
+    {
+      "name": "error_400_invalid_sql",
+      "operation_id": "executeQuery",
+      "request": {},
+      "status": 400,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Error400",
+      "body": {
+        "error": {
+          "code": "invalid_sql",
+          "message": "Request could not be completed"
+        }
+      }
+    },
+    {
+      "name": "error_400_unsupported_sql",
+      "operation_id": "executeQuery",
+      "request": {},
+      "status": 400,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Error400",
+      "body": {
+        "error": {
+          "code": "unsupported_sql",
+          "message": "Request could not be completed"
+        }
+      }
+    },
+    {
+      "name": "error_400_page_out_of_range",
+      "operation_id": "executeQuery",
+      "request": {},
+      "status": 400,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Error400",
+      "body": {
+        "error": {
+          "code": "page_out_of_range",
+          "message": "Request could not be completed",
+          "details": {
+            "query_id": "query-synthetic-1",
+            "expires_at": "2026-10-05T12:15:00Z"
+          }
+        }
+      }
+    },
+    {
+      "name": "error_400_page_size_mismatch",
+      "operation_id": "executeQuery",
+      "request": {},
+      "status": 400,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Error400",
+      "body": {
+        "error": {
+          "code": "page_size_mismatch",
+          "message": "Request could not be completed"
+        }
+      }
+    },
+    {
+      "name": "error_401_unauthenticated",
+      "operation_id": "executeQuery",
+      "request": {},
+      "status": 401,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Error401",
+      "body": {
+        "error": {
+          "code": "unauthenticated",
+          "message": "Request could not be completed"
+        }
+      }
+    },
+    {
+      "name": "error_403_forbidden",
+      "operation_id": "executeQuery",
+      "request": {},
+      "status": 403,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Error403",
+      "body": {
+        "error": {
+          "code": "forbidden",
+          "message": "Request could not be completed"
+        }
+      }
+    },
+    {
+      "name": "error_404_dataset_unavailable",
+      "operation_id": "previewDataset",
+      "request": {},
+      "status": 404,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Error404",
+      "body": {
+        "error": {
+          "code": "dataset_unavailable",
+          "message": "Request could not be completed"
+        }
+      }
+    },
+    {
+      "name": "error_404_query_unavailable",
+      "operation_id": "getQueryPage",
+      "request": {},
+      "status": 404,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Error404",
+      "body": {
+        "error": {
+          "code": "query_unavailable",
+          "message": "Request could not be completed"
+        }
+      }
+    },
+    {
+      "name": "error_404_refresh_unavailable",
+      "operation_id": "getRefresh",
+      "request": {},
+      "status": 404,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Error404",
+      "body": {
+        "error": {
+          "code": "refresh_unavailable",
+          "message": "Request could not be completed"
+        }
+      }
+    },
+    {
+      "name": "error_409_refresh_busy",
+      "operation_id": "admitRefresh",
+      "request": {},
+      "status": 409,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Retry-After": "3"
+      },
+      "schema": "Error409",
+      "body": {
+        "error": {
+          "code": "refresh_busy",
+          "message": "Request could not be completed",
+          "retry_after_seconds": 3
+        }
+      }
+    },
+    {
+      "name": "error_409_idempotency_conflict",
+      "operation_id": "admitRefresh",
+      "request": {},
+      "status": 409,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Error409",
+      "body": {
+        "error": {
+          "code": "idempotency_conflict",
+          "message": "Request could not be completed"
+        }
+      }
+    },
+    {
+      "name": "error_410_preview_unavailable",
+      "operation_id": "previewDataset",
+      "request": {},
+      "status": 410,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Error410",
+      "body": {
+        "error": {
+          "code": "preview_unavailable",
+          "message": "Request could not be completed"
+        }
+      }
+    },
+    {
+      "name": "error_410_query_unavailable",
+      "operation_id": "getQueryPage",
+      "request": {},
+      "status": 410,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Error410",
+      "body": {
+        "error": {
+          "code": "query_unavailable",
+          "message": "Request could not be completed"
+        }
+      }
+    },
+    {
+      "name": "error_422_query_resource_limit",
+      "operation_id": "executeQuery",
+      "request": {},
+      "status": 422,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Error422",
+      "body": {
+        "error": {
+          "code": "query_resource_limit",
+          "message": "Request could not be completed"
+        }
+      }
+    },
+    {
+      "name": "error_429_result_capacity_exhausted",
+      "operation_id": "executeQuery",
+      "request": {},
+      "status": 429,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Retry-After": "3"
+      },
+      "schema": "Error429",
+      "body": {
+        "error": {
+          "code": "result_capacity_exhausted",
+          "message": "Request could not be completed",
+          "retry_after_seconds": 3
+        }
+      }
+    },
+    {
+      "name": "error_503_query_busy",
+      "operation_id": "executeQuery",
+      "request": {},
+      "status": 503,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Retry-After": "3"
+      },
+      "schema": "Error503",
+      "body": {
+        "error": {
+          "code": "query_busy",
+          "message": "Request could not be completed",
+          "retry_after_seconds": 3
+        }
+      }
+    },
+    {
+      "name": "error_503_result_capacity_exhausted",
+      "operation_id": "executeQuery",
+      "request": {},
+      "status": 503,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Retry-After": "3"
+      },
+      "schema": "Error503",
+      "body": {
+        "error": {
+          "code": "result_capacity_exhausted",
+          "message": "Request could not be completed",
+          "retry_after_seconds": 3
+        }
+      }
+    },
+    {
+      "name": "error_503_data_unavailable",
+      "operation_id": "executeQuery",
+      "request": {},
+      "status": 503,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Retry-After": "3"
+      },
+      "schema": "Error503",
+      "body": {
+        "error": {
+          "code": "data_unavailable",
+          "message": "Request could not be completed",
+          "retry_after_seconds": 3
+        }
+      }
+    },
+    {
+      "name": "error_503_service_unavailable",
+      "operation_id": "executeQuery",
+      "request": {},
+      "status": 503,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Retry-After": "3"
+      },
+      "schema": "Error503",
+      "body": {
+        "error": {
+          "code": "service_unavailable",
+          "message": "Request could not be completed",
+          "retry_after_seconds": 3
+        }
+      }
+    },
+    {
+      "name": "error_504_query_timeout",
+      "operation_id": "executeQuery",
+      "request": {},
+      "status": 504,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Error504",
+      "body": {
+        "error": {
+          "code": "query_timeout",
+          "message": "Request could not be completed"
+        }
+      }
+    },
+    {
+      "name": "query_lossless_types",
+      "operation_id": "executeQuery",
+      "request": {},
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "QueryResult",
+      "body": {
+        "query_id": "query-synthetic-1",
+        "generation_id": "generation-synthetic-1",
+        "columns": [
+          {
+            "index": 0,
+            "name": "x",
+            "type": "integer",
+            "encoding": "integer-string",
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 1,
+            "name": "x",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 2,
+            "name": "nan",
+            "type": "float",
+            "encoding": "number-or-special-string",
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 3,
+            "name": "positive_infinity",
+            "type": "float",
+            "encoding": "number-or-special-string",
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 4,
+            "name": "negative_infinity",
+            "type": "float",
+            "encoding": "number-or-special-string",
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 5,
+            "name": "finite",
+            "type": "float",
+            "encoding": "number-or-special-string",
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 6,
+            "name": "flag",
+            "type": "boolean",
+            "encoding": "boolean",
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 7,
+            "name": "missing",
+            "type": "integer",
+            "encoding": "integer-string",
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 8,
+            "name": "day",
+            "type": "date",
+            "encoding": "iso-date",
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 9,
+            "name": "clock",
+            "type": "time",
+            "encoding": "iso-time",
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 10,
+            "name": "local_time",
+            "type": "timestamp",
+            "encoding": "iso-local-datetime",
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 11,
+            "name": "instant",
+            "type": "timestamp_tz",
+            "encoding": "iso-utc-datetime",
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 12,
+            "name": "bytes",
+            "type": "binary",
+            "encoding": "base64",
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 13,
+            "name": "values",
+            "type": "list",
+            "encoding": "array",
+            "children": [
+              {
+                "name": "child",
+                "type": "integer",
+                "encoding": "integer-string"
+              }
+            ],
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 14,
+            "name": "record",
+            "type": "struct",
+            "encoding": "field-array",
+            "children": [
+              {
+                "name": "label",
+                "type": "string",
+                "encoding": "string"
+              },
+              {
+                "name": "amount",
+                "type": "decimal",
+                "encoding": "decimal-string",
+                "precision": 8,
+                "scale": 2
+              }
+            ],
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 15,
+            "name": "mapping",
+            "type": "map",
+            "encoding": "pair-array",
+            "children": [
+              {
+                "name": "key",
+                "type": "string",
+                "encoding": "string"
+              },
+              {
+                "name": "value",
+                "type": "integer",
+                "encoding": "integer-string"
+              }
+            ],
+            "nullable": null,
+            "unit": null
+          }
+        ],
+        "rows": [
+          [
+            "9007199254740993",
+            "0.123456789012",
+            "NaN",
+            "Infinity",
+            "-Infinity",
+            1.25,
+            true,
+            null,
+            "2026-10-01",
+            "12:34:56.123456",
+            "2026-10-01T12:34:56.123456",
+            "2026-10-01T10:34:56Z",
+            "AP8=",
+            [
+              "1",
+              null,
+              "9007199254740993"
+            ],
+            [
+              "é",
+              "1.25"
+            ],
+            [
+              [
+                "one",
+                "1"
+              ],
+              [
+                "two",
+                null
+              ]
+            ]
+          ]
+        ],
+        "page": 1,
+        "page_size": 1,
+        "retained_row_count": 1,
+        "total_pages": 1,
+        "has_more": false,
+        "truncated": false,
+        "truncation_reason": null,
+        "limits": {
+          "max_rows": 1000,
+          "max_bytes": 1048576
+        },
+        "expires_at": "2026-10-05T12:15:00Z"
+      }
+    }
+  ]
+}

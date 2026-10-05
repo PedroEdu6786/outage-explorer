@@ -43,8 +43,8 @@ PERSONAS = tuple(
 def database():
     admin = os.environ.get("OUTAGE_TEST_POSTGRES_DSN")
     if not admin:
-        pytest.skip(
-            "Set OUTAGE_TEST_POSTGRES_DSN to an explicit local disposable database"
+        pytest.fail(
+            "Required database missing: set OUTAGE_TEST_POSTGRES_DSN to an explicit local disposable database"
         )
     values = conninfo_to_dict(admin)
     if (

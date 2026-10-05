@@ -1,13 +1,18 @@
 # Data API contract
-> Status: proposed · Date: 2026-10-04 · No product endpoint implementation claimed
+> Status: v1 client contract implemented · Date: 2026-10-05 · Product endpoints pending
 
-This is the contract draft requested alongside the
-[requirements discussion](requirements.md). It does not replace the existing
-backend/connector specifications or accepted ADRs. Routes, JSON shapes, and
-settings below remain proposed unless explicitly identified as user decisions
-or existing accepted policies.
+Phase 1 freezes the client vocabulary in [openapi.json](openapi.json), with
+validated synthetic [fixtures.json](fixtures.json) and the
+[client handoff](client-handoff.md). The OpenAPI version is 1.0.0; public schema
+and tabular encoding versions are `1`. These files support fixture-backed web
+client development. They do not claim functioning data/refresh endpoints.
 
-## Agreed behavior and proposed routes
+The selected plan resolves the earlier draft recommendations below. Runtime
+isolation, process ownership and measured resource/retention quotas remain open
+in [runtime-evidence.md](runtime-evidence.md). The formal
+[specification](spec.md) continues to govern behavior.
+
+## Agreed behavior and selected routes
 
 User decisions: SQL comes from the frontend editor; SQL page selection belongs
 on `/api/query` as a query parameter, without `/api/query/page`; refresh covers
@@ -24,10 +29,11 @@ Refresh always uses the configured range, without caller-supplied dates
 | `POST /api/query` | Execute submitted SQL once | Every referenced dataset authorized | `200` |
 | `GET /api/query` | Read a retained numbered result page | Original user, access rechecked | `200` |
 | `POST /api/refresh` | Admit one all-dataset background run | Admin | `202` for new admission |
+| `GET /api/refresh/latest` | Rediscover active/latest run without its ID | Admin | `200` |
 | `GET /api/refresh/{run_id}` | Read run progress and outcome | Admin | `200` |
 
-The POST/GET method split for `/api/query` is proposed; the shared path and page
-query parameter are user-selected. SQL execution is proposed as a bounded
+The POST/GET method split for `/api/query` is selected; the shared path and page
+query parameter are user-selected. SQL execution is selected as a bounded
 synchronous response; refresh admission is asynchronous.
 
 ## Shared transport and serialization
@@ -35,7 +41,7 @@ synchronous response; refresh admission is asynchronous.
 - Reuse the [browser authentication contract](../user-access/http-contract.md):
   opaque application session cookie, no browser provider tokens. Check current
   local roles before analytical access and again on every page.
-- Proposed: require exact permitted `Origin` and session-bound `X-CSRF-Token`
+- Selected: require exact permitted `Origin` and session-bound `X-CSRF-Token`
   on both POST routes. Add `Idempotency-Key` to allowed CORS request headers
   for refresh. These extensions still need integration with auth transport.
 - Responses use JSON and `Cache-Control: no-store`. Errors expose no storage
@@ -44,12 +50,12 @@ synchronous response; refresh admission is asynchronous.
   Facility/generator identifiers remain strings, including leading zeros.
 - Represent tabular rows as arrays aligned with an ordered `columns` array.
   This preserves duplicate SQL column labels. Each column has `index`, `name`,
-  logical `type`, `nullable`, and nullable `unit`.
-- Encode decimal and 64-bit integer values as strings to preserve precision in
-  browsers. Booleans are JSON booleans, nulls are JSON null, and floating-point
-  values require an explicit non-finite-value policy before support. Complex
-  SQL output types need a documented bounded encoding before implementation;
-  their encoding is open, not a blanket exclusion of analytical SQL features.
+  logical `type`, `encoding`, `nullable`, and nullable `unit`; decimal descriptors additionally carry `precision`/`scale`, and nested descriptors carry ordered `children` (`name` plus recursive type/encoding). Query-expression
+  nullability may be unknown. Decimal and SQL integer cells are encoded as
+  strings to preserve precision. Bounded pagination counters remain JSON numbers.
+  Booleans and nulls use native JSON values. The concrete proposal for floating,
+  temporal, binary and nested values is in [design-notes.md](design-notes.md);
+  representative adapter verification is required before claiming support.
 - Reject duplicate query parameters, unknown request fields, malformed dates,
   invalid positive integers, and unsupported filter combinations with `400`.
 
@@ -60,18 +66,18 @@ Each dataset entry contains `id`, `sql_name`, `label`, `schema_version`,
 `columns`, `supported_filters`, and `coverage` (`start_date`, `end_date`).
 Coverage describes usable stored observations, not proof of upstream completeness.
 
-Proposed public IDs and SQL relation names: `national`, `facilities`,
-`generators`. Freeze the exact public column projection against the verified
-modeled schemas during design; do not expose provenance object keys or raw files.
+Public IDs and SQL relation names: `national`, `facilities`,
+`generators`. The public projection is frozen and tested against verified
+modeled v1 schemas; do not expose provenance object keys or raw files.
 Existing modeled field references are `period`, `capacity_mw`, `outage_mw`,
 `reported_percentage`, `facility`, `facility_name`, and `generator` where
 applicable; see the [connector schemas](../data-connector/plan.md).
 
-Viewer receives only national datasets. Analyst/Admin receive all three.
-The accepted prepared fleet metric must be available through catalog/preview/
-SQL; its relation name and whether to incorporate its fields in `national`
-or expose another national-derived relation remain open. It does not require
-a separate metric endpoint.
+Viewer receives only national data. Analyst/Admin receive all three datasets.
+The user selected the prepared fleet metric as columns of `national`, alongside
+the source-reported percentage, available through preview and SQL. No additional
+metric dataset/endpoint is needed. Exact public column names and precision are encoded in [openapi.json](openapi.json)
+and its validated catalog fixtures.
 
 An unpublished S3 candidate is unavailable through this catalog. No active
 generation yields `503 data_unavailable`, distinguishable from an empty
@@ -81,26 +87,30 @@ filtered result. The API serves only verified, published modeled data.
 
 `GET /api/datasets/{dataset}/preview` first-page query parameters:
 
-| Parameter | Meaning | Proposed behavior |
+| Parameter | Meaning | Selected behavior |
 | --- | --- | --- |
 | `start_date`, `end_date` | Inclusive date bounds | Optional; an omitted side is unbounded within stored coverage |
 | `page_size` | Rows per page | Accepted default 100, initial configurable maximum 500 |
 
 The initial filter set is date range only, as selected by the user. Reject
-facility/generator filter parameters rather than ignoring them. Proposed continuation:
+facility/generator filter parameters rather than ignoring them. Selected continuation:
 `GET /api/datasets/{dataset}/preview?cursor=<opaque-value>`, without repeating
 filters or page size. Cursor binds user, dataset, generation, normalized filters,
-fixed page size, and next position. Proposed deterministic ordering is ascending
-`period`, then applicable string identifiers with a documented stable comparison.
+fixed page size, and next position. User-selected initial browsing covers all
+available dates when dates are omitted, newest observations first. Use descending
+`period`, then applicable identifiers with a stable tie-break order; exact
+identifier comparison is binary UTF-8. This does not add ordering to user SQL.
 
-Response fields: `dataset`, `generation_id`, `columns`, `rows`, `page_size`,
+Response fields: `dataset`, `generation_id`, `columns`, `rows`, `page_size`, `page_cursor`,
 `has_more`, nullable `next_cursor`, and `expires_at`.
 No matching records returns `200`, empty `rows`, and no next cursor.
+`page_cursor` identifies the current page, including page 1; previous navigation
+resubmits a visited cursor. Identifier ties use ascending binary UTF-8 order.
 
 Accepted cursor lifetime is 15 minutes from first-page creation, without renewal.
 Refresh never changes an existing browsing sequence. Expired/lost continuation
 returns `410 preview_unavailable`; user explicitly starts browsing again.
-An unknown or forbidden dataset returns proposed generic `404 dataset_unavailable`
+An unknown or forbidden dataset returns selected generic `404 dataset_unavailable`
 without schema details, avoiding disclosure through direct ID guesses.
 
 ## Submit SQL and read pages on the same path
@@ -132,14 +142,14 @@ GET /api/query?query_id=<opaque-id>&page=2
 the execution's stored size. GET accepts neither SQL nor a replacement body.
 It never starts a worker or silently reruns the query.
 
-Proposed common result envelope:
+Common result envelope:
 
 ```json
 {
   "query_id": "opaque-id",
   "generation_id": "opaque-generation",
   "columns": [
-    {"index": 0, "name": "period", "type": "date", "nullable": false, "unit": null}
+    {"index": 0, "name": "period", "type": "date", "encoding": "iso-date", "nullable": false, "unit": null}
   ],
   "rows": [["2026-09-01"]],
   "page": 1,
@@ -158,8 +168,8 @@ Example values are illustrative. `retained_row_count` counts retained rows,
 not the full unbounded query result. `total_pages` covers only retained rows,
 with one empty page for an empty result. `has_more` concerns another retained
 page; it does not indicate whether SQL was truncated. Truncation reasons are
-proposed `row_limit` or `byte_limit`; returned rows contain complete values.
-The byte-cap accounting representation must be frozen during design.
+selected `row_limit` or `byte_limit`; returned rows contain complete values.
+The byte-cap accounting representation is frozen below.
 
 Accepted total caps remain 1,000 rows or 1 MiB and the execution deadline is
 10 seconds, with one isolated analytical worker at a time. Preparation/overall
@@ -167,7 +177,7 @@ deadlines and result-storage budgets remain open. The user selected a result
 lifetime of 15 minutes from completion, fixed and unrenewed.
 
 Empty result page 1 returns `200`; a positive page beyond the retained range
-returns proposed `400 page_out_of_range`, never an automatic rerun. A foreign or
+returns selected `400 page_out_of_range`, never an automatic rerun. A foreign or
 unknown query ID returns generic `404 query_unavailable`. Known expiry returns
 `410 query_unavailable`; after metadata loss, the backend cannot necessarily
 distinguish an expired ID from an unknown one. Both require explicit resubmission.
@@ -198,7 +208,7 @@ Initial live publication follows the accepted April 2–October 1, 2026 interval
 and requires usable output in all three grains; other first-run dates require
 an explicit policy decision.
 
-Proposed new-admission response: `202`, `Location: /api/refresh/{run_id}`,
+Selected new-admission response: `202`, `Location: /api/refresh/{run_id}`,
 `Retry-After: 3`, and JSON `run_id`, `status: accepted`,
 `effective_interval: {start_date, end_date}`, and `status_url`.
 Admission means the run has been durably recorded for supervised processing;
@@ -207,21 +217,25 @@ durably returns an error rather than a success receipt.
 
 Scope idempotency to local user and operation. Repeating the same key and empty
 request returns the same run and its original resolved interval, even if backend
-configuration has changed: proposed `202` if active, `200` if terminal. A fresh
+configuration has changed: selected `202` if active, `200` if terminal. A fresh
 key resolves the current configuration. Never silently change a recorded run's
 interval. Conflicting key reuse yields `409 idempotency_conflict`; caller date
 overrides remain invalid input rather than a way to reconfigure a run.
 Another run while refresh is occupied yields `409 refresh_busy`.
-Idempotency retention/expiry and interruption recovery need design.
+Keys are 16–128 ASCII letters/digits/hyphen/underscore. Keep the scoped key binding with durable run records; no independent key expiry is introduced. Accepted-but-unclaimed runs may be claimed after restart; claimed runs with lost owners must reconcile. The user selected
+reconciliation followed by explicit Admin retry for an unpublished interrupted
+run ([ADR-0052](../../adr/0052-interrupted-refresh-recovery.md)). An API-only
+restart does not stop a healthy worker.
 
 Background execution belongs outside the HTTP request and app factory. Closing
 the browser does not cancel it. Supervision, ownership, and restart handling
 must be established across processes; a thread tied to a request is insufficient.
 No separate approval or publish endpoint is included.
 
-`GET /api/refresh/{run_id}` returns proposed fields:
+`GET /api/refresh/{run_id}` returns selected fields:
 
-- `run_id`, `status`: `accepted`, `running`, `succeeded`, `failed`, `interrupted`.
+- `run_id`, `status`: `accepted`, `running`, `succeeded`, `retained`, `failed`,
+  `interrupted`; selected additional nonterminal state `publication_unknown`.
 - `stage`: `queued`, `retrieving`, `modeling`, `persisting`, `verifying`,
   `publishing`, `finished`; use stage/per-dataset progress rather than an invented
   completion percentage or promised completion time.
@@ -232,8 +246,10 @@ No separate approval or publish endpoint is included.
   `duplicates_collapsed`, `superseded_rows`, `retained_invalid_rows`,
   `retained_absent_rows`, `carried_outside_interval_rows`, `modeled_rows`,
   `retained_entire_dataset`, and `exclusion_reasons` (`code`, `count`).
-- `publication`: `published`, nullable `generation_id`, `previous_generation_id`,
-  and nullable `no_publication_reason`.
+- Selected `publication`: `state` (`pending`, `published`, `not_published`,
+  `unknown`), nullable `generation_id`, `previous_generation_id`, and nullable
+  `no_publication_reason`. This replaces the insufficient boolean-only draft;
+  see the uncertainty/reconciliation proposal in [design-notes.md](design-notes.md).
 - Nullable `failure`: safe `code` and `message`, without raw upstream errors.
 
 Unavailable counts are null, never guessed zeros. Final quality mapping must
@@ -241,15 +257,25 @@ reconcile with the connector's existing dispositions/ledger; overlapping reason
 counts must not inflate the excluded-row count. Coverage does not certify that
 all upstream observations exist.
 
-Success may publish with row exclusions and retained data. All-three-excluded
-input with previous data is proposed as `succeeded`, `published: false`,
+Success may publish with row exclusions and retained data. The user selected
+`retained` for all-three-excluded input with previous data, consistent with the
+connector plan; `succeeded` means confirmed new publication. Selected publication
+fields for retention are `state: not_published` and
 `no_publication_reason: all_incoming_rows_excluded`. Some wholly excluded
 datasets retain previous valid data while other valid changes can publish.
 Empty routes, missing/failed pages, resource exhaustion or integrity failures
 fail the run. Never publish only a subset of datasets. Unknown Admin run ID
 returns `404 refresh_unavailable`; non-Admin access is denied before lookup.
 
-## Proposed error contract
+The latest-run lookup capability is user-approved. Selected route:
+`GET /api/refresh/latest`, with response `{"run": <same run object as by-ID>}`.
+Return the active run when one exists, otherwise the most recently admitted run,
+across Admin requesters; tie-break equal admission timestamps by run ID. When
+there has been no run, return `200` with `{"run": null}`. It does not admit work
+or provide a history list. Authorization precedes lookup. If PostgreSQL/session
+resolution is unavailable, return `503`, not a fabricated empty response.
+
+## Error contract
 
 Use the existing HTTP error envelope shape:
 
@@ -257,58 +283,65 @@ Use the existing HTTP error envelope shape:
 {"error": {"code": "invalid_request", "message": "Invalid request"}}
 ```
 
-| HTTP status | Proposed codes | Meaning |
+| HTTP status | Selected codes | Meaning |
 | --- | --- | --- |
 | `400` | `invalid_request`, `invalid_sql`, `unsupported_sql`, `page_out_of_range`, `page_size_mismatch` | Input/SQL rejected; correct before retry |
 | `401` | `unauthenticated` | Sign in again |
-| `403` | `forbidden`, `csrf_failed` | Current access/origin/CSRF rejected |
+| `403` | `forbidden` | Current access/origin/CSRF rejected |
 | `404` | `dataset_unavailable`, `query_unavailable`, `refresh_unavailable` | Resource unavailable; no protected details |
 | `409` | `refresh_busy`, `idempotency_conflict` | Refresh admission conflict |
 | `410` | `preview_unavailable`, `query_unavailable` | Known continuation expired/lost; restart explicitly |
 | `422` | `query_resource_limit` | Query exceeds execution resources |
-| `503` | `query_busy`, `data_unavailable`, `service_unavailable` | Busy worker or unavailable data/dependency |
+| `429` | `result_capacity_exhausted` | Per-user retained-result admission exhausted |
+| `503` | `query_busy`, `result_capacity_exhausted`, `data_unavailable`, `service_unavailable` | Busy worker or unavailable data/dependency |
 | `504` | `query_timeout` | Execution deadline exceeded |
 
 Busy responses include a bounded `Retry-After`; its value is a retry suggestion,
 not a completion guarantee. Refresh execution failures are exposed in its status
 resource, not as a retroactive failure of an already accepted POST response.
 
-## Open contract decisions and verification gates
+## Frozen representation and remaining runtime gates
 
-Review found that the draft is not yet a complete integration contract:
+Public projections are defined in `domain/datasets.py` and parity-tested against
+physical modeled v1 schemas. All exposed modeled fields are non-nullable. Catalog,
+preview and SQL use the same projection; arbitrary SQL columns are never expanded.
+National adds calculated percentage decimal(38,2), exact fraction strings and two
+display strings; capacity/outage/reported percentage are decimal(38,12). Storage,
+source and provenance fields are not public.
 
-- **Initial browsing view:** optional dates and ascending order above are
-  proposals. Confirm the desired default interval/order; date-only filter scope
-  and cursor pagination are already accepted. Specify previous-page navigation
-  without silently restarting on a newer generation.
-- **Refresh rediscovery:** only lookup by known run ID exists. Define whether
-  Admin can retrieve the current/latest run without retaining its ID; a latest
-  lookup or bounded run list would be an additional proposed route.
-- **Refresh status consistency:** the connector plan's `retained` state means
-  all input excluded and no publication, while this draft uses `succeeded` plus
-  `published: false`. Resolve this before freezing status enums; prefer the
-  connector's distinct outcome to avoid a misleading success label.
-- **Uncertain publication:** a boolean `published` is insufficient when a commit
-  cannot be confirmed. The connector plan already calls for `publication_unknown`
-  and reconciliation. Define an explicit pending/unknown representation; do not
-  label uncertain publication as failed or claim that a commit was rolled back.
-- **Restart behavior:** distinguish durable accepted-but-unclaimed work from
-  interrupted running work. The connector proposes claiming queued work after
-  restart, reconciling running work, then requiring an explicit retry for an
-  unpublished interrupted run. Browser disconnection alone never cancels it.
-- **Lifetime versus capacity:** the SQL result's accepted 15-minute expiry is
-  subject to already accepted process/store loss. Bound per-user/global result
-  admission and cleanup; do not silently evict valid results under pressure while
-  presenting an unconditional lifetime guarantee. Budgets require measurements.
+Canonical retained bytes are compact UTF-8 JSON with insertion order
+`encoding_version`, `columns`, `rows`, `retained_row_count`, `truncated`,
+`truncation_reason`, `limits`. Count all fields once inside the 1,048,576-byte
+budget. Reserve worst-case fixed metadata (`max_rows`, `byte_limit`, plus one byte
+for boolean width) before adding complete rows. At the first non-fitting row stop;
+never skip ahead. Offset indexes and HTTP envelopes need separately bounded storage.
+The canonical document is an internal artifact, not a replacement HTTP envelope.
 
-The points below are remaining design choices, not additional accepted scope:
+Integer/decimal values are strings; finite floats are numbers and nonfinite
+values are `NaN`, `Infinity`, `-Infinity`. Date/time/local timestamp are ISO strings;
+instants normalize to UTC. Binary is base64. Lists recurse; structs are ordered
+field arrays; maps are key/value pair arrays. Engine compatibility is tested for
+these types. Unsupported values fail explicitly. Nanosecond timestamps, calendar
+intervals, time-with-timezone, unions/variants, BIGNUM, UUID/enum and fixed arrays are not
+currently claimed: their lossless engine conversion requires further evidence.
+DATE/TIMESTAMP min/max Python sentinels are rejected because engine infinities
+convert to those same values; finite extremes cannot be distinguished.
 
-- Refresh configuration field names/change mechanism; no per-request date input.
-- Final public dataset/SQL names and complete column projection/metric exposure.
-- Complex/non-finite value encoding, byte-cap representation, and
-  retained-result budgets.
-- Proposed error statuses, empty/out-of-range behavior, and idempotency policy.
-- Polling suggestion, stages, and quality-field mapping to existing connector DTOs.
-- Auth transport extensions, isolated query runtime, background supervision,
-  complete-generation activation, and measured resources remain implementation
-  gates. This document is not evidence that they work.
+Initial out-of-range POST errors include owned `query_id` and `expires_at` in
+`error.details`, permitting GET page 1 without repeating execution. Optional
+`error.retry_after_seconds` agrees with `Retry-After`. CSRF/origin failures preserve
+the auth layer's generic `forbidden`. Per-user retention admission is 429; global
+admission is 503. No unexpired result eviction is introduced.
+
+Refresh dataset statuses are `pending`, `processing`, `succeeded`, `retained`,
+`failed`. A run always contains all three public IDs. Unavailable quality and
+coverage remain null. All run/publication combinations have synthetic fixtures;
+status is not an invented completion percentage. Idempotency retry preserves the
+recorded interval even after current settings change.
+
+Runtime gates remain: verified Linux isolation/termination, parser/worker wall-clock
+budgets, cold/warm preparation and combined refresh/query measurements, process
+ownership, cache/spill/spool limits and reviewed result/preview quotas. The proposed
+three-results/user and ten/global are not activated. Existing auth transport needs
+route integration for Idempotency-Key and exposed Location/Retry-After headers.
+No endpoint or live publication has been enabled by this phase.

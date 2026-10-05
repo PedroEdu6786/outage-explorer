@@ -243,3 +243,73 @@ def test_bounded_transport_and_sanitized_failures(keys, failure, caplog):
     assert "PROVIDER-SECRET" not in caplog.text + str(error.value)
     assert len(calls) <= 2
     identity.close()
+
+
+@pytest.mark.parametrize(
+    "secret, valid", [(None, True), ("CONFIDENTIAL", True), ("INCORRECT", False)]
+)
+def test_confidential_basic_pkce_without_fallback_or_leak(keys, caplog, secret, valid):
+    import base64
+
+    calls = []
+    expected = "Basic " + base64.b64encode(b"trusted-client:CONFIDENTIAL").decode()
+
+    def handler(request):
+        calls.append(request)
+        if request.method == "GET":
+            assert "authorization" not in request.headers
+            return httpx.Response(200, json={"keys": [jwk(keys[0], "first")]})
+        if secret is not None and request.headers.get("authorization") != expected:
+            return httpx.Response(401, json={"error": "invalid_client"})
+        return httpx.Response(
+            200,
+            json={
+                "access_token": token(keys),
+                "token_type": "Bearer",
+                "refresh_token": "REFRESH-PRIVATE",
+            },
+        )
+
+    config = CognitoConfig(
+        ISSUER, "https://login.test", "trusted-client", ("email",), client_secret=secret
+    )
+    adapter = CognitoIdentityProvider(config, transport=httpx.MockTransport(handler))
+    with caplog.at_level(logging.DEBUG):
+        if valid:
+            assert (
+                adapter.exchange(
+                    "CODE-PRIVATE", "PKCE-PRIVATE", "https://backend.test/callback"
+                ).subject
+                == "seeded-subject"
+            )
+        else:
+            with pytest.raises(UnauthenticatedError, match="^Login failed$"):
+                adapter.exchange(
+                    "CODE-PRIVATE", "PKCE-PRIVATE", "https://backend.test/callback"
+                )
+    assert len([call for call in calls if call.method == "POST"]) == 1
+    assert parse_qs(calls[0].content.decode())["code_verifier"] == ["PKCE-PRIVATE"]
+    if secret is None:
+        assert "authorization" not in calls[0].headers
+    else:
+        assert calls[0].headers["authorization"].startswith("Basic ")
+    surface = (
+        repr(config)
+        + repr(adapter.__dict__)
+        + caplog.text
+        + adapter.authorization_url(
+            "https://backend.test/callback", "state", "challenge"
+        )
+    )
+    assert not any(
+        value in surface
+        for value in (
+            "CONFIDENTIAL",
+            "INCORRECT",
+            "REFRESH-PRIVATE",
+            "CODE-PRIVATE",
+            "PKCE-PRIVATE",
+            expected,
+        )
+    )
+    adapter.close()
