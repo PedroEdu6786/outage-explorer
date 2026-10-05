@@ -1,41 +1,53 @@
 # Tasks: Docker analytical runtime
 
-> Status: all follow-up implementation tasks pending · Slug: analytical-runtime · Plan: [plan.md](plan.md) · Spec: [spec.md](spec.md)
+> Status: Phase 1 implemented and controlled checkpoint passed; Phases 2–5 pending · Slug: analytical-runtime · Plan: [plan.md](plan.md) · Spec: [spec.md](spec.md)
 
-This is a planning-only change. Every checkbox below remains open. Existing
+The original task list was planning-only; Phase 1 implementation was explicitly
+authorized on October 5, 2026. Existing
 [data-api phases](../data-api/tasks.md) are reused rather than reset. Proposed
 new files/test commands do not exist until their tasks deliver them. Keep phases
 sequential; checkpoint evidence is required before moving to dependent work.
-No implementation, Docker execution, enablement, deployment or publication is
-authorized by this document. T1.7 remains owned by the user.
+This document itself grants no Docker execution, enablement, deployment or
+publication authorization. T1.7 remains owned by the user.
 
 ## Phase 1: Runtime profile and strict transport
 
-- [ ] **T1.1** Define inert typed candidate/reviewed profile and evidence contracts
+- [x] **T1.1** Define inert typed candidate/reviewed profile and evidence contracts
   in proposed `src/outage_explorer/infrastructure/worker_runtime/configuration.py`
   and `src/outage_explorer/settings.py`; specify finite bounds, explicit local
   Docker daemon/image identity, strict mount/env policy, profile invalidation and
   unreviewed/unstarted fail-closed states. Record unresolved budgets in `plan.md`.
   (FR3, FR9, FR11, TR2–TR6)
-- [ ] **T1.2** Add strict response/request serialization adapter in proposed
+- [x] **T1.2** Add strict response/request serialization adapter in proposed
   `src/outage_explorer/infrastructure/worker_runtime/decoding.py`, reusing
   `protocol.py` and `query_results/encoding.py`; reject duplicates, unknown keys,
   versions/operations, invalid descriptors/cells/counts/limits/keys and excessive
   expansion; reconstruct preview date/Decimal values and exact query document
   bytes. Use existing safe application errors. Depends on T1.1. (FR3, FR6–FR8)
-- [ ] **T1.3** Make worker engine limits match validated nonsecret runtime profile
+- [x] **T1.3** Make worker engine limits match validated nonsecret runtime profile
   in `src/outage_explorer/bootstrap.py` and
   `src/outage_explorer/entrypoints/query_worker_startup.py`; preserve internal v1
   and public caps, reject mismatched/out-of-policy values. Document candidate
   profile in `infrastructure/analytical-worker/README.md`. Depends on T1.1–T1.2.
   (FR3, TR2–TR4)
-- [ ] **T1.C** Add proposed `tests/unit/test_worker_response_decoding.py` and
+- [x] **T1.C** Add proposed `tests/unit/test_worker_response_decoding.py` and
   `tests/unit/test_analytical_runtime_configuration.py`; run controlled protocol,
   canonical encoding and architecture regression plus Ruff/mypy. Include actual
   date/Decimal round trips, duplicate labels/nested types, exact canonical result
   field order/bytes and exit/error mismatch. No Docker required. Depends on
   T1.1–T1.3. Gate: AC3 and configured bounds contract proved; readiness still
   absent. (AC3, TR5–TR6)
+
+### Phase 1 checkpoint evidence (October 5, 2026)
+
+AC3 and the configured bounds contract passed controlled verification: 217 tests
+in response decoding, configuration, existing protocol/encoding, architecture and
+real-worker-subprocess suites. Real DuckDB returned date/Decimal/nested cells and
+duplicate labels with exact retained bytes; real Parquet preview reconstructed
+date/Decimal values. Ruff lint/format and mypy passed. No Docker was executed;
+readiness, AC2/AC4/AC7 and original data-api T1.7 remain open. A broader pytest
+attempt was interrupted after 202 passed/19 skipped/9 fixture errors because
+`OUTAGE_TEST_POSTGRES_DSN` was not configured; it is not a full-suite pass.
 
 ## Phase 2: Inputs, Docker lifecycle and recoverable ownership
 

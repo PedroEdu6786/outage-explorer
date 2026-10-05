@@ -1,6 +1,6 @@
 # Spec: Docker analytical runtime
 
-> Status: draft follow-up; implementation and user-owned runtime validation pending · Slug: analytical-runtime
+> Status: Phase 1 controlled profile/transport verified; dependent implementation and user-owned runtime validation pending · Slug: analytical-runtime
 
 ## Problem
 
@@ -135,7 +135,7 @@ counts/limits/keys and oversized output are rejected. No diagnostic passthrough.
 - [ ] **AC2:** Only selected public projection files are readable; mutation,
   replacement/symlink races, raw/cache siblings, credentials and network access
   are denied in the real runtime. (FR2, TR2)
-- [ ] **AC3:** Malformed/duplicate/unknown/oversized responses and invalid canonical
+- [x] **AC3:** Malformed/duplicate/unknown/oversized responses and invalid canonical
   cells/keys are rejected; real date/Decimal round trips and exact retained bytes
   preserve public encoding. (FR3, FR6–FR8, TR4)
 - [ ] **AC4:** Crashes, deadlines, cancellation and daemon/control failures leave no

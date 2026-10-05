@@ -133,6 +133,7 @@ from outage_explorer.infrastructure.worker_runtime.unavailable import (
     UnavailableSequences,
 )
 from outage_explorer.settings import (
+    AnalyticalWorkerSettings,
     ArtifactSettings,
     DatabaseSettings,
     ModelSettings,
@@ -784,15 +785,34 @@ def build_query_result_lifecycle(
     return store, QueryCleanup(store, interval_seconds=cleanup_interval_seconds)
 
 
-def build_query_worker(*, inputs_root: Path | None = None) -> Callable[[bytes], bytes]:
+def build_query_worker(
+    *, inputs_root: Path | None = None, settings: AnalyticalWorkerSettings | None = None
+) -> Callable[[bytes], bytes]:
     """Candidate container transport with explicit smoke-test limits only."""
     from outage_explorer.application.ports.execution import ExecutionBounds
     from outage_explorer.infrastructure.duckdb.previews import execute_preview
     from outage_explorer.infrastructure.duckdb.queries import execute_query
     from outage_explorer.infrastructure.worker_runtime.protocol import AnalyticalWorker
+    from outage_explorer.settings import AnalyticalWorkerSettings
 
-    bounds = ExecutionBounds(30, 40, 134_217_728, 16_777_216, 1_048_576)
-    encoding = EncodingBounds(1_048_576, 16, 10_000, 100, 65_536)
+    settings = AnalyticalWorkerSettings() if settings is None else settings
+    if settings != AnalyticalWorkerSettings():
+        raise ValueError("Worker limits must match internal v1 image profile")
+    bounds = ExecutionBounds(
+        settings.preparation_seconds,
+        settings.overall_seconds,
+        settings.memory_bytes,
+        settings.temporary_bytes,
+        settings.output_bytes,
+        settings.execution_seconds,
+    )
+    encoding = EncodingBounds(
+        settings.max_cell_bytes,
+        settings.max_depth,
+        settings.max_nested_items,
+        settings.max_columns,
+        settings.max_schema_bytes,
+    )
     worker = AnalyticalWorker(
         Path("/inputs") if inputs_root is None else inputs_root,
         lambda request: execute_preview(request, bounds),

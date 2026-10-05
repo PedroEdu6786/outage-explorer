@@ -109,6 +109,38 @@ raise SystemExit(run(build_query_worker(inputs_root=Path(sys.argv[1])), sys.stdi
     assert Decimal(response["rows"][0][1]) == Decimal("100")
     assert response["keys"] == [["2026-09-01"]]
     assert response["has_more"] is False
+    from outage_explorer.application.ports.analytical_inputs import ApprovedFile
+    from outage_explorer.application.ports.execution import PreviewRead
+    from outage_explorer.infrastructure.worker_runtime.configuration import (
+        RuntimeProfile,
+    )
+    from outage_explorer.infrastructure.worker_runtime.decoding import WorkerTransport
+
+    transport = WorkerTransport(
+        RuntimeProfile(
+            image_id="sha256:" + "a" * 64,
+            daemon_endpoint="unix:///var/run/docker.sock",
+            platform="controlled-subprocess",
+            daemon_version="not-run",
+            filesystem_identity="synthetic",
+        )
+    )
+    decoded = transport.decode(
+        result.stdout.encode(),
+        request=PreviewRead(
+            dataset,
+            (ApprovedFile(str(tmp_path / (digest + ".parquet")), digest, len(raw), 1),),
+            None,
+            None,
+            None,
+            100,
+        ),
+        exit_code=result.returncode,
+    )
+    assert decoded.rows[0][0] == values[0]
+    assert decoded.rows[0][1] == values[1]
+    assert type(decoded.rows[0][0]) is date
+    assert type(decoded.rows[0][1]) is Decimal
     payload["files"][0]["sha256"] = "b" * 64
     rejected = subprocess.run(
         [sys.executable, "-c", program, str(tmp_path)],
@@ -121,3 +153,42 @@ raise SystemExit(run(build_query_worker(inputs_root=Path(sys.argv[1])), sys.stdi
     assert rejected.returncode == 1
     assert "fixture.parquet" not in rejected.stdout
     assert "error" in json.loads(rejected.stdout)
+
+
+def test_real_engine_response_passes_strict_parent_decoder():
+    from outage_explorer.application.ports.execution import QueryRead
+    from outage_explorer.infrastructure.worker_runtime.configuration import (
+        RuntimeProfile,
+    )
+    from outage_explorer.infrastructure.worker_runtime.decoding import WorkerTransport
+
+    transport = WorkerTransport(
+        RuntimeProfile(
+            image_id="sha256:" + "a" * 64,
+            daemon_endpoint="unix:///var/run/docker.sock",
+            platform="controlled-subprocess",
+            daemon_version="not-run",
+            filesystem_identity="synthetic",
+        )
+    )
+    request = QueryRead(
+        "SELECT DATE '2026-09-01' AS same, CAST(10.123456789012 AS DECIMAL(38,12)) AS same, [1,2] AS nested",
+        (),
+    )
+    result = subprocess.run(
+        [sys.executable, "-m", "outage_explorer.entrypoints.query_worker_startup"],
+        input=transport.request(request),
+        capture_output=True,
+        timeout=20,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    output = transport.decode(
+        result.stdout, request=request, exit_code=result.returncode
+    )
+    document = json.loads(output.document)
+    assert document["rows"] == [["2026-09-01", "10.123456789012", ["1", "2"]]]
+    assert document["columns"][0]["name"] == document["columns"][1]["name"] == "same"
+    from outage_explorer.infrastructure.query_results.encoding import canonical_json
+
+    assert output.document == canonical_json(json.loads(result.stdout)["result"])

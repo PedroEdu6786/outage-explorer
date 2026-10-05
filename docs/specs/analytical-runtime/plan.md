@@ -302,3 +302,21 @@ ownership handoff still require work. No accepted boundary changes are proposed.
   single-owner profile is proposed and must be explicitly enforced/reviewed.
 - Evidence record schema/reviewer/profile invalidation and parser wall-clock
   enforcement. Define and test before readiness; no guessed production values.
+
+## Phase 1 implementation record
+
+Controlled profile/transport implementation selects the plan's exact internal-v1
+image-limit matching option. Startup settings and adapter image-limit contracts
+remain separate to preserve the import dependency matrix; worker composition
+rejects mismatched limits, and tests verify their default agreement.
+`RuntimeProfile` binds immutable image/local daemon/platform/filesystem identity,
+strict isolation policy, private roots and all candidate budgets. `RuntimeEvidence`
+binds report digests/reviewer/date to the complete profile digest; unstarted or
+mismatched profiles and tmpfs-smoke cannot pass its readiness check.
+
+Candidate budgets are documented in the worker README and remain unreviewed.
+The selected finite contributor allowances are not representative measurements;
+all measured memory/CPU/process/storage/cache/result/transport/deadline choices,
+supported daemon/filesystem/quota backend, parser wall-clock enforcement and
+actual evidence validation remain open for dependent phases. No Docker execution,
+T1.7 validation, API enablement, deployment or publication occurred in Phase 1.

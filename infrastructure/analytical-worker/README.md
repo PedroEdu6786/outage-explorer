@@ -62,3 +62,47 @@ and complete container termination/reaping; the transport does not do so.
 Next: implement `ReviewedRuntime` with bounded Docker lifecycle/I/O, typed
 response decoding, input mount preparation and teardown; perform T1.7 validation;
 then wire `DataHttpResources` through the API supervisor.
+
+## Phase 1 profile and parent transport
+
+`RuntimeProfile` and `RuntimeEvidence` are inert typed contracts in
+`infrastructure/worker_runtime/configuration.py`; constructing them starts no
+Docker process and prepares no directories. A profile requires an immutable
+`sha256:` image ID, explicit local `unix:///...` daemon, platform/daemon/filesystem
+identities and separate private staging/cache/result roots. It accepts only UID/GID
+65534, one serving process, no network, read-only root, dropped capabilities,
+no-new-privileges and no extra mounts/environment. All integer budgets are finite,
+positive and independently identified; public lifetimes stay 900 seconds.
+
+The internal v1 worker uses exact image-profile matching. Startup settings are
+validated by `build_query_worker()` and translated into execution/encoding bounds;
+any deviation from the image's candidate limits is rejected. The adapter's
+`WorkerImageLimits` is separate from startup settings to preserve the repository's
+import matrix. Tests require the two contracts to agree. There are no host
+resource environment overrides, credential-bearing profiles or v1 request changes.
+
+Candidate limits are engine memory 128 MiB, temporary space 16 MiB, preparation
+30 seconds, overall 40 seconds and execution 10 seconds; encoding uses 1-MiB cells,
+depth 16, 10,000 nested items, 100 columns and 64-KiB schema bytes. Candidate
+container limits are 512-MiB memory/equal swap ceiling, one CPU and 32 processes.
+Input/staging/cache allowances are each 2,147,483,647 bytes; result storage is
+10 MiB with ten global/three per-user entries. Control and termination each have
+five-second candidate bounds, cleanup interval 30 seconds, stdout 1,179,648 bytes,
+stderr 65,536 bytes and JSON expansion 100,000 nodes. These limits are **unmeasured
+candidates**, including contributor defaults; none establishes runtime readiness.
+
+`WorkerTransport` serializes authorized descriptors without host paths and rejects
+malformed/noncanonical responses, duplicate keys, incompatible versions/operations,
+invalid descriptors/cells, count/limit disagreement, excessive expansion and
+exit/error disagreement. Preview reconstructs dates and Decimals and checks exact
+projection, key equality/order and original filters. Query documents preserve
+canonical bytes, descriptor order and duplicate column labels, including nested
+values; transport does not normalize alternate JSON representations.
+
+Evidence references are bounded SHA-256 report identities plus reviewer/date and
+a digest of the entire profile. Changing any profile field invalidates the match.
+Unstarted resources, missing evidence and `tmpfs-smoke` remain unavailable.
+`quota-disk` names a future supported hard-quota backend; selecting that string
+alone does not implement or prove a quota. Phase 3 must verify readiness in startup,
+and Phase 4 must supply/review actual denial, termination, storage and representative
+measurement evidence. Phase 1 has not supplied a Docker launcher or enabled HTTP.

@@ -1,4 +1,4 @@
-"""Explicit candidate worker startup; no HTTP runtime is enabled here."""
+"""Explicit fixed-v1 image startup; parent must match its validated limits."""
 
 import sys
 
