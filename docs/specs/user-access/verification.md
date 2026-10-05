@@ -120,9 +120,9 @@ fixtures cover IAM infrastructure and Flask/helper leakage without widening the
 existing startup exception. Controlled setup uses the shared IAM configuration
 without Cognito and signs separately for explicit migration, seed and cleanup.
 
-## Live acceptance still pending
+## Initial live acceptance blockers (before subsequent configuration)
 
-Runtime authentication is not configured in the available local `.env`/process
+At the initial controlled checkpoint, runtime authentication was not configured in the available local `.env`/process
 environment: auth opt-in, exact public callback/backend/UI origins and allowed
 return paths, runtime provider domain/scopes and securely supplied client secret
 are missing. Pool/client identifiers and existing cloud configuration do not
@@ -130,7 +130,7 @@ substitute for exporting these application settings. Persona password access and
 first-login completion are also unavailable; the read-only account statuses prove
 that required password changes remain outstanding.
 
-The following checks **did not run**:
+The following checks **had not run at that checkpoint**:
 
 - Real managed email login for Viewer, Analyst and Admin, including required
   first-login password changes and generic invalid-credential messaging.
@@ -149,3 +149,34 @@ extraction and result ownership remain downstream feature responsibilities.
 Auth seam checks do not assert authorization of absent product operations.
 EC2 provisioning, deployment, connector completion and analytical data are not
 prerequisites for the independent user-access test harness.
+
+## Subsequent local authentication and web integration — 2026-10-05
+
+The user subsequently confirmed: **auth module fully completed and integrated
+in the web client**. Record this as user acceptance of the integrated behavior;
+no additional automated or comprehensive live test run is implied.
+
+- Local ignored configuration was populated with explicit IAM database settings,
+  existing confidential-client settings, localhost callback and frontend origin.
+  No secret or actual persona identifier is included in this evidence.
+- Read-only Cognito checks verified that the localhost callback is registered
+  and selected as default, all three personas are enabled and `CONFIRMED`, and
+  the configured issuer/domain/client secret/scopes match provider metadata.
+- IAM signing, read-only PostgreSQL access, required runtime table privileges
+  and application-pool checks passed. Login admission returned `302` to Cognito.
+- The user supplied a successful real Viewer session response with role and
+  fixed expiry. Personal identifiers and CSRF values are deliberately omitted.
+- The user reported logout `204`, followed by `401 unauthenticated` with the
+  prior session. An initial Origin/CSRF rejection was corrected before success.
+- The user confirmed login and frontend redirection work as expected, registered
+  the frontend sign-out URL in Cognito, and later confirmed the complete auth
+  integration. Cognito browser logout was handed off to the web client; its
+  exact implementation and provider-cookie clearing were not independently
+  rerun in this backend session.
+
+The earlier missing configuration, initial-password and untested Viewer
+login/logout statements are historical and are superseded by these observations.
+No separate detailed results for real Admin/Analyst login, managed-login invalid
+credentials, fixed expiry/reopening and independent live sessions were supplied.
+Keep T5.14/T5.C open for that evidence; they do not identify additional auth
+implementation required by the user's integrated-module confirmation.

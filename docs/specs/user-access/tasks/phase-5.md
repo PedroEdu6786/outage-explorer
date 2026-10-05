@@ -1,5 +1,5 @@
 # Tasks: Live connection support, reusable HTTP protection and acceptance
-> Status: controlled T5.1–T5.13 complete; live gates pending · Slug: user-access · Plan: ../plan.md · Spec: ../spec.md
+> Status: implementation complete; web integration confirmed by user; detailed live checkpoint evidence pending · Slug: user-access · Plan: ../plan.md · Spec: ../spec.md
 
 ## Phase 5: Live connection support, reusable HTTP protection and acceptance (plan phase 5)
 
@@ -49,3 +49,14 @@ schema/seeds, retained profile identity and all three first-login password state
 actual email login/password completion, managed-login invalid credentials,
 configured callback/session/logout and real-provider browser evidence did not run.
 Phase 5 remains open until those required live gates pass.
+
+### Subsequent integration confirmation — 2026-10-05
+
+The user confirms the auth module is fully completed and integrated in the web
+client. Local configuration and account password setup now exist; real Viewer
+login/session and logout `204` followed by `401` were reported and provider
+configuration was revalidated read-only. The preceding deferred-live summary
+describes the original checkpoint. T5.14/T5.C remain unchecked only because
+detailed evidence for the remaining live criteria has not been supplied; do not
+claim another automated run or unobserved persona/browser outcomes. See the
+subsequent evidence in [verification.md](../verification.md).

@@ -1,5 +1,5 @@
 # Tasks: Seeded users, login, and role access
-> Status: phases 1–4 complete original checkpoints; phase 5 controlled tasks complete, live checkpoint pending · Slug: user-access · Plan: ./plan.md · Spec: ./spec.md
+> Status: auth implementation complete; web integration confirmed by user; phase 5 detailed live checkpoint evidence pending · Slug: user-access · Plan: ./plan.md · Spec: ./spec.md
 
 ## Overview
 
@@ -33,3 +33,18 @@ Ruff/mypy/dependency/whitespace checks and sdist/wheel build on Python 3.14.6.
 T5.14, T5.C and the Phase 5 checkbox remain pending because real managed-login
 and browser verification was explicitly deferred. See [verification.md](verification.md)
 for AC1–AC22 controlled/live reconciliation and the exact commands.
+
+## Subsequent local integration confirmation — 2026-10-05
+
+The user confirms that the auth module is fully completed and integrated in the
+web client. Subsequent local work configured the existing Cognito client and IAM
+database connection in the ignored environment file. Read-only checks verified
+the local callback registration and all three accounts enabled and `CONFIRMED`.
+The user demonstrated real Viewer login/session, logout `204`, and old-session
+denial `401`, then confirmed successful web-client login and integration.
+
+This supersedes the initial missing-configuration/password and deferred-login
+status above. Detailed real-persona, invalid-credential, browser-reopening,
+expiry and independent-session evidence has not been supplied separately;
+T5.14/T5.C remain evidence gates rather than missing auth implementation.
+See the subsequent evidence in [verification.md](verification.md).
