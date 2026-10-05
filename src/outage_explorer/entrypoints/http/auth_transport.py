@@ -64,14 +64,18 @@ class AuthTransport:
         if origin in self.allowed_origins:
             response.headers["Access-Control-Allow-Origin"] = origin
             response.headers["Access-Control-Allow-Credentials"] = "true"
+        if request.path.startswith(("/api/datasets", "/api/query", "/api/refresh")):
+            response.headers["Access-Control-Expose-Headers"] = "Location, Retry-After"
         return response
 
-    def preflight(self) -> Response:
-        if request.headers.get(
-            "Origin"
-        ) not in self.allowed_origins or request.headers.get(
-            "Access-Control-Request-Method"
-        ) not in {"GET", "POST"}:
+    def preflight(
+        self, *, methods: set[str] | None = None, idempotency: bool = False
+    ) -> Response:
+        methods = {"GET", "POST"} if methods is None else methods
+        if (
+            request.headers.get("Origin") not in self.allowed_origins
+            or request.headers.get("Access-Control-Request-Method") not in methods
+        ):
             raise ForbiddenError("Access denied")
         requested = {
             item.strip().lower()
@@ -80,11 +84,16 @@ class AuthTransport:
             )
             if item.strip()
         }
-        if requested - {"x-csrf-token", "content-type"}:
+        allowed = {"x-csrf-token", "content-type"}
+        if idempotency:
+            allowed.add("idempotency-key")
+        if requested - allowed:
             raise ForbiddenError("Access denied")
         response = Response(status=204)
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST"
-        response.headers["Access-Control-Allow-Headers"] = "X-CSRF-Token, Content-Type"
+        response.headers["Access-Control-Allow-Methods"] = ", ".join(sorted(methods))
+        response.headers["Access-Control-Allow-Headers"] = (
+            "X-CSRF-Token, Content-Type" + (", Idempotency-Key" if idempotency else "")
+        )
         return response
 
 

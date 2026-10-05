@@ -5,7 +5,7 @@ import logging
 import os
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
-from dataclasses import asdict, replace
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -30,15 +30,23 @@ from outage_explorer.application.errors import (
     ConnectorConfigurationError,
     ConnectorDependencyError,
 )
+from outage_explorer.application.ports.analytical_inputs import PublishedInputs
 from outage_explorer.application.ports.artifacts import (
     ArtifactBounds,
     StoredObject,
     TransferBounds,
 )
 from outage_explorer.application.ports.connector import DurableConnectorReceipt
+from outage_explorer.application.ports.execution import (
+    IsolatedExecution,
+)
+from outage_explorer.application.ports.preview_sequences import PreviewSequences
+from outage_explorer.application.ports.query_results import QueryResults
 from outage_explorer.application.ports.refresh_execution import RefreshConnector
 from outage_explorer.application.ports.source import ROUTES, SourceBounds
+from outage_explorer.application.ports.tabular_encoding import TabularEncoding
 from outage_explorer.application.services.access import AccessService
+from outage_explorer.application.services.catalog import CatalogService
 from outage_explorer.application.services.connector import CreateConnectorCandidate
 from outage_explorer.application.services.connector_artifacts import (
     CreateDurableConnectorCandidate,
@@ -52,6 +60,9 @@ from outage_explorer.application.services.evidence import (
 )
 from outage_explorer.application.services.health import HealthService
 from outage_explorer.application.services.login import LoginService
+from outage_explorer.application.services.preview import PreviewService
+from outage_explorer.application.services.queries import QueryService
+from outage_explorer.application.services.refresh import RefreshService
 from outage_explorer.application.services.refresh_execution import (
     RefreshExecution,
     RefreshReports,
@@ -61,7 +72,11 @@ from outage_explorer.application.services.seed_users import (
     SeedUsers,
     validate_identities,
 )
-from outage_explorer.domain.publication import RefreshOwner, RefreshRun
+from outage_explorer.domain.publication import (
+    RefreshConfiguration,
+    RefreshOwner,
+    RefreshRun,
+)
 from outage_explorer.domain.refresh import Interval, RefreshBounds
 from outage_explorer.entrypoints.cli.access_setup import read_manifest
 from outage_explorer.entrypoints.http.app import create_app
@@ -69,6 +84,7 @@ from outage_explorer.entrypoints.http.auth_transport import (
     AuthTransport,
     CallbackLogFilter,
 )
+from outage_explorer.entrypoints.http.data_services import DataServices
 from outage_explorer.infrastructure.clock import SystemClock
 from outage_explorer.infrastructure.cognito.identity import (
     CognitoConfig,
@@ -93,6 +109,10 @@ from outage_explorer.infrastructure.postgresql.publication import (
     PostgresqlPublicationStore,
 )
 from outage_explorer.infrastructure.query_results.cleanup import QueryCleanup
+from outage_explorer.infrastructure.query_results.encoding import EncodingBounds
+from outage_explorer.infrastructure.query_results.preview_encoding import (
+    PreviewEncoding,
+)
 from outage_explorer.infrastructure.query_results.store import (
     BoundedQueryResults,
     ResultBounds,
@@ -104,7 +124,14 @@ from outage_explorer.infrastructure.refresh_worker import (
 )
 from outage_explorer.infrastructure.s3.artifacts import S3ArtifactStore
 from outage_explorer.infrastructure.security import RandomSecurityMaterial
+from outage_explorer.infrastructure.sql_validation.inspection import DuckdbSqlInspector
 from outage_explorer.infrastructure.verification_report import LocalReportWriter
+from outage_explorer.infrastructure.worker_runtime.unavailable import (
+    UnavailableExecution,
+    UnavailableInputs,
+    UnavailableResults,
+    UnavailableSequences,
+)
 from outage_explorer.settings import (
     ArtifactSettings,
     DatabaseSettings,
@@ -113,18 +140,119 @@ from outage_explorer.settings import (
     artifact_settings,
     auth_settings,
     connector_settings,
+    data_http_settings,
     database_settings,
+    refresh_settings,
     s3_settings,
 )
 
 
-def build_http_app() -> Flask:
+@dataclass(frozen=True)
+class DataHttpResources:
+    """Explicit analytical composition supplied only by a reviewed supervisor.
+
+    Constructor/factory never starts resources. Supervisor invokes start after
+    establishing process ownership; close is idempotent and process-bound.
+    """
+
+    inputs: PublishedInputs
+    execution: IsolatedExecution
+    results: QueryResults
+    sequences: PreviewSequences
+    encoding: TabularEncoding
+    response_bytes: int
+    start: Callable[[], None]
+    close: Callable[[], None]
+    evidence: str
+
+    def __post_init__(self) -> None:
+        if (
+            not self.evidence
+            or type(self.response_bytes) is not int
+            or self.response_bytes <= 0
+        ):
+            raise ValueError("Explicit analytical bounds and evidence required")
+
+
+def build_data_services(
+    access: AccessService,
+    store: PostgresqlPublicationStore,
+    security: RandomSecurityMaterial,
+    environment: Mapping[str, str],
+    resources: DataHttpResources | None = None,
+) -> DataServices:
+    configuration = refresh_settings(environment)
+    refresh = RefreshService(
+        access,
+        store,
+        lambda: RefreshConfiguration(
+            configuration.start_date,
+            configuration.end_date,
+            configuration.max_interval_days,
+            configuration.source_interval_days,
+            configuration.model_interval_days,
+            configuration.candidate_seconds,
+            configuration.persistence_seconds,
+        ),
+        security,
+    )
+    # With no reviewed runtime, reserve fails before preparation or source access.
+    if resources is None:
+        encoding: TabularEncoding = PreviewEncoding(
+            EncodingBounds(1048576, 16, 10000, 100, 65536)
+        )
+        inputs: PublishedInputs = UnavailableInputs()
+        execution: IsolatedExecution = UnavailableExecution()
+        results: QueryResults = UnavailableResults()
+        sequences: PreviewSequences = UnavailableSequences()
+        response_bytes = 1048576
+    else:
+        encoding, inputs, execution, results, sequences, response_bytes = (
+            resources.encoding,
+            resources.inputs,
+            resources.execution,
+            resources.results,
+            resources.sequences,
+            resources.response_bytes,
+        )
+    return DataServices(
+        CatalogService(access, store),
+        PreviewService(
+            access,
+            store,
+            inputs,
+            execution,
+            sequences,
+            encoding,
+            response_bytes=response_bytes,
+        ),
+        QueryService(
+            access,
+            DuckdbSqlInspector(max_sql_bytes=65536, max_nodes=10000, max_depth=64),
+            store,
+            inputs,
+            execution,
+            results,
+        ),
+        refresh,
+        encoding,
+    )
+
+
+def build_http_app(*, data_resources: DataHttpResources | None = None) -> Flask:
     clock = SystemClock()
     try:
         settings = auth_settings(os.environ)
     except ValueError:
         raise AccessConfigurationError("Invalid authentication configuration") from None
+    data = data_http_settings(os.environ)
+    if data_resources is not None and not data.enabled:
+        raise AccessConfigurationError(
+            "Data HTTP resources require explicit enablement"
+        )
     if settings is None:
+        if data.enabled:
+            raise AccessConfigurationError("Data HTTP requires authentication")
         return create_app(health_service=HealthService(clock=clock))
     try:
         config = CognitoConfig(
@@ -150,7 +278,11 @@ def build_http_app() -> Flask:
         if os.getpid() == owner and not closed:
             closed = True
             try:
-                provider.close()
+                try:
+                    if data_resources is not None:
+                        data_resources.close()
+                finally:
+                    provider.close()
             finally:
                 pool.close()
                 access_logger.removeFilter(access_filter)
@@ -182,11 +314,24 @@ def build_http_app() -> Flask:
             login_service=login,
             access_service=access,
             auth_transport=transport,
+            data_services=build_data_services(
+                access,
+                PostgresqlPublicationStore(pool),
+                security,
+                os.environ,
+                data_resources,
+            )
+            if data.enabled
+            else None,
         )
     except Exception:
         close()
         raise
     app.extensions["outage_access_close"] = close
+    if data.enabled:
+        app.extensions["outage_data_close"] = close
+        if data_resources is not None:
+            app.extensions["outage_data_start"] = data_resources.start
     atexit.register(close)
     return app
 

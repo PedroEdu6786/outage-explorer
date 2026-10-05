@@ -105,3 +105,79 @@ process-liveness proof for private orphan cleanup, not an isolation mechanism.
 No launcher is configured by this implementation; controlled deadline/busy/reap
 contracts do not close actual Linux worker-tree, resource or network denial gates.
 See the [Phase 5 checkpoint](tasks/phase-5.md) for exact verification results.
+
+## Phase 6 HTTP and combined acceptance
+
+T1.7 belongs to the user, who instructed agents to skip its validation. No Linux
+launcher, credential/network denial, worker-tree limit test or representative
+production measurement was run in this phase. The missing
+`tests/acceptance/test_query_runtime.py` remains a runtime-evidence gap, not a
+passed test. Transport implementation and controlled acceptance proceed under
+that instruction.
+
+The HTTP suite exercises real disposable PostgreSQL, migrations including 0003,
+real Parquet and controlled source/S3/analytical workers. Actual response envelopes
+validate against OpenAPI. It uncovered and fixed two handoff inconsistencies:
+reference-free queries require nullable generation identity, and the internal
+spool encoding version must not leak into the public result. The other three
+tracked fixture/documentation corrections are closed with tests.
+
+Focused PostgreSQL HTTP/refresh/coordination regression: **45 passed**. Combined
+HTTP lifecycle: **2 passed**, including blocked refresh/query overlap, current
+session loss, independent API reconstruction, all-grain publication, old preview
+and SQL snapshot stability, and retained busy responses while health/status work.
+The existing independent-process restart/fencing/recovery tests also ran in the
+focused regression. Controlled transport/contract/architecture checks: **226
+passed**. Dependency consistency, Ruff lint/format, strict mypy (**126 source
+files**) and sdist/wheel build pass. Full configured non-live regression: **1,556 passed plus 17 subtests** in
+242.16 seconds, with explicit loopback PostgreSQL and Chromium. Afterwards, the
+disabled composition replaced placeholder bounds with stateless unavailable
+ports; affected portable/startup and static/package gates reran. This avoids
+suggesting unmeasured runtime quotas through disabled placeholder values.
+
+### Acceptance evidence map
+
+All rows describe controlled application/adapter evidence unless explicitly
+qualified. They do not claim live provider/publication or deployment readiness.
+`http` means `tests/integration/test_data_api_http.py`; `lifecycle` means
+`tests/acceptance/test_data_api_lifecycle.py`; `preview`, `query`, `refresh`,
+`recovery`, `coordination`, and `retention` mean the integration suites
+`test_catalog_preview.py`, `test_query_results.py`, `test_refresh_execution.py`,
+`test_refresh_recovery.py`, `test_data_api_postgresql.py`, and
+`test_query_lifecycle.py` respectively.
+
+| AC | Actual evidence | Remaining limit |
+| --- | --- | --- |
+| AC1 | http role/ownership/CSRF and current-role revocation; preview/retention continuation denial | Live identity/provider readiness remains separate. |
+| AC2 | http role catalogs plus preview public projection parity | Controlled publication. |
+| AC3 | preview old-generation reads with upstream unavailable; cache admits published modeled graph only | Controlled source/S3. |
+| AC4 | preview inclusive/one-sided dates, binary ties, defaults; strict HTTP date-only inputs | Controlled data. |
+| AC5 | preview 100/500 rows, exact fixed 15-minute expiry/revisits; http cursor-only validation | Reviewed production preview quotas remain pending. |
+| AC6 | preview exact national precision; query unchanged projection/engine corpus | No live input claim. |
+| AC7 | query joins/CTEs/subquery/window compatibility and unchanged SQL | Controlled DuckDB subprocess. |
+| AC8 | SQL inspection adversarial corpus, role denial before inputs | OS network/file/credential isolation is user-owned T1.7 and unverified. |
+| AC9 | query sequence reconstruction/revisits/direct pages; http GET never starts execution | Controlled worker. |
+| AC10 | http strict pagination; retention fixed size and completion expiry | Quotas require review. |
+| AC11 | http expiry/unknown IDs; preview tampering/lost continuation and retention process loss | No durable query metadata added. |
+| AC12 | retention autonomous cleanup and active-reader protection | Explicit supervisor startup required. |
+| AC13 | transport fixed safe error/status/retry matrix; validated success/empty/truncation fixtures | Controlled errors. |
+| AC14 | http durable 202 before claim; lifecycle blocked source work | No live source admission performed. |
+| AC15 | coordination frozen intervals/replays/config changes; http override rejection | Configured limits are initial allowances. |
+| AC16 | lifecycle initiating-session logout and independent API reconstruction; refresh independent-process restart test | Deployed supervisor readiness not claimed. |
+| AC17 | refresh conservation/exclusion/partial retention, null unknown counts; safe public quality projection | Controlled quality evidence. |
+| AC18 | http latest rediscovery; coordination no-run/outage distinction; transport lookup outage | No history endpoint introduced. |
+| AC19 | refresh/coordination full verified all-grain atomic publication; lifecycle new active generation | Controlled storage. |
+| AC20 | preview old data/source outage; refresh failures preserve pointer; lifecycle old data during refresh | Controlled storage. |
+| AC21 | lifecycle old preview and retained SQL equality after new publication | In-memory continuations require same owner process. |
+| AC22 | refresh invalid/absent/partial excluded retention and disposition conservation | Controlled observations. |
+| AC23 | refresh all-three-excluded retention with overlapping reasons and unchanged pointer | Controlled observations. |
+| AC24 | coordination initial dates/all grains; refresh incomplete initial failure | No live initial-load proof. |
+| AC25 | refresh missing/corrupt graph, source failure/resource exhaustion and no partial pointer | Controlled source/S3 failures. |
+| AC26 | refresh independent worker process surviving API process restarts; lifecycle API reconstruction | Actual host supervision not configured. |
+| AC27 | recovery lost owner reconciliation before terminal/replacement work | Controlled PostgreSQL races. |
+| AC28 | recovery verified history after later publication without reretrieval | Controlled source/storage. |
+| AC29 | recovery interrupted claim/no automatic work and explicit new-key retry | Controlled worker loss. |
+| AC30 | coordination commit-loss/read failure and recovery unresolved admission occupancy | Controlled fault injection. |
+| AC31 | recovery stale worker rejected during source; coordination epoch/base fencing | Controlled process/transaction barriers. |
+| AC32 | query exact 1,000-row, UTF-8 byte/schema boundary and contiguous retained prefix | Controlled engine/encoder. |
+| AC33 | lifecycle busy HTTP response, independent health/status; retention controlled timeout/slot/reap seam | Real ten-second worker-tree termination and measured overlap remain user-owned T1.7. |

@@ -4,6 +4,7 @@ from datetime import date
 
 from outage_explorer.application.errors import (
     AnalyticalResourceError,
+    DatasetUnavailableError,
     DataUnavailableError,
     InvalidRequestError,
 )
@@ -58,7 +59,7 @@ class PreviewService:
             (item for item in PUBLIC_DATASETS if item.id == dataset_id), None
         )
         if dataset is None:
-            raise DataUnavailableError("Dataset unavailable")
+            raise DatasetUnavailableError("Dataset unavailable")
         authorization = self._access.authorize(
             token,
             AccessOperation.ANALYTICAL,

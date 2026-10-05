@@ -613,3 +613,44 @@ automatic source retries. Imports and HTTP factories start no refresh work.
 HTTP refresh endpoints arrive in data API Phase 6. This local executable and its
 controlled tests do not authorize live publication or establish EC2 supervision,
 measured budgets or SQL sandbox readiness.
+
+
+## Data API HTTP integration
+
+The seven operations in the [data contract](docs/specs/data-api/http-contract.md)
+are implemented. Enable their transport alongside configured authentication and
+apply explicit migrations to your intended database before serving requests:
+
+```sh
+.venv/bin/access-setup migrate
+export OUTAGE_DATA_HTTP_ENABLED=true
+export OUTAGE_REFRESH_START_DATE=2026-04-02
+export OUTAGE_REFRESH_END_DATE=2026-10-01
+make run
+```
+
+These commands are an operator runbook; this implementation did not migrate live
+RDS or publish live data. Configured dates are captured durably at refresh
+admission; request dates/selectors are rejected. Start `refresh-worker` separately
+with its documented EIA/S3/staging configuration. The HTTP factory never starts it.
+
+Without explicitly injected reviewed analytical resources, authorized previews
+and SQL submissions fail closed with `503 service_unavailable`. Catalog and
+durable refresh remain usable independently. A reviewed supervisor can pass
+`DataHttpResources` to `build_http_app`, explicitly call `outage_data_start`, and
+close `outage_data_close`; quota, cache, execution and cleanup ownership must come
+from that configured composition. The default CLI startup supplies no real SQL
+launcher. User-owned T1.7 validation remains separate.
+
+For reproducible controlled acceptance, use disposable loopback PostgreSQL and
+the installed Chromium browser as documented above, then run:
+
+```sh
+.venv/bin/python -m pytest tests/integration/test_data_api_http.py tests/acceptance/test_data_api_lifecycle.py tests/integration/test_refresh_recovery.py
+make check
+```
+
+The HTTP tests use real PostgreSQL/Parquet and controlled source/S3/analytical
+workers. They verify contract envelopes, current roles, durable acknowledgement,
+refresh/query overlap and retained snapshots; they do not prove Linux isolation,
+live provider readiness, deployment or measured production resource budgets.

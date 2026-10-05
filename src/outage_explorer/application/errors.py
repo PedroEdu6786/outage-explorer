@@ -78,6 +78,10 @@ class DataUnavailableError(Exception):
     """Published data is absent or failed integrity checks."""
 
 
+class DatasetUnavailableError(DataUnavailableError):
+    """Unknown or forbidden public dataset identity."""
+
+
 class PreviewUnavailableError(Exception):
     """Continuation is invalid, foreign, expired or lost; never restart silently."""
 

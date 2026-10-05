@@ -2,7 +2,8 @@
 
 Status: **accepted structure**, [ADR-0030](../adr/0030-layered-flask-monolith.md).
 The health scaffold and offline national/facility/generator verification are implemented; product
-data delivery remains pending. This guide governs application code and refactors;
+data HTTP delivery is implemented with explicit enablement and controlled
+verification; actual analytical runtime readiness remains separate. This guide governs application code and refactors;
 [AGENTS.md](../../AGENTS.md) makes its rules discoverable to agents.
 
 Under [ADR-0051](../adr/0051-configured-http-refresh-range.md), HTTP refresh
@@ -396,3 +397,22 @@ store rejects incompatible multiple-process ownership without selecting the
 final WSGI topology. Controlled integration evidence is in the
 [Phase 5 checkpoint](../specs/data-api/tasks/phase-5.md); product execution stays
 fail-closed pending T1.7 Linux launcher evidence and HTTP remains Phase 6.
+
+
+### Data HTTP integration (Phase 6)
+
+`entrypoints/http/data_schemas.py` owns strict bounded transport parsing;
+`data_services.py` groups already-constructed application services for the inert
+factory. Dataset/query/refresh routes invoke those services. Public catalog and
+refresh projections remain in application code; the latter decodes bounded
+operational JSON using a narrowly allowed pure `json.loads` import. Architecture
+negative fixtures still reject JSON file readers there.
+
+Bootstrap controls `OUTAGE_DATA_HTTP_ENABLED`, configured refresh dates and
+optional supervisor-supplied `DataHttpResources`. Analytical ports fail closed
+when no reviewed resources are supplied. Process lifecycle extensions are explicit:
+the factory never invokes start, and API close does not stop refresh supervision.
+Migration 0003 records actual start/finish times; historical unknown values remain
+null. Verified modeled partitions supply reported refresh coverage.
+See the [Phase 6 checkpoint](../specs/data-api/tasks/phase-6.md) and
+[evidence map](../specs/data-api/runtime-evidence.md).

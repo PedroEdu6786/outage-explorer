@@ -1,11 +1,14 @@
 # Data API contract
-> Status: v1 client contract implemented · Date: 2026-10-05 · Product endpoints pending
+> Status: v1 client contract implemented · Date: 2026-10-05 · HTTP endpoints implemented with explicit enablement
 
 Phase 1 freezes the client vocabulary in [openapi.json](openapi.json), with
 validated synthetic [fixtures.json](fixtures.json) and the
 [client handoff](client-handoff.md). The OpenAPI version is 1.0.0; public schema
 and tabular encoding versions are `1`. These files support fixture-backed web
-client development. They do not claim functioning data/refresh endpoints.
+client development. Phase 6 implements the seven transport operations with controlled HTTP/process
+acceptance. Live resources and the user-owned Linux runtime validation remain
+separate. Set `OUTAGE_DATA_HTTP_ENABLED=true` alongside configured authentication
+and refresh dates to install them; this alone does not enable analytical execution.
 
 The selected plan resolves the earlier draft recommendations below. Runtime
 isolation, process ownership and measured resource/retention quotas remain open
@@ -43,7 +46,7 @@ synchronous response; refresh admission is asynchronous.
   local roles before analytical access and again on every page.
 - Selected: require exact permitted `Origin` and session-bound `X-CSRF-Token`
   on both POST routes. Add `Idempotency-Key` to allowed CORS request headers
-  for refresh. These extensions still need integration with auth transport.
+  for refresh. These extensions are implemented in the shared auth transport.
 - Responses use JSON and `Cache-Control: no-store`. Errors expose no storage
   paths, provider diagnostics, SQL fragments, or protected dataset metadata.
 - Dates use `YYYY-MM-DD`; timestamps use RFC 3339 UTC; IDs are opaque strings.
@@ -165,7 +168,8 @@ Common result envelope:
 ```
 
 Example values are illustrative. `retained_row_count` counts retained rows,
-not the full unbounded query result. `total_pages` covers only retained rows,
+not the full unbounded query result. `generation_id` is null for a
+reference-free analytical expression, which reads no published relation. `total_pages` covers only retained rows,
 with one empty page for an empty result. `has_more` concerns another retained
 page; it does not indicate whether SQL was truncated. Truncation reasons are
 selected `row_limit` or `byte_limit`; returned rows contain complete values.
@@ -342,6 +346,37 @@ recorded interval even after current settings change.
 Runtime gates remain: verified Linux isolation/termination, parser/worker wall-clock
 budgets, cold/warm preparation and combined refresh/query measurements, process
 ownership, cache/spill/spool limits and reviewed result/preview quotas. The proposed
-three-results/user and ten/global are not activated. Existing auth transport needs
-route integration for Idempotency-Key and exposed Location/Retry-After headers.
-No endpoint or live publication has been enabled by this phase.
+three-results/user and ten/global are not activated by default. Phase 6 implements
+Idempotency-Key preflight and exposed Location/Retry-After headers. HTTP routes
+are explicitly opt-in; real execution requires supervisor-supplied analytical
+resources with reviewed evidence and bounded lifecycle ownership. No live
+publication or deployment was performed.
+
+
+## Implemented transport bounds and local composition
+
+Requests are capped at 131,072 bytes; URL query strings at 8,192 bytes; SQL at
+65,536 UTF-8 bytes. Duplicate JSON keys and query parameters, unknown fields,
+GET bodies, non-JSON/encoded POST bodies, malformed dates, noncanonical positive
+integers and cursor/filter mixtures return `400 invalid_request`. Positive page
+numbers are bounded by 2,147,483,647; page sizes remain 1–500.
+
+`create_app` accepts already-constructed `DataServices` and starts no jobs or
+connections. Bootstrap uses the same lazy operational pool for access and durable
+publication/refresh. Refresh remains an independently started `refresh-worker`.
+Without reviewed analytical resources, authorized preview/submission receives
+`503 service_unavailable`; retained GET IDs are unavailable rather than rerun.
+The supervisor may supply `DataHttpResources` and explicitly call the
+`outage_data_start` extension after establishing ownership; construction never
+calls it. `outage_data_close` closes only API-owned resources and cannot cancel
+an independently supervised refresh worker.
+
+Migration `0003_refresh_timestamps` stores actual claim/terminal timestamps.
+Historical timestamps remain null instead of being reconstructed. Coverage is
+reported only from fully verified modeled partitions; unknown prior reports
+remain null. Internal encoding versions, storage identities, ownership fencing
+and provider diagnostics do not appear in responses.
+
+The `query_row_limit` fixture shows page 1 of 1,000 retained rows with page size
+1. It is a complete page, not a shortened retained result. Named duplicate-label
+and reference-free fixtures cover those independent SQL behaviors.

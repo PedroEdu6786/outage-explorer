@@ -129,6 +129,9 @@ class RefreshRun:
     failure: str | None
     no_publication_reason: str | None
 
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+
     @property
     def grains(self) -> tuple[AnalyticalGrain, ...]:
         return tuple(AnalyticalGrain)

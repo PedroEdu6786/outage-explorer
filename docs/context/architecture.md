@@ -10,12 +10,15 @@ The product HTTP refresh action uses a configured inclusive interval under
 overrides. Admission records that interval for the complete all-grain background
 run; later configuration changes cannot change it. Initial-load policy and CLI
 date overrides remain unchanged. The [data API contract](../specs/data-api/http-contract.md)
-records proposed transport details; product HTTP implementation remains pending.
+records implemented opt-in transport details. Phase 6 mounts seven HTTP
+operations using injected use cases; transport enablement does not enable the
+user-owned Linux runtime gate.
 
 [ADR-0052](../adr/0052-interrupted-refresh-recovery.md) accepts continued work
 through API-only restarts and publication reconciliation after worker loss.
 Unpublished interrupted runs require explicit Admin retry; recovery mechanics
-and ownership enforcement still need implementation and verification.
+and ownership enforcement are implemented with controlled PostgreSQL/process
+verification; live deployment remains separate.
 
 User-access Phases 1–4 implement PostgreSQL users/roles, fixed sessions and
 single-use browser-bound login attempts, explicit migrations, controlled seeding,
@@ -28,8 +31,9 @@ Downstream spies verify fresh authorization before direct and later-page work;
 Opt-in HTTP login/callback/session/logout composition now has host-only fixed-expiry
 cookies, application-owned CSRF, exact origin/CORS checks and sanitized errors.
 Configured construction is inert; process resources have explicit cleanup and
-health remains dependency-independent. Actual analytical/refresh use cases,
-configured-provider readiness and real browser reopening remain later work.
+health remains dependency-independent. Analytical/refresh use cases and opt-in HTTP delivery are implemented with
+controlled evidence. Configured-provider readiness and real browser reopening
+remain separate acceptance work.
 Read-only checks on October 5 verified the RDS schema and three seeded users
 with their role and Cognito identity links; live login remains unverified.
 The [updated auth plan](../specs/user-access/plan.md) records dated setup evidence
@@ -60,7 +64,8 @@ verification and measured production limits remain open.
 Configuration is validated before staging/transport construction and bootstrap
 owns transport cleanup. Imports, help and HTTP construction start no
 connector work. These local results never activate a generation. Live retrieval
-validation, refresh authorization and durable publication remain pending. See the
+validation remains pending. Refresh authorization and durable publication now
+have controlled PostgreSQL/Parquet/S3 implementation evidence. See the
 [implementation tasks](../specs/data-connector/tasks.md).
 
 The [connector flow diagrams](../specs/data-connector/diagrams.md) distinguish
@@ -232,7 +237,7 @@ Scheduling and an Admin UI remain deferred; job execution details remain open.
 |---------|--------|-------|
 | Data source | decided (de facto) | EIA Open Data API v2 |
 | EIA datasets | required by brief | Daily `us-nuclear-outages`, `facility-nuclear-outages`, and `generator-nuclear-outages` |
-| Backend | **Python/Flask health scaffold implemented** | Python >=3.12, Flask 3.1; pinned development dependencies in `requirements-dev.txt`; product integrations pending |
+| Backend | **Layered Python/Flask auth/data HTTP implemented** | Python >=3.12, Flask 3.1; pinned dependencies; opt-in data delivery with controlled verification, real analytical runtime still gated |
 | Analytical model | **schema contracts confirmed** | See ADR-0002; source fields, keys and relationships await EIA investigation |
 | Frontend | **separate repository selected; implementation pending** | React/Next.js, TypeScript, Tailwind, Figma and atomic components; see ADR-0039 and the UI handoff |
 | Analytical storage | **Amazon S3 + Parquet confirmed** | Development bucket access verified; deployed-role verification pending; retention/recovery policy deferred; see ADR-0001 |
@@ -341,3 +346,19 @@ use cases still independently check session validity and current roles. Controll
 PostgreSQL/provider/persistent-browser acceptance is available independently of
 connector, analytical data and the separate UI. The required real-provider login,
 logout and browser gate remains open; see [verification](../specs/user-access/verification.md).
+
+
+## Data API HTTP integration
+
+Phase 6 registers strict catalog, preview, query submission/paging and durable
+refresh admission/latest/by-ID routes when `OUTAGE_DATA_HTTP_ENABLED=true`.
+Application use cases enforce current roles and retained ownership; shared
+transport adds exact Origin/CSRF, credentialed CORS, no-store and safe errors.
+The factory starts no refresh, cleanup thread, migration, SDK or database query.
+
+Bootstrap can accept reviewed `DataHttpResources` with explicit start/close hooks,
+resource bounds and evidence reference. With none, analytical ports fail closed;
+catalog and durable refresh remain independent. API shutdown never closes the
+independent refresh worker. Controlled overlap/restart/retention tests establish
+application behavior, not OS isolation or measured production capacity. T1.7
+validation belongs to the user and was skipped by instruction.

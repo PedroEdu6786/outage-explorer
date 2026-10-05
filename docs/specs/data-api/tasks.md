@@ -13,7 +13,7 @@
 - [x] **Phase 3: Supervised connector integration and recovery** — [tasks/phase-3.md](tasks/phase-3.md), 6 tasks complete; controlled PostgreSQL/Parquet/S3 and independent process restart checkpoint passed. Combined production enablement still requires the runtime evidence gate.
 - [x] **Phase 4: Authorized catalog and stable previews** — [tasks/phase-4.md](tasks/phase-4.md), 7 tasks complete; approved disposable PostgreSQL and controlled worker checkpoint passed. Real execution remains disabled pending T1.7 reviewed Linux evidence.
 - [x] **Phase 5: One-execution SQL and retained paging** — [tasks/phase-5.md](tasks/phase-5.md), 7 tasks complete; controlled one-execution, byte-boundary and lifecycle checkpoint passed. Real execution remains gated by T1.7 reviewed Linux evidence.
-- [ ] **Phase 6: HTTP integration and combined acceptance** — [tasks/phase-6.md](tasks/phase-6.md), 6 tasks. Requires Phases 2–5 and actual runtime evidence for release claims.
+- [x] **Phase 6: HTTP integration and combined acceptance** — [tasks/phase-6.md](tasks/phase-6.md), 6 tasks implemented; controlled HTTP/process checkpoint passes independently of user-owned T1.7. Actual runtime evidence remains required for release claims.
 - Within a phase follow dependency order. [P] denotes independent siblings after their stated prerequisites, not permission to bypass verification.
 
 ## Assumptions and environment gates

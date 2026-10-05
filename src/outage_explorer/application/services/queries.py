@@ -105,6 +105,10 @@ class QueryService:
             self._authorize(token, reader.identity.grains)
             if page_size is not None and page_size != reader.identity.page_size:
                 raise QueryPageError("page_size_mismatch")
-            return reader.page(page)
+            response = reader.page(page)
+            response.pop(
+                "encoding_version", None
+            )  # Internal spool version is not HTTP metadata.
+            return response
         finally:
             reader.close()

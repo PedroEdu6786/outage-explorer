@@ -21,7 +21,7 @@ def validator(name):
     )
 
 
-def test_seven_operations_are_explicitly_pending_and_all_have_fixtures():
+def test_seven_operations_are_implemented_and_all_have_fixtures():
     operations = {
         operation["operationId"]: operation
         for path in CONTRACT["paths"].values()
@@ -30,7 +30,7 @@ def test_seven_operations_are_explicitly_pending_and_all_have_fixtures():
     assert len(operations) == 7
     assert {fixture["operation_id"] for fixture in FIXTURES} == operations.keys()
     for operation in operations.values():
-        assert operation["x-implementation-status"] == "pending"
+        assert operation["x-implementation-status"] == "implemented"
         assert operation["security"] == [{"SessionCookie": []}]
     assert (
         CONTRACT["components"]["securitySchemes"]["SessionCookie"]["name"]
@@ -171,3 +171,19 @@ def test_type_contract_rejects_incompatible_metadata(change):
 def test_request_contract_rejects_refresh_overrides_and_sql_body_pagination():
     assert list(validator("RefreshRequest").iter_errors({"start_date": "2026-01-01"}))
     assert list(validator("QueryRequest").iter_errors({"sql": "SELECT 1", "page": 2}))
+
+
+def test_corrected_examples_are_consistent():
+    by_name = {f["name"]: f for f in FIXTURES}
+    for name in ("query_first", "query_direct_page", "query_second", "query_revisit"):
+        assert [col["name"] for col in by_name[name]["body"]["columns"]] == [
+            "x",
+            "x_copy",
+        ]
+    assert [
+        col["name"] for col in by_name["query_duplicate_labels"]["body"]["columns"]
+    ] == ["x", "x"]
+    row_limit = by_name["query_row_limit"]["body"]
+    assert row_limit["retained_row_count"] == row_limit["limits"]["max_rows"] == 1000
+    assert len(row_limit["rows"]) == row_limit["page_size"] == 1
+    assert by_name["query_reference_free"]["body"]["generation_id"] is None

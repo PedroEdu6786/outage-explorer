@@ -568,3 +568,15 @@ def refresh_settings(environment: Mapping[str, str]) -> RefreshSettings:
         return result
     except (KeyError, ValueError, TypeError, OverflowError):
         raise ValueError("Invalid refresh configuration") from None
+
+
+@dataclass(frozen=True)
+class DataHttpSettings:
+    enabled: bool = False
+
+
+def data_http_settings(environment: Mapping[str, str]) -> DataHttpSettings:
+    value = environment.get("OUTAGE_DATA_HTTP_ENABLED", "false")
+    if value not in {"true", "false"}:
+        raise ValueError("Invalid data HTTP enablement")
+    return DataHttpSettings(value == "true")

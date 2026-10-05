@@ -37,6 +37,7 @@ def test_application_obeys_import_boundaries():
         ("application/services/bad.py", "from flask import current_app"),
         ("application/services/bad.py", "import sqlite3"),
         ("application/refresh_outcomes.py", "from json import load"),
+        ("application/data_payloads.py", "from json import load"),
         (
             "application/ports/refresh_execution.py",
             "from contextlib import contextmanager",

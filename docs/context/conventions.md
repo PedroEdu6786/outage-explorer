@@ -36,7 +36,11 @@ is wrong, propose a change here rather than silently deviating.
 
 ## Git practices
 
-- Every new commit follows Conventional Commits as defined below.
+- Every completed, verified update is committed automatically; pushing still
+  requires user instruction.
+- Every new commit follows Conventional Commits as defined below and includes
+  a descriptive body logging the changes made, verification performed, and
+  any remaining validation gaps.
 - Keep commits small, focused, and incremental. Do not squash or rewrite
   history; fixes and reverts belong in subsequent commits.
 - Work directly on `main` for this project. Commit and push approved changes to
@@ -48,7 +52,7 @@ is wrong, propose a change here rather than silently deviating.
 ```text
 <type>(<scope>): <summary>
 
-<optional body explaining why>
+<required description and log of changes, verification, and remaining gaps>
 
 <optional footers>
 ```

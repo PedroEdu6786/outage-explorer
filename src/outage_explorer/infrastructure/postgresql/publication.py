@@ -66,6 +66,8 @@ def _run(row: DictRow) -> RefreshRun:
         else None,
         row["failure"],
         row["no_publication_reason"],
+        row["started_at"],
+        row["finished_at"],
     )
 
 
@@ -245,7 +247,7 @@ class PostgresqlPublicationStore:
                 (epoch, identity, lease_seconds),
             )
             connection.execute(
-                "UPDATE refresh_runs SET status = 'running', stage = 'retrieving', epoch = %s, updated_at = clock_timestamp() WHERE id = %s",
+                "UPDATE refresh_runs SET status = 'running', stage = 'retrieving', started_at = COALESCE(started_at, clock_timestamp()), epoch = %s, updated_at = clock_timestamp() WHERE id = %s",
                 (epoch, run.id),
             )
             result = RefreshOwner(run.id, identity, epoch)
@@ -289,7 +291,7 @@ class PostgresqlPublicationStore:
             if status is RunStatus.RETAINED and run.base_generation_id is None:
                 raise ValueError("Initial data cannot be retained")
             connection.execute(
-                "UPDATE refresh_runs SET status = %s, publication = 'not_published', stage = 'finished', failure = %s, quality_json = COALESCE(%s, quality_json), no_publication_reason = %s, updated_at = clock_timestamp() WHERE id = %s",
+                "UPDATE refresh_runs SET status = %s, publication = 'not_published', stage = 'finished', finished_at = clock_timestamp(), failure = %s, quality_json = COALESCE(%s, quality_json), no_publication_reason = %s, updated_at = clock_timestamp() WHERE id = %s",
                 (
                     status.value,
                     failure,
@@ -357,7 +359,7 @@ class PostgresqlPublicationStore:
                     (generation.id,),
                 )
                 connection.execute(
-                    "UPDATE refresh_runs SET status = 'succeeded', publication = 'published', generation_id = %s, stage = 'finished', quality_json = COALESCE(%s, quality_json), updated_at = clock_timestamp() WHERE id = %s",
+                    "UPDATE refresh_runs SET status = 'succeeded', publication = 'published', generation_id = %s, stage = 'finished', finished_at = clock_timestamp(), quality_json = COALESCE(%s, quality_json), updated_at = clock_timestamp() WHERE id = %s",
                     (generation.id, quality, owner.run_id),
                 )
                 self._release(connection)
@@ -381,7 +383,7 @@ class PostgresqlPublicationStore:
             if history is not None:
                 if run.status is not RunStatus.SUCCEEDED:
                     connection.execute(
-                        "UPDATE refresh_runs SET status = 'succeeded', publication = 'published', generation_id = %s, stage = 'finished', updated_at = clock_timestamp() WHERE id = %s",
+                        "UPDATE refresh_runs SET status = 'succeeded', publication = 'published', generation_id = %s, stage = 'finished', finished_at = clock_timestamp(), updated_at = clock_timestamp() WHERE id = %s",
                         (history["id"], run_id),
                     )
                 if str(coordination["active_run_id"]) == run_id:
@@ -392,7 +394,7 @@ class PostgresqlPublicationStore:
                 and (force or not coordination["healthy"])
             ):
                 connection.execute(
-                    "UPDATE refresh_runs SET status = 'interrupted', publication = 'not_published', stage = 'finished', failure = 'interrupted', updated_at = clock_timestamp() WHERE id = %s",
+                    "UPDATE refresh_runs SET status = 'interrupted', publication = 'not_published', stage = 'finished', finished_at = clock_timestamp(), failure = 'interrupted', updated_at = clock_timestamp() WHERE id = %s",
                     (run_id,),
                 )
                 self._release(connection)

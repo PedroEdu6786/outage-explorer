@@ -3,14 +3,14 @@
   "info": {
     "title": "Outage Explorer Data API",
     "version": "1.0.0",
-    "description": "Phase 1 client contract. Synthetic examples; runtime endpoints are pending. Linux isolation and measured capacity are not established."
+    "description": "Implemented HTTP contract for explicitly configured services. Synthetic examples; Linux runtime validation belongs to the user and live resources are not enabled."
   },
   "paths": {
     "/api/datasets": {
       "get": {
         "operationId": "listDatasets",
         "summary": "listDatasets",
-        "x-implementation-status": "pending",
+        "x-implementation-status": "implemented",
         "parameters": [],
         "responses": {
           "200": {
@@ -87,6 +87,23 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Error400",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error400"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -101,7 +118,7 @@
       "get": {
         "operationId": "previewDataset",
         "summary": "previewDataset",
-        "x-implementation-status": "pending",
+        "x-implementation-status": "implemented",
         "parameters": [
           {
             "name": "dataset",
@@ -330,7 +347,7 @@
       "post": {
         "operationId": "executeQuery",
         "summary": "executeQuery",
-        "x-implementation-status": "pending",
+        "x-implementation-status": "implemented",
         "parameters": [
           {
             "name": "page",
@@ -542,7 +559,7 @@
       "get": {
         "operationId": "getQueryPage",
         "summary": "getQueryPage",
-        "x-implementation-status": "pending",
+        "x-implementation-status": "implemented",
         "parameters": [
           {
             "name": "query_id",
@@ -714,7 +731,7 @@
       "post": {
         "operationId": "admitRefresh",
         "summary": "admitRefresh",
-        "x-implementation-status": "pending",
+        "x-implementation-status": "implemented",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -909,7 +926,7 @@
       "get": {
         "operationId": "latestRefresh",
         "summary": "latestRefresh",
-        "x-implementation-status": "pending",
+        "x-implementation-status": "implemented",
         "parameters": [],
         "responses": {
           "200": {
@@ -986,6 +1003,23 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Error400",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error400"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1000,7 +1034,7 @@
       "get": {
         "operationId": "getRefresh",
         "summary": "getRefresh",
-        "x-implementation-status": "pending",
+        "x-implementation-status": "implemented",
         "parameters": [
           {
             "name": "run_id",
@@ -3314,9 +3348,16 @@
             "maxLength": 256
           },
           "generation_id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 256
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "columns": {
             "$ref": "#/components/schemas/Columns"

@@ -1323,7 +1323,7 @@
           },
           {
             "index": 1,
-            "name": "x",
+            "name": "x_copy",
             "type": "decimal",
             "encoding": "decimal-string",
             "precision": 38,
@@ -1379,7 +1379,7 @@
           },
           {
             "index": 1,
-            "name": "x",
+            "name": "x_copy",
             "type": "decimal",
             "encoding": "decimal-string",
             "precision": 38,
@@ -1434,7 +1434,7 @@
           },
           {
             "index": 1,
-            "name": "x",
+            "name": "x_copy",
             "type": "decimal",
             "encoding": "decimal-string",
             "precision": 38,
@@ -1489,7 +1489,7 @@
           },
           {
             "index": 1,
-            "name": "x",
+            "name": "x_copy",
             "type": "decimal",
             "encoding": "decimal-string",
             "precision": 38,
@@ -1704,8 +1704,8 @@
         ],
         "page": 1,
         "page_size": 1,
-        "retained_row_count": 2,
-        "total_pages": 2,
+        "retained_row_count": 1000,
+        "total_pages": 1000,
         "has_more": true,
         "truncated": true,
         "truncation_reason": "row_limit",
@@ -3220,6 +3220,152 @@
           "max_bytes": 1048576
         },
         "expires_at": "2026-10-05T12:15:00Z"
+      }
+    },
+    {
+      "name": "query_duplicate_labels",
+      "operation_id": "executeQuery",
+      "request": {
+        "sql": "SELECT x AS x, x_copy AS x FROM (VALUES (9007199254740993::HUGEINT, 0.123456789012::DECIMAL(38,12)), (-9007199254740993::HUGEINT, 9.999999999999::DECIMAL(38,12))) AS sample(x, x_copy)",
+        "page_size": 1
+      },
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "QueryResult",
+      "body": {
+        "query_id": "query-synthetic-1",
+        "generation_id": "generation-synthetic-1",
+        "columns": [
+          {
+            "index": 0,
+            "name": "x",
+            "type": "integer",
+            "encoding": "integer-string",
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 1,
+            "name": "x",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": null,
+            "unit": null
+          }
+        ],
+        "rows": [
+          [
+            "9007199254740993",
+            "0.123456789012"
+          ]
+        ],
+        "page": 1,
+        "page_size": 1,
+        "retained_row_count": 2,
+        "total_pages": 2,
+        "has_more": true,
+        "truncated": false,
+        "truncation_reason": null,
+        "limits": {
+          "max_rows": 1000,
+          "max_bytes": 1048576
+        },
+        "expires_at": "2026-10-05T12:15:00Z"
+      }
+    },
+    {
+      "name": "query_reference_free",
+      "operation_id": "executeQuery",
+      "request": {
+        "sql": "SELECT * FROM (VALUES (9007199254740993::HUGEINT, 0.123456789012::DECIMAL(38,12)), (-9007199254740993::HUGEINT, 9.999999999999::DECIMAL(38,12))) AS sample(x, x_copy)",
+        "page_size": 1
+      },
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "QueryResult",
+      "body": {
+        "query_id": "query-synthetic-1",
+        "generation_id": null,
+        "columns": [
+          {
+            "index": 0,
+            "name": "x",
+            "type": "integer",
+            "encoding": "integer-string",
+            "nullable": null,
+            "unit": null
+          },
+          {
+            "index": 1,
+            "name": "x_copy",
+            "type": "decimal",
+            "encoding": "decimal-string",
+            "precision": 38,
+            "scale": 12,
+            "nullable": null,
+            "unit": null
+          }
+        ],
+        "rows": [
+          [
+            "9007199254740993",
+            "0.123456789012"
+          ]
+        ],
+        "page": 1,
+        "page_size": 1,
+        "retained_row_count": 2,
+        "total_pages": 2,
+        "has_more": true,
+        "truncated": false,
+        "truncation_reason": null,
+        "limits": {
+          "max_rows": 1000,
+          "max_bytes": 1048576
+        },
+        "expires_at": "2026-10-05T12:15:00Z"
+      }
+    },
+    {
+      "name": "catalog_invalid_parameters",
+      "operation_id": "listDatasets",
+      "request": {
+        "unexpected": "1"
+      },
+      "status": 400,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Error400",
+      "body": {
+        "error": {
+          "code": "invalid_request",
+          "message": "Invalid request"
+        }
+      }
+    },
+    {
+      "name": "latest_invalid_parameters",
+      "operation_id": "latestRefresh",
+      "request": {
+        "unexpected": "1"
+      },
+      "status": 400,
+      "headers": {
+        "Cache-Control": "no-store"
+      },
+      "schema": "Error400",
+      "body": {
+        "error": {
+          "code": "invalid_request",
+          "message": "Invalid request"
+        }
       }
     }
   ]

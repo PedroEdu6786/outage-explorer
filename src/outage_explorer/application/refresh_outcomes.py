@@ -1,6 +1,8 @@
 """Bounded status projections; dispositions and reason occurrences stay distinct."""
 
 from collections import Counter
+from collections.abc import Mapping
+from datetime import date
 from json import dumps
 
 from outage_explorer.application.dto import ConnectorReport
@@ -14,6 +16,7 @@ from outage_explorer.application.ports.artifacts import (
     RepresentationError,
 )
 from outage_explorer.application.ports.source import ROUTES
+from outage_explorer.domain.observations import Grain
 from outage_explorer.domain.refresh import RefreshInputError, RefreshLimitError
 
 
@@ -31,7 +34,9 @@ def safe_failure(error: Exception) -> ConnectorFailure:
     return "internal"
 
 
-def quality_json(report: ConnectorReport) -> str:
+def quality_json(
+    report: ConnectorReport, coverage: Mapping[Grain, tuple[date, date]] | None = None
+) -> str:
     models = {item.grain: item for item in report.models}
     sources = {item.grain: item for item in report.sources}
     datasets: list[dict[str, object]] = []
@@ -49,6 +54,12 @@ def quality_json(report: ConnectorReport) -> str:
         datasets.append(
             {
                 "dataset": grain,
+                "coverage": None
+                if coverage is None or grain not in coverage
+                else {
+                    "start_date": coverage[grain][0].isoformat(),
+                    "end_date": coverage[grain][1].isoformat(),
+                },
                 "received": None if source is None else source.received,
                 "selected": None if quality is None else quality.selected,
                 "excluded": None if quality is None else quality.excluded,

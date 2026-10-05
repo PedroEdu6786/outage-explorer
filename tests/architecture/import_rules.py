@@ -176,6 +176,8 @@ def allowed_dependency(source: str, target: str) -> bool:
     # Pure in-memory encoding only; do not admit json file readers to inner layers.
     if source == f"{ROOT}.application.refresh_outcomes" and target == "json.dumps":
         return True
+    if source == f"{ROOT}.application.data_payloads" and target == "json.loads":
+        return True  # Pure durable-to-public DTO projection; no file readers.
     external = target.split(".")[0]
     if external in {"importlib", "builtins"}:
         return False
@@ -198,7 +200,10 @@ def allowed_dependency(source: str, target: str) -> bool:
             transport |= {"json", "pathlib"}
         if source == f"{ROOT}.entrypoints.http.auth_transport":
             transport |= {"logging"}
-        if source == f"{ROOT}.entrypoints.http.schemas":
+        if source in {
+            f"{ROOT}.entrypoints.http.schemas",
+            f"{ROOT}.entrypoints.http.data_schemas",
+        }:
             transport |= {"json"}  # Strict transport JSON decoding only.
         if source == f"{ROOT}.entrypoints.http.errors":
             transport |= {"werkzeug"}

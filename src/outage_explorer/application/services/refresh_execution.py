@@ -110,6 +110,16 @@ class RefreshExecution:
                     or verified.transformation_id != request.transformation_id
                 ):
                     raise ArtifactError("Verified candidate identity mismatch")
+                coverage = {}
+                for grain in {item.grain for item in verified.modeled}:
+                    days = [
+                        ref.partition
+                        for ref in verified.modeled
+                        if ref.grain == grain and ref.partition is not None
+                    ]
+                    if days:
+                        coverage[grain] = (min(days), max(days))
+                report_json = quality_json(report, coverage)
                 if (
                     report.run_id != run.id
                     or report.generation_id != run.id
