@@ -1,5 +1,8 @@
 # Data API v1 client handoff
 
+Track pending contract corrections and frontend assumption differences in the
+[integration decision tracker](integration-decisions.md).
+
 The web client can implement fixture adapters using [openapi.json](openapi.json)
 and [fixtures.json](fixtures.json). Copy both files into the client repository;
 neither depends on backend Python. All seven operations have schemas and
