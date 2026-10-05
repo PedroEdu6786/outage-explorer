@@ -55,6 +55,14 @@ background refresh, and verification commands reuse the same use cases.
 
 ## Directory layout
 
+The HTTP entry point also serves public Swagger UI at `/api/docs` and the full
+OpenAPI 3.1 contract at `/api/openapi.json`. Its packaged transport contract lives
+in `entrypoints/http/openapi.json`; locally served assets come from the pinned
+flask-swagger-ui dependency. Documentation requires no external services and does
+not enable optional auth/data operations. Route coverage and data-contract parity
+tests guard its coverage; the architecture check admits only the documentation
+module's JSON and Swagger rendering imports.
+
 ```text
 src/outage_explorer/
   bootstrap.py                  # concrete wiring and process composition

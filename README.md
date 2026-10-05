@@ -78,6 +78,19 @@ Open <http://127.0.0.1:8000/health> in your browser, or in another terminal:
 make health
 ```
 
+Interactive API documentation is available at <http://127.0.0.1:8000/api/docs>.
+Import <http://127.0.0.1:8000/api/openapi.json> into Postman for the complete
+OpenAPI 3.1 contract, including health, authentication, datasets, SQL and refresh.
+Run `make setup` after updating dependencies. Documentation is available even
+when auth/data services are disabled; those operations still require their normal
+enablement and configured resources.
+
+To test protected operations in Swagger, sign in through `/api/auth/login` in the
+same browser on the backend origin. Swagger sends the existing session cookie.
+Use `/api/auth/session` to obtain `csrf_token`, then supply `X-CSRF-Token` and
+the exact configured `Origin` for POST requests. Refresh requires Admin access;
+executing it starts real background work. Logout invalidates the current session.
+
 Returns HTTP 200 with JSON like:
 
 ```json

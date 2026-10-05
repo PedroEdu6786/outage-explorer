@@ -1,0 +1,4943 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Outage Explorer API",
+    "version": "1.0.0",
+    "description": "Complete implemented HTTP contract. Health and documentation are always available. Auth requires OUTAGE_AUTH_ENABLED=true; data routes additionally require OUTAGE_DATA_HTTP_ENABLED=true. Analytical runtime resources must be configured separately. Sign in through /api/auth/login in a browser on this backend origin, then use its HttpOnly session cookie. Fetch /api/auth/session for the session-bound CSRF token. Mutations require X-CSRF-Token and an exact configured backend/UI Origin. Swagger cannot set HttpOnly cookies through Authorize; use browser login. Sessions expire without renewal. Documentation does not enable optional services."
+  },
+  "paths": {
+    "/api/datasets": {
+      "get": {
+        "operationId": "listDatasets",
+        "summary": "listDatasets",
+        "x-implementation-status": "implemented",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Catalog",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Catalog"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error401",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error401"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error403",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error403"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error503",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                },
+                "description": "Bounded retry suggestion, agrees with error.retry_after_seconds when present."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error503"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error400",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error400"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "description": "Requires current session and application authorization. All responses use no-store. Duplicate/unknown parameters and unsupported bodies are rejected. Requires enabled data HTTP services. Viewer: national only; Analyst/Admin: all datasets.",
+        "tags": [
+          "Datasets"
+        ]
+      }
+    },
+    "/api/datasets/{dataset}/preview": {
+      "get": {
+        "operationId": "previewDataset",
+        "summary": "previewDataset",
+        "x-implementation-status": "implemented",
+        "parameters": [
+          {
+            "name": "dataset",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "national",
+                "facilities",
+                "generators"
+              ]
+            }
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Preview",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Preview"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error400",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error400"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error401",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error401"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error403",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error403"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error404",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error404"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Error410",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error410"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error422",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error422"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error503",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                },
+                "description": "Bounded retry suggestion, agrees with error.retry_after_seconds when present."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error503"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Error504",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error504"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "description": "Requires current session and application authorization. All responses use no-store. Duplicate/unknown parameters and unsupported bodies are rejected. Initial dates are inclusive; omitted sides are unbounded. A cursor cannot be combined with filters/page_size. page_cursor revisits this page; next_cursor advances. Fixed 15-minute expiry. Requires enabled data HTTP services. Viewer: national only; Analyst/Admin: all datasets.",
+        "tags": [
+          "Datasets"
+        ]
+      }
+    },
+    "/api/query": {
+      "post": {
+        "operationId": "executeQuery",
+        "summary": "executeQuery",
+        "x-implementation-status": "implemented",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "QueryResult",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error400",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error400"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error401",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error401"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error403",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error403"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error422",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error422"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error429",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                },
+                "description": "Bounded retry suggestion, agrees with error.retry_after_seconds when present."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error429"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error503",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                },
+                "description": "Bounded retry suggestion, agrees with error.retry_after_seconds when present."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error503"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Error504",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error504"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "description": "Requires current session and application authorization. All responses use no-store. Duplicate/unknown parameters and unsupported bodies are rejected. SQL is executed only by POST and is never modified for pagination. GET reads an owned immutable result. Default page size 100, maximum 500; expiry is 15 minutes from execution completion. Requires enabled data HTTP services. Viewer: national only; Analyst/Admin: all datasets.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryRequest"
+              }
+            }
+          }
+        },
+        "tags": [
+          "Queries"
+        ]
+      },
+      "get": {
+        "operationId": "getQueryPage",
+        "summary": "getQueryPage",
+        "x-implementation-status": "implemented",
+        "parameters": [
+          {
+            "name": "query_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "QueryResult",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error400",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error400"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error401",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error401"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error403",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error403"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error404",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error404"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Error410",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error410"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error503",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                },
+                "description": "Bounded retry suggestion, agrees with error.retry_after_seconds when present."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error503"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "description": "Requires current session and application authorization. All responses use no-store. Duplicate/unknown parameters and unsupported bodies are rejected. SQL is executed only by POST and is never modified for pagination. GET reads an owned immutable result. Default page size 100, maximum 500; expiry is 15 minutes from execution completion. Requires enabled data HTTP services. Viewer: national only; Analyst/Admin: all datasets.",
+        "tags": [
+          "Queries"
+        ]
+      }
+    },
+    "/api/refresh": {
+      "post": {
+        "operationId": "admitRefresh",
+        "summary": "admitRefresh",
+        "x-implementation-status": "implemented",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "RefreshReceipt",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error400",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error400"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error401",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error401"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error403",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error403"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error409",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                },
+                "description": "Bounded retry suggestion, agrees with error.retry_after_seconds when present."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error409"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error503",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                },
+                "description": "Bounded retry suggestion, agrees with error.retry_after_seconds when present."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error503"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "RefreshReceipt",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "const": "3"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshReceipt"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "description": "Requires current session and application authorization. All responses use no-store. Duplicate/unknown parameters and unsupported bodies are rejected. Requires enabled data HTTP services. Admin role required.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          }
+        },
+        "tags": [
+          "Refresh"
+        ]
+      }
+    },
+    "/api/refresh/latest": {
+      "get": {
+        "operationId": "latestRefresh",
+        "summary": "latestRefresh",
+        "x-implementation-status": "implemented",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "LatestRefresh",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LatestRefresh"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error401",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error401"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error403",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error403"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error503",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                },
+                "description": "Bounded retry suggestion, agrees with error.retry_after_seconds when present."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error503"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error400",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error400"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "description": "Requires current session and application authorization. All responses use no-store. Duplicate/unknown parameters and unsupported bodies are rejected. Requires enabled data HTTP services. Admin role required.",
+        "tags": [
+          "Refresh"
+        ]
+      }
+    },
+    "/api/refresh/{run_id}": {
+      "get": {
+        "operationId": "getRefresh",
+        "summary": "getRefresh",
+        "x-implementation-status": "implemented",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "RefreshRun",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshRun"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error400",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error400"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error401",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error401"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error403",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error403"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error404",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error404"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error503",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                },
+                "description": "Bounded retry suggestion, agrees with error.retry_after_seconds when present."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error503"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "description": "Requires current session and application authorization. All responses use no-store. Duplicate/unknown parameters and unsupported bodies are rejected. Requires enabled data HTTP services. Admin role required.",
+        "tags": [
+          "Refresh"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "getHealth",
+        "summary": "Process liveness",
+        "tags": [
+          "Health"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Process is alive; does not check external dependencies",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        },
+        "x-implementation-status": "implemented"
+      }
+    },
+    "/api/auth/login": {
+      "get": {
+        "operationId": "beginLogin",
+        "summary": "Start Cognito browser login",
+        "tags": [
+          "Authentication"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "return_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "/",
+              "description": "Must be an exact configured relative return path."
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect; cookies are host-only, HttpOnly, SameSite=Lax. Secure in HTTPS mode.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Login binding or session cookie; callback also clears the login cookie."
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or failed login",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthError"
+                }
+              }
+            }
+          }
+        },
+        "x-implementation-status": "implemented",
+        "description": "Open in a browser. Requires enabled auth. Sets a login-binding cookie and redirects to Cognito Authorization Code with PKCE; credentials stay at Cognito."
+      }
+    },
+    "/api/auth/callback": {
+      "get": {
+        "operationId": "completeLogin",
+        "summary": "Complete Cognito login",
+        "tags": [
+          "Authentication"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "__Host-outage_login",
+            "in": "cookie",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Use outage_login in explicit local HTTP mode. Must match this login attempt."
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect; cookies are host-only, HttpOnly, SameSite=Lax. Secure in HTTPS mode.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Login binding or session cookie; callback also clears the login cookie."
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or failed login",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthError"
+                }
+              }
+            }
+          }
+        },
+        "x-implementation-status": "implemented",
+        "description": "Normally invoked by Cognito with a fresh single-use code and matching state/binding cookie. Provider error/error_description/error_uri parameters are accepted and yield a generic login failure. Creates an opaque application session and redirects to the stored UI return path."
+      }
+    },
+    "/api/auth/session": {
+      "get": {
+        "operationId": "getSession",
+        "summary": "Get current identity and CSRF token",
+        "tags": [
+          "Authentication"
+        ],
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Current local role, fixed session expiry, and CSRF token",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthError"
+                }
+              }
+            }
+          }
+        },
+        "x-implementation-status": "implemented"
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "summary": "Invalidate the current session",
+        "tags": [
+          "Authentication"
+        ],
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Exact configured backend or UI origin."
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Token returned by GET /api/auth/session."
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Current session invalidated; session cookie cleared",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthError"
+                }
+              }
+            }
+          }
+        },
+        "x-implementation-status": "implemented",
+        "description": "Requires enabled auth. Repeated logout with an invalid/expired session clears its cookie after the Origin check; a valid session requires its CSRF token. Other sessions remain active."
+      }
+    },
+    "/api/docs": {
+      "get": {
+        "operationId": "getApiDocs",
+        "summary": "Interactive Swagger UI",
+        "tags": [
+          "Documentation"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Interactive Swagger UI",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "x-implementation-status": "implemented"
+      }
+    },
+    "/api/openapi.json": {
+      "get": {
+        "operationId": "getOpenApi",
+        "summary": "Complete OpenAPI 3.1 contract",
+        "tags": [
+          "Documentation"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Complete OpenAPI 3.1 contract",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "x-implementation-status": "implemented"
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "SessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-outage_session",
+        "description": "Opaque HttpOnly application session set by browser login. Explicit local HTTP uses outage_session; HTTPS uses __Host-outage_session. Swagger uses the current browser cookie."
+      }
+    },
+    "schemas": {
+      "Cell": {
+        "anyOf": [
+          {
+            "type": [
+              "string",
+              "number",
+              "boolean",
+              "null"
+            ]
+          },
+          {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Cell"
+            }
+          }
+        ]
+      },
+      "Type": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "enum": [
+              "integer",
+              "decimal",
+              "float",
+              "boolean",
+              "string",
+              "date",
+              "time",
+              "timestamp",
+              "timestamp_tz",
+              "binary",
+              "list",
+              "struct",
+              "map",
+              "null"
+            ]
+          },
+          "encoding": {
+            "enum": [
+              "integer-string",
+              "decimal-string",
+              "number-or-special-string",
+              "boolean",
+              "string",
+              "iso-date",
+              "iso-time",
+              "iso-local-datetime",
+              "iso-utc-datetime",
+              "base64",
+              "array",
+              "field-array",
+              "pair-array",
+              "null"
+            ]
+          },
+          "precision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 38
+          },
+          "scale": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 38
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Child"
+            }
+          }
+        },
+        "required": [
+          "type",
+          "encoding"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "integer"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "integer-string"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "decimal"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "decimal-string"
+                }
+              },
+              "required": [
+                "precision",
+                "scale"
+              ],
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "float"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "number-or-special-string"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "boolean"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "boolean"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "string"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "string"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "date"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "iso-date"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "time"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "iso-time"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "timestamp"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "iso-local-datetime"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "timestamp_tz"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "iso-utc-datetime"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "binary"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "base64"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "list"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "array"
+                },
+                "children": {
+                  "minItems": 1,
+                  "maxItems": 1
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "required": [
+                "children"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "struct"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "field-array"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "required": [
+                "children"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "map"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "pair-array"
+                },
+                "children": {
+                  "minItems": 2,
+                  "maxItems": 2
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "required": [
+                "children"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "null"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "null"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "Child": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "integer",
+              "decimal",
+              "float",
+              "boolean",
+              "string",
+              "date",
+              "time",
+              "timestamp",
+              "timestamp_tz",
+              "binary",
+              "list",
+              "struct",
+              "map",
+              "null"
+            ]
+          },
+          "encoding": {
+            "enum": [
+              "integer-string",
+              "decimal-string",
+              "number-or-special-string",
+              "boolean",
+              "string",
+              "iso-date",
+              "iso-time",
+              "iso-local-datetime",
+              "iso-utc-datetime",
+              "base64",
+              "array",
+              "field-array",
+              "pair-array",
+              "null"
+            ]
+          },
+          "precision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 38
+          },
+          "scale": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 38
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Child"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "encoding"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "integer"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "integer-string"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "decimal"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "decimal-string"
+                }
+              },
+              "required": [
+                "precision",
+                "scale"
+              ],
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "float"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "number-or-special-string"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "boolean"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "boolean"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "string"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "string"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "date"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "iso-date"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "time"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "iso-time"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "timestamp"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "iso-local-datetime"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "timestamp_tz"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "iso-utc-datetime"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "binary"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "base64"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "list"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "array"
+                },
+                "children": {
+                  "minItems": 1,
+                  "maxItems": 1
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "required": [
+                "children"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "struct"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "field-array"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "required": [
+                "children"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "map"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "pair-array"
+                },
+                "children": {
+                  "minItems": 2,
+                  "maxItems": 2
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "required": [
+                "children"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "null"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "null"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "Column": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "integer",
+              "decimal",
+              "float",
+              "boolean",
+              "string",
+              "date",
+              "time",
+              "timestamp",
+              "timestamp_tz",
+              "binary",
+              "list",
+              "struct",
+              "map",
+              "null"
+            ]
+          },
+          "encoding": {
+            "enum": [
+              "integer-string",
+              "decimal-string",
+              "number-or-special-string",
+              "boolean",
+              "string",
+              "iso-date",
+              "iso-time",
+              "iso-local-datetime",
+              "iso-utc-datetime",
+              "base64",
+              "array",
+              "field-array",
+              "pair-array",
+              "null"
+            ]
+          },
+          "precision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 38
+          },
+          "scale": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 38
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Child"
+            }
+          },
+          "nullable": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "index",
+          "name",
+          "type",
+          "encoding",
+          "nullable",
+          "unit"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "integer"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "integer-string"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "decimal"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "decimal-string"
+                }
+              },
+              "required": [
+                "precision",
+                "scale"
+              ],
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "float"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "number-or-special-string"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "boolean"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "boolean"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "string"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "string"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "date"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "iso-date"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "time"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "iso-time"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "timestamp"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "iso-local-datetime"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "timestamp_tz"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "iso-utc-datetime"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "binary"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "base64"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "list"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "array"
+                },
+                "children": {
+                  "minItems": 1,
+                  "maxItems": 1
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "required": [
+                "children"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "struct"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "field-array"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "required": [
+                "children"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "map"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "pair-array"
+                },
+                "children": {
+                  "minItems": 2,
+                  "maxItems": 2
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "required": [
+                "children"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "null"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "encoding": {
+                  "const": "null"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "precision"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "scale"
+                    ]
+                  }
+                ]
+              },
+              "allOf": [
+                {
+                  "not": {
+                    "required": [
+                      "children"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "Columns": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/Column"
+        }
+      },
+      "Rows": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/Cell"
+          }
+        }
+      },
+      "Coverage": {
+        "type": "object",
+        "properties": {
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "start_date",
+          "end_date"
+        ],
+        "additionalProperties": false
+      },
+      "Interval": {
+        "type": "object",
+        "properties": {
+          "start_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "start_date",
+          "end_date"
+        ],
+        "additionalProperties": false
+      },
+      "Dataset": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "enum": [
+              "national",
+              "facilities",
+              "generators"
+            ]
+          },
+          "sql_name": {
+            "type": "string",
+            "enum": [
+              "national",
+              "facilities",
+              "generators"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1"
+          },
+          "columns": {
+            "$ref": "#/components/schemas/Columns"
+          },
+          "supported_filters": {
+            "const": [
+              "start_date",
+              "end_date"
+            ]
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/Coverage"
+          }
+        },
+        "required": [
+          "id",
+          "sql_name",
+          "label",
+          "schema_version",
+          "columns",
+          "supported_filters",
+          "coverage"
+        ],
+        "additionalProperties": false
+      },
+      "Catalog": {
+        "type": "object",
+        "properties": {
+          "generation_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "datasets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dataset"
+            }
+          }
+        },
+        "required": [
+          "generation_id",
+          "datasets"
+        ],
+        "additionalProperties": false
+      },
+      "Preview": {
+        "type": "object",
+        "properties": {
+          "dataset": {
+            "type": "string",
+            "enum": [
+              "national",
+              "facilities",
+              "generators"
+            ]
+          },
+          "generation_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "columns": {
+            "$ref": "#/components/schemas/Columns"
+          },
+          "rows": {
+            "$ref": "#/components/schemas/Rows"
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "page_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          }
+        },
+        "required": [
+          "dataset",
+          "generation_id",
+          "columns",
+          "rows",
+          "page_size",
+          "page_cursor",
+          "next_cursor",
+          "has_more",
+          "expires_at"
+        ],
+        "additionalProperties": false
+      },
+      "Limits": {
+        "type": "object",
+        "properties": {
+          "max_rows": {
+            "const": 1000
+          },
+          "max_bytes": {
+            "const": 1048576
+          }
+        },
+        "required": [
+          "max_rows",
+          "max_bytes"
+        ],
+        "additionalProperties": false
+      },
+      "QueryResult": {
+        "type": "object",
+        "properties": {
+          "query_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "generation_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "columns": {
+            "$ref": "#/components/schemas/Columns"
+          },
+          "rows": {
+            "$ref": "#/components/schemas/Rows"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "retained_row_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "total_pages": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "truncation_reason": {
+            "enum": [
+              null,
+              "row_limit",
+              "byte_limit"
+            ]
+          },
+          "limits": {
+            "$ref": "#/components/schemas/Limits"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          }
+        },
+        "required": [
+          "query_id",
+          "generation_id",
+          "columns",
+          "rows",
+          "page",
+          "page_size",
+          "retained_row_count",
+          "total_pages",
+          "has_more",
+          "truncated",
+          "truncation_reason",
+          "limits",
+          "expires_at"
+        ],
+        "additionalProperties": false
+      },
+      "QueryRequest": {
+        "type": "object",
+        "properties": {
+          "sql": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "sql"
+        ],
+        "additionalProperties": false
+      },
+      "RefreshRequest": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "RefreshReceipt": {
+        "type": "object",
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "running",
+              "succeeded",
+              "retained",
+              "failed",
+              "interrupted",
+              "publication_unknown"
+            ]
+          },
+          "effective_interval": {
+            "$ref": "#/components/schemas/Interval"
+          },
+          "status_url": {
+            "type": "string",
+            "pattern": "^/api/refresh/[^/]+$"
+          }
+        },
+        "required": [
+          "run_id",
+          "status",
+          "effective_interval",
+          "status_url"
+        ],
+        "additionalProperties": false
+      },
+      "Quality": {
+        "type": "object",
+        "properties": {
+          "received_rows": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "selected_rows": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "excluded_rows": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "duplicates_collapsed": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "superseded_rows": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "retained_invalid_rows": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "retained_absent_rows": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "carried_outside_interval_rows": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "modeled_rows": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "retained_entire_dataset": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "exclusion_reasons": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "code",
+                "count"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "received_rows",
+          "selected_rows",
+          "excluded_rows",
+          "duplicates_collapsed",
+          "superseded_rows",
+          "retained_invalid_rows",
+          "retained_absent_rows",
+          "carried_outside_interval_rows",
+          "modeled_rows",
+          "retained_entire_dataset",
+          "exclusion_reasons"
+        ],
+        "additionalProperties": false
+      },
+      "RefreshDataset": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "enum": [
+              "national",
+              "facilities",
+              "generators"
+            ]
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "processing",
+              "succeeded",
+              "retained",
+              "failed"
+            ]
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Coverage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quality": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Quality"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "coverage",
+          "quality"
+        ],
+        "additionalProperties": false
+      },
+      "SafeFailure": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "additionalProperties": false
+      },
+      "Publication": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "enum": [
+              "pending",
+              "published",
+              "not_published",
+              "unknown"
+            ]
+          },
+          "generation_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "previous_generation_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "no_publication_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "state",
+          "generation_id",
+          "previous_generation_id",
+          "no_publication_reason"
+        ],
+        "additionalProperties": false
+      },
+      "RefreshRun": {
+        "type": "object",
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "running",
+              "succeeded",
+              "retained",
+              "failed",
+              "interrupted",
+              "publication_unknown"
+            ]
+          },
+          "stage": {
+            "enum": [
+              "queued",
+              "retrieving",
+              "modeling",
+              "persisting",
+              "verifying",
+              "publishing",
+              "finished"
+            ]
+          },
+          "effective_interval": {
+            "$ref": "#/components/schemas/Interval"
+          },
+          "accepted_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "Z$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "Z$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "datasets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RefreshDataset"
+            },
+            "minItems": 3,
+            "maxItems": 3
+          },
+          "publication": {
+            "$ref": "#/components/schemas/Publication"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SafeFailure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "run_id",
+          "status",
+          "stage",
+          "effective_interval",
+          "accepted_at",
+          "started_at",
+          "finished_at",
+          "datasets",
+          "publication",
+          "failure"
+        ],
+        "additionalProperties": false
+      },
+      "LatestRefresh": {
+        "type": "object",
+        "properties": {
+          "run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RefreshRun"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "run"
+        ],
+        "additionalProperties": false
+      },
+      "Error400": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "enum": [
+                  "invalid_request",
+                  "invalid_sql",
+                  "unsupported_sql",
+                  "page_out_of_range",
+                  "page_size_mismatch"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "retry_after_seconds": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3600
+              },
+              "details": {
+                "type": "object",
+                "properties": {
+                  "query_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "expires_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "Z$"
+                  }
+                },
+                "required": [
+                  "query_id",
+                  "expires_at"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "Error401": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "enum": [
+                  "unauthenticated"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "retry_after_seconds": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3600
+              },
+              "details": {
+                "type": "object",
+                "properties": {
+                  "query_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "expires_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "Z$"
+                  }
+                },
+                "required": [
+                  "query_id",
+                  "expires_at"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "Error403": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "enum": [
+                  "forbidden"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "retry_after_seconds": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3600
+              },
+              "details": {
+                "type": "object",
+                "properties": {
+                  "query_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "expires_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "Z$"
+                  }
+                },
+                "required": [
+                  "query_id",
+                  "expires_at"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "Error404": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "enum": [
+                  "dataset_unavailable",
+                  "query_unavailable",
+                  "refresh_unavailable"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "retry_after_seconds": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3600
+              },
+              "details": {
+                "type": "object",
+                "properties": {
+                  "query_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "expires_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "Z$"
+                  }
+                },
+                "required": [
+                  "query_id",
+                  "expires_at"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "Error409": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "enum": [
+                  "refresh_busy",
+                  "idempotency_conflict"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "retry_after_seconds": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3600
+              },
+              "details": {
+                "type": "object",
+                "properties": {
+                  "query_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "expires_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "Z$"
+                  }
+                },
+                "required": [
+                  "query_id",
+                  "expires_at"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "Error410": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "enum": [
+                  "preview_unavailable",
+                  "query_unavailable"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "retry_after_seconds": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3600
+              },
+              "details": {
+                "type": "object",
+                "properties": {
+                  "query_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "expires_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "Z$"
+                  }
+                },
+                "required": [
+                  "query_id",
+                  "expires_at"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "Error422": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "enum": [
+                  "query_resource_limit"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "retry_after_seconds": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3600
+              },
+              "details": {
+                "type": "object",
+                "properties": {
+                  "query_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "expires_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "Z$"
+                  }
+                },
+                "required": [
+                  "query_id",
+                  "expires_at"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "Error429": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "enum": [
+                  "result_capacity_exhausted"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "retry_after_seconds": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3600
+              },
+              "details": {
+                "type": "object",
+                "properties": {
+                  "query_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "expires_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "Z$"
+                  }
+                },
+                "required": [
+                  "query_id",
+                  "expires_at"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "Error503": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "enum": [
+                  "query_busy",
+                  "result_capacity_exhausted",
+                  "data_unavailable",
+                  "service_unavailable"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "retry_after_seconds": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3600
+              },
+              "details": {
+                "type": "object",
+                "properties": {
+                  "query_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "expires_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "Z$"
+                  }
+                },
+                "required": [
+                  "query_id",
+                  "expires_at"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "Error504": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "enum": [
+                  "query_timeout"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "retry_after_seconds": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3600
+              },
+              "details": {
+                "type": "object",
+                "properties": {
+                  "query_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "expires_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "Z$"
+                  }
+                },
+                "required": [
+                  "query_id",
+                  "expires_at"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "Health": {
+        "type": "object",
+        "required": [
+          "status",
+          "service",
+          "checked_at"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok"
+          },
+          "service": {
+            "type": "string",
+            "const": "outage-explorer"
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Session": {
+        "type": "object",
+        "required": [
+          "user",
+          "expires_at",
+          "csrf_token"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "user": {
+            "type": "object",
+            "required": [
+              "id",
+              "email",
+              "role"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "viewer",
+                  "analyst",
+                  "admin"
+                ]
+              }
+            }
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "csrf_token": {
+            "type": "string"
+          }
+        }
+      },
+      "AuthError": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "login_failed",
+                  "invalid_request",
+                  "unauthenticated",
+                  "forbidden",
+                  "service_unavailable"
+                ]
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Current backend origin"
+    }
+  ]
+}

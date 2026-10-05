@@ -74,6 +74,10 @@ def test_application_obeys_import_boundaries():
         ("entrypoints/http/routes/bad.py", "from ....bootstrap import build_http_app"),
         ("entrypoints/http/routes/bad.py", "from ..startup import create_app"),
         ("entrypoints/http/routes/bad.py", "import duckdb"),
+        ("entrypoints/http/routes/bad.py", "import flask_swagger_ui"),
+        ("application/services/bad.py", "import flask_swagger_ui"),
+        ("entrypoints/http/routes/documentation.py", "import boto3"),
+        ("entrypoints/http/routes/documentation.py", "import importlib"),
         (
             "entrypoints/http/routes/access.py",
             "from ....infrastructure.security import RandomSecurityMaterial",

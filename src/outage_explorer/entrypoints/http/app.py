@@ -9,6 +9,7 @@ from outage_explorer.entrypoints.http.data_services import DataServices
 from outage_explorer.entrypoints.http.errors import register_auth_errors
 from outage_explorer.entrypoints.http.routes.access import create_access_blueprint
 from outage_explorer.entrypoints.http.routes.datasets import create_datasets_blueprint
+from outage_explorer.entrypoints.http.routes.documentation import register_documentation
 from outage_explorer.entrypoints.http.routes.health import create_health_blueprint
 from outage_explorer.entrypoints.http.routes.queries import create_queries_blueprint
 from outage_explorer.entrypoints.http.routes.refresh import create_refresh_blueprint
@@ -35,6 +36,10 @@ def create_app(
     app = Flask(__name__, static_folder=None)
     app.config["MAX_CONTENT_LENGTH"] = MAX_BODY_BYTES
     app.config["JSON_SORT_KEYS"] = False
+    register_documentation(
+        app,
+        development_http=auth_transport.development_http if auth_transport else False,
+    )
     app.register_blueprint(create_health_blueprint(health_service))
     if (
         login_service is not None

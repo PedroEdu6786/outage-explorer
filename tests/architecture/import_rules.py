@@ -179,6 +179,11 @@ def allowed_dependency(source: str, target: str) -> bool:
     if source == f"{ROOT}.application.data_payloads" and target == "json.loads":
         return True  # Pure durable-to-public DTO projection; no file readers.
     external = target.split(".")[0]
+    if source == f"{ROOT}.entrypoints.http.routes.documentation" and target in {
+        "json",
+        "flask_swagger_ui.get_swaggerui_blueprint",
+    }:
+        return True  # Packaged transport contract and Swagger UI rendering only.
     if external in {"importlib", "builtins"}:
         return False
     if layer in {"domain", "application"}:
