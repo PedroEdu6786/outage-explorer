@@ -15,12 +15,14 @@ from outage_explorer.application.ports.execution import (
     PreviewRead,
     PreviewRows,
     QueryRead,
+    RecoveryLease,
 )
 from outage_explorer.application.ports.query_results import QueryOutput
+from outage_explorer.infrastructure.worker_runtime.ownership import RecoveryOwner
 
 
 class ReviewedRuntime(Protocol):
-    """Implement only after reviewed Linux denial/limits/kill/reap evidence.
+    """Adapter contract; activation requires reviewed denial/limits/reaping evidence.
 
     Run must enforce the supplied hard limits and immutable approved files.
     Termination must cover the complete worker tree; return only after reaping.
@@ -42,27 +44,40 @@ class VerifiedLauncher:
         runtime: ReviewedRuntime | None = None,
         *,
         evidence: str | None = None,
+        recovery: RecoveryOwner | None = None,
     ) -> None:
         if runtime is not None and not evidence:
             raise ValueError("Reviewed runtime evidence reference required")
         self._bounds, self._runtime = bounds, runtime
         self._slot = Lock()
+        self.recovery = recovery if recovery is not None else RecoveryOwner()
 
     def reserve(self) -> "_Reservation":
         if self._runtime is None:
             raise RuntimeUnavailableError("Reviewed analytical runtime unavailable")
         if not self._slot.acquire(blocking=False):
             raise AnalyticalBusyError("Analytical execution busy")
-        return _Reservation(self._slot, self._runtime, self._bounds)
+        return _Reservation(self._slot, self._runtime, self._bounds, self.recovery)
 
 
 class _Reservation:
     def __init__(
-        self, slot: Lock, runtime: ReviewedRuntime, bounds: ExecutionBounds
+        self,
+        slot: Lock,
+        runtime: ReviewedRuntime,
+        bounds: ExecutionBounds,
+        recovery: RecoveryOwner,
     ) -> None:
         self._slot, self._runtime, self._bounds = slot, runtime, bounds
+        self._recovery = recovery
+        self._handed_off = False
         self._started = monotonic()
         self._closed = False
+
+    def handoff(self, leases: tuple[RecoveryLease, ...]) -> None:
+        if not self._handed_off:
+            self._recovery.retain(self.close, leases)
+            self._handed_off = True
 
     def check_preparation(self) -> None:
         if self._closed or monotonic() - self._started >= min(

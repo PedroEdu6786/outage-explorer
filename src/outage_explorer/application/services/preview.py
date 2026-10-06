@@ -1,5 +1,6 @@
 """Fresh authorization, snapshot-bound keyset reads and complete-row byte bounds."""
 
+from dataclasses import dataclass
 from datetime import date
 
 from outage_explorer.application.errors import (
@@ -19,6 +20,18 @@ from outage_explorer.application.ports.tabular_encoding import TabularEncoding
 from outage_explorer.application.services.access import AccessService
 from outage_explorer.domain.access import AccessOperation, AnalyticalGrain
 from outage_explorer.domain.datasets import PUBLIC_DATASETS
+
+
+@dataclass
+class _ActivePreviewLease:
+    sequences: PreviewSequences
+    sequence: PreviewSequence
+    _closed: bool = False
+
+    def close(self) -> None:
+        if not self._closed:
+            self.sequences.release(self.sequence)
+            self._closed = True
 
 
 class PreviewService:
@@ -168,6 +181,14 @@ class PreviewService:
             # An unreaped worker can still use its inputs. Retain both capacity
             # and the active pin until the runtime supervisor proves termination.
             if reservation is not None:
-                reservation.close()
+                try:
+                    reservation.close()
+                except BaseException:
+                    reservation.handoff(
+                        ()
+                        if sequence is None
+                        else (_ActivePreviewLease(self._sequences, sequence),)
+                    )
+                    raise
             if sequence is not None:
                 self._sequences.release(sequence)

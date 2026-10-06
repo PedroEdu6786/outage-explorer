@@ -516,8 +516,16 @@ def test_unreaped_worker_keeps_active_preview_pin_through_expiry():
     clock.value += timedelta(minutes=15)
     sequences.cleanup()
     inputs.close.assert_not_called()
+    assert launcher.recovery.pending == 1
+    launcher.recovery.reconcile()
+    inputs.close.assert_not_called()
     with pytest.raises(AnalyticalBusyError):
         launcher.reserve()
+    runtime.terminate_and_reap.side_effect = None
+    launcher.recovery.reconcile()
+    inputs.close.assert_called_once()
+    assert launcher.recovery.pending == 0
+    launcher.reserve().close()
 
 
 def test_missing_runtime_denies_before_publication_or_preparation():

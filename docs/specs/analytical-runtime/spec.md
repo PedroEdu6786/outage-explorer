@@ -1,6 +1,6 @@
 # Spec: Docker analytical runtime
 
-> Status: Phase 1 controlled profile/transport verified; dependent implementation and user-owned runtime validation pending · Slug: analytical-runtime
+> Status: Phases 1–2 controlled profile/transport/lifecycle verified; composition and user-owned runtime validation pending · Slug: analytical-runtime
 
 ## Problem
 

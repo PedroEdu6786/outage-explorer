@@ -320,3 +320,32 @@ all measured memory/CPU/process/storage/cache/result/transport/deadline choices,
 supported daemon/filesystem/quota backend, parser wall-clock enforcement and
 actual evidence validation remain open for dependent phases. No Docker execution,
 T1.7 validation, API enablement, deployment or publication occurred in Phase 1.
+
+## Phase 2 implementation record
+
+`inputs.py` makes bounded private copies using directory-descriptor traversal,
+no-follow regular-file opens, pre/post identity checks, streaming digest/byte
+verification and Parquet row identity; exact mode-0444 digest files are installed
+atomically beneath host-owned mode-0700 execution directories. No hardlinks or
+whole-cache binds are used.
+
+`docker.py` implements the proposed argument-array CLI control with a fixed local
+endpoint/image, minimal host-control environment, concurrent independently bounded
+streams and monotonic deadlines. Container identity/owner/state inspection,
+kill/wait/removal and synthetic controller process-group reaping are separate
+from worker output validation. An unreaped host controller remains strongly owned
+and blocks further control until explicit retry. Ambiguous removal can reconcile
+absence only after prior death proof; absent ambiguous creation remains unresolved.
+
+`ownership.py` provides an explicitly opened private owner lock and bounded,
+fsynced single-worker creation ledger. The launcher's recovery owner strongly
+retains the reservation and application leases on handoff. SQL pins/result
+reservations and the idempotent active-preview lease are released only after
+successful runtime reconciliation. Automatic start/cleanup/orphan orchestration
+remains Phase 3 work.
+
+The concrete candidate backend uses bounded tmpfs for smoke work only. The
+`quota-disk` backend fails closed rather than claiming disk-backed spill quota
+enforcement without a selected implementation. No real Docker execution or
+readiness was established; supported platforms, storage enforcement, measured
+budgets and evidence-review decisions remain open for their later gates.

@@ -1,6 +1,6 @@
 # Tasks: Docker analytical runtime
 
-> Status: Phase 1 implemented and controlled checkpoint passed; Phases 2–5 pending · Slug: analytical-runtime · Plan: [plan.md](plan.md) · Spec: [spec.md](spec.md)
+> Status: Phases 1–2 implemented and controlled checkpoints passed; Phases 3–5 pending · Slug: analytical-runtime · Plan: [plan.md](plan.md) · Spec: [spec.md](spec.md)
 
 The original task list was planning-only; Phase 1 implementation was explicitly
 authorized on October 5, 2026. Existing
@@ -51,19 +51,19 @@ attempt was interrupted after 202 passed/19 skipped/9 fixture errors because
 
 ## Phase 2: Inputs, Docker lifecycle and recoverable ownership
 
-- [ ] **T2.1** Implement bounded private copy/verify/atomic staging in proposed
+- [x] **T2.1** Implement bounded private copy/verify/atomic staging in proposed
   `src/outage_explorer/infrastructure/worker_runtime/inputs.py`, adapting
   `src/outage_explorer/infrastructure/local_cache/modeled.py` only as needed for
   owned teardown. Reject symlink/nonregular/replacement races; bind exact staged
   digest files read-only, enforce independent bytes/files/deadlines, test UID
   readability without cache/raw siblings. Depends on T1.C. (FR1–FR2, FR12, TR2)
-- [ ] **T2.2** Implement bounded Docker control and `ReviewedRuntime` in proposed
+- [x] **T2.2** Implement bounded Docker control and `ReviewedRuntime` in proposed
   `src/outage_explorer/infrastructure/worker_runtime/docker.py`; structured
   create/start/attach, concurrent bounded I/O, minimal environment, strict local
   daemon, immutable image, isolation flags, all deadlines, cancellation,
   kill/wait/inspect/remove and safe mapping. Track ambiguous creation and do not
   release slot/files on uncertain liveness. Depends on T2.1. (FR3–FR6, TR2–TR3)
-- [ ] **T2.3** Add explicit recovery-lease handoff to
+- [x] **T2.3** Add explicit recovery-lease handoff to
   `src/outage_explorer/application/ports/execution.py`,
   `src/outage_explorer/application/services/queries.py` and `preview.py`; create
   proposed `src/outage_explorer/infrastructure/worker_runtime/ownership.py` for
@@ -72,7 +72,7 @@ attempt was interrupted after 202 passed/19 skipped/9 fixture errors because
   application ports; retain SQL pins/reservations or preview active lease on
   failed reaping without relying on garbage collection. Depends on T2.2.
   (FR1, FR4–FR5, FR9–FR12)
-- [ ] **T2.C** Add proposed `tests/unit/test_docker_runtime.py` and
+- [x] **T2.C** Add proposed `tests/unit/test_docker_runtime.py` and
   `tests/integration/test_analytical_input_staging.py`; extend
   `tests/integration/test_query_lifecycle.py` and `test_catalog_preview.py` for
   failed reap/retry, expiry with active preview lease, no release/download on
@@ -80,6 +80,34 @@ attempt was interrupted after 202 passed/19 skipped/9 fixture errors because
   crash/OOM/cancel/timeouts and death-vs-removal distinction. Run existing
   lifecycle suites and static/architecture checks. Depends on T2.1–T2.3.
   Gate: controlled AC1–AC4 hold; no real isolation claim. (AC1–AC4)
+
+### Phase 2 checkpoint evidence (October 5, 2026)
+
+Controlled AC1–AC4 checkpoint passed: 218 staging, Docker-control, strict decoder,
+profile and architecture tests, plus 67 existing/extended catalog, preview, SQL
+and result lifecycle tests against the verified disposable PostgreSQL cluster
+(`/private/tmp/outage-access-pg/data`, explicit loopback port 5432). The historical
+55439 port was unavailable; a read-only server data-directory check established
+which existing service was safe to use. No cluster was provisioned or repaired.
+Ruff lint/format and mypy passed.
+
+Filesystem fixtures cover digest/size/row validation, nonregular and symlink
+parents, replacement races, independent input limits, exact read-only file
+mount arguments and private staging. Fake Docker responses plus real synthetic
+host-control subprocesses cover independently bounded stdin/stdout/stderr,
+blocked inherited pipes, cancellation, timeout, crash/OOM/protocol faults,
+ambiguous creation/start/removal, retained unreaped controllers and cleanup
+failures. SQL pins/result reservations and active preview leases survive failed
+reaping and expiry, then release on explicit successful reconciliation; busy and
+role-denial regressions preserve admission/authorization ordering.
+
+These are controlled checks, **not** real Docker denial/termination evidence.
+No Docker command or analytical API enablement ran. The candidate `tmpfs-smoke`
+backend is implemented; `quota-disk` deliberately fails closed until its storage
+implementation and evidence are selected. Ambiguous creation with no proven
+container identity remains quarantined rather than treating absence/CLI failure
+as proof of death. Autonomous recovery/startup composition belongs to Phase 3;
+real AC2/AC4, AC7 and user-owned T1.7 remain open.
 
 ## Phase 3: Explicit composition and local supervision
 

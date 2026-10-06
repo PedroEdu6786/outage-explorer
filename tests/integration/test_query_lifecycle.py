@@ -324,3 +324,69 @@ def test_missing_tampered_spool_unavailable_without_execution(queries, system):
     with pytest.raises(QueryUnavailableError):
         service.page(token, result["query_id"])
     assert len(runtime.calls) == 1
+
+
+def test_unreaped_sql_explicitly_hands_off_all_pins_and_result_reservation():
+    from outage_explorer.application.ports.execution import QueryRead
+    from outage_explorer.application.services.queries import QueryService
+    from outage_explorer.infrastructure.sql_validation.inspection import (
+        DuckdbSqlInspector,
+    )
+
+    access, publications, inputs, results = Mock(), Mock(), Mock(), Mock()
+    access.authorize.return_value.principal.id = "user"
+    pin = inputs.prepare.return_value
+    pin.files = ()
+    runtime = Mock()
+    runtime.query.return_value = output()
+    runtime.terminate_and_reap.side_effect = RuntimeUnavailableError(
+        "controlled outage"
+    )
+    launcher = VerifiedLauncher(EXECUTION, runtime, evidence="controlled only")
+    service = QueryService(
+        access,
+        DuckdbSqlInspector(max_sql_bytes=65536, max_nodes=10000, max_depth=64),
+        publications,
+        inputs,
+        launcher,
+        results,
+    )
+    with pytest.raises(RuntimeUnavailableError):
+        service.execute("token", "SELECT * FROM national")
+    assert isinstance(runtime.query.call_args.args[0], QueryRead)
+    assert launcher.recovery.pending == 1
+    pin.close.assert_not_called()
+    results.reserve.return_value.close.assert_not_called()
+    launcher.recovery.reconcile()
+    pin.close.assert_not_called()
+    runtime.terminate_and_reap.side_effect = None
+    launcher.recovery.reconcile()
+    pin.close.assert_called_once()
+    results.reserve.return_value.close.assert_called_once()
+    assert launcher.recovery.pending == 0
+    launcher.reserve().close()
+
+
+@pytest.mark.parametrize("sql", ["SELECT 42", "SELECT * FROM national"])
+def test_denied_application_authorization_before_results_inputs_or_runtime(sql):
+    from outage_explorer.application.services.queries import QueryService
+    from outage_explorer.infrastructure.sql_validation.inspection import (
+        DuckdbSqlInspector,
+    )
+
+    access, publications, inputs, execution, results = (Mock() for _ in range(5))
+    access.authorize.side_effect = ForbiddenError("controlled denial")
+    service = QueryService(
+        access,
+        DuckdbSqlInspector(max_sql_bytes=65536, max_nodes=10000, max_depth=64),
+        publications,
+        inputs,
+        execution,
+        results,
+    )
+    with pytest.raises(ForbiddenError):
+        service.execute("token", sql)
+    publications.active_generation.assert_not_called()
+    inputs.prepare.assert_not_called()
+    execution.reserve.assert_not_called()
+    results.reserve.assert_not_called()

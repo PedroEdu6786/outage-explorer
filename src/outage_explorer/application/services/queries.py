@@ -87,7 +87,11 @@ class QueryService:
             # If reaping fails, hold pins/capacity rather than expose files to a
             # still-live worker. The supervisor must resolve uncertain liveness.
             if execution is not None:
-                execution.close()
+                try:
+                    execution.close()
+                except BaseException:
+                    execution.handoff((*pins, retained))
+                    raise
             for pin in pins:
                 pin.close()
             retained.close()

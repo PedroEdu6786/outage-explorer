@@ -106,3 +106,26 @@ Unstarted resources, missing evidence and `tmpfs-smoke` remain unavailable.
 alone does not implement or prove a quota. Phase 3 must verify readiness in startup,
 and Phase 4 must supply/review actual denial, termination, storage and representative
 measurement evidence. Phase 1 has not supplied a Docker launcher or enabled HTTP.
+
+### Controlled Docker adapter implementation
+
+Analytical-runtime Phase 2 supplies `DockerRuntime`, `BoundedDockerControl`,
+private input staging and an explicitly opened `OwnershipLedger`. Construction
+starts no Docker operation. The adapter implements the existing `ReviewedRuntime`
+port; implementing that port does not establish reviewed readiness or inject it
+into the product API. Serving-process composition is still Phase 3.
+
+Inputs are copied/verified into private execution directories and each exact
+digest file is bound read-only. The fixed image receives no request-selected
+image, environment, directory mounts or network. The CLI uses explicit local
+`--host` arguments, no shell, and independently bounded concurrent streams.
+Creation intent is persisted before Docker creation. Recovery preserves the
+single admission slot, staging and application leases through unconfirmed death,
+removal or cleanup; only confirmed cleanup permits reuse. The supervisor will
+invoke the explicit recovery owner rather than relying on garbage collection.
+
+Only the candidate `tmpfs-smoke` backend is implemented. `quota-disk` returns
+safe unavailable until a supported disk-backed quota implementation is selected
+and validated; it never falls back to tmpfs or unrestricted disk. These adapter
+and controlled-test changes do not close real isolation/termination evidence,
+measured budgets, user-owned T1.7 or the separate API-enablement gate.
