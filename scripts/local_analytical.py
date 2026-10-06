@@ -23,6 +23,24 @@ ROOT = Path(__file__).resolve().parents[1]
 SSH = ["colima", "ssh", "--profile", "outage-runtime", "--"]
 PYTHON = "/opt/outage-runtime-validation/.venv/bin/python"
 RUNTIME = "/run/outage-api"
+UNIT = "outage-api-local"
+# The guest service is transient: stopping it unloads the unit, so it must be
+# recreated with the same properties it was activated with.
+UNIT_COMMAND = [
+    "sudo",
+    "systemd-run",
+    f"--unit={UNIT}",
+    "--property=User=65534",
+    "--property=Group=65534",
+    "--property=SupplementaryGroups=991",
+    "--property=WorkingDirectory=/opt/outage-runtime-validation",
+    "--property=UMask=0077",
+    "--property=KillSignal=SIGINT",
+    "--property=TimeoutStopSec=30",
+    "--property=KillMode=control-group",
+    PYTHON,
+    f"{RUNTIME}/start.py",
+]
 
 # Credential-process stdout is consumed privately by the SDK, never by our logs.
 READER = """import json, sys
@@ -75,6 +93,15 @@ def export_credentials(profiles):
                 raise ValueError("Local AWS login credentials expired")
         documents[profile] = value
     return documents
+
+
+def start_service():
+    """Restart the transient guest unit, creating it first if it was stopped."""
+    state = run(SSH + ["systemctl", "show", UNIT, "-p", "LoadState", "--value"])
+    if state.decode().strip() == "not-found":
+        run(SSH + UNIT_COMMAND)
+    else:
+        run(SSH + ["sudo", "systemctl", "restart", UNIT])
 
 
 def credential_config(profiles):
@@ -140,7 +167,7 @@ def main():
         try:
             config = credential_config(profiles)
             install(export_credentials(profiles), config)
-            run(SSH + ["sudo", "systemctl", "restart", "outage-api-local"])
+            start_service()
             started = True
             print(
                 "Local API: http://localhost:8000; credential renewal active. Ctrl+C stops the API.",

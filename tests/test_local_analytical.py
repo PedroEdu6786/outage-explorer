@@ -92,3 +92,50 @@ def test_cli_failures_do_not_expose_credential_diagnostics(monkeypatch):
     with pytest.raises(RuntimeError) as error:
         local.run(["aws"])
     assert "secret" not in str(error.value)
+
+
+@pytest.mark.parametrize(
+    "state,expected",
+    [
+        ("loaded", ["sudo", "systemctl", "restart", "outage-api-local"]),
+        ("not-found", None),
+    ],
+)
+def test_service_is_restarted_or_recreated_after_a_stop(monkeypatch, state, expected):
+    calls = []
+
+    def fake(arguments, **kwargs):
+        calls.append(arguments[len(local.SSH) :])
+        return state.encode() if "show" in arguments else b""
+
+    monkeypatch.setattr(local, "run", fake)
+    local.start_service()
+    command = calls[-1]
+    if expected is not None:
+        assert command == expected
+    else:
+        assert command[:3] == ["sudo", "systemd-run", "--unit=outage-api-local"]
+        assert command[-2:] == [local.PYTHON, "/run/outage-api/start.py"]
+        assert "--property=User=65534" in command
+        assert "--property=SupplementaryGroups=991" in command
+
+
+def test_worker_launcher_loads_env_and_defaults_private_staging(tmp_path, monkeypatch):
+    spec = importlib.util.spec_from_file_location(
+        "run_worker", Path(__file__).parents[1] / "scripts/run_worker.py"
+    )
+    assert spec is not None and spec.loader is not None
+    worker = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(worker)
+    (tmp_path / ".env").write_text(
+        "EIA_API_KEY=from-file\nCOGNITO_OAUTH_SCOPES=a b c\n"
+    )
+    monkeypatch.setattr(worker, "ROOT", tmp_path)
+    monkeypatch.delenv("OUTAGE_REFRESH_STAGING", raising=False)
+    monkeypatch.setenv("EIA_API_KEY", "from-process")
+    env = worker.environment()
+    assert env["EIA_API_KEY"] == "from-process"  # Explicit environment wins.
+    assert env["COGNITO_OAUTH_SCOPES"] == "a b c"
+    assert env["OUTAGE_REFRESH_STAGING"].endswith("data/refresh-local")
+    monkeypatch.setenv("OUTAGE_REFRESH_STAGING", "/custom")
+    assert worker.environment()["OUTAGE_REFRESH_STAGING"] == "/custom"

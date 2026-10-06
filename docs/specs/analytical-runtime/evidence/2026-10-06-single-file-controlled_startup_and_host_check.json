@@ -1,0 +1,37 @@
+{
+ "image_id": "sha256:f507f62cbe6edd79c97e7620c5de2aa242ade4f0d41ad03259a51b4ad7b7c9df",
+ "note": "Report files are on the Colima guest under owned/validation-reports (16:03 batch); a 15:56 batch from the same profile is a setup failure (validation roots not empty) and is not evidence.",
+ "profile_identity": "ca719644341cc5d77b6ef3e56e111a587843074254ff2eabd5d405cd3835fae8",
+ "recorded_on": "2026-10-06",
+ "reports": [
+  {
+   "gates": {
+    "cleanup": "passed",
+    "disk_quota": "passed",
+    "disk_spill_readiness_requires_supported_backend": "passed",
+    "identity": "passed"
+   },
+   "report_file": "disk_spill_readiness_requires_supported_backend-da12ec66c0a94f688d0b21ed8f2d8bd1.json",
+   "report_sha256": "d1d1ae2483fe8737c7e68851f2e874401dc56c936225ebca8d6ca661e0362f4b",
+   "test": "disk_spill_readiness_requires_supported_backend"
+  },
+  {
+   "gates": {
+    "cleanup": "passed",
+    "disk_quota": "not_run",
+    "identity": "passed",
+    "worker_protocol": "passed",
+    "worker_protocol_and_canonical_output": "passed"
+   },
+   "report_file": "worker_protocol_and_canonical_output-441ae26e6571475a879bfbc455a6561b.json",
+   "report_sha256": "7cb3ba79cd5a62a8bef2cbce47b88fb6ea06ce0fb7028a171f2c0a6df4fc9018",
+   "test": "worker_protocol_and_canonical_output"
+  }
+ ],
+ "result": "19 passed, 1 deselected (measurement test)",
+ "review_status": "unreviewed",
+ "run": "tests/acceptance/test_query_runtime.py -m runtime_docker via native-linux-validation/run-isolation.sh",
+ "schema": 1,
+ "scope": "controlled_startup_and_host_check",
+ "source_commit": "b5e12e2"
+}

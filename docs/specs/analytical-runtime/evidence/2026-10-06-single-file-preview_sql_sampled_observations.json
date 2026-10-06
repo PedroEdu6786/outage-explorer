@@ -1,0 +1,15 @@
+{
+ "image_id": "sha256:f507f62cbe6edd79c97e7620c5de2aa242ade4f0d41ad03259a51b4ad7b7c9df",
+ "note": "Report files are on the Colima guest under owned/validation-reports (16:03 batch); a 15:56 batch from the same profile is a setup failure (validation roots not empty) and is not evidence.",
+ "profile_identity": "ca719644341cc5d77b6ef3e56e111a587843074254ff2eabd5d405cd3835fae8",
+ "reason": "Representative measurements need a published generation in the new single-file layout; none exists yet. Per ADR-0056, unperformed checks remain open evidence rather than startup blockers.",
+ "recorded_on": "2026-10-06",
+ "reports": [],
+ "result": "19 passed, 1 deselected (measurement test)",
+ "review_status": "unreviewed",
+ "run": "tests/acceptance/test_query_runtime.py -m runtime_docker via native-linux-validation/run-isolation.sh",
+ "schema": 1,
+ "scope": "preview_sql_sampled_observations",
+ "source_commit": "b5e12e2",
+ "status": "not_run"
+}

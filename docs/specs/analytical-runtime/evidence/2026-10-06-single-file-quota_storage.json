@@ -1,0 +1,54 @@
+{
+ "cleanup_after_run": {
+  "cache_entries": 0,
+  "owned_containers": 0,
+  "results_entries": 0,
+  "spill_entries": "only .quota.lock",
+  "staging_entries": 0
+ },
+ "image_id": "sha256:f507f62cbe6edd79c97e7620c5de2aa242ade4f0d41ad03259a51b4ad7b7c9df",
+ "note": "Report files are on the Colima guest under owned/validation-reports (16:03 batch); a 15:56 batch from the same profile is a setup failure (validation roots not empty) and is not evidence.",
+ "profile_identity": "ca719644341cc5d77b6ef3e56e111a587843074254ff2eabd5d405cd3835fae8",
+ "recorded_on": "2026-10-06",
+ "reports": [
+  {
+   "gates": {
+    "cleanup": "passed",
+    "cpu_quota_throttles_busy_children": "passed",
+    "disk_quota": "not_run",
+    "identity": "passed"
+   },
+   "report_file": "cpu_quota_throttles_busy_children-84dad4af6fca49c7b064c4a4697f252d.json",
+   "report_sha256": "b65363ca163ecdf6e933af3ca841ad6e3e043d7db006e07c9df8071ee13e8540",
+   "test": "cpu_quota_throttles_busy_children"
+  },
+  {
+   "gates": {
+    "cleanup": "passed",
+    "disk_quota": "not_run",
+    "identity": "passed",
+    "memory_quota_enforcement": "passed"
+   },
+   "report_file": "memory_quota_enforcement-068749d4fc694db28a209743cea00d43.json",
+   "report_sha256": "e7502e4c29b265a9ada7f372711e39cd14f84bacb0d9674b6bcdfb5a865fc13d",
+   "test": "memory_quota_enforcement"
+  },
+  {
+   "gates": {
+    "cleanup": "passed",
+    "disk_quota": "not_run",
+    "identity": "passed",
+    "temporary_quota_enforcement": "passed"
+   },
+   "report_file": "temporary_quota_enforcement-c4c2ed13e4cc45cb8403148cadda4c14.json",
+   "report_sha256": "78cf09d97205d429355db761f80ab367f229c48c00747f95bc447dc61ce9ed8e",
+   "test": "temporary_quota_enforcement"
+  }
+ ],
+ "result": "19 passed, 1 deselected (measurement test)",
+ "review_status": "unreviewed",
+ "run": "tests/acceptance/test_query_runtime.py -m runtime_docker via native-linux-validation/run-isolation.sh",
+ "schema": 1,
+ "scope": "quota_storage",
+ "source_commit": "b5e12e2"
+}

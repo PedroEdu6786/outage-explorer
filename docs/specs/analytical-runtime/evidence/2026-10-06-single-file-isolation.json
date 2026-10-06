@@ -1,0 +1,47 @@
+{
+ "image_id": "sha256:f507f62cbe6edd79c97e7620c5de2aa242ade4f0d41ad03259a51b4ad7b7c9df",
+ "note": "Report files are on the Colima guest under owned/validation-reports (16:03 batch); a 15:56 batch from the same profile is a setup failure (validation roots not empty) and is not evidence.",
+ "profile_identity": "ca719644341cc5d77b6ef3e56e111a587843074254ff2eabd5d405cd3835fae8",
+ "recorded_on": "2026-10-06",
+ "reports": [
+  {
+   "gates": {
+    "cleanup": "passed",
+    "cpu_memory_process_temp_policy": "passed",
+    "disk_quota": "not_run",
+    "identity": "passed"
+   },
+   "report_file": "cpu_memory_process_temp_policy-52bfc2ac8be6496c968cd3c365d00c0c.json",
+   "report_sha256": "c4591eb692f59c180a7799ae093b59c7735cf5e37c9925a012c9743ecd6f568f",
+   "test": "cpu_memory_process_temp_policy"
+  },
+  {
+   "gates": {
+    "cleanup": "passed",
+    "disk_quota": "not_run",
+    "identity": "passed",
+    "namespace_network_mount_env_denial": "passed"
+   },
+   "report_file": "namespace_network_mount_env_denial-f6c2d5f7d53e4df8ade3dd59d7f13b71.json",
+   "report_sha256": "7b97c656c94d88a48bde7bd93c77102c9f96cca3c9787f7ca1e6450b437af46c",
+   "test": "namespace_network_mount_env_denial"
+  },
+  {
+   "gates": {
+    "cleanup": "passed",
+    "disk_quota": "not_run",
+    "identity": "passed",
+    "source_replacement_cannot_mutate_staged_input": "passed"
+   },
+   "report_file": "source_replacement_cannot_mutate_staged_input-260ebe3588334755baef8d9cac354281.json",
+   "report_sha256": "c75ad03ab3710e80dcda3bc027f9a82852af39a05824c7c88dced308e3237abf",
+   "test": "source_replacement_cannot_mutate_staged_input"
+  }
+ ],
+ "result": "19 passed, 1 deselected (measurement test)",
+ "review_status": "unreviewed",
+ "run": "tests/acceptance/test_query_runtime.py -m runtime_docker via native-linux-validation/run-isolation.sh",
+ "schema": 1,
+ "scope": "isolation",
+ "source_commit": "b5e12e2"
+}

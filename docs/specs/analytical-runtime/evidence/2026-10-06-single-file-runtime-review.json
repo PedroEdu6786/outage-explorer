@@ -1,0 +1,40 @@
+{
+ "acceptance_scope": "local-preview-sql",
+ "deferred_full_checkpoints": [
+  "T4.3",
+  "T4.C",
+  "data-api T1.7",
+  "data-api T1.C"
+ ],
+ "image_id": "sha256:f507f62cbe6edd79c97e7620c5de2aa242ade4f0d41ad03259a51b4ad7b7c9df",
+ "installed": {
+  "path_on_guest": "/run/outage-api/runtime.json",
+  "previous_record_backup": "/run/outage-api/runtime.json.pre-single-file-20261006"
+ },
+ "measurement_status": "not_run: deferred until a published single-file generation exists (ADR-0056)",
+ "profile_identity": "ca719644341cc5d77b6ef3e56e111a587843074254ff2eabd5d405cd3835fae8",
+ "reason": "ADR-0057 changed the worker image (single-file public inputs, DuckDB views); the profile identity embeds the image ID.",
+ "reports": {
+  "controlled_report": "f921980e66817520af6cee9a5d158619bb5d3c6e95bf1142571ec72aab009a28",
+  "isolation_report": "922036df60b4cd83cac2a58a3217f02aca05ba22c523bc8a99914cfb85a702d2",
+  "measurement_report": "e985e551f386fc3740bc028694768f7c0d2ec33e564fe803f0e7a1b15b124e65",
+  "storage_report": "c19db74720ec20af89505f6c1c655e800192d138bad945b65ff832d2b87e933a",
+  "termination_report": "53a09394b2b4b4eab9b0c8ad6f80cec38f51c8704a5bfd8772742b1fe3db60ab"
+ },
+ "review_status": "approved_local_preview_sql",
+ "reviewed_on": "2026-10-06",
+ "reviewer": "user",
+ "schema": 1,
+ "side_effects": [
+  "outage-api-local.service was stopped; the old image sha256:1ee90c05... no longer exists in the guest",
+  "old candidate.json kept as candidate-pre-single-file-20261006.json"
+ ],
+ "smoke_check": {
+  "api_started_on_new_image": true,
+  "authenticated_http_functional_acceptance": "not performed",
+  "health_http_status": 200,
+  "refresh_started": false
+ },
+ "source_commit": "b5e12e2",
+ "supersedes_profile_identity": "a227d729593bcff61f301df141e2479301c7cf9fbf91ea0ebe8891c33611f57f"
+}

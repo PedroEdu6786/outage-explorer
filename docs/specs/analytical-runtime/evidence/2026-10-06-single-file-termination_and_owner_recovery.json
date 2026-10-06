@@ -1,0 +1,135 @@
+{
+ "image_id": "sha256:f507f62cbe6edd79c97e7620c5de2aa242ade4f0d41ad03259a51b4ad7b7c9df",
+ "note": "Report files are on the Colima guest under owned/validation-reports (16:03 batch); a 15:56 batch from the same profile is a setup failure (validation roots not empty) and is not evidence.",
+ "profile_identity": "ca719644341cc5d77b6ef3e56e111a587843074254ff2eabd5d405cd3835fae8",
+ "recorded_on": "2026-10-06",
+ "reports": [
+  {
+   "gates": {
+    "ambiguous_create_and_daemon_failure": "passed",
+    "cleanup": "passed",
+    "disk_quota": "not_run",
+    "identity": "passed"
+   },
+   "report_file": "ambiguous_create_and_daemon_failure-d3e7c25aac2f4b51a7ce02a1cd696728.json",
+   "report_sha256": "28065e849405757250d9d4a01b4024cfd2cf5434430c13ab209fd45fcfff120d",
+   "test": "ambiguous_create_and_daemon_failure"
+  },
+  {
+   "gates": {
+    "cleanup": "passed",
+    "deadline_crash_io_cleanup": "passed",
+    "disk_quota": "not_run",
+    "identity": "passed"
+   },
+   "report_file": "deadline_crash_io_cleanup-4735a6ebfd784a2bbe20d72203fd3af4.json",
+   "report_sha256": "4b779ad8cc2c1a05f4953fd89e6caadab9ac668f5593aaff24fae53b0774a66d",
+   "test": "deadline_crash_io_cleanup"
+  },
+  {
+   "gates": {
+    "cleanup": "passed",
+    "deadline_crash_io_cleanup": "passed",
+    "disk_quota": "not_run",
+    "identity": "passed"
+   },
+   "report_file": "deadline_crash_io_cleanup-60bbfdd842b2405dabed0a9c8a1e41f7.json",
+   "report_sha256": "4b779ad8cc2c1a05f4953fd89e6caadab9ac668f5593aaff24fae53b0774a66d",
+   "test": "deadline_crash_io_cleanup"
+  },
+  {
+   "gates": {
+    "cleanup": "passed",
+    "deadline_crash_io_cleanup": "passed",
+    "disk_quota": "not_run",
+    "identity": "passed"
+   },
+   "report_file": "deadline_crash_io_cleanup-663b23667fca42299b332ef8c3b11172.json",
+   "report_sha256": "4b779ad8cc2c1a05f4953fd89e6caadab9ac668f5593aaff24fae53b0774a66d",
+   "test": "deadline_crash_io_cleanup"
+  },
+  {
+   "gates": {
+    "cleanup": "passed",
+    "deadline_crash_io_cleanup": "passed",
+    "disk_quota": "not_run",
+    "identity": "passed"
+   },
+   "report_file": "deadline_crash_io_cleanup-6fd1e6f87493414ea592efe7fcf98340.json",
+   "report_sha256": "4b779ad8cc2c1a05f4953fd89e6caadab9ac668f5593aaff24fae53b0774a66d",
+   "test": "deadline_crash_io_cleanup"
+  },
+  {
+   "gates": {
+    "cleanup": "passed",
+    "deadline_crash_io_cleanup": "passed",
+    "disk_quota": "not_run",
+    "identity": "passed"
+   },
+   "report_file": "deadline_crash_io_cleanup-a335b6fbef874b549b964721279b11c1.json",
+   "report_sha256": "4b779ad8cc2c1a05f4953fd89e6caadab9ac668f5593aaff24fae53b0774a66d",
+   "test": "deadline_crash_io_cleanup"
+  },
+  {
+   "gates": {
+    "cleanup": "passed",
+    "deadline_crash_io_cleanup": "passed",
+    "disk_quota": "not_run",
+    "identity": "passed"
+   },
+   "report_file": "deadline_crash_io_cleanup-f635372f2d214029af02d3dcc88ac07f.json",
+   "report_sha256": "4b779ad8cc2c1a05f4953fd89e6caadab9ac668f5593aaff24fae53b0774a66d",
+   "test": "deadline_crash_io_cleanup"
+  },
+  {
+   "gates": {
+    "cleanup": "passed",
+    "deadline_crash_io_cleanup": "passed",
+    "disk_quota": "not_run",
+    "identity": "passed"
+   },
+   "report_file": "deadline_crash_io_cleanup-f87303ccd13749df894855a1eb071049.json",
+   "report_sha256": "4b779ad8cc2c1a05f4953fd89e6caadab9ac668f5593aaff24fae53b0774a66d",
+   "test": "deadline_crash_io_cleanup"
+  },
+  {
+   "gates": {
+    "cleanup": "passed",
+    "disk_quota": "not_run",
+    "failed_reap_preserves_slot_pins_and_recovers": "passed",
+    "identity": "passed"
+   },
+   "report_file": "failed_reap_preserves_slot_pins_and_recovers-19fb27e190fa44c2bf14230fa04ba4d1.json",
+   "report_sha256": "b7034668c7436ea4678196f317d1080367d90aae01b30f4ccf14d100100c39f1",
+   "test": "failed_reap_preserves_slot_pins_and_recovers"
+  },
+  {
+   "gates": {
+    "cleanup": "passed",
+    "disk_quota": "not_run",
+    "identity": "passed",
+    "process_quota_and_descendant_reap": "passed"
+   },
+   "report_file": "process_quota_and_descendant_reap-53a6666d777f463e978dacb0a189f27e.json",
+   "report_sha256": "0c6afb46e90bfbea65699d27c7cb60533a32affd0e476d0658e63fe0b15bc4f8",
+   "test": "process_quota_and_descendant_reap"
+  },
+  {
+   "gates": {
+    "cleanup": "passed",
+    "disk_quota": "not_run",
+    "identity": "passed",
+    "restart_reconciles_owned_container": "passed"
+   },
+   "report_file": "restart_reconciles_owned_container-8aecd5ba4ac74596a550112cab421af6.json",
+   "report_sha256": "7faab1f38b1abd5c09365fbb1cb82e644fbdfc0ba22e9c9e8a6255290a4ec71f",
+   "test": "restart_reconciles_owned_container"
+  }
+ ],
+ "result": "19 passed, 1 deselected (measurement test)",
+ "review_status": "unreviewed",
+ "run": "tests/acceptance/test_query_runtime.py -m runtime_docker via native-linux-validation/run-isolation.sh",
+ "schema": 1,
+ "scope": "termination_and_owner_recovery",
+ "source_commit": "b5e12e2"
+}

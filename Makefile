@@ -18,7 +18,7 @@ PRIOR ?=
 STAGING ?= $(if $(strip $(CONFIG)),,data/connector-local)
 shell_quote = '$(subst ','"'"',$(1))'
 
-.PHONY: help setup run run-analytical stop-analytical health connector connector-help test check check-env check-test-env test-postgres test-postgres-stop test-browser-setup
+.PHONY: help setup run run-analytical stop-analytical run-worker health connector connector-help test check check-env check-test-env test-postgres test-postgres-stop test-browser-setup
 
 help:
 	@printf '%s\n' \
@@ -26,6 +26,7 @@ help:
 	  'make run     Start Flask without preview/SQL execution resources' \
 	  'make run-analytical   Serve the configured Colima API with AWS credential renewal' \
 	  'make stop-analytical  Stop the configured Colima API' \
+	  'make run-worker   Run the independent refresh worker using .env' \
 	  'make health  Call GET /health on the running API' \
 	  'make connector START=YYYY-MM-DD END=YYYY-MM-DD   Build and verify a candidate in S3' \
 	  'make connector CONFIG=path.json   Run with optional JSON configuration' \
@@ -58,6 +59,10 @@ run: check-env
 # Uses the explicitly provisioned/reviewed local service. Never falls back to Flask.
 run-analytical: check-env
 	$(VENV_PYTHON) scripts/local_analytical.py
+
+# Independent refresh process; it only claims runs an Admin has admitted.
+run-worker: check-env
+	$(VENV_PYTHON) scripts/run_worker.py
 
 stop-analytical:
 	colima ssh --profile outage-runtime -- sudo systemctl stop outage-api-local
