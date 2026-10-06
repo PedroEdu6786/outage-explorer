@@ -348,6 +348,31 @@ ownership/parser/reviewer choices remain explicit in
 5 remain open. No refresh, publication, deployment, credential transfer or API
 enablement ran.
 
+### Code-only native isolation follow-up (October 5, 2026)
+
+After switching from per-file mounts to one sealed directory mount, the first
+native rerun exposed a recovery regression: recovery rejected the exact `0555`
+staging-directory mode created by input sealing. The suite reported 16 passed,
+one failed, one deselected and two setup errors; cleanup retained the uncertain
+test-owned resources. Recovery now accepts only the sealed `0555` mode and the
+existing private `0700` mode, preserving UID, directory, symlink and ownership
+checks. The targeted local suite passed 42 tests (four known temporary-directory
+cleanup warnings); Ruff, formatting, mypy and whitespace checks passed.
+
+Rebuilt image `sha256:1ee90c05fa1c8578b3240f4eb39382103fe948f190d9ec0b8e3593440cd9b176`
+and matching profile `a227d729593bcff61f301df141e2479301c7cf9fbf91ea0ebe8891c33611f57f`
+then passed 19 real `runtime_docker` probes; the representative measurement test
+was deselected. The focused native Linux execute-only traversal regression passed.
+Final cleanup verified zero owned containers, staging directories, spill execution
+directories and temporary recovery ledgers. Matching per-probe hashes are recorded
+in the [unreviewed directory-mount isolation bundle](evidence/2026-10-05-colima-isolation-directory-mount.json);
+the older bundle remains as historical evidence for its prior image/profile.
+
+This follow-up ran **no performance or capacity measurements**. T4.3/T4.C stay
+open for representative inputs, existing authorized API/refresh overlap, S3
+transfer/storage coverage, measured-budget review and independent review. Original
+data-API T1.7/T1.C and Phase 5 remain open; no API, refresh or publication ran.
+
 ## Phase 5: Separately authorized local API acceptance
 
 - [ ] **T5.1** After T4.C and explicit API-enablement direction, start the delivered

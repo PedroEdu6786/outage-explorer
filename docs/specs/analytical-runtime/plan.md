@@ -487,3 +487,16 @@ storage measurements and measured-budget review remain open. The synthetic VM
 size is not a measured runtime budget. T4.3 is partial; T4.C and separate API
 enablement remain gated. No product API, source retrieval/publication or deployment
 was performed.
+
+### Directory-mount recovery follow-up (October 5, 2026)
+
+The directory-mount change exposed a native recovery edge case because sealed
+staging is `0555`. Recovery now allows exactly sealed `0555` or private `0700`
+directories while retaining ownership and symlink checks. The rebuilt matching
+image/profile passed all 19 synthetic Docker isolation probes; one measurement
+test remained deselected. The Linux execute-only traversal regression passed,
+and cleanup verified zero owned containers or runtime directories. See the
+[current unreviewed evidence bundle](evidence/2026-10-05-colima-isolation-directory-mount.json).
+No performance measurement was run. Representative workload, overlap, S3
+transfer/storage and measured-budget gates remain open; readiness and API
+enablement remain closed.

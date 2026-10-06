@@ -314,14 +314,16 @@ only synthetic `runtime_docker` probes as 65534 with trusted daemon access and a
 clean environment. It never executes representative measurements, starts the
 product API, passes cloud credentials or retrieves/publishes data.
 
-Final execution passed **19 real Docker probes**, with one measurement test
-deselected; the focused native Linux execute-only traversal regression also
-passed. It verified zero owned containers, spill execution directories and
-validation recovery ledgers after cleanup. The bounded
-[unreviewed evidence bundle](../../docs/specs/analytical-runtime/evidence/2026-10-05-colima-isolation.json)
-binds the final immutable image/profile and individual report hashes. Earlier
-setup failures exposed and corrected the ancestor-read-permission bug; the image
-was rebuilt and all probes rerun afterward.
+The latest matching-image execution passed **19 real Docker probes**, with one
+measurement test deselected; the focused native Linux execute-only traversal
+regression also passed. It verified zero owned containers, staging directories,
+spill execution directories and temporary recovery ledgers after cleanup. The
+[unreviewed directory-mount evidence bundle](../../docs/specs/analytical-runtime/evidence/2026-10-05-colima-isolation-directory-mount.json)
+binds the final immutable image/profile and individual report hashes. The earlier
+[pre-fix isolation bundle](../../docs/specs/analytical-runtime/evidence/2026-10-05-colima-isolation.json)
+is retained as historical evidence for a different image/profile. The final run
+also confirms recovery accepts the exact sealed `0555` staging mode while
+preserving private ownership checks. No performance measurements were run.
 
 The initial Colima wrapper provisioning exited with a killed subprocess and
 `colima status` reported incomplete wrapper metadata. Bounded native guest

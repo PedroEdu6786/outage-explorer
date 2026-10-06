@@ -228,7 +228,11 @@ rebuilt and all probes rerun.
 
 - Image: `sha256:553111d33d88c52344317ee9a75893fc65be4093362c7c79b9c93b9aeb973ff4`.
 - Profile: `261ad952916d7334a0e90afac3bbc23a961fd82db2ef29d0147243f9415db7bd`.
-- [Unreviewed evidence bundle](../analytical-runtime/evidence/2026-10-05-colima-isolation.json),
+- [Current unreviewed directory-mount isolation evidence](../analytical-runtime/evidence/2026-10-05-colima-isolation-directory-mount.json),
+  matching image `sha256:1ee90c05fa1c8578b3240f4eb39382103fe948f190d9ec0b8e3593440cd9b176`
+  and profile `a227d729593bcff61f301df141e2479301c7cf9fbf91ea0ebe8891c33611f57f`.
+  This is synthetic isolation evidence only; no performance measurements were run.
+- [Historical unreviewed evidence bundle](../analytical-runtime/evidence/2026-10-05-colima-isolation.json),
   SHA-256 `4312d0dff3c3c1b0eb3c959195690b8090cba9af8f5b49061fd8616948e483ad`.
 - Actual spill filesystem: 16,494,592 allocatable bytes; 1,024 inodes.
 - Final cleanup: zero owned containers, spill execution directories and recovery
