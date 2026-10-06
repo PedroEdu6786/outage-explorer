@@ -588,3 +588,12 @@ observations cannot approve resource budgets. Cleanup passed and was rechecked.
 See data-api runtime evidence for numeric observations and scope. Preview, spill
 high-water, S3 behavior, API/refresh overlap, parser implementation and user
 review remain outstanding. No readiness or Phase 5 task was closed.
+
+### Separate successful SQL behavior from failed resource monitoring
+
+User directed acceptance of the completed SQL workload as succeeded. Six SQL
+executions, three retained-result page reads and cleanup are passed in the
+[scoped outcome record](evidence/2026-10-06-sql-workload-outcome.json). Resource
+sampling remains failed separately; preserve the original combined report.
+Continue remaining work without rerunning SQL merely to establish execution
+success. Numeric resource budgets and overall readiness remain open.

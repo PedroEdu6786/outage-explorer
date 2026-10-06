@@ -441,3 +441,17 @@ one five-row retained result. A reference-free `SELECT 42 AS answer` is a useful
 transport check but does not replace published-input preview/SQL acceptance.
 Use current application-role tests and independently authorized refresh overlap
 without adding a refresh POST to this checklist.
+
+## October 6 SQL workload outcome clarification
+
+User directed acceptance of completed SQL execution as succeeded. This records
+partial T4.3 outcomes; it does not close T4.3/T4.C or authorize T5.1.
+
+- [x] Six public-snapshot SQL executions completed on the recorded image/profile.
+- [x] Three retained-result page reads completed without SQL reruns.
+- [x] Measurement-owned runtime resources cleaned up and native cleanup rechecked.
+- [ ] Resource sampling accepted: five errors remain unexplained.
+
+See the [scoped outcome record](evidence/2026-10-06-sql-workload-outcome.json).
+Remaining preview/spill/S3/overlap coverage, parser implementation, reviewed
+budgets and final readiness review retain their existing prerequisites.

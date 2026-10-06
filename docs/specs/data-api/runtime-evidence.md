@@ -479,3 +479,17 @@ reports and unrelated recovery artifacts were preserved. No preview, spill
 high-water, product S3 cold-cache, API/refresh overlap or external transfer
 evidence was collected. T4.3/T4.C, original T1.7/T1.C and Phase 5 remain open;
 ADR-0054 parser implementation and final user review are still required.
+
+### SQL workload accepted as succeeded — October 6, 2026
+
+At user direction, record SQL execution and retained-result paging separately
+from resource monitoring. **SQL execution passed: six completed executions.
+Retained-result paging passed: three page reads without SQL reruns. Cleanup
+passed. Resource sampling failed: five errors, with causes unrecorded.**
+
+The [scoped outcome record](../analytical-runtime/evidence/2026-10-06-sql-workload-outcome.json)
+references the preserved original evidence/report digests and matching identities.
+The combined harness exit remains failed historically; it does not negate the
+completed SQL behavior. Proceed with remaining implementation and acceptance
+prerequisites without treating this workload as failed SQL. Resource budgets
+and overall readiness are not approved; no API startup or activation follows.

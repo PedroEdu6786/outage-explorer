@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "assessment": "sql_workload_outcome",
+  "source_evidence": "2026-10-06-colima-analytical-only-failed-sampling.json",
+  "source_evidence_sha256": "999270c463c37035b47500e1afd46dee84ee5e5e8d360b9c86e4d6c4bbb4d1bb",
+  "original_report_sha256": "6973133c52428e7d002b50e3f9a82c2ba5f1a3a97bef565b647eaeabfeab4fdf",
+  "image_id": "sha256:1ee90c05fa1c8578b3240f4eb39382103fe948f190d9ec0b8e3593440cd9b176",
+  "profile_identity": "a227d729593bcff61f301df141e2479301c7cf9fbf91ea0ebe8891c33611f57f",
+  "workload_identity": "a4ddeca4b21d3ed25200dc794e39951930b493d1fcff757d16067265af8131d9",
+  "outcomes": {
+    "sql_execution": {
+      "status": "passed",
+      "completed_executions": 6,
+      "coverage": [
+        "all-three-grain aggregates for old/current/warm snapshots",
+        "sorted generator output for old/current/warm snapshots"
+      ]
+    },
+    "retained_result_paging": {
+      "status": "passed",
+      "completed_page_reads": 3,
+      "sql_reruns_for_paging": 0
+    },
+    "cleanup": {
+      "status": "passed"
+    },
+    "resource_sampling": {
+      "status": "failed",
+      "successful_iterations": 37,
+      "failed_iterations": 5,
+      "cause": "not_recorded"
+    }
+  },
+  "user_direction": "Accept completed SQL executions as succeeded and proceed with remaining work.",
+  "readiness_status": "incomplete",
+  "api_enabled": false,
+  "resource_budgets_approved": false,
+  "limitations": [
+    "Original measurement report and failure status preserved; this is a separate scoped assessment.",
+    "SQL success does not establish reliable resource peaks, preview, spill, S3 transfer or API/refresh overlap coverage.",
+    "No overall readiness review or Phase 5 activation is inferred."
+  ]
+}
