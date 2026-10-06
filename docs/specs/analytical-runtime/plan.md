@@ -299,8 +299,11 @@ in worker messages, profiles or evidence. (TR1–TR2, TR6)
 - Docker Desktop differs from Linux/EC2: evidence is platform-scoped; local
   readiness does not establish deployed budgets.
 - API parser currently runs in-process: existing byte/AST caps do not prove a
-  parser wall-clock bound. Track parser deadline isolation as a readiness risk;
-  bounded Docker execution does not fix pre-launch parser CPU exhaustion.
+  parser wall-clock bound. [ADR-0054](../../adr/0054-bounded-subprocess-sql-inspection.md)
+  accepts a separate bounded subprocess with controlled admission, CPU/memory/time,
+  strict output validation, confirmed termination and no in-process fallback.
+  Concrete design, implementation, budgets and verification remain prerequisites;
+  bounded Docker execution alone does not fix pre-launch parser CPU exhaustion.
 
 ### Alternatives considered
 
@@ -347,8 +350,11 @@ parser enforcement and evidence review remain open; no startup was authorized.
   proposals. Resolve from representative cold/warm and overlap evidence.
 - Final API process/supervisor topology and private recovery-ledger storage; local
   single-owner profile is proposed and must be explicitly enforced/reviewed.
-- Evidence record schema/reviewer/profile invalidation and parser wall-clock
-  enforcement. Define and test before readiness; no guessed production values.
+- Evidence record schema/reviewer/profile invalidation. Define and test before
+  readiness; no guessed production values.
+- ADR-0054 parser subprocess launcher/protocol, admission/resource/transport bounds
+  and termination/recovery implementation and verification. The enforcement
+  approach is accepted; measured budgets and actual enforcement remain open.
 
 ## Phase 1 implementation record
 

@@ -185,6 +185,12 @@ refresh for local endpoint acceptance. Process-owned continuations remain epheme
 reloader/fork/multiple-process rejection remains required. This does not settle
 EC2 topology or grant runtime startup/enablement permission.
 
+[ADR-0054](../adr/0054-bounded-subprocess-sql-inspection.md) accepts subprocess
+SQL inspection behind the application port, with concrete launch/transport in
+infrastructure and wiring in bootstrap. Admission, time/CPU/memory/output and
+termination must be bounded before SQL enablement; no API-process fallback.
+Implementation and numeric budgets remain pending.
+
 Under [ADR-0043](../adr/0043-seeded-users-and-role-only-access.md), seed local
 users, roles and assignments with essential Cognito identity linkage. Keep
 credentials in Cognito. Registration and Admin user management are excluded

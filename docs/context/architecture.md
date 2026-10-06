@@ -356,6 +356,12 @@ supervised refresh. Final EC2 topology remains open. The user authorized
 representative measurements and chose to review budgets after measurements;
 readiness review and separate startup/enablement direction remain prerequisites.
 
+[ADR-0054](../adr/0054-bounded-subprocess-sql-inspection.md) accepts separate
+bounded subprocess parsing/reference inspection before SQL endpoint enablement.
+The current in-process inspector still requires replacement and verification;
+numeric budgets remain open. Authentication precedes inspection, and complete
+application-role authorization precedes analytical input access.
+
 Phase 6 registers strict catalog, preview, query submission/paging and durable
 refresh admission/latest/by-ID routes when `OUTAGE_DATA_HTTP_ENABLED=true`.
 Application use cases enforce current roles and retained ownership; shared

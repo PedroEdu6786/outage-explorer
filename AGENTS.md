@@ -66,6 +66,13 @@ one analytical execution slot and independently supervised refresh under
 local acceptance decision; final EC2 topology remains open. It grants no startup
 or activation permission and does not bypass analytical readiness gates.
 
+Before SQL endpoint enablement, enforce user-SQL parsing/reference inspection in
+a separate bounded subprocess under
+[ADR-0054](docs/adr/0054-bounded-subprocess-sql-inspection.md). Preserve application
+authorization before analytical inputs, bounded admission/resources/transport,
+confirmed termination and no API-process parsing fallback. Numeric parser budgets
+and concrete runtime verification remain open.
+
 Product HTTP refresh uses a configured inclusive date range, without caller
 date overrides, under [ADR-0051](docs/adr/0051-configured-http-refresh-range.md).
 Record the resolved interval at admission; later configuration changes must
