@@ -576,3 +576,15 @@ and cleanup verified zero owned containers or runtime directories. See the
 No performance measurement was run. Representative workload, overlap, S3
 transfer/storage and measured-budget gates remain open; readiness and API
 enablement remain closed.
+
+### Existing-resource analytical-only measurement (October 6, 2026)
+
+User selected existing S3/PostgreSQL resources; no new validation namespace or
+cloud stack was created. Authorized public-only Linux measurements completed
+six SQL executions and retained-result paging on the exact recorded image and
+profile, but resource sampling reported five errors. Preserve the
+[failed unreviewed record](evidence/2026-10-06-colima-analytical-only-failed-sampling.json);
+observations cannot approve resource budgets. Cleanup passed and was rechecked.
+See data-api runtime evidence for numeric observations and scope. Preview, spill
+high-water, S3 behavior, API/refresh overlap, parser implementation and user
+review remain outstanding. No readiness or Phase 5 task was closed.

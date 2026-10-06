@@ -1,0 +1,115 @@
+{
+  "schema": 1,
+  "source_commit": "3777382",
+  "review_status": "unreviewed",
+  "api_enabled": false,
+  "report_sha256": "6973133c52428e7d002b50e3f9a82c2ba5f1a3a97bef565b647eaeabfeab4fdf",
+  "report": {
+    "daemon_version": "29.5.2",
+    "gates": {
+      "analytical_only_measurements": {
+        "metrics": {
+          "api_cpu_seconds": 0.0,
+          "api_failures": 0,
+          "api_max_seconds": 0.0,
+          "api_requests": 0,
+          "api_rss_peak_bytes": 0,
+          "cache_peak_bytes": 2248604,
+          "cold_aggregate_rows": 3,
+          "cold_aggregate_seconds": 2.688401519000763,
+          "cold_cumulative_local_copy_bytes": 2248604,
+          "cold_execution_seconds": 1.9321823280006356,
+          "cold_output_bytes": 99067,
+          "cold_page_seconds": 0.0009112120005738689,
+          "cold_prepare_seconds": 0.001751756000885507,
+          "cold_retained_rows": 1000,
+          "container_cpu_peak_percent": 100.41,
+          "container_memory_peak_bytes": 94843699,
+          "harness_cpu_seconds": 2.7478940000000005,
+          "harness_rss_peak_bytes": 63516672,
+          "host_available_memory_min_bytes": 5574565888,
+          "local_copy_bytes": 2248604,
+          "old_aggregate_rows": 3,
+          "old_aggregate_seconds": 2.89012107400049,
+          "old_and_current_retained_bytes": 2248604,
+          "old_cumulative_local_copy_bytes": 2199347,
+          "old_execution_seconds": 2.438082646998737,
+          "old_output_bytes": 99067,
+          "old_page_seconds": 0.0015091250006662449,
+          "old_prepare_seconds": 0.0708475700012059,
+          "old_retained_rows": 1000,
+          "refresh_cpu_seconds": 0.0,
+          "refresh_rss_peak_bytes": 0,
+          "samples": 37,
+          "sampling_failures": 5,
+          "spool_index_peak_bytes": 297201,
+          "staging_peak_bytes": 2248604,
+          "warm_aggregate_rows": 3,
+          "warm_aggregate_seconds": 2.341753847998916,
+          "warm_cumulative_local_copy_bytes": 2248604,
+          "warm_execution_seconds": 1.9651119810005184,
+          "warm_output_bytes": 99067,
+          "warm_page_seconds": 0.0009701109993329737,
+          "warm_prepare_seconds": 0.00030506499933835585,
+          "warm_retained_rows": 1000
+        },
+        "status": "failed"
+      },
+      "cleanup": {
+        "metrics": {},
+        "status": "passed"
+      },
+      "disk_quota": {
+        "metrics": {},
+        "status": "not_run"
+      },
+      "external_refresh_transfer": {
+        "metrics": {},
+        "status": "not_run"
+      },
+      "identity": {
+        "metrics": {},
+        "status": "passed"
+      },
+      "product_s3_cold_cache": {
+        "metrics": {},
+        "status": "not_run"
+      },
+      "refresh_api_overlap": {
+        "metrics": {},
+        "status": "not_run"
+      },
+      "representative_inputs": {
+        "metrics": {},
+        "status": "passed"
+      },
+      "representative_measurements": {
+        "metrics": {},
+        "status": "not_run"
+      }
+    },
+    "image_id": "sha256:1ee90c05fa1c8578b3240f4eb39382103fe948f190d9ec0b8e3593440cd9b176",
+    "platform": "linux/arm64",
+    "profile_identity": "a227d729593bcff61f301df141e2479301c7cf9fbf91ea0ebe8891c33611f57f",
+    "readiness": "unreviewed",
+    "schema": 1,
+    "temporary_backend": "quota-disk",
+    "workload_identity": "a4ddeca4b21d3ed25200dc794e39951930b493d1fcff757d16067265af8131d9"
+  },
+  "scope": "analytical-only verified public local-copy SQL workload",
+  "limitations": [
+    "Five sampling errors; diagnostics do not identify their causes. Numeric observations are provisional, not accepted resource budgets.",
+    "Cold current preparation adds twelve files after 549 shared old hashes; not product S3 cold-cache evidence.",
+    "No preview workload, spill high-water evidence, API/refresh overlap or S3 transfer/storage measurement.",
+    "Candidate profile has no reviewed evidence; no readiness gate or enablement task closed."
+  ],
+  "post_run_cleanup": {
+    "owned_containers": 0,
+    "staging_entries": 0,
+    "cache_entries": 0,
+    "result_entries": 0,
+    "spill_request_directories": 0,
+    "measurement_ledger_directories": 0,
+    "historical_reports_and_unrelated_recovery_artifacts": "preserved"
+  }
+}

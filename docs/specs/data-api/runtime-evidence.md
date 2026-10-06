@@ -445,3 +445,37 @@ It does not establish prior-date revision handling, published serving behavior,
 S3 cold/warm loading, overlap or measured resource budgets. T4.3/T4.C, original
 T1.7/T1.C and analytical Phase 5 remain open. Independently authorized Linux
 API/refresh workload and matching S3 transfer/storage evidence are still absent.
+
+## Existing-resource analytical measurement — October 6, 2026
+
+The user chose existing S3/PostgreSQL resources and rejected a new validation
+bucket, database or namespace. The authorized analytical-only run required no
+S3/database access: only the verified public snapshots and committed runtime
+code were transferred to the existing Linux host. No credentials, API startup,
+refresh, publication, deployment or new cloud resources were involved.
+
+The exact directory-mount image/profile passed identity and input checks. All
+six SQL executions completed: all-grain aggregates and sorted generator output
+for old, current and warm snapshots, each with retained-result page reads.
+Aggregate latency was 2.34–2.89 seconds; generator execution 1.93–2.44 seconds;
+page reads 0.91–1.51 milliseconds. Each generator result retained 1,000 rows in
+99,067 bytes. These are individual observations, not percentiles or approved
+latency limits. Current preparation copied only twelve new public files after
+old preparation; warm preparation added zero bytes. Total verified local-copy
+cache bytes were 2,248,604.
+
+**The measurement gate failed:** 37 successful sampler iterations and five
+sampling errors. The current sampler suppresses error details, so their cause
+is undetermined. Observed container memory maximum was 94,843,699 bytes and CPU
+maximum 100.41%; incomplete sampling means neither establishes a reliable
+high-water bound. Preserve this failed attempt; diagnose sampling before using
+resource observations for proposed budgets. No limits were changed.
+
+The [unreviewed failed-sampling record](../analytical-runtime/evidence/2026-10-06-colima-analytical-only-failed-sampling.json)
+preserves the original report digest and explicit coverage gaps. Cleanup passed;
+a subsequent native check found zero labeled owned containers, staging/cache/
+result entries, spill request directories or measurement ledgers. Historical
+reports and unrelated recovery artifacts were preserved. No preview, spill
+high-water, product S3 cold-cache, API/refresh overlap or external transfer
+evidence was collected. T4.3/T4.C, original T1.7/T1.C and Phase 5 remain open;
+ADR-0054 parser implementation and final user review are still required.
