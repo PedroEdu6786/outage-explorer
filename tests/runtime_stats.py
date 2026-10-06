@@ -12,6 +12,12 @@ from outage_explorer.application.errors import AnalyticalTimeoutError
 LIMIT = 65_536
 
 
+class StatsUnavailable(ValueError):
+    def __init__(self, status):
+        super().__init__("Container metrics unavailable")
+        self.status = status
+
+
 class _ResponseSocket:
     def __init__(self, data):
         self.data = data
@@ -24,7 +30,7 @@ def decode_stats(raw, identity):
     response = http.client.HTTPResponse(_ResponseSocket(raw))
     response.begin()
     if response.status != 200:
-        raise ValueError("Container metrics unavailable")
+        raise StatsUnavailable(response.status)
     body = response.read(LIMIT + 1)
     if len(body) > LIMIT:
         raise ValueError("Container metrics exceeded")

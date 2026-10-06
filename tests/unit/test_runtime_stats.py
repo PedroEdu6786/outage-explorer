@@ -87,3 +87,27 @@ def test_transport_caps_before_decoding(monkeypatch):
     )
     with pytest.raises(ValueError):
         container_stats("unix:///test", IDENTITY)
+
+
+def test_transport_timeout_is_bounded_failure(monkeypatch):
+    from outage_explorer.application.errors import AnalyticalTimeoutError
+
+    connection = Mock()
+    connection.__enter__ = Mock(return_value=connection)
+    connection.__exit__ = Mock(return_value=False)
+    connection.recv.side_effect = TimeoutError()
+    monkeypatch.setattr(
+        "tests.runtime_stats.socket.socket", Mock(return_value=connection)
+    )
+    with pytest.raises(AnalyticalTimeoutError):
+        container_stats("unix:///test", IDENTITY)
+
+
+def test_observer_has_bounded_identity_history(monkeypatch):
+    monkeypatch.setattr(
+        "tests.runtime_stats.container_stats", Mock(return_value=(1, (1, 10, 1)))
+    )
+    observer = ContainerStats("unix:///test")
+    observer.previous = {str(i): (1, 10, 1) for i in range(1024)}
+    with pytest.raises(ValueError):
+        observer.sample(IDENTITY)

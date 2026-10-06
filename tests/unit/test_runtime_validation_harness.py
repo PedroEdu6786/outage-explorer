@@ -392,6 +392,9 @@ def test_sampler_prerequisite_failure_creates_no_cache_or_spools(profile, monkey
         ("disk", "filesystem"),
         ("control", "container_control"),
         ("decode", "container_decode"),
+        ("removed", None),
+        ("unknown404", "container_control"),
+        ("bad500", "container_control"),
         (None, None),
     ],
 )
@@ -417,10 +420,18 @@ def test_sampler_records_only_bounded_failure_stage_counters(
         command.side_effect = RuntimeError("private-diagnostic-canary")
     elif fault == "decode":
         command.return_value = ("private-invalid-output-canary", 100.0)
+    elif fault in {"removed", "unknown404", "bad500"}:
+        from tests.runtime_stats import StatsUnavailable
+
+        command.side_effect = StatsUnavailable(500 if fault == "bad500" else 404)
     sampler = OverlapSampler(
         SimpleNamespace(
             profile=profile,
-            runtime=SimpleNamespace(_container="owned-test"),
+            runtime=SimpleNamespace(
+                _container="owned-test",
+                _removed=fault == "removed",
+                _death_confirmed=fault == "removed",
+            ),
             container_stats=command,
         ),
         None,
@@ -429,7 +440,8 @@ def test_sampler_records_only_bounded_failure_stage_counters(
     sampler.stop.is_set.side_effect = [False, True]
     sampler._sample()
     assert sampler.metrics["samples"] == int(fault is None)
-    assert sampler.metrics["sampling_failures"] == int(fault is not None)
+    assert sampler.metrics["sampling_failures"] == int(fault not in {None, "removed"})
+    assert sampler.metrics["retired_container_reads"] == int(fault == "removed")
     counters = {
         key: value
         for key, value in sampler.metrics.items()

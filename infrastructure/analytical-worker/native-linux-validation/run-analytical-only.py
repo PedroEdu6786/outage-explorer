@@ -68,7 +68,16 @@ def main():
             if metrics["samples"]
             and not metrics["sampling_failures"]
             and metrics["container_memory_peak_bytes"]
+            and metrics["sampled_container_count"]
+            == (33 if args.include_previews else 6)
             else "failed"
+        )
+        harness.report.document["resource_sampler"] = "docker-api-v1.51-one-shot"
+        harness.report.document["container_memory_basis"] = (
+            "total-cgroup-usage-including-cache"
+        )
+        harness.report.document["resource_observation"] = (
+            "sampled-not-complete-high-water"
         )
         harness.report.gate("analytical_only_measurements", status, metrics)
     except Exception as error:

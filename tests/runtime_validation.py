@@ -46,7 +46,7 @@ from outage_explorer.infrastructure.worker_runtime.docker import (
 )
 from outage_explorer.infrastructure.worker_runtime.inputs import stage_inputs
 from outage_explorer.infrastructure.worker_runtime.ownership import OwnershipLedger
-from tests.runtime_stats import ContainerStats
+from tests.runtime_stats import ContainerStats, StatsUnavailable
 
 
 def record_gate(function):
@@ -462,12 +462,15 @@ class OverlapSampler:
             "sampling_container_control_failures": 0,
             "container_control_timeouts": 0,
             "container_control_nonzero": 0,
+            "retired_container_reads": 0,
+            "sampled_container_count": 0,
             "sampling_container_decode_failures": 0,
             "sampling_overlap_process_failures": 0,
             "sampling_api_probe_failures": 0,
             "sampling_other_failures": 0,
             "spill_peak_bytes": 0,
         }
+        self.observed_containers = set()
 
     def _sample(self):
         while not self.stop.is_set():
@@ -554,6 +557,16 @@ class OverlapSampler:
                     stage = "container_control"
                     memory, cpu = self.harness.container_stats(identity)
                     stage = "container_decode"
+                    if memory > 0:
+                        if (
+                            identity not in self.observed_containers
+                            and len(self.observed_containers) >= 1024
+                        ):
+                            raise ValueError("Container observation budget exceeded")
+                        self.observed_containers.add(identity)
+                        self.metrics["sampled_container_count"] = len(
+                            self.observed_containers
+                        )
                     self.metrics["container_memory_peak_bytes"] = max(
                         self.metrics["container_memory_peak_bytes"],
                         memory,
@@ -581,12 +594,27 @@ class OverlapSampler:
                     )
                 self.metrics["samples"] += 1
             except Exception as error:
-                if stage == "container_control" and isinstance(
-                    error, AnalyticalTimeoutError
+                # A read crossing confirmed owned removal is an observed lifecycle
+                # event. Unknown 404s and all other failures still fail measurement.
+                runtime = self.harness.runtime
+                if (
+                    stage == "container_control"
+                    and isinstance(error, StatsUnavailable)
+                    and error.status == 404
+                    and (
+                        runtime._container != identity
+                        or getattr(runtime, "_removed", False) is True
+                        and getattr(runtime, "_death_confirmed", False) is True
+                    )
                 ):
-                    self.metrics["container_control_timeouts"] += 1
-                self.metrics["sampling_failures"] += 1
-                self.metrics["sampling_" + stage + "_failures"] += 1
+                    self.metrics["retired_container_reads"] += 1
+                else:
+                    if stage == "container_control" and isinstance(
+                        error, AnalyticalTimeoutError
+                    ):
+                        self.metrics["container_control_timeouts"] += 1
+                    self.metrics["sampling_failures"] += 1
+                    self.metrics["sampling_" + stage + "_failures"] += 1
             self.stop.wait(0.1)
 
     def start(self):
