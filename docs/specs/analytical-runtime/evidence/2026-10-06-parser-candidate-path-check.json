@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "profile_identity": "833fd37713f21542d3ffca7bb0d34d237441c7a145c4b35463deef1cc6649669",
+  "api_enabled": false,
+  "review_status": "numeric_caps_accepted_full_review_pending",
+  "scope": "exact candidate ownership path on Linux validation host; no independent serving-host attestation",
+  "uid": 65534,
+  "gid": 65534,
+  "supplemental_groups": [],
+  "checks": {
+    "start": "passed",
+    "constant_sql_scope": "passed",
+    "close": "passed",
+    "parser_exit_confirmed": true,
+    "ownership_descriptor_released": true
+  },
+  "numeric_cap_approval": {
+    "reviewer": "user",
+    "date": "2026-10-06",
+    "wall_seconds": 4,
+    "cpu_seconds": 1,
+    "memory_bytes": 268435456,
+    "termination_seconds": 1
+  },
+  "candidate_config_sha256": "324f4762246a87da8be89db25966e2a44ce8ffde55179b9bf2137e0e925ab6ef",
+  "remaining_approval": "matching report/profile review; analytical readiness and activation remain separate"
+}

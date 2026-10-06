@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "source_commit": "eed4251",
+  "profile_identity": "833fd37713f21542d3ffca7bb0d34d237441c7a145c4b35463deef1cc6649669",
+  "review_status": "unreviewed",
+  "api_enabled": false,
+  "scope": "controlled parser lifecycle/configuration/inspection checks; no native isolation claim",
+  "command": ".venv/bin/python -m pytest -q tests/unit/test_subprocess_sql_inspection.py tests/unit/test_sql_inspection_configuration.py tests/unit/test_sql_inspection.py",
+  "python": "3.14.6",
+  "results": {
+    "passed": 102,
+    "failed": 0,
+    "skipped": 0,
+    "existing_temporary_cleanup_warnings": 4
+  },
+  "source_sha256": {
+    "src/outage_explorer/infrastructure/sql_validation/configuration.py": "6189129d2fc93a01c185e920a76bdcdf21019391d6c03f80fc7ef84ad6bae0bc",
+    "src/outage_explorer/infrastructure/sql_validation/subprocess_inspection.py": "34b03ef0f1e03d48fc9cd78d99999162445a4ae5b541554817c89ea00fbef6f2",
+    "src/outage_explorer/infrastructure/sql_validation/ownership.py": "cca5a256a84293099b8515caad9f015c8307ef97013eb1823fa1ed118a9dacf6",
+    "tests/unit/test_subprocess_sql_inspection.py": "6dd3503be7e2c238d71ea1f8850f6236ab18c76c4bebf19bb0c3a5eecb396096",
+    "tests/unit/test_sql_inspection_configuration.py": "e12971fa2f5ea07df35920b2ebb0822b3f29663461bab42e79e6ff74b51f8caa",
+    "tests/unit/test_sql_inspection.py": "3d9fa775261e3faa2590566bf5c1d3557284a3202b4da7aad08cc9550a205a48"
+  },
+  "native_parser_code_matches_owner_loss_record": true
+}

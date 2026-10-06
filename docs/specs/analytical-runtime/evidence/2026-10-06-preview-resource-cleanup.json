@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "source_commit": "eed4251",
+  "analytical_report_sha256": "55ee09bec87f71188725c2815ce9e7d4d5bb509b54890db638ee632c573f7e78",
+  "scope": "read-only post-run measurement-owned cleanup check; historical validation reports/foreign artifacts preserved",
+  "api_started": false,
+  "endpoint_enabled": false,
+  "results": {
+    "owned_containers": 0,
+    "staging_entries": 0,
+    "cache_entries": 0,
+    "results_entries": 0,
+    "spill_execution_directories": 0,
+    "measurement_ledgers": 0
+  }
+}

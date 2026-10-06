@@ -557,3 +557,32 @@ unclassified errors and successful SQL executions remain intact. No measurement
 rerun or new resource-budget evidence is claimed. Parser budget approval, actual
 serving-host ownership-root verification and all external readiness/user review
 prerequisites remain open.
+
+## October 6 native preview and local analytical observations
+
+User accepted initial parser containment caps only (4-second wall, 1 CPU second,
+256 MiB address space, 1-second termination). Exact candidate Linux ownership
+path startup/constant-SQL/close passed; 102 controlled parser/configuration tests
+passed and current parser hashes still match the 18-check native owner-loss record.
+[Parser review packet](../analytical-runtime/parser-review.md) now includes exact
+controlled/native digests. Candidate review remains null pending substantive approval.
+
+The latest [native analytical record](../analytical-runtime/evidence/2026-10-06-preview-sql-local-resource-observations.json)
+passes 27 previews, six SQL executions, three retained-result page reads and
+local resource observations of all33 containers. There were301 samples, zero
+failed samples and one explicitly recorded read crossing confirmed removal.
+Corrected host decoder ordering to newest dates first with binary UTF-8 identifier
+ascending ties, matching the existing worker/HTTP contract. Original failed
+attempts remain separate. Measurement-only one-shot stats avoid CLI two-cycle
+EOF on short workers; unknown404/daemon failures still fail and every expected
+container must have a nonzero-memory observation. Memory includes cgroup cache.
+Independent cleanup found zero active measurement-owned runtime resources.
+
+These observations do not prove complete memory/spill high-water, reviewed budgets,
+S3 cold-cache/transfer/storage or API/refresh overlap. They do not close T4.3/T4.C,
+original T1.7/T1.C or start Phase5. Existing-resources preference remains accepted;
+no cloud namespace, transfer credentials, refresh, publication, deployment or API
+startup was created. The historical authentication status above remains scoped:
+Viewer session/logout and application-pool checks were accepted earlier; detailed
+Admin/Analyst, invalid-credential, expiry/reopening, independent-session and live
+pooled-IAM evidence still needs completion. No fresh live-provider attestation ran.

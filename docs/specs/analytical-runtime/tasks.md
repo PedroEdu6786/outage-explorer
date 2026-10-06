@@ -481,4 +481,27 @@ No Phase 5 task is completed by this code checkpoint.
 - [x] Controlled unsafe lock, duplicate/invalid config, missing/mismatched review,
   executable mismatch and inert construction verification.
 - [x] Revised native owner-loss/replacement and resource suite: 18 checks passed.
-- [ ] User review of concrete parser limits and complete readiness evidence.
+- [x] Initial local parser caps accepted by the user: 4 seconds wall, 1 CPU second,
+  256 MiB address space and 1 second termination.
+- [ ] Matching parser report/profile review and complete analytical readiness.
+
+## October 6 preview and local resource observation checkpoint
+
+- [x] 27 native public previews across all three grains and old/current/warm inputs;
+  first 100 rows, continuation up to 500, October 2–5 filters and canonical encoding.
+- [x] Six SQL executions and three immutable result-page reads; no pagination reruns.
+- [x] Local-copy cold/warm behavior and bounded sampler observation for all 33
+  containers: 301 samples, zero failures, one confirmed-retirement read.
+- [x] Measurement-owned cleanup independently rechecked: containers, staging,
+  cache, result entries, spill executions and measurement ledgers all zero.
+- [ ] Complete spill/high-water evidence and reviewed resource budgets.
+- [ ] Product S3 cold-cache/transfer/storage and independently authorized overlap.
+- [ ] T4.3/T4.C and original data-api T1.7/T1.C remain open; Phase 5 unstarted.
+
+See [unreviewed observations](evidence/2026-10-06-preview-sql-local-resource-observations.json)
+and [cleanup follow-up](evidence/2026-10-06-preview-resource-cleanup.json).
+Observed memory137,428,992 bytes includes cgroup-accounted cache; CPU105.58% is
+an interval counter observation, not a reviewed CPU limit. Spill zero does not
+exercise spill. Warm local-copy bytes remained2,248,604; this is not S3 retrieval.
+Original CLI sampling failures and later failed one-shot attempts stay preserved;
+no historical gate was relabeled. No API, refresh, publication or deployment started.

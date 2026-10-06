@@ -654,3 +654,16 @@ for all three grains, old/current/warm: default100, maximum500 continuation and
 Oct2–Oct5 changed-date filter, canonical projection encoding, strict key order
 and non-overlap. Report preview behavior separately from resource sampling and
 SQL; retain all external gates. No API/source/S3/refresh work is introduced.
+
+
+### October 6 representative preview/resource observation continuation
+
+Preserve accepted newest-first preview ordering across worker and host decoding.
+Measurement-only local Unix one-shot stats use2-second total/64KiB transport
+bounds, validate owned identity/counters and require observation of every expected
+container. Confirmed-removal reads are recorded; unknown failures remain failed.
+27 previews, six SQL executions and three page reads pass with301 samples and
+zero failures on the existing image/profile. Sampled memory is total cgroup usage,
+not complete high-water. Full spill, S3, overlap and budget review prerequisites
+remain open. Parser numeric caps are accepted; report/configuration approval stays
+separate, with the matching packet available. No Phase5 or endpoint activation.
