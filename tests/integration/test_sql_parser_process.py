@@ -210,7 +210,7 @@ adapter=SubprocessSqlInspector(InspectionBounds(4,1,268435456,1,1024,65536,10000
 adapter.start()
 launch=subprocess.Popen
 def controlled(arguments,**kwargs):
-    child=launch((*arguments[:-4],"-c","import time; time.sleep(30)",*arguments[-2:]),**kwargs)
+    child=launch((*arguments[:-4],"-c","import os,sys,time; sys.exit(1) if os.getppid()!=int(sys.argv[1]) else time.sleep(30)",*arguments[-2:]),**kwargs)
     print(child.pid,flush=True)
     return child
 subprocess.Popen=controlled
