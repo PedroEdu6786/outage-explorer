@@ -383,3 +383,62 @@ def test_sampler_prerequisite_failure_creates_no_cache_or_spools(profile, monkey
         measured_workload(adapter, SimpleNamespace())
     assert not Path(profile.cache_root).exists()
     assert not Path(profile.result_root).exists()
+
+
+@pytest.mark.parametrize(
+    "fault,stage",
+    [
+        ("host", "host_memory"),
+        ("disk", "filesystem"),
+        ("control", "container_control"),
+        ("decode", "container_decode"),
+        (None, None),
+    ],
+)
+def test_sampler_records_only_bounded_failure_stage_counters(
+    profile, monkeypatch, fault, stage
+):
+    from tests.runtime_validation import OverlapSampler
+
+    original = Path
+    memory = Mock()
+    memory.is_file.return_value = fault != "host"
+    memory.read_text.return_value = "MemAvailable: 4096 kB\n"
+    monkeypatch.setattr(
+        "tests.runtime_validation.Path",
+        lambda p: memory if str(p) == "/proc/meminfo" else original(p),
+    )
+    sizes = Mock(return_value=1)
+    if fault == "disk":
+        sizes.side_effect = OSError("private-path-canary")
+    monkeypatch.setattr("tests.runtime_validation.directory_bytes", sizes)
+    command = Mock(
+        return_value=SimpleNamespace(code=0, stdout=b"94MiB / 512MiB|100.0%")
+    )
+    if fault == "control":
+        command.side_effect = RuntimeError("private-diagnostic-canary")
+    elif fault == "decode":
+        command.return_value.stdout = b"private-invalid-output-canary"
+    sampler = OverlapSampler(
+        SimpleNamespace(
+            profile=profile,
+            runtime=SimpleNamespace(_container="owned-test"),
+            command=command,
+        ),
+        None,
+    )
+    sampler.stop = Mock()
+    sampler.stop.is_set.side_effect = [False, True]
+    sampler._sample()
+    assert sampler.metrics["samples"] == int(fault is None)
+    assert sampler.metrics["sampling_failures"] == int(fault is not None)
+    counters = {
+        key: value
+        for key, value in sampler.metrics.items()
+        if key.startswith("sampling_") and key != "sampling_failures"
+    }
+    assert sum(counters.values()) == sampler.metrics["sampling_failures"]
+    if stage:
+        assert counters["sampling_" + stage + "_failures"] == 1
+    assert all(type(value) in (int, float) for value in sampler.metrics.values())
+    assert "canary" not in json.dumps(sampler.metrics)

@@ -1,0 +1,22 @@
+{
+  "profile": {
+    "bounds": {
+      "wall_seconds": 4,
+      "cpu_seconds": 1,
+      "memory_bytes": 268435456,
+      "termination_seconds": 1,
+      "stderr_bytes": 1024,
+      "max_sql_bytes": 65536,
+      "max_nodes": 10000,
+      "max_depth": 64
+    },
+    "python": "/opt/outage-runtime-validation/.venv/bin/python",
+    "prlimit": "/usr/bin/prlimit",
+    "setpriv": "/usr/bin/setpriv",
+    "ownership_root": "/var/lib/outage-runtime-validation/parser-ownership",
+    "python_sha256": "c86f21d0da9290ece2d7d49a3f7ed52aed59cb029abdf0ea25c79634f6cbe960",
+    "prlimit_sha256": "26600e1c720c29d7b7a87eac6beb13f5bc497925349d6c36a5c03751df879fd1",
+    "setpriv_sha256": "9922bc8da40cd9f1024beae714aee76c2b7d2abac563391235f32e30141d35da"
+  },
+  "evidence": null
+}

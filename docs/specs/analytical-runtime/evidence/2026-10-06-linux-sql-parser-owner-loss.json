@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "source_commit": "b17a1c2",
+  "review_status": "unreviewed",
+  "api_enabled": false,
+  "scope": "native Linux parser resource/owner-loss and replacement checks, no API or performance measurements",
+  "results": {
+    "passed": 18,
+    "failed": 0,
+    "skipped": 0,
+    "remaining_parser_processes": 0
+  },
+  "command": ".venv/bin/python -m pytest -q -p no:cacheprovider tests/integration/test_sql_parser_process.py",
+  "platform": {
+    "kernel": "Linux 6.8.0-117-generic",
+    "python": "3.12.3",
+    "uid": 65534,
+    "gid": 65534,
+    "supplemental_groups": []
+  },
+  "candidate_config": {
+    "path": "infrastructure/analytical-worker/sql-inspection.candidate.json",
+    "sha256": "324f4762246a87da8be89db25966e2a44ce8ffde55179b9bf2137e0e925ab6ef",
+    "profile_identity": "833fd37713f21542d3ffca7bb0d34d237441c7a145c4b35463deef1cc6649669",
+    "review": null,
+    "ownership_root_status": "Proposed concrete root remains unstarted; native suite used pytest-owned private roots."
+  },
+  "candidate_bounds": {
+    "wall_seconds": 4,
+    "cpu_seconds": 1,
+    "memory_bytes": 268435456,
+    "termination_seconds": 1,
+    "stderr_bytes": 1024,
+    "max_sql_bytes": 65536,
+    "max_nodes": 10000,
+    "max_depth": 64
+  },
+  "executable_sha256": {
+    "python_sha256": "c86f21d0da9290ece2d7d49a3f7ed52aed59cb029abdf0ea25c79634f6cbe960",
+    "prlimit_sha256": "26600e1c720c29d7b7a87eac6beb13f5bc497925349d6c36a5c03751df879fd1",
+    "setpriv_sha256": "9922bc8da40cd9f1024beae714aee76c2b7d2abac563391235f32e30141d35da"
+  },
+  "source_sha256": {
+    "src/outage_explorer/infrastructure/sql_validation/ownership.py": "cca5a256a84293099b8515caad9f015c8307ef97013eb1823fa1ed118a9dacf6",
+    "src/outage_explorer/infrastructure/sql_validation/subprocess_inspection.py": "34b03ef0f1e03d48fc9cd78d99999162445a4ae5b541554817c89ea00fbef6f2",
+    "tests/integration/test_sql_parser_process.py": "cc1de51f81ff789df9f17f0509fe64c68024abe0b7f273526c96c0f32001ea71"
+  },
+  "coverage": [
+    "All previous 15 parser checks with new inherited ownership/setpriv launcher",
+    "Inherited child lock denies replacement after parent descriptor close",
+    "Real test-owner SIGKILL triggers child death; pidfd confirms exit; replacement executes SQL",
+    "Wrong parent rejected before SQL input"
+  ],
+  "unchanged_analytical_image": "sha256:1ee90c05fa1c8578b3240f4eb39382103fe948f190d9ec0b8e3593440cd9b176",
+  "limitations": [
+    "Concrete candidate ownership root was not provisioned/started; path-specific startup validation remains necessary.",
+    "Limits and substantive report review remain user-owned; evidence:null cannot activate SQL.",
+    "No product API-loss/live refresh overlap or Cognito/IAM acceptance was exercised.",
+    "Existing SQL success stands separately; resource sampling, preview/spill/S3/overlap and full readiness remain open."
+  ]
+}

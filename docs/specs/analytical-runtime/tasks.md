@@ -466,7 +466,8 @@ budgets and final readiness review retain their existing prerequisites.
 - [x] Controlled safe-error, malformed scope, authorization ordering, admission
   and retained ownership tests.
 - [x] Native Linux subprocess resource/lifecycle checks: 15 passed as UID 65534.
-- [ ] Reviewed parser budgets/configuration, API-loss/restart ownership verification
+- [x] Controlled owner-loss/restart parser ownership verification on native Linux.
+- [ ] Reviewed parser budgets/configuration, actual-serving-host path validation
   and complete readiness acceptance.
 
 No Phase 5 task is completed by this code checkpoint.
@@ -479,5 +480,5 @@ No Phase 5 task is completed by this code checkpoint.
   identity and matching review gate; no parser defaults or profile alteration.
 - [x] Controlled unsafe lock, duplicate/invalid config, missing/mismatched review,
   executable mismatch and inert construction verification.
-- [ ] Revised native owner-loss/replacement and resource suite execution.
+- [x] Revised native owner-loss/replacement and resource suite: 18 checks passed.
 - [ ] User review of concrete parser limits and complete readiness evidence.

@@ -526,3 +526,34 @@ API-loss/restart parser ownership verification, failed resource sampling and
 remaining preview/spill/S3/overlap coverage. SQL execution success remains passed
 separately. No readiness gate, API startup, activation, refresh, publication,
 cloud provisioning or live authentication acceptance was performed.
+
+## Parser owner-loss and configuration continuation — October 6, 2026
+
+The parser now holds a stable private lease inherited by its child; parent loss
+cannot release admission until the child exits. Setpriv adds parent-death SIGKILL
+and no-new-privileges before the limited interpreter. Parent identity checking
+closes the signal-setup race. Explicit start/rollback/close owns the lock; unsafe
+locks/paths fail without foreign cleanup or lock inode replacement.
+
+A separate --inspection-config carries all bounds and executable/hash/ownership
+identities plus matching review. Missing/mismatched parser review rejects before
+API construction; binary hash mismatch rejects before ownership. Existing
+analytical image/profile identities remain unchanged.
+
+307 controlled parser/configuration/worker/architecture/startup/supervisor checks
+passed (18 Linux-only skips locally); Ruff lint/format, mypy143files, dependency
+consistency and package build passed. Native suite on committed b17a1c2 passed
+18 checks as UID/GID65534 without supplemental groups, including inherited lease
+retention, real test-owner SIGKILL, pidfd-confirmed child exit and replacement
+ownership/SQL success. No parser processes remained; source hashes matched.
+The [unreviewed record](../analytical-runtime/evidence/2026-10-06-linux-sql-parser-owner-loss.json)
+and [review packet](../analytical-runtime/parser-review.md) preserve candidate
+limits, code/executable identities and concrete-root limitations. No API server
+was started; test-owner loss is not a product API/refresh overlap test.
+
+Sampler diagnostics now count fixed failure stages numerically, without paths,
+SQL or exception text. 31 controlled harness tests passed; original five
+unclassified errors and successful SQL executions remain intact. No measurement
+rerun or new resource-budget evidence is claimed. Parser budget approval, actual
+serving-host ownership-root verification and all external readiness/user review
+prerequisites remain open.

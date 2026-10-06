@@ -433,12 +433,21 @@ class OverlapSampler:
             "cache_peak_bytes": 0,
             "spool_index_peak_bytes": 0,
             "sampling_failures": 0,
+            "sampling_host_memory_failures": 0,
+            "sampling_filesystem_failures": 0,
+            "sampling_container_control_failures": 0,
+            "sampling_container_decode_failures": 0,
+            "sampling_overlap_process_failures": 0,
+            "sampling_api_probe_failures": 0,
+            "sampling_other_failures": 0,
         }
 
     def _sample(self):
         while not self.stop.is_set():
+            stage = "other"
             try:
                 if self.inputs is not None:
+                    stage = "overlap_process"
                     for pid, token in self.process_tokens.items():
                         if process_token(pid) != token:
                             raise ValueError("Overlap process identity changed")
@@ -490,6 +499,7 @@ class OverlapSampler:
                         / os.sysconf("SC_CLK_TCK"),
                     )
                 # Linux MemAvailable is measured, not total installed RAM.
+                stage = "host_memory"
                 meminfo = Path("/proc/meminfo")
                 if not meminfo.is_file():
                     raise ValueError("Host available-memory sampler requires Linux")
@@ -502,6 +512,7 @@ class OverlapSampler:
                     self.metrics["host_available_memory_min_bytes"],
                     int(available.split()[1]) * 1024,
                 )
+                stage = "filesystem"
                 for name, root in (
                     ("staging_peak_bytes", self.harness.profile.staging_root),
                     ("cache_peak_bytes", self.harness.profile.cache_root),
@@ -512,6 +523,7 @@ class OverlapSampler:
                     )
                 identity = self.harness.runtime._container
                 if identity:
+                    stage = "container_control"
                     response = self.harness.command(
                         (
                             "stats",
@@ -525,6 +537,7 @@ class OverlapSampler:
                     )
                     if response.code:
                         raise ValueError("Container sampling unavailable")
+                    stage = "container_decode"
                     memory, cpu = response.stdout.decode().strip().split("|")
                     number, unit = re.fullmatch(
                         r"([0-9.]+)([A-Za-z]+).*", memory
@@ -547,6 +560,7 @@ class OverlapSampler:
                         float(cpu.removesuffix("%")),
                     )
                 if self.inputs is not None:
+                    stage = "api_probe"
                     started = monotonic()
                     connection = http.client.HTTPConnection(
                         "127.0.0.1", self.inputs.api_port, timeout=1
@@ -565,6 +579,7 @@ class OverlapSampler:
                 self.metrics["samples"] += 1
             except Exception:
                 self.metrics["sampling_failures"] += 1
+                self.metrics["sampling_" + stage + "_failures"] += 1
             self.stop.wait(0.1)
 
     def start(self):
