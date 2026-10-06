@@ -1,4 +1,4 @@
-"""Private copies of approved inputs; no directory binds or mutable hardlinks."""
+"""Sealed private copies of approved inputs for read-only directory binds."""
 
 import hashlib
 import os
@@ -26,6 +26,9 @@ class StagedInputs:
 
     def close(self) -> None:
         if not self._closed:
+            # A sealed directory is not writable by its owner. Restore private
+            # write access only after the caller has confirmed worker death.
+            os.chmod(self.directory, 0o700)
             shutil.rmtree(self.directory)
             self._closed = True
 
@@ -146,6 +149,11 @@ def stage_inputs(
                 staged.append(
                     ApprovedFile(str(final), item.sha256, item.byte_count, item.rows)
                 )
+        expected_names = {item.sha256 + ".parquet" for item in unique.values()}
+        actual_names = {entry.name for entry in os.scandir(directory)}
+        if actual_names != expected_names:
+            raise ValueError("Staged input directory identity mismatch")
+        os.chmod(directory, 0o555)
         result.files = tuple(staged)
         return result
     except AnalyticalResourceError:

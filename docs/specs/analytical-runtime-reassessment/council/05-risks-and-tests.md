@@ -35,3 +35,28 @@
 - Any 2/4 scenario result is only a measured workload point; future demand and acceptance thresholds remain open.
 - Primary vendor documentation, even where it advertises managed compute/security/scaling, does not validate the project-specific contract or operating cost.
 - Global admission closure during uncertain daemon ownership may reduce availability; the competing risk is an unaccounted live worker and unsafe capacity reuse.
+
+## Directory-mount implementation status — 2026-10-05
+
+The request-private staging directory now contains only verified digest-named
+Parquet files, is sealed mode `0555` after final exact-entry verification, and
+is passed to Docker as one read-only `bind-recursive=disabled` mount at
+`/inputs`. Individual Parquet files remain mode `0444`. Cleanup restores
+directory-owner write permission only after the existing caller lifecycle has
+confirmed worker termination.
+
+Controlled verification passed 41 tests across
+`tests/integration/test_analytical_input_staging.py` and
+`tests/unit/test_docker_runtime.py`; Ruff check/format, mypy on the changed
+adapters, and `git diff --check` passed. Pytest emitted four temporary-directory
+cleanup warnings in `test_dedicated_pool_private_mode`; the selected tests passed.
+These controlled checks do not prove Docker mount behavior or worker isolation.
+
+The owner authorized code and isolation/lifecycle tests while keeping latency
+and resource targets open, and explicitly excluded performance/capacity
+measurements. Native Linux Docker isolation has not run. The documented guest
+export uses `git archive HEAD` only after committing the reviewed implementation
+and explicitly refuses a stale source export; the implementation is currently
+uncommitted. Do not bypass that guard. T3.2/T3.C remain open pending the
+documented guest validation; no performance, capacity, API/refresh-overlap or
+throughput measurements are authorized.

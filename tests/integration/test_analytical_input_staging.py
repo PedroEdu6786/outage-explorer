@@ -44,18 +44,23 @@ def approved(tmp_path):
     return ApprovedFile(str(path), hashlib.sha256(raw).hexdigest(), len(raw), 2)
 
 
-def test_private_copy_exact_files_uid_readability_and_mutable_source(profile, approved):
+def test_private_copy_sealed_exact_entries_uid_readability_and_mutable_source(
+    profile, approved
+):
     staged = stage_inputs(profile, (approved,), monotonic() + 5)
     path = Path(staged.files[0].path)
     assert path.name == approved.sha256 + ".parquet"
     assert path.read_bytes() == Path(approved.path).read_bytes()
     assert path.stat().st_mode & 0o777 == 0o444  # UID 65534 reads exact bind.
-    assert staged.directory.stat().st_mode & 0o777 == 0o700
+    assert staged.directory.stat().st_mode & 0o777 == 0o555
+    with pytest.raises(PermissionError):
+        (staged.directory / "unapproved.parquet").touch()
     assert path.stat().st_ino != Path(approved.path).stat().st_ino
     Path(approved.path).write_bytes(b"changed source")
     assert hashlib.sha256(path.read_bytes()).hexdigest() == approved.sha256
     assert list(staged.directory.iterdir()) == [path]
     staged.close()
+    assert not staged.directory.exists()
     staged.close()
 
 

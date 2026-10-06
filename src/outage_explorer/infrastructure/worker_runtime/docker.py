@@ -310,13 +310,16 @@ class DockerRuntime:
                 )
             args.extend(("--mount", self._spill.mount_argument()))
         assert self._staging is not None
-        for item in self._staging.files:
-            if any(c in item.path for c in (",", "\n", "\x00")):
+        if self._staging.files:
+            directory = str(self._staging.directory)
+            if any(c in directory for c in (",", "\n", "\x00")):
                 raise RuntimeUnavailableError("Unsupported analytical mount path")
             args.extend(
                 (
                     "--mount",
-                    f"type=bind,src={item.path},dst=/inputs/{item.sha256}.parquet,readonly",
+                    "type=bind,src="
+                    + directory
+                    + ",dst=/inputs,readonly,bind-recursive=disabled",
                 )
             )
         args.append(p.image_id)

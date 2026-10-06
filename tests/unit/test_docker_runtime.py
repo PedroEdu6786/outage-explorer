@@ -1,5 +1,6 @@
 """Controlled Docker responses and real bounded host-control subprocesses only."""
 
+import hashlib
 import json
 import sys
 from dataclasses import replace
@@ -8,6 +9,8 @@ from threading import Event
 from time import monotonic
 from unittest.mock import Mock
 
+import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
 
 from outage_explorer.application.errors import (
@@ -16,6 +19,7 @@ from outage_explorer.application.errors import (
     AnalyticalTimeoutError,
     RuntimeUnavailableError,
 )
+from outage_explorer.application.ports.analytical_inputs import ApprovedFile
 from outage_explorer.application.ports.execution import QueryRead
 from outage_explorer.domain.datasets import Column, ValueType
 from outage_explorer.infrastructure.query_results.encoding import retain_result
@@ -307,13 +311,30 @@ def test_only_exact_authorized_digest_files_bound_readonly(runtime, approved):  
     from outage_explorer.domain.datasets import PUBLIC_DATASETS
 
     adapter, control, _ = runtime
-    request = QueryRead("SELECT * FROM national", ((PUBLIC_DATASETS[0], (approved,)),))
+    second_path = Path(approved.path).with_name("second.parquet")
+    pq.write_table(pa.table({"n": [3]}), second_path)
+    payload = second_path.read_bytes()
+    second = ApprovedFile(
+        str(second_path), hashlib.sha256(payload).hexdigest(), len(payload), 1
+    )
+    request = QueryRead(
+        "SELECT * FROM national",
+        ((PUBLIC_DATASETS[0], (approved, second)),),
+    )
     adapter.query(request, adapter.profile.execution_bounds, monotonic() + 5)
     arguments = control.calls[0][0]
     mount = arguments[arguments.index("--mount") + 1]
-    assert f"/inputs/{approved.sha256}.parquet,readonly" in mount
+    assert mount == (
+        f"type=bind,src={adapter._staging.directory},dst=/inputs,readonly,"
+        "bind-recursive=disabled"
+    )
     assert approved.path not in mount
     assert arguments.count("--mount") == 1
+    assert {path.name for path in adapter._staging.directory.iterdir()} == {
+        approved.sha256 + ".parquet",
+        second.sha256 + ".parquet",
+    }
+    assert adapter._staging.directory.stat().st_mode & 0o777 == 0o555
     adapter.terminate_and_reap()
 
 
