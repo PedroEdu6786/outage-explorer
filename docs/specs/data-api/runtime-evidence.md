@@ -623,15 +623,20 @@ Verification actually run:
   with null review. The analytical image/profile and prior passing reports were
   reused without rebuilding the image or rerunning measurements.
 
-A new read-only current dependency probe attempted configured runtime-user IAM
-pool checkout/replacement and Cognito seed/configuration verification. The sandbox
-attempt failed; the approved outside-sandbox retry also failed at bounded IAM
-credentials. The existing sanitized diagnostic then reported **SDK signing:
-`LoginRefreshRequired`; bounded signing/application pool unavailable**. Refresh
-the existing local AWS login before a current RDS/pool/Cognito recheck. No live
-binding, replacement-connection or Cognito success is claimed from these attempts;
-the historical October 5 successes remain dated evidence. No credentials were
-printed, changed or transferred; no application database writes or API startup ran.
+A first read-only current dependency probe was sandbox-blocked. The user clarified
+that the IAM login was already active; the prior `LoginRefreshRequired` report was
+stale. Retried with the current identity in the approved outside-sandbox path at
+2026-10-06 16:14 UTC. IAM token signing, encrypted PostgreSQL access as the runtime
+user, required runtime table privileges, and the application pool all passed. The
+pool reused its existing connection without signing, then replaced a physical
+connection and signed again. Read-only checks confirmed three seeded Viewer,
+Analyst and Admin role bindings match the configured Cognito issuer, all three
+provider accounts are enabled/confirmed, self-registration is disabled, and the
+configured callback, authorization-code flow and confidential-client secret match
+provider metadata. The sanitized output contained only statuses/counters and no
+identifiers or credentials. No application writes or API startup ran. This current
+Mac dependency check does not supply the outstanding real browser login/session
+acceptance or actual Linux serving-host check.
 
 The user subsequently approved the narrow local scope in ADR-0055: local acceptance
 may precede complete capacity measurements, preserving safety/report/budget review,
@@ -643,7 +648,8 @@ reviews remain null; no reviewer/date/digest approval was inferred.
 Original T4.3/T4.C, data-api T1.7/T1.C, auth T5.14/T5.C and analytical Phase 5 stay
 open. Local T4.L0/T4.L1 record only the accepted scope and delivered safeguards;
 T4.L2/T4.L3/T4.LC and all Phase 5 tasks remain open. No activation flag or reviewed
-record was changed, and no unperformed check was marked passed.
+record was changed, and no unperformed check was marked passed. The prior IAM
+failure note above was superseded by the current successful read-only check.
 
 After scoped-record wiring, the final startup/profile/parser-configuration/
 architecture selection passed **201 tests**, including local-record rejection by
