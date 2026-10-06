@@ -1,4 +1,4 @@
-"""Bounded modeled-only publication reads and pinned public Parquet projections."""
+"""Bounded publication reads that pin each dataset's verified public Parquet file."""
 
 import hashlib
 import os
@@ -14,7 +14,6 @@ from time import monotonic
 from typing import Protocol
 
 import pyarrow as pa  # type: ignore[import-untyped]
-import pyarrow.parquet as pq  # type: ignore[import-untyped]
 
 from outage_explorer.application.errors import (
     AnalyticalResourceError,
@@ -30,10 +29,6 @@ from outage_explorer.application.ports.artifacts import (
 from outage_explorer.domain.datasets import Dataset
 from outage_explorer.domain.publication import PublishedGeneration
 from outage_explorer.infrastructure.parquet.manifests import load_manifest
-from outage_explorer.infrastructure.parquet.schemas import (
-    modeled_from_record,
-    schema_for,
-)
 from outage_explorer.infrastructure.parquet.storage import LocalParquetStore
 
 
@@ -159,7 +154,7 @@ class VerifiedModeledCache:
         identity: tuple[str, str],
         check: Callable[[], None],
     ) -> None:
-        # A staging session downloads only the manifest and selected modeled files.
+        # A staging session downloads only the manifest and the selected public file.
         # Raw/provenance dependencies are neither fetched nor granted to a worker.
         guard = check
         with tempfile.TemporaryDirectory(
@@ -194,81 +189,54 @@ class VerifiedModeledCache:
                 for item in generation.datasets
                 if item.grain.value == dataset.grain
             )
-            refs = tuple(ref for ref in manifest.modeled if ref.grain == dataset.grain)
+            refs = tuple(ref for ref in manifest.public if ref.grain == dataset.grain)
             if (
-                not refs
-                or sum(ref.row_count for ref in refs) != summary.rows
+                len(refs) != 1
+                or refs[0].row_count != summary.rows
                 or summary.rows > self._bounds.rows
             ):
                 raise ArtifactLimitError(
-                    "Published modeled row count unavailable or over budget"
+                    "Published public row count unavailable or over budget"
                 )
-            if any(
-                ref.kind != "modeled" or ref.schema_version != dataset.schema_version
-                for ref in refs
-            ):
-                raise ArtifactError("Invalid modeled references")
-            keys: set[tuple[str, ...]] = set()
-            dates = []
-            prepared: list[ApprovedFile] = []
-            for index, ref in enumerate(refs):
-                download(ref.object)
-                records = []
-                for record in staging.records(ref):
-                    guard()
-                    row = modeled_from_record(record, dataset.grain)
-                    key = (row.observation.day.isoformat(), *row.observation.identity)
-                    if key in keys or row.observation.day != ref.partition:
-                        raise ArtifactError("Duplicate or misplaced modeled key")
-                    keys.add(key)
-                    dates.append(row.observation.day)
-                    records.append(
-                        {col.name: record[col.name] for col in dataset.columns}
-                    )
-                schema = schema_for("modeled", dataset.grain)
-                public_schema = pa.schema(
-                    [schema.field(col.name) for col in dataset.columns]
-                )
-                projected = Path(directory) / f"projection-{index}.parquet"
-                pq.write_table(
-                    pa.Table.from_pylist(records, schema=public_schema), projected
-                )
-                size = projected.stat().st_size
-                if (
-                    size > self._artifacts.file_bytes
-                    or sum(file.byte_count for file in prepared) + size
-                    > self._bounds.bytes
-                ):
-                    raise ArtifactLimitError("Projected file budget exceeded")
-                digest = hashlib.sha256(projected.read_bytes()).hexdigest()
-                prepared.append(
-                    ApprovedFile(str(projected), digest, size, len(records))
-                )
+            ref = refs[0]
             if (
-                len(keys) != summary.rows
-                or min(dates) != summary.start
-                or max(dates) != summary.end
+                ref.kind != "public"
+                or ref.partition is not None
+                or ref.schema_version != dataset.schema_version
+            ):
+                raise ArtifactError("Invalid public reference")
+            coverage = next(
+                item for item in manifest.summaries if item.grain == dataset.grain
+            )
+            if (coverage.first_period, coverage.last_period) != (
+                summary.start,
+                summary.end,
             ):
                 raise ArtifactError("Published coverage mismatch")
-            self._evict(sum(file.byte_count for file in prepared), len(prepared))
-            installed: list[ApprovedFile] = []
+            # The connector already verified this file as an exact projection of
+            # the modeled file; readers only check identity, schema and rows.
+            download(ref.object)
+            staging.verify(ref)
+            guard()
+            size = ref.object.byte_count
+            if size > self._bounds.bytes:
+                raise ArtifactLimitError("Public file budget exceeded")
+            self._evict(size, 1)
+            target = self._root / f"{generation.manifest_digest}-{dataset.id}.parquet"
+            os.replace(staging.root / ref.object.key, target)
             try:
-                for index, file in enumerate(prepared):
-                    target = (
-                        self._root
-                        / f"{generation.manifest_digest}-{dataset.id}-{index}.parquet"
-                    )
-                    os.replace(file.path, target)
-                    target.chmod(0o400)
-                    installed.append(
+                target.chmod(0o400)
+                self._entries[identity] = _Entry(
+                    generation,
+                    dataset,
+                    (
                         ApprovedFile(
-                            str(target), file.sha256, file.byte_count, file.rows
-                        )
-                    )
-                self._entries[identity] = _Entry(generation, dataset, tuple(installed))
+                            str(target), ref.object.sha256, size, ref.row_count
+                        ),
+                    ),
+                )
             except BaseException:
-                for file in installed:
-                    Path(file.path).unlink(missing_ok=True)
+                target.unlink(missing_ok=True)
                 raise
 
     def _evict(self, incoming: int, files: int) -> None:
@@ -342,7 +310,7 @@ def reclaim_private_cache(root: Path, *, file_limit: int) -> None:
         if info.st_uid != os.getuid() or path.is_symlink():
             raise ValueError("Invalid disposable cache file")
         if stat.S_ISREG(info.st_mode) and re.fullmatch(
-            r"[0-9a-f]{64}-(national|facilities|generators)-[0-9]+\.parquet", path.name
+            r"[0-9a-f]{64}-(national|facilities|generators)\.parquet", path.name
         ):
             paths.append(path)
         elif stat.S_ISDIR(info.st_mode) and path.name.startswith(".preparing-"):

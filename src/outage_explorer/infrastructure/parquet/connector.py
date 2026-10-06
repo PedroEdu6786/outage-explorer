@@ -57,6 +57,7 @@ class LocalConnectorEvidence:
                     item.object
                     for item in (
                         *current.modeled,
+                        *current.public,
                         *current.base_modeled,
                         *current.dispositions,
                         *current.ledger,
@@ -187,6 +188,7 @@ def manifest_dependencies(manifest: CandidateManifest) -> tuple[StoredObject, ..
         item.object
         for item in (
             *manifest.modeled,
+            *manifest.public,
             *manifest.base_modeled,
             *manifest.dispositions,
             *manifest.ledger,

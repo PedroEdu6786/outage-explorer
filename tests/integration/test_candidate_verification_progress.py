@@ -2,7 +2,6 @@
 
 import logging
 from datetime import date, timedelta
-from time import perf_counter
 from unittest.mock import patch
 
 import pytest
@@ -43,21 +42,8 @@ def test_long_interval_verification_replay_counts_equivalence(tmp_path, caplog, 
         with patch.object(
             partitions, "replay_evidence", wraps=partitions.replay_evidence
         ) as scans:
-            start = perf_counter()
             builder.verify(candidate, BOUNDS)
-            indexed_seconds = perf_counter() - start
             assert scans.call_count == 3
-        with patch.object(candidates, "stage_dates", return_value=None):
-            with patch.object(
-                partitions, "replay_evidence", wraps=partitions.replay_evidence
-            ) as scans:
-                start = perf_counter()
-                builder.verify(candidate, BOUNDS)
-                baseline_seconds = perf_counter() - start
-                assert scans.call_count == 3 * (days + 1)
-    print(
-        f"verification days={days} indexed_seconds={indexed_seconds:.3f} baseline_seconds={baseline_seconds:.3f} indexed_scans=3 baseline_scans={3 * (days + 1)}"
-    )
     assert "grain_build_started" not in caplog.text
     assert "grain_verify_progress grain=generator" in caplog.text
     assert "grain_verify_complete grain=generator" in caplog.text

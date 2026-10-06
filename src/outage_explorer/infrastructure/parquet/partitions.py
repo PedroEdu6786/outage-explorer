@@ -9,7 +9,7 @@ from outage_explorer.application.ports.artifacts import (
     ArtifactRef,
 )
 from outage_explorer.application.ports.candidates import EvidenceBundle
-from outage_explorer.domain.observations import Grain, parse_day
+from outage_explorer.domain.observations import parse_day
 from outage_explorer.domain.refresh import (
     IncomingRow,
     Interval,
@@ -31,7 +31,7 @@ from outage_explorer.infrastructure.parquet.schemas import (
 )
 from outage_explorer.infrastructure.parquet.storage import LocalParquetStore
 
-PartitionIndex = dict[date | None, tuple[ArtifactRef, ...]]
+StagedDays = dict[date | None, tuple[ArtifactRef, ...]]
 
 
 def row_day(row: IncomingRow) -> date | None:
@@ -42,7 +42,7 @@ def row_day(row: IncomingRow) -> date | None:
     return parse_day(period) if isinstance(period, str) else None
 
 
-def stage_dates(store: LocalParquetStore, bundle: EvidenceBundle) -> PartitionIndex:
+def stage_dates(store: LocalParquetStore, bundle: EvidenceBundle) -> StagedDays:
     """Spool bounded batches, closing files between writes; preserve source order."""
     index: dict[date | None, list[ArtifactRef]] = {}
     buffered: dict[date | None, list[dict[str, object]]] = {}
@@ -69,70 +69,78 @@ def stage_dates(store: LocalParquetStore, bundle: EvidenceBundle) -> PartitionIn
     return {day: tuple(refs) for day, refs in index.items()}
 
 
-def index_modeled(refs: tuple[ArtifactRef, ...], grain: Grain) -> PartitionIndex:
-    result: dict[date | None, list[ArtifactRef]] = {}
-    for ref in refs:
-        if ref.grain != grain:
-            continue
-        if ref.kind != "modeled" or ref.partition is None:
-            raise RefreshInputError("Modeled reference needs a date partition")
-        result.setdefault(ref.partition, []).append(ref)
-    return {day: tuple(values) for day, values in result.items()}
-
-
-def day_sequence(interval: Interval, prior: PartitionIndex) -> Iterator[date | None]:
-    # Metadata only, never history rows; interval length is checked before this.
-    dates = {day for day in prior if day is not None}
-    day = interval.start
-    while day <= interval.end:
-        dates.add(day)
-        if day == date.max:
-            break
-        day += timedelta(days=1)
-    yield None  # malformed dates still get dispositions and quality counts
-    yield from sorted(dates)
-
-
 def incoming_day(
-    store: LocalParquetStore,
-    bundle: EvidenceBundle,
-    day: date | None,
-    staged: PartitionIndex | None,
+    store: LocalParquetStore, day: date | None, staged: StagedDays
 ) -> Iterator[IncomingRow]:
-    if staged is not None:
-        for ref in staged.get(day, ()):
-            for record in store.records(ref):
-                yield raw_from_record(record)
-        return
-    # Unindexed fallback for callers without derived staging; candidate verification
-    # rebuilds bounded day indexes from fresh replay instead of rescanning per day.
-    for row in replay_evidence(store, bundle):
-        actual_day = row_day(row)
-        if actual_day is not None and not bundle.interval.contains(actual_day):
-            raise RefreshInputError("Source observation outside requested interval")
-        if actual_day == day:
-            yield row
-
-
-def prior_day(
-    store: LocalParquetStore, refs: tuple[ArtifactRef, ...], bounds: RefreshBounds
-) -> tuple[ModeledRow, ...]:
-    rows: list[ModeledRow] = []
-    previous = None
-    for ref in refs:
+    for ref in staged.get(day, ()):
         for record in store.records(ref):
-            row = modeled_from_record(record, ref.grain)
-            if row.observation.day != ref.partition:
-                raise RefreshInputError("Modeled row does not match partition")
-            if previous is not None and row.key <= previous:
-                raise RefreshInputError(
-                    "Duplicate or unsorted modeled keys across files"
-                )
-            previous = row.key
-            if len(rows) >= bounds.prior_rows:
-                raise ArtifactLimitError("Prior day row bound exceeded")
-            rows.append(row)
-    return tuple(rows)
+            yield raw_from_record(record)
+
+
+def prior_days(
+    store: LocalParquetStore, ref: ArtifactRef | None, bounds: RefreshBounds
+) -> Iterator[tuple[date, tuple[ModeledRow, ...]]]:
+    """Stream the prior single modeled file as ascending day groups.
+
+    Keys must be strictly increasing, which also rejects duplicates. Only one day
+    group is held; cumulative rows are bounded per dataset by ``prior_rows``.
+    """
+    if ref is None:
+        return
+    if ref.kind != "modeled" or ref.partition is not None:
+        raise RefreshInputError("Prior modeled input must be one unpartitioned file")
+    group: list[ModeledRow] = []
+    previous: tuple[date, tuple[str, ...]] | None = None
+    count = 0
+    for record in store.records(ref):
+        row = modeled_from_record(record, ref.grain)
+        if previous is not None and row.key <= previous:
+            raise RefreshInputError("Duplicate or unsorted prior modeled keys")
+        count += 1
+        if count > bounds.prior_rows:
+            raise ArtifactLimitError("Prior dataset row bound exceeded")
+        if group and row.observation.day != group[0].observation.day:
+            yield group[0].observation.day, tuple(group)
+            group = []
+        group.append(row)
+        previous = row.key
+    if group:
+        yield group[0].observation.day, tuple(group)
+
+
+def day_walk(
+    interval: Interval, prior: Iterator[tuple[date, tuple[ModeledRow, ...]]]
+) -> Iterator[tuple[date | None, tuple[ModeledRow, ...]]]:
+    """Yield malformed dates first, then each interval or prior day ascending.
+
+    Each day carries its prior rows. The union is merged lazily so only the
+    current day group is resident; interval length is checked before this runs.
+    """
+    yield None, ()  # malformed dates still get dispositions and quality counts
+
+    def interval_days() -> Iterator[date]:
+        day = interval.start
+        while day <= interval.end:
+            yield day
+            if day == date.max:
+                break
+            day += timedelta(days=1)
+
+    days = interval_days()
+    current = next(days, None)
+    pending = next(prior, None)
+    while current is not None or pending is not None:
+        if current is not None and (pending is None or current < pending[0]):
+            yield current, ()
+            current = next(days, None)
+        elif pending is not None and (current is None or pending[0] < current):
+            yield pending
+            pending = next(prior, None)
+        else:
+            assert current is not None and pending is not None
+            yield current, pending[1]
+            current = next(days, None)
+            pending = next(prior, None)
 
 
 @dataclass(frozen=True)
@@ -179,11 +187,11 @@ def merge_day(
     store: LocalParquetStore,
     bundle: EvidenceBundle,
     day: date | None,
-    prior: PartitionIndex,
+    old: tuple[ModeledRow, ...],
     bounds: RefreshBounds,
-    staged: PartitionIndex | None = None,
+    staged: StagedDays,
 ) -> DayMerge:
-    rows = incoming_day(store, bundle, day, staged)
+    rows = incoming_day(store, day, staged)
     first = next(rows, None)
     if first is not None:
 
@@ -203,5 +211,4 @@ def merge_day(
             frozenset(),
             Quality(0, 0, 0, 0, 0, ()),
         )
-    old = prior_day(store, prior.get(day, ()), bounds)
     return DayMerge(day, merge_partition(modeled, old, bounds), old)

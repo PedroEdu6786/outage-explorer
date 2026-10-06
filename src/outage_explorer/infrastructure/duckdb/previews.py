@@ -1,12 +1,7 @@
 """Restricted worker engine. Call only inside the reviewed isolated boundary."""
 
-import hashlib
 from datetime import date
-from pathlib import Path
 from typing import cast
-
-import duckdb
-import pyarrow.parquet as pq  # type: ignore[import-untyped]
 
 from outage_explorer.application.errors import (
     AnalyticalResourceError,
@@ -17,6 +12,7 @@ from outage_explorer.application.ports.execution import (
     PreviewRead,
     PreviewRows,
 )
+from outage_explorer.infrastructure.duckdb.views import open_restricted
 
 
 def execute_preview(request: PreviewRead, bounds: ExecutionBounds) -> PreviewRows:
@@ -26,30 +22,8 @@ def execute_preview(request: PreviewRead, bounds: ExecutionBounds) -> PreviewRow
     identities = [name for name in ("facility", "generator") if name in names]
     if not request.files or not 1 <= request.size <= 500:
         raise DataUnavailableError("Invalid approved preview inputs")
-    for file in request.files:
-        path = Path(file.path)
-        if (
-            path.is_symlink()
-            or path.stat().st_size != file.byte_count
-            or hashlib.sha256(path.read_bytes()).hexdigest() != file.sha256
-            or pq.read_schema(path).names != names
-        ):
-            raise DataUnavailableError("Approved preview file integrity mismatch")
-    connection = duckdb.connect(
-        config={
-            "allow_unsigned_extensions": "false",
-            "autoinstall_known_extensions": "false",
-            "autoload_known_extensions": "false",
-            "threads": "1",
-            "memory_limit": f"{bounds.memory_bytes}B",
-            "max_temp_directory_size": f"{bounds.temporary_bytes}B",
-        }
-    )
+    connection = open_restricted(bounds, [("approved", request.dataset, request.files)])
     try:
-        connection.from_parquet([file.path for file in request.files]).create(
-            "approved"
-        )
-        connection.execute("SET enable_external_access = false")
         predicates: list[str] = []
         values: list[object] = []
         for value, operator in ((request.start, ">="), (request.end, "<=")):

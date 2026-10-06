@@ -205,8 +205,9 @@ def test_binary_identifier_ties_revisit_and_no_raw_graph_download(system, browsi
         ["001", "01", "1", "A", "Z", "a", "é", "😀"], key=lambda s: s.encode("utf-8")
     )
     assert service.page(token, "facilities", cursor=first["page_cursor"]) == first
-    # Exactly manifest + selected modeled objects, never raw/pages/ledger.
+    # Exactly the manifest + the one selected public file, never raw/pages/ledger.
     assert len([call for call in client.calls if call[0] == "get"]) == 2
+    assert len(runtime.calls[0].files) == 1
     for file in runtime.calls[0].files:
         assert pq.read_schema(file.path).names == [
             col.name for col in PUBLIC_DATASETS[1].columns
@@ -476,7 +477,7 @@ def test_local_modeled_projection_and_controlled_worker_without_cloud_or_databas
             replace(generation, id="different-generation"), PUBLIC_DATASETS[0]
         )
     limited = VerifiedModeledCache(
-        tmp_path / "limited-cache", Objects(), ARTIFACT, replace(CACHE, files=2)
+        tmp_path / "limited-cache", Objects(), ARTIFACT, replace(CACHE, files=1)
     )
     pin = limited.prepare(generation, PUBLIC_DATASETS[0])
     with pytest.raises(AnalyticalResourceError):

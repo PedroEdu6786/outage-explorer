@@ -6,6 +6,7 @@ publication guarantee. The later refresh application owns those boundaries.
 
 from collections.abc import Iterable
 from dataclasses import dataclass
+from datetime import date
 from typing import Literal, Protocol
 
 from outage_explorer.application.ports.artifacts import ArtifactRef, StoredObject
@@ -56,6 +57,8 @@ class GrainSummary:
     observed_entities: int
     observed_dates: int
     usable_dates: int
+    first_period: date | None = None
+    last_period: date | None = None
 
 
 @dataclass(frozen=True)
@@ -67,13 +70,14 @@ class CandidateManifest:
     inherited_evidence: tuple[EvidenceBundle, ...]
     base_modeled: tuple[ArtifactRef, ...]
     modeled: tuple[ArtifactRef, ...]
+    public: tuple[ArtifactRef, ...]
     dispositions: tuple[ArtifactRef, ...]
     ledger: tuple[ArtifactRef, ...]
     summaries: tuple[GrainSummary, ...]
     outcome: Literal["candidate", "retained_all_excluded"]
     contract_id: str
     transformation_id: str
-    schema_version: str = "1"
+    schema_version: str = "2"
     manifest_object: StoredObject | None = None
     base_manifest_object: StoredObject | None = None
 

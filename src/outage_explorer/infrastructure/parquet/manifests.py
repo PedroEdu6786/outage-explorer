@@ -16,9 +16,25 @@ from outage_explorer.application.ports.candidates import (
     EvidenceBundle,
     GrainSummary,
 )
-from outage_explorer.domain.observations import IDENTITY_FIELDS, Reason
+from outage_explorer.domain.observations import IDENTITY_FIELDS, Grain, Reason
 from outage_explorer.domain.refresh import Interval, Quality
 from outage_explorer.infrastructure.parquet.storage import LocalParquetStore
+
+MANIFEST_VERSION = "2"
+
+
+def _single_files(
+    refs: tuple[ArtifactRef, ...], kind: str, allow_empty: bool = False
+) -> dict[Grain, ArtifactRef]:
+    """Exactly one unpartitioned file of this kind per grain (or none at all)."""
+    if allow_empty and not refs:
+        return {}
+    if any(ref.kind != kind or ref.partition is not None for ref in refs):
+        raise ArtifactError(f"Manifest {kind} files must be single unpartitioned files")
+    grains = {ref.grain: ref for ref in refs}
+    if len(grains) != len(refs) or set(grains) != set(IDENTITY_FIELDS):
+        raise ArtifactError(f"Manifest requires exactly one {kind} file per grain")
+    return grains
 
 
 def validate_manifest(manifest: CandidateManifest) -> None:
@@ -40,17 +56,28 @@ def validate_manifest(manifest: CandidateManifest) -> None:
         identifier(value)
     if manifest.base_generation_id is not None:
         identifier(manifest.base_generation_id)
-    if manifest.schema_version != "1" or manifest.outcome not in (
-        "candidate",
-        "retained_all_excluded",
-    ):
-        raise ArtifactError("Unsupported manifest version or outcome")
+    if manifest.schema_version != MANIFEST_VERSION:
+        raise ArtifactError("Unsupported manifest schema version")
+    if manifest.outcome not in ("candidate", "retained_all_excluded"):
+        raise ArtifactError("Unsupported manifest outcome")
+    modeled = _single_files(manifest.modeled, "modeled")
+    public = _single_files(manifest.public, "public")
+    _single_files(manifest.base_modeled, "modeled", allow_empty=True)
+    if any(public[grain].row_count != modeled[grain].row_count for grain in modeled):
+        raise ArtifactError("Public and modeled row counts differ")
     for summary in manifest.summaries:
         if summary.grain not in IDENTITY_FIELDS:
             raise ArtifactError("Invalid summary grain")
         for name, value in vars(summary).items():
-            if name not in ("grain", "quality"):
+            if name not in ("grain", "quality", "first_period", "last_period"):
                 integer(value)
+        first, last = summary.first_period, summary.last_period
+        if (first is None) != (last is None) or any(
+            value is not None and type(value) is not date for value in (first, last)
+        ):
+            raise ArtifactError("Invalid summary period coverage")
+        if first is not None and last is not None and first > last:
+            raise ArtifactError("Invalid summary period coverage")
         for name, value in vars(summary.quality).items():
             if name != "reason_counts":
                 integer(value)
@@ -60,6 +87,7 @@ def validate_manifest(manifest: CandidateManifest) -> None:
             integer(count, 1)
     refs = [
         *manifest.modeled,
+        *manifest.public,
         *manifest.base_modeled,
         *manifest.dispositions,
         *manifest.ledger,
@@ -75,7 +103,8 @@ def validate_manifest(manifest: CandidateManifest) -> None:
     for ref in refs:
         if (
             ref.grain not in IDENTITY_FIELDS
-            or ref.kind not in ("raw", "pages", "modeled", "dispositions", "ledger")
+            or ref.kind
+            not in ("raw", "pages", "modeled", "public", "dispositions", "ledger")
             or ref.schema_version != "1"
         ):
             raise ArtifactError("Invalid artifact descriptor")
@@ -125,6 +154,10 @@ def _interval(value: dict[str, Any]) -> Interval:
     )
 
 
+def _optional_date(value: str | None) -> date | None:
+    return None if value is None else date.fromisoformat(value)
+
+
 def _ref(value: dict[str, Any]) -> ArtifactRef:
     return ArtifactRef(
         StoredObject(**value["object"]),
@@ -154,13 +187,29 @@ def load_manifest(
     payload = b"".join(store.read(reference))
     try:
         value = json.loads(payload)
+        version = value["schema_version"]
+    except (KeyError, TypeError, ValueError) as error:
+        raise ArtifactError("Invalid candidate manifest") from error
+    # Checked first so an old-layout manifest fails with an explicit reason.
+    if version != MANIFEST_VERSION:
+        raise ArtifactError("Unsupported manifest schema version")
+    try:
         summaries = []
         for summary in value["summaries"]:
             quality = summary["quality"]
             quality["reason_counts"] = tuple(
                 (Reason(**reason), count) for reason, count in quality["reason_counts"]
             )
-            summaries.append(GrainSummary(**{**summary, "quality": Quality(**quality)}))
+            summaries.append(
+                GrainSummary(
+                    **{
+                        **summary,
+                        "quality": Quality(**quality),
+                        "first_period": _optional_date(summary["first_period"]),
+                        "last_period": _optional_date(summary["last_period"]),
+                    }
+                )
+            )
         manifest = CandidateManifest(
             generation_id=value["generation_id"],
             base_generation_id=value["base_generation_id"],
@@ -171,6 +220,7 @@ def load_manifest(
             ),
             base_modeled=tuple(_ref(item) for item in value["base_modeled"]),
             modeled=tuple(_ref(item) for item in value["modeled"]),
+            public=tuple(_ref(item) for item in value["public"]),
             dispositions=tuple(_ref(item) for item in value["dispositions"]),
             ledger=tuple(_ref(item) for item in value["ledger"]),
             summaries=tuple(summaries),
@@ -185,7 +235,7 @@ def load_manifest(
                 else None
             ),
         )
-        if manifest.schema_version != "1" or manifest_bytes(manifest) != payload:
+        if manifest_bytes(manifest) != payload:
             raise ArtifactError("Unsupported or noncanonical manifest")
         return manifest
     except (KeyError, TypeError, ValueError, AttributeError) as error:

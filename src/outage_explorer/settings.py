@@ -39,7 +39,7 @@ class ArtifactSettings:
     batch_rows: int = 100
     row_group_rows: int = 100
     row_group_bytes: int = 1_000_000
-    file_bytes: int = 2_000_000
+    file_bytes: int = 32_000_000
     total_bytes: int = 256_000_000
     objects: int = 10_000
     field_bytes: int = 100_000
@@ -65,8 +65,8 @@ class WorkerSettings:
     endpoint_workers: int = 1
     page_workers: int = 1
     s3_workers: int = 1
-    memory_bytes: int = 256_000_000
-    temporary_bytes: int = 600_000_000
+    memory_bytes: int = 512_000_000
+    temporary_bytes: int = 700_000_000
 
     def __post_init__(self) -> None:
         if any(type(value) is not int or value <= 0 for value in vars(self).values()):

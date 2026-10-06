@@ -32,9 +32,11 @@ from outage_explorer.domain.refresh import (
 from outage_explorer.infrastructure.parquet.candidates import ParquetCandidateBuilder
 from outage_explorer.infrastructure.parquet.evidence import write_evidence
 from outage_explorer.infrastructure.parquet.manifests import load_manifest
+from outage_explorer.infrastructure.parquet.partitions import prior_days
 from outage_explorer.infrastructure.parquet.schemas import (
     modeled_from_record,
     modeled_record,
+    public_record,
 )
 from outage_explorer.infrastructure.parquet.storage import LocalParquetStore
 
@@ -159,7 +161,8 @@ def test_real_recorded_replay_matches_existing_verifiers(store, builder):
                 ),
             )
         )
-    candidate = builder.build("recorded", bundles, BOUNDS)
+    dataset_bounds = replace(BOUNDS, incoming_rows=5000, output_rows=5000)
+    candidate = builder.build("recorded", bundles, dataset_bounds)
     for grain in GRAINS:
         expected = (
             {
@@ -193,7 +196,7 @@ def test_real_recorded_replay_matches_existing_verifiers(store, builder):
     # A newly constructed store can replay explicit references without listing.
     reopened = LocalParquetStore(store.root, ARTIFACT_BOUNDS)
     ParquetCandidateBuilder(reopened).verify(
-        load_manifest(reopened, candidate.manifest_object), BOUNDS
+        load_manifest(reopened, candidate.manifest_object), dataset_bounds
     )
 
 
@@ -250,12 +253,44 @@ def test_refresh_retains_invalid_absent_missing_dates_and_outside(store, builder
             assert row.origin.run_id == (
                 "new" if grain == "national" and row.observation.day.day == 3 else "old"
             )
-    untouched = [ref for ref in prior.modeled if ref.partition.day == 1]
-    assert all(ref in candidate.modeled for ref in untouched)
+    for grain in GRAINS:
+        assert [
+            row
+            for row in models(store, candidate, grain)
+            if row.observation.day.day == 1
+        ] == [
+            row for row in models(store, prior, grain) if row.observation.day.day == 1
+        ]
     ledger = records(store, candidate.ledger)
     retained = [item for item in ledger if item["action"] == "retain_invalid"]
     assert all(item["exclusion_positions"] == [0] for item in retained)
     assert candidate.outcome == "candidate"
+
+
+def test_merge_reads_only_the_prior_generations_single_modeled_files(store, builder):
+    values = {
+        grain: [raw(grain, period=f"2026-09-0{day}") for day in (1, 2, 3)]
+        for grain in GRAINS
+    }
+    prior = builder.build("old", evidence(store, "old", values), BOUNDS)
+    incoming = evidence(store, "new", {grain: [raw(grain)] for grain in GRAINS})
+    seen = []
+    original = LocalParquetStore.records
+
+    def spy(self, ref):
+        seen.append(ref)
+        return original(self, ref)
+
+    LocalParquetStore.records = spy
+    try:
+        candidate = builder.build("new", incoming, BOUNDS, prior)
+    finally:
+        LocalParquetStore.records = original
+    modeled = [ref for ref in seen if ref.kind == "modeled"]
+    assert all(ref.partition is None for ref in modeled)
+    assert set(prior.modeled) <= set(modeled)
+    assert candidate.base_modeled == prior.modeled and len(candidate.modeled) == 3
+    assert not set(candidate.modeled) & set(prior.modeled)
 
 
 def test_valid_replacement_repeated_refresh_and_absent_entity(store, builder):
@@ -385,14 +420,73 @@ def test_coherent_forged_values_cannot_reuse_real_origin(store, builder):
         models(store, other, "national")[0],
         origin=models(store, valid, "national")[0].origin,
     )
-    forged_ref = store.write(
-        "modeled", "national", forged.observation.day, [modeled_record(forged)]
+    forged_modeled = store.write_file("modeled", "national", [modeled_record(forged)])
+    forged_public = store.write_file(
+        "public", "national", [public_record(modeled_record(forged))]
     )
     changed = replace(
-        valid, modeled=(*forged_ref, *valid.modeled[1:]), manifest_object=None
+        valid,
+        modeled=(forged_modeled, *valid.modeled[1:]),
+        public=(forged_public, *valid.public[1:]),
+        manifest_object=None,
     )
     with pytest.raises(ArtifactError, match="replay or merge"):
         builder.verify(changed, BOUNDS)
+
+
+@pytest.mark.parametrize("target", ["modeled", "public"])
+def test_each_dataset_file_must_match_replay_even_when_the_other_is_valid(
+    store, builder, target
+):
+    valid = builder.build("valid", evidence(store, "valid"), BOUNDS)
+    row = models(store, valid, "facility")[0]
+    changed = {**modeled_record(row), "outage_mw": row.observation.outage + 1}
+    if target == "modeled":
+        forged = store.write_file("modeled", "facility", [changed])
+        fields = {"modeled": (valid.modeled[0], forged, valid.modeled[2])}
+    else:
+        forged = store.write_file("public", "facility", [public_record(changed)])
+        fields = {"public": (valid.public[0], forged, valid.public[2])}
+    with pytest.raises(ArtifactError, match="replay or merge"):
+        builder.verify(replace(valid, **fields, manifest_object=None), BOUNDS)
+
+
+def test_dataset_file_rows_must_not_exceed_or_reorder_replay(store, builder):
+    values = {
+        grain: [raw(grain, period=f"2026-09-0{day}") for day in (1, 2)]
+        for grain in GRAINS
+    }
+    valid = builder.build("valid", evidence(store, "valid", values), BOUNDS)
+    ordered = records(store, valid.modeled[:1])
+    reordered = store.write_file("modeled", "national", ordered[::-1])
+    reordered_public = store.write_file(
+        "public", "national", [public_record(r) for r in ordered[::-1]]
+    )
+    with pytest.raises(ArtifactError, match="replay or merge"):
+        builder.verify(
+            replace(
+                valid,
+                modeled=(reordered, *valid.modeled[1:]),
+                public=(reordered_public, *valid.public[1:]),
+                manifest_object=None,
+            ),
+            BOUNDS,
+        )
+    extra = [*ordered, {**ordered[0], "period": date(2026, 9, 3)}]
+    longer = store.write_file("modeled", "national", extra)
+    longer_public = store.write_file(
+        "public", "national", [public_record(r) for r in extra]
+    )
+    with pytest.raises(ArtifactError):
+        builder.verify(
+            replace(
+                valid,
+                modeled=(longer, *valid.modeled[1:]),
+                public=(longer_public, *valid.public[1:]),
+                manifest_object=None,
+            ),
+            BOUNDS,
+        )
 
 
 def test_ledger_forgery_with_correct_hash_and_schema_rejected(store, builder):
@@ -418,19 +512,28 @@ def test_inherited_evidence_cannot_be_omitted(store, builder):
         )
 
 
-def test_duplicate_keys_split_between_different_files_fail(store, builder):
+def test_duplicate_keys_in_a_prior_file_fail_verification_and_streaming(store, builder):
     prior = builder.build("old", evidence(store, "old"), BOUNDS)
-    changed = modeled_record(models(store, prior, "national")[0])
+    original = modeled_record(models(store, prior, "national")[0])
     # Different content/hash while retaining the same natural key.
-    changed["origin"] = {**changed["origin"], "run_id": "forged"}
-    extra = store.write("modeled", "national", date(2026, 9, 2), [changed])
+    changed = {**original, "origin": {**original["origin"], "run_id": "forged"}}
+    duplicated = store.write_file("modeled", "national", [original, changed])
+    duplicated_public = store.write_file(
+        "public", "national", [public_record(original), public_record(changed)]
+    )
     malformed_base = replace(
         prior,
-        modeled=(prior.modeled[0], *extra, *prior.modeled[1:]),
+        modeled=(duplicated, *prior.modeled[1:]),
+        public=(duplicated_public, *prior.public[1:]),
         manifest_object=None,
     )
     with pytest.raises(ArtifactError):
         builder.verify(malformed_base, BOUNDS)
+    with pytest.raises(RefreshInputError, match="Duplicate or unsorted"):
+        list(prior_days(store, duplicated, BOUNDS))
+    unsorted = store.write_file("modeled", "national", [changed, original][::-1])
+    with pytest.raises(RefreshInputError, match="Duplicate or unsorted"):
+        list(prior_days(store, unsorted, BOUNDS))
     candidate = builder.build("new", evidence(store, "new"), BOUNDS, prior)
     with pytest.raises(ArtifactError, match="pinned manifest"):
         builder.verify(
@@ -441,7 +544,7 @@ def test_duplicate_keys_split_between_different_files_fail(store, builder):
         )
 
 
-def test_many_dates_exceed_group_bound_in_total_but_stream_successfully(store, builder):
+def test_dataset_row_bounds_are_cumulative_across_days(store, builder):
     interval = Interval(date(2026, 8, 1), date(2026, 8, 20))
     values = {
         grain: [
@@ -450,19 +553,26 @@ def test_many_dates_exceed_group_bound_in_total_but_stream_successfully(store, b
         ]
         for grain in GRAINS
     }
-    small_groups = replace(BOUNDS, incoming_rows=2, prior_rows=2, output_rows=2)
-    prior = builder.build(
-        "history", evidence(store, "history", values, interval), small_groups
-    )
+    bundles = evidence(store, "history", values, interval)
+    for field, message in (
+        ("incoming_rows", "Incoming dataset"),
+        ("output_rows", "Output dataset"),
+    ):
+        with pytest.raises(ArtifactLimitError, match=message):
+            builder.build("history", bundles, replace(BOUNDS, **{field: 19}))
+    dataset = replace(BOUNDS, incoming_rows=25, prior_rows=25, output_rows=25)
+    prior = builder.build("history", bundles, dataset)
     fresh_interval = Interval(date(2026, 9, 1), date(2026, 9, 3))
-    new = builder.build(
-        "fresh", evidence(store, "fresh", interval=fresh_interval), small_groups, prior
-    )
+    fresh = evidence(store, "fresh", interval=fresh_interval)
+    with pytest.raises(ArtifactLimitError, match="Prior dataset"):
+        builder.build("fresh", fresh, replace(dataset, prior_rows=19), prior)
+    new = builder.build("fresh", fresh, dataset, prior)
     assert all(
         summary.candidate_count == 21 and summary.carried_outside_interval == 20
         for summary in new.summaries
     )
-    assert all(ref in new.modeled for ref in prior.modeled)
+    assert len(new.modeled) == len(new.public) == 3
+    assert new.base_modeled == prior.modeled
 
 
 def test_one_overfull_complete_day_fails_without_truncation(store, builder):
@@ -503,10 +613,17 @@ def test_rehashed_manifest_rejects_noninteger_or_negative_quality(
 def test_immutable_base_manifest_prevents_dropped_history(store, builder):
     prior = builder.build("old", evidence(store, "old"), BOUNDS)
     candidate = builder.build("new", evidence(store, "new"), BOUNDS, prior)
-    with pytest.raises(ArtifactError, match="pinned manifest"):
+    with pytest.raises(ArtifactError, match="exactly one modeled"):
         builder.verify(
             replace(
                 candidate, base_modeled=candidate.base_modeled[1:], manifest_object=None
             ),
+            BOUNDS,
+        )
+    other_values = {grain: [raw(grain, outage="50")] for grain in GRAINS}
+    other = builder.build("other", evidence(store, "other", other_values), BOUNDS)
+    with pytest.raises(ArtifactError, match="pinned manifest"):
+        builder.verify(
+            replace(candidate, base_modeled=other.modeled, manifest_object=None),
             BOUNDS,
         )

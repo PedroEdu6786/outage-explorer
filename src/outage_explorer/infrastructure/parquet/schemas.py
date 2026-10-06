@@ -13,6 +13,7 @@ from outage_explorer.application.ports.artifacts import (
     ArtifactKind,
     RepresentationError,
 )
+from outage_explorer.domain.datasets import PUBLIC_DATASETS, Dataset
 from outage_explorer.domain.observations import Grain, SourceRecord, assess, calculate
 from outage_explorer.domain.refresh import (
     IncomingRow,
@@ -51,9 +52,27 @@ def _origin_type() -> Any:
     )
 
 
+def _public_dataset(grain: Grain) -> Dataset:
+    for dataset in PUBLIC_DATASETS:
+        if dataset.grain == grain:
+            return dataset
+    raise ArtifactError("Unknown artifact grain")
+
+
+def public_schema(grain: Grain) -> Any:
+    """Public columns in declared order, typed exactly as the modeled schema."""
+    modeled = schema_for("modeled", grain)
+    return pa.schema(
+        [modeled.field(column.name) for column in _public_dataset(grain).columns],
+        metadata={b"kind": b"public", b"grain": grain.encode(), b"version": b"1"},
+    )
+
+
 def schema_for(kind: ArtifactKind, grain: Grain) -> Any:
     if grain not in ("national", "facility", "generator"):
         raise ArtifactError("Unknown artifact grain")
+    if kind == "public":
+        return public_schema(grain)
     origin = _field("origin", _origin_type())
     interval = [
         _field("interval_start", pa.date32()),
@@ -275,6 +294,18 @@ def modeled_record(row: ModeledRow) -> dict[str, object]:
             Decimal(result.calculated_display), 2
         ),
     }
+
+
+def public_record(record: dict[str, object]) -> dict[str, object]:
+    """Project one modeled record to its public columns, without recomputation."""
+    try:
+        grain = cast(Grain, cast(dict[str, object], record["origin"])["grain"])
+        return {
+            column.name: record[column.name]
+            for column in _public_dataset(grain).columns
+        }
+    except (KeyError, TypeError) as exc:
+        raise ArtifactError("Invalid modeled record for public projection") from exc
 
 
 def modeled_from_record(record: dict[str, object], grain: Grain) -> ModeledRow:

@@ -39,16 +39,17 @@ from outage_explorer.infrastructure.parquet.manifests import (
 )
 from outage_explorer.infrastructure.parquet.partitions import (
     DayMerge,
-    PartitionIndex,
-    day_sequence,
+    StagedDays,
+    day_walk,
     incoming_day,
-    index_modeled,
     merge_day,
+    prior_days,
     stage_dates,
 )
 from outage_explorer.infrastructure.parquet.schemas import (
     disposition_record,
     modeled_record,
+    public_record,
 )
 from outage_explorer.infrastructure.parquet.storage import LocalParquetStore
 
@@ -63,6 +64,8 @@ class _Accounting:
     identities: set[tuple[str, ...]] = field(default_factory=set)
     observed_dates: set[date] = field(default_factory=set)
     usable_dates: set[date] = field(default_factory=set)
+    first_period: date | None = None
+    last_period: date | None = None
 
     def add(self, day: DayMerge, bounds: RefreshBounds) -> None:
         merged = day.merged
@@ -75,9 +78,19 @@ class _Accounting:
         self.counts["invalid"] += len(merged.retained_invalid_keys)
         self.counts["absent"] += len(merged.absent_prior_rows)
         self.counts["outside"] += len(merged.carried_outside_keys)
+        if merged.rows and day.day is not None:
+            # Days arrive ascending, so the first and last populated days bound
+            # the dataset's period coverage.
+            self.first_period = self.first_period or day.day
+            self.last_period = day.day
         self.identities.update(merged.incoming.observed_identities)
         self.observed_dates.update(merged.incoming.observed_dates)
         self.usable_dates.update(row.observation.day for row in merged.incoming.rows)
+        # Per-dataset cumulative bounds; the domain checks one day group at a time.
+        if self.counts["received"] > bounds.incoming_rows:
+            raise ArtifactLimitError("Incoming dataset row bound exceeded")
+        if self.counts["candidate"] > bounds.output_rows:
+            raise ArtifactLimitError("Output dataset row bound exceeded")
         # Exact incoming coverage cardinalities are bounded separately from the
         # number of historical rows scanned, reusing explicit caller limits.
         if len(self.identities) > bounds.output_rows:
@@ -118,6 +131,8 @@ class _Accounting:
             len(self.identities),
             len(self.observed_dates),
             len(self.usable_dates),
+            self.first_period,
+            self.last_period,
         )
 
 
@@ -194,46 +209,65 @@ class ParquetCandidateBuilder:
         base = () if prior is None else prior.modeled
         inherited = () if prior is None else _dependencies(prior)
         modeled: list[ArtifactRef] = []
+        public: list[ArtifactRef] = []
         dispositions: list[ArtifactRef] = []
         ledger: list[ArtifactRef] = []
         summaries = []
         for bundle in bundles:
             _LOG.info("grain_build_started grain=%s", bundle.grain)
             staged = stage_dates(self.store, bundle)
-            previous = index_modeled(base, bundle.grain)
             account = _Accounting(bundle.grain)
-            for position, day in enumerate(day_sequence(bundle.interval, previous)):
-                _progress("grain_build_progress", bundle, position, day)
-                part = merge_day(self.store, bundle, day, previous, bounds, staged)
-                account.add(part, bounds)
-                dispositions.extend(
-                    self.store.write(
-                        "dispositions",
-                        bundle.grain,
-                        day,
-                        (
-                            disposition_record(value)
-                            for value in part.merged.incoming.decisions
-                        ),
-                    )
-                )
-                ledger.extend(
-                    self.store.write("ledger", bundle.grain, day, part.ledger())
-                )
-                if not part.merged.incoming.rows:
-                    modeled.extend(previous.get(day, ()))
-                else:
-                    modeled.extend(
+            walk = day_walk(
+                bundle.interval,
+                prior_days(self.store, _grain_ref(base, bundle.grain), bounds),
+            )
+
+            def rows(
+                bundle: EvidenceBundle = bundle,
+                account: _Accounting = account,
+                staged: StagedDays = staged,
+                walk: Iterator[tuple[date | None, tuple[ModeledRow, ...]]] = walk,
+            ) -> Iterator[dict[str, object]]:
+                for position, (day, old) in enumerate(walk):
+                    _progress("grain_build_progress", bundle, position, day)
+                    part = merge_day(self.store, bundle, day, old, bounds, staged)
+                    account.add(part, bounds)
+                    dispositions.extend(
                         self.store.write(
-                            "modeled",
+                            "dispositions",
                             bundle.grain,
                             day,
-                            (modeled_record(row) for row in part.merged.rows),
+                            (
+                                disposition_record(value)
+                                for value in part.merged.incoming.decisions
+                            ),
                         )
                     )
+                    ledger.extend(
+                        self.store.write("ledger", bundle.grain, day, part.ledger())
+                    )
+                    for row in part.merged.rows:
+                        yield modeled_record(row)
+
+            stream = rows()
+            first = next(stream, None)
+            if first is not None:
+                modeled_ref = self.store.write_file(
+                    "modeled", bundle.grain, chain((first,), stream)
+                )
+                modeled.append(modeled_ref)
+                public.append(
+                    self.store.write_file(
+                        "public",
+                        bundle.grain,
+                        (public_record(r) for r in self.store.records(modeled_ref)),
+                    )
+                )
             summaries.append(account.summary())
             _LOG.info("grain_build_complete grain=%s", bundle.grain)
         outcome = _outcome(tuple(summaries), prior is None)
+        if len(modeled) != len(IDENTITY_FIELDS):
+            raise ArtifactError("A dataset produced no modeled rows")
         candidate = CandidateManifest(
             generation_id,
             None if prior is None else prior.generation_id,
@@ -242,6 +276,7 @@ class ParquetCandidateBuilder:
             inherited,
             base,
             tuple(modeled),
+            tuple(public),
             tuple(dispositions),
             tuple(ledger),
             tuple(summaries),
@@ -254,8 +289,6 @@ class ParquetCandidateBuilder:
 
     def verify(self, candidate: CandidateManifest, bounds: RefreshBounds) -> None:
         validate_manifest(candidate)
-        if candidate.schema_version != "1":
-            raise ArtifactError("Unsupported candidate schema version")
         if (
             not candidate.generation_id
             or len(candidate.generation_id) > bounds.field_chars
@@ -303,20 +336,34 @@ class ParquetCandidateBuilder:
                 for dependency in candidate.inherited_evidence
                 if dependency.grain == bundle.grain
             )
-            previous = index_modeled(candidate.base_modeled, bundle.grain)
-            actual = index_modeled(candidate.modeled, bundle.grain)
-            expected_dates = set(previous)
+            modeled_rows = self.store.records(
+                _required(_grain_ref(candidate.modeled, bundle.grain))
+            )
+            public_rows = self.store.records(
+                _required(_grain_ref(candidate.public, bundle.grain))
+            )
+            visited: set[date | None] = set()
             account = _Accounting(bundle.grain)
-            for position, day in enumerate(day_sequence(bundle.interval, previous)):
+            walk = day_walk(
+                bundle.interval,
+                prior_days(
+                    self.store, _grain_ref(candidate.base_modeled, bundle.grain), bounds
+                ),
+            )
+            for position, (day, old) in enumerate(walk):
                 _progress("grain_verify_progress", bundle, position, day)
-                expected_dates.add(day)
-                part = merge_day(self.store, bundle, day, previous, bounds, staged)
+                visited.add(day)
+                part = merge_day(self.store, bundle, day, old, bounds, staged)
                 account.add(part, bounds)
                 self._bind_history(part.old, history, bounds)
-                self._equal_records(
-                    actual.get(day, ()),
-                    (modeled_record(row) for row in part.merged.rows),
-                )
+                for row in part.merged.rows:
+                    expected = modeled_record(row)
+                    if next(modeled_rows, None) != expected or next(
+                        public_rows, None
+                    ) != public_record(expected):
+                        raise ArtifactError(
+                            "Artifact rows disagree with replay or merge ledger"
+                        )
                 self._equal_records(
                     _refs(candidate.dispositions, bundle.grain, day),
                     (disposition_record(row) for row in part.merged.incoming.decisions),
@@ -324,13 +371,14 @@ class ParquetCandidateBuilder:
                 self._equal_records(
                     _refs(candidate.ledger, bundle.grain, day), part.ledger()
                 )
-            for collection in (
-                candidate.modeled,
-                candidate.dispositions,
-                candidate.ledger,
+            if (
+                next(modeled_rows, None) is not None
+                or next(public_rows, None) is not None
             ):
+                raise ArtifactError("Dataset file has rows beyond replay or merge")
+            for collection in (candidate.dispositions, candidate.ledger):
                 if any(
-                    ref.grain == bundle.grain and ref.partition not in expected_dates
+                    ref.grain == bundle.grain and ref.partition not in visited
                     for ref in collection
                 ):
                     raise ArtifactError("Unexpected artifact partition")
@@ -351,6 +399,7 @@ class ParquetCandidateBuilder:
         for kind, collection in (
             ("modeled", candidate.base_modeled),
             ("modeled", candidate.modeled),
+            ("public", candidate.public),
             ("dispositions", candidate.dispositions),
             ("ledger", candidate.ledger),
         ):
@@ -393,7 +442,7 @@ class ParquetCandidateBuilder:
     def _bind_history(
         self,
         rows: tuple[ModeledRow, ...],
-        evidence: tuple[tuple[EvidenceBundle, PartitionIndex], ...],
+        evidence: tuple[tuple[EvidenceBundle, StagedDays], ...],
         bounds: RefreshBounds,
     ) -> None:
         if not rows:
@@ -407,7 +456,7 @@ class ParquetCandidateBuilder:
                 day
             ):
                 continue
-            incoming = incoming_day(self.store, bundle, day, staged)
+            incoming = incoming_day(self.store, day, staged)
             first = next(incoming, None)
             if first is None:
                 continue
@@ -437,6 +486,17 @@ def _dependencies(prior: CandidateManifest) -> tuple[EvidenceBundle, ...]:
             seen.add(identity)
             values.append(bundle)
     return tuple(values)
+
+
+def _grain_ref(refs: tuple[ArtifactRef, ...], grain: Grain) -> ArtifactRef | None:
+    """The single dataset file of a grain; manifest validation bounds it to one."""
+    return next((ref for ref in refs if ref.grain == grain), None)
+
+
+def _required(ref: ArtifactRef | None) -> ArtifactRef:
+    if ref is None:
+        raise ArtifactError("Dataset file missing from manifest")
+    return ref
 
 
 def _refs(

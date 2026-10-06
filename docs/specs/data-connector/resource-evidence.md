@@ -64,7 +64,8 @@ Inherited graph: 150 objects/1,438,271 bytes; parallel persistence/readback
 
 Typed `workers` defaults retain sequential endpoint/S3 execution (`1` each),
 with independently selectable `1`–`3` workers. `memory_bytes` defaults to
-256,000,000 logical buffer bytes; `temporary_bytes` to 600,000,000. They bound
+512,000,000 logical buffer bytes; `temporary_bytes` to 700,000,000 (raised with the
+32,000,000-byte file bound of ADR-0057; initial, unmeasured limits). They bound
 admitted payload/file envelopes, not total interpreter/native RSS. Invalid types,
 counts above three and insufficient aggregate buffer/staging envelopes fail
 before source/client work. Source caps on requests (including retries), pages,

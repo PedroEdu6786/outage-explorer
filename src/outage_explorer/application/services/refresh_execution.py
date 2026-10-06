@@ -1,8 +1,11 @@
 """Execute only committed claims using frozen inputs and verified durable graphs."""
 
+from datetime import date
+
 from outage_explorer.application.dto import ConnectorReport, ConnectorRequest
 from outage_explorer.application.errors import AccessStoreError, StaleRefreshOwnerError
 from outage_explorer.application.ports.artifacts import ArtifactError
+from outage_explorer.application.ports.candidates import CandidateManifest
 from outage_explorer.application.ports.publication import PublicationStore
 from outage_explorer.application.ports.refresh import RefreshStore
 from outage_explorer.application.ports.refresh_execution import (
@@ -12,6 +15,7 @@ from outage_explorer.application.ports.refresh_execution import (
 from outage_explorer.application.refresh_outcomes import quality_json, safe_failure
 from outage_explorer.application.services.refresh_recovery import RefreshRecovery
 from outage_explorer.domain.access import AnalyticalGrain
+from outage_explorer.domain.observations import Grain
 from outage_explorer.domain.publication import (
     DatasetSummary,
     PublishedGeneration,
@@ -41,6 +45,31 @@ class RefreshReports:
 
     def finish(self, report: ConnectorReport) -> None:
         self.store.progress(self.owner, RefreshStage.VERIFYING, quality_json(report))
+
+
+def _coverage(verified: CandidateManifest) -> dict[Grain, tuple[date, date]]:
+    """Per-grain period coverage from verified summaries and single dataset files.
+
+    Publication needs exactly one modeled and one public file per grain whose
+    row counts equal the verified candidate count; anything else is refused.
+    """
+    coverage: dict[Grain, tuple[date, date]] = {}
+    for summary in verified.summaries:
+        modeled = [ref for ref in verified.modeled if ref.grain == summary.grain]
+        public = [ref for ref in verified.public if ref.grain == summary.grain]
+        if (
+            len(modeled) != 1
+            or len(public) != 1
+            or modeled[0].row_count != summary.candidate_count
+            or public[0].row_count != summary.candidate_count
+            or summary.first_period is None
+            or summary.last_period is None
+        ):
+            raise ArtifactError("Dataset files or coverage do not match the candidate")
+        coverage[summary.grain] = (summary.first_period, summary.last_period)
+    if set(coverage) != {grain.value for grain in AnalyticalGrain}:
+        raise ArtifactError("Candidate does not cover all three datasets")
+    return coverage
 
 
 class RefreshExecution:
@@ -105,20 +134,12 @@ class RefreshExecution:
                     or verified.interval != request.interval
                     or verified.summaries != report.models
                     or verified.base_manifest_object != prior
-                    or verified.schema_version != "1"
+                    or verified.schema_version != "2"
                     or verified.contract_id != request.contract_id
                     or verified.transformation_id != request.transformation_id
                 ):
                     raise ArtifactError("Verified candidate identity mismatch")
-                coverage = {}
-                for grain in {item.grain for item in verified.modeled}:
-                    days = [
-                        ref.partition
-                        for ref in verified.modeled
-                        if ref.grain == grain and ref.partition is not None
-                    ]
-                    if days:
-                        coverage[grain] = (min(days), max(days))
+                coverage = _coverage(verified)
                 report_json = quality_json(report, coverage)
                 if (
                     report.run_id != run.id
@@ -164,16 +185,7 @@ class RefreshExecution:
                             AnalyticalGrain(item.grain),
                             "v1",
                             item.candidate_count,
-                            min(
-                                ref.partition
-                                for ref in verified.modeled
-                                if ref.grain == item.grain and ref.partition is not None
-                            ),
-                            max(
-                                ref.partition
-                                for ref in verified.modeled
-                                if ref.grain == item.grain and ref.partition is not None
-                            ),
+                            *coverage[item.grain],
                         )
                         for item in report.models
                     ),

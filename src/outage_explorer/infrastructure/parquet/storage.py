@@ -213,6 +213,14 @@ class LocalParquetStore:
             refs.append(self._write_batch(kind, grain, partition, batch, schema))
         return tuple(refs)
 
+    def _table(self, rows: list[dict[str, object]], schema: Any) -> Any:
+        table = pa.Table.from_pylist(rows, schema=schema)
+        if table.nbytes > self.bounds.row_group_bytes:
+            raise ArtifactLimitError("Exceeded encoded row-group bytes")
+        if table.to_pylist() != rows:
+            raise ArtifactError("Physical conversion changed artifact values")
+        return table
+
     def _write_batch(
         self,
         kind: ArtifactKind,
@@ -222,11 +230,7 @@ class LocalParquetStore:
         schema: Any,
     ) -> ArtifactRef:
         try:
-            table = pa.Table.from_pylist(rows, schema=schema)
-            if table.nbytes > self.bounds.row_group_bytes:
-                raise ArtifactLimitError("Exceeded encoded row-group bytes")
-            if table.to_pylist() != rows:
-                raise ArtifactError("Physical conversion changed artifact values")
+            table = self._table(rows, schema)
             buffer = _LimitedBuffer(self.bounds.file_bytes)
             pq.write_table(
                 table,
@@ -241,6 +245,61 @@ class LocalParquetStore:
         except (pa.ArrowException, OverflowError, TypeError) as exc:
             raise ArtifactError("Cannot encode artifact using declared schema") from exc
         return ArtifactRef(stored, kind, grain, partition, len(rows))
+
+    def write_file(
+        self, kind: ArtifactKind, grain: Grain, rows: Iterable[dict[str, object]]
+    ) -> ArtifactRef:
+        """Write all rows as exactly one immutable object of bounded row groups.
+
+        Each batch becomes one row group, so decode bounds match ``write``. Public
+        files keep column statistics for row-group pruning. Row order is the
+        caller's; ordering rules belong to the modeling and verification steps.
+        """
+        schema = schema_for(kind, grain)
+        buffer = _LimitedBuffer(self.bounds.file_bytes)
+        limit = min(self.bounds.batch_rows, self.bounds.row_group_rows)
+        batch: list[dict[str, object]] = []
+        batch_bytes = 0
+        total = 0
+        try:
+            with pq.ParquetWriter(
+                buffer,
+                schema,
+                compression="NONE",
+                use_dictionary=False,
+                write_statistics=kind == "public",
+                write_page_checksum=True,
+            ) as writer:
+
+                def flush() -> None:
+                    writer.write_table(
+                        self._table(batch, schema),
+                        row_group_size=self.bounds.row_group_rows,
+                    )
+
+                for record in rows:
+                    self.check()
+                    size = value_size(record, self.bounds)
+                    if size > self.bounds.row_group_bytes:
+                        raise ArtifactLimitError("Exceeded row-group bytes")
+                    if batch and (
+                        len(batch) >= limit
+                        or batch_bytes + size > self.bounds.row_group_bytes
+                    ):
+                        flush()
+                        total += len(batch)
+                        batch, batch_bytes = [], 0
+                    batch.append(record)
+                    batch_bytes += size
+                if batch:
+                    flush()
+                    total += len(batch)
+            if total == 0:
+                raise ArtifactError("Empty dataset file")
+            stored = self.put_immutable([buffer.getvalue()])
+        except (pa.ArrowException, OverflowError, TypeError) as exc:
+            raise ArtifactError("Cannot encode artifact using declared schema") from exc
+        return ArtifactRef(stored, kind, grain, None, total)
 
     def _parquet(self, reference: ArtifactRef) -> Any:
         if (

@@ -562,7 +562,7 @@ def test_private_cache_reclamation_only_known_bounded_owned_paths(tmp_path):
 
     root = tmp_path / "cache"
     root.mkdir(mode=0o700)
-    known = root / ("a" * 64 + "-national-0.parquet")
+    known = root / ("a" * 64 + "-national.parquet")
     known.write_bytes(b"old modeled fixture")
     unknown = root / "durable-source"
     unknown.write_bytes(b"preserve fixture")
@@ -570,6 +570,12 @@ def test_private_cache_reclamation_only_known_bounded_owned_paths(tmp_path):
         reclaim_private_cache(root, file_limit=10)
     assert known.exists() and unknown.exists()
     unknown.unlink()
+    daily = root / ("b" * 64 + "-national-0.parquet")  # Removed daily-layout name.
+    daily.write_bytes(b"old layout fixture")
+    with pytest.raises(ValueError, match="Unknown"):
+        reclaim_private_cache(root, file_limit=10)
+    assert daily.exists()
+    daily.unlink()
     with pytest.raises(ValueError, match="limit"):
         reclaim_private_cache(root, file_limit=0)
     assert known.exists()
@@ -583,7 +589,7 @@ def test_recovery_failure_preserves_cache_before_construct(tmp_path):
     candidate = profile(tmp_path)
     cache = Path(candidate.cache_root)
     cache.mkdir(mode=0o700)
-    old_file = cache / ("a" * 64 + "-national-0.parquet")
+    old_file = cache / ("a" * 64 + "-national.parquet")
     old_file.write_bytes(b"orphan fixture")
     construct = Mock(
         side_effect=lambda ledger, key: reclaim_private_cache(cache, file_limit=10)

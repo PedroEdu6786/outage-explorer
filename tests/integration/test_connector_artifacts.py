@@ -271,9 +271,9 @@ def test_recovery_rejects_conflicting_dependency_identity(tmp_path):
     client = ControlledS3()
     transfer(client, root, ref)
     value = json.loads(client.objects["connector/objects/" + ref.key])
-    repeated = json.loads(json.dumps(value["modeled"][0]))
+    repeated = json.loads(json.dumps(value["dispositions"][0]))
     repeated["object"]["byte_count"] += 1
-    value["modeled"].append(repeated)
+    value["dispositions"].append(repeated)
     data = json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
     digest = hashlib.sha256(data).hexdigest()
     bad = StoredObject(digest, digest, len(data))

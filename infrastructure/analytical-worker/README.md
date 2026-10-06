@@ -508,11 +508,14 @@ candidates; reports never mutate them or grant readiness.
 
 October 5 measurement continuation found two existing local initial-interval
 candidate graphs and derived their exact public projections using the same domain
-decoder/schema/column mapping as the product cache. The preparation helper is
-[`prepare-public-inputs.py`](native-linux-validation/prepare-public-inputs.py);
-it preserves all 549 daily partitions per snapshot, verifies modeled identities,
-and exports only public columns. It does not replay the full raw/disposition
-graph or establish publication. Its private `snapshots.json` deliberately omits
+decoder/schema/column mapping as the product cache. That helper preserved all
+549 daily partitions per snapshot and has been removed with the daily layout
+([ADR-0057](../../docs/adr/0057-single-file-modeled-datasets.md)): generations now
+carry one verified public file per dataset. A validation snapshot descriptor
+(`path`, `sha256`, `byte_count`, `rows` per dataset) now names each generation's
+public file from its manifest directly; no preparation helper exists. The
+earlier preparation did not replay the full raw/disposition graph or establish
+publication. Its private `snapshots.json` deliberately omits
 overlap PIDs until a real independently authorized Linux workload is available.
 Both candidates have identical public content; the current snapshot is a cache
 hit, not a second cold transfer. Descriptor size is 274,689 bytes, which exposed

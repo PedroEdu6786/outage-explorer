@@ -75,6 +75,7 @@ def setup(prior=None, outcome="candidate"):
         (),
         (),
         (),
+        (),
         outcome,
         "contract",
         "transform",

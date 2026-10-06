@@ -3,6 +3,7 @@
 import json
 import logging
 from dataclasses import asdict
+from datetime import date
 from fractions import Fraction
 from unittest.mock import patch
 
@@ -17,7 +18,10 @@ from outage_explorer.domain.refresh import RefreshBounds
 from outage_explorer.entrypoints.cli.connector import run
 from outage_explorer.infrastructure.parquet.connector import LocalConnectorEvidence
 from outage_explorer.infrastructure.parquet.evidence import replay_evidence
-from outage_explorer.infrastructure.parquet.schemas import modeled_from_record
+from outage_explorer.infrastructure.parquet.schemas import (
+    modeled_from_record,
+    public_record,
+)
 from outage_explorer.infrastructure.parquet.storage import LocalParquetStore
 
 SECRET = "synthetic-only-connector-secret"
@@ -311,6 +315,30 @@ def test_grains_calculate_independently(tmp_path):
     assert [
         models(store, candidate, grain)[0].result.percentage for grain in ROUTES
     ] == [Fraction(100, 3), Fraction(50), Fraction(0)]
+
+
+def test_cli_candidate_stores_one_modeled_and_one_public_file_per_dataset(tmp_path):
+    rows = {
+        grain: [row(grain, period="2026-09-01"), row(grain, period="2026-09-02")]
+        for grain in ROUTES
+    }
+    result, _ = execute(tmp_path, rows)
+    store, candidate = reopen(tmp_path, result.report.manifest)
+    for refs, kind in ((candidate.modeled, "modeled"), (candidate.public, "public")):
+        assert [(ref.kind, ref.grain, ref.partition) for ref in refs] == [
+            (kind, grain, None) for grain in ROUTES
+        ]
+        assert all(ref.row_count == 2 for ref in refs)
+    assert candidate.schema_version == "2" and not candidate.base_modeled
+    assert [(item.first_period, item.last_period) for item in candidate.summaries] == [
+        (date(2026, 9, 1), date(2026, 9, 2))
+    ] * 3
+    for modeled_ref, public_ref in zip(
+        candidate.modeled, candidate.public, strict=True
+    ):
+        assert [public_record(r) for r in store.records(modeled_ref)] == list(
+            store.records(public_ref)
+        )
 
 
 def test_cli_failure_and_configuration_exit_codes(tmp_path, capsys):
