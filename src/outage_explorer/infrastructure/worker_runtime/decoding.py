@@ -22,6 +22,7 @@ from outage_explorer.application.ports.execution import (
 from outage_explorer.application.ports.query_results import QueryOutput
 from outage_explorer.application.ports.sql_inspection import SqlRejected
 from outage_explorer.domain.datasets import PUBLIC_DATASETS, Column, ValueType
+from outage_explorer.domain.preview_keys import follows_preview_key
 from outage_explorer.infrastructure.query_results.encoding import (
     canonical_json,
     column_descriptors,
@@ -481,7 +482,9 @@ class WorkerTransport:
                     for v, c in zip(row, request.dataset.columns, strict=True)
                     if c.name in {"period", "facility", "generator"}
                 )
-                if key != expected or previous is not None and key <= previous:
+                if key != expected or (
+                    previous is not None and not follows_preview_key(key, previous)
+                ):
                     raise _Invalid()
                 day = date.fromisoformat(key[0])
                 if (

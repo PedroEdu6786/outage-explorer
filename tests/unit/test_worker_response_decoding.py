@@ -203,6 +203,65 @@ def test_actual_preview_roundtrip(transport):
     assert b"/host/private" not in transport.request(request)
 
 
+@pytest.mark.parametrize("dataset", PUBLIC_DATASETS)
+@pytest.mark.parametrize("fault", [None, "ascending_dates", "duplicate", "cursor"])
+def test_preview_newest_first_and_binary_identifiers(transport, dataset, fault):
+    from dataclasses import replace
+
+    request, national, _ = preview_fixture(transport)
+    identifiers = [
+        c.name for c in dataset.columns if c.name in {"facility", "generator"}
+    ]
+    keys = [("2026-09-02", *("a" for _ in identifiers))]
+    if identifiers:
+        keys.append(("2026-09-02", *("é" for _ in identifiers)))
+    keys.append(("2026-09-01", *("a" for _ in identifiers)))
+    if fault == "ascending_dates":
+        keys.reverse()
+    elif fault == "duplicate":
+        keys.append(keys[-1])
+    request = replace(
+        request, dataset=dataset, after=keys[0] if fault == "cursor" else None
+    )
+    by_name = {
+        column.name: value
+        for column, value in zip(PUBLIC_DATASETS[0].columns, national, strict=True)
+    }
+    rows = []
+    for key in keys:
+        identity_values = dict(zip(identifiers, key[1:], strict=True))
+        rows.append(
+            tuple(
+                date.fromisoformat(key[0])
+                if c.name == "period"
+                else identity_values.get(c.name, by_name.get(c.name, "Facility"))
+                for c in dataset.columns
+            )
+        )
+    worker = AnalyticalWorker(
+        __import__("pathlib").Path("/inputs"),
+        lambda _: PreviewRows(tuple(rows), tuple(keys), False),
+        lambda _: None,
+        DuckdbSqlInspector(max_sql_bytes=65536, max_nodes=10000, max_depth=64),
+        PreviewEncoding(transport.bounds),
+    )
+    raw = worker.execute(transport.request(request))
+    if fault:
+        with pytest.raises(RuntimeUnavailableError):
+            transport.decode(raw, request=request, exit_code=0)
+    else:
+        output = transport.decode(raw, request=request, exit_code=0)
+        assert output.keys == tuple(keys)
+        continuation = replace(request, after=keys[0])
+        worker._preview = lambda _: PreviewRows(tuple(rows[1:]), tuple(keys[1:]), False)
+        result = transport.decode(
+            worker.execute(transport.request(continuation)),
+            request=continuation,
+            exit_code=0,
+        )
+        assert result.keys == tuple(keys[1:])
+
+
 @pytest.mark.parametrize(
     "mutation",
     [

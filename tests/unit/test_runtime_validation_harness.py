@@ -464,12 +464,12 @@ def test_representative_preview_calls_validate_projection_keys_and_date_range(
             if fault == "filter":
                 days = [date(2026, 4, 2)]
         elif request.after is not None:
-            days = [date.fromisoformat(request.after[0]) + timedelta(days=1)]
+            days = [date.fromisoformat(request.after[0]) - timedelta(days=1)]
             if fault == "overlap":
                 days = [date.fromisoformat(request.after[0])]
         else:
             count = 101 if fault == "size" else 100
-            days = [date(2026, 4, 2) + timedelta(days=i) for i in range(count)]
+            days = [date(2026, 10, 1) - timedelta(days=i) for i in range(count)]
             if fault == "order":
                 days.reverse()
         rows = []

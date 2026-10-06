@@ -26,6 +26,11 @@ settings and should not be described as measured resource budgets. The user acce
 This does not approve full readiness or claim measured production budgets. No
 reviewer/date/report approval fields have been invented.
 
+The exact candidate profile (`833fd37713f21542d3ffca7bb0d34d237441c7a145c4b35463deef1cc6649669`)
+also passed start, constant-SQL inspection, close and confirmed lease/process
+release at its configured ownership root on the Linux validation host. This
+does not validate an independently selected serving host.
+
 Before SQL activation: review reports and settings; validate the proposed private
 ownership root on the actual serving host; create a matching review record from
 actual approved report digests; pass the separate `--inspection-config` together

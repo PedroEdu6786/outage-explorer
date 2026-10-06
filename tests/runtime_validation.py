@@ -22,10 +22,14 @@ from uuid import uuid4
 
 import pyarrow.parquet as pq
 
-from outage_explorer.application.errors import RuntimeUnavailableError
+from outage_explorer.application.errors import (
+    AnalyticalTimeoutError,
+    RuntimeUnavailableError,
+)
 from outage_explorer.application.ports.analytical_inputs import ApprovedFile
 from outage_explorer.application.ports.execution import PreviewRead, QueryRead
 from outage_explorer.domain.datasets import PUBLIC_DATASETS
+from outage_explorer.domain.preview_keys import follows_preview_key
 from outage_explorer.infrastructure.query_results.preview_encoding import (
     PreviewEncoding,
 )
@@ -451,6 +455,8 @@ class OverlapSampler:
             "sampling_host_memory_failures": 0,
             "sampling_filesystem_failures": 0,
             "sampling_container_control_failures": 0,
+            "container_control_timeouts": 0,
+            "container_control_nonzero": 0,
             "sampling_container_decode_failures": 0,
             "sampling_overlap_process_failures": 0,
             "sampling_api_probe_failures": 0,
@@ -553,6 +559,7 @@ class OverlapSampler:
                         limit=256,
                     )
                     if response.code:
+                        self.metrics["container_control_nonzero"] += 1
                         raise ValueError("Container sampling unavailable")
                     stage = "container_decode"
                     memory, cpu = response.stdout.decode().strip().split("|")
@@ -594,7 +601,11 @@ class OverlapSampler:
                         self.metrics["api_max_seconds"], monotonic() - started
                     )
                 self.metrics["samples"] += 1
-            except Exception:
+            except Exception as error:
+                if stage == "container_control" and isinstance(
+                    error, AnalyticalTimeoutError
+                ):
+                    self.metrics["container_control_timeouts"] += 1
                 self.metrics["sampling_failures"] += 1
                 self.metrics["sampling_" + stage + "_failures"] += 1
             self.stop.wait(0.1)
@@ -783,10 +794,11 @@ def measure_previews(harness, relations, label, metrics):
                 len(output.rows) != len(output.keys)
                 or len(output.rows) > size
                 or any(
-                    a >= b for a, b in zip(output.keys, output.keys[1:], strict=False)
+                    not follows_preview_key(b, a)
+                    for a, b in zip(output.keys, output.keys[1:], strict=False)
                 )
                 or after is not None
-                and any(key <= after for key in output.keys)
+                and any(not follows_preview_key(key, after) for key in output.keys)
                 or filtered_range
                 and any(
                     not start.isoformat() <= key[0] <= end.isoformat()
