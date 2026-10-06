@@ -88,6 +88,9 @@ filtered result. The API serves only verified, published modeled data.
 
 ## Dataset preview
 
+See the [preview flow diagrams](preview-flow.md) for the endpoint, S3 cache and
+isolated DuckDB processing sequence.
+
 `GET /api/datasets/{dataset}/preview` first-page query parameters:
 
 | Parameter | Meaning | Selected behavior |
