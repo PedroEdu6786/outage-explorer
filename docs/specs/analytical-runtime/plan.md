@@ -643,3 +643,14 @@ validates shape/identity, not the substantive quality of a review. Candidate
 files retain evidence:null and cannot activate SQL. Bootstrap starts/rolls back/
 closes parser ownership with the analytical lifecycle, preserving independent
 refresh and existing readiness gates.
+
+### Representative preview verification and parser-cap approval
+
+User accepted initial local parser containment caps: four-second wall, one CPU
+second, 256 MiB address space and one-second termination. This is numeric approval
+only, not full readiness/report approval. Candidate configuration remains null
+review. Extend the authorized analytical-only harness with opt-in real previews
+for all three grains, old/current/warm: default100, maximum500 continuation and
+Oct2–Oct5 changed-date filter, canonical projection encoding, strict key order
+and non-overlap. Report preview behavior separately from resource sampling and
+SQL; retain all external gates. No API/source/S3/refresh work is introduced.

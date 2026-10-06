@@ -1,6 +1,7 @@
 # Parser readiness review packet
 
-Status: candidate, awaiting user review; no activation authorization.
+Status: numeric containment caps accepted by the user on October 6, 2026;
+full report/configuration readiness review pending; no activation authorization.
 
 The [candidate configuration](../../../infrastructure/analytical-worker/sql-inspection.candidate.json)
 contains explicit Linux paths/hashes and bounds, with `evidence: null`.
@@ -21,9 +22,9 @@ ownership. This file is a review packet, not an approved runtime record.
 
 Recommendation: review these as initial local acceptance caps while preserving
 the ten-second analytical execution ceiling. They are candidate containment
-settings and should not be described as measured resource budgets. The numeric
-limits remain open until the user accepts them. No reviewer/date/report approval
-fields have been invented.
+settings and should not be described as measured resource budgets. The user accepted the four numeric containment caps for initial local acceptance.
+This does not approve full readiness or claim measured production budgets. No
+reviewer/date/report approval fields have been invented.
 
 Before SQL activation: review reports and settings; validate the proposed private
 ownership root on the actual serving host; create a matching review record from

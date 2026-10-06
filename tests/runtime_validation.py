@@ -13,7 +13,7 @@ import resource
 import shutil
 import stat
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from functools import wraps
 from pathlib import Path
 from threading import Event, Thread
@@ -24,8 +24,11 @@ import pyarrow.parquet as pq
 
 from outage_explorer.application.errors import RuntimeUnavailableError
 from outage_explorer.application.ports.analytical_inputs import ApprovedFile
-from outage_explorer.application.ports.execution import QueryRead
+from outage_explorer.application.ports.execution import PreviewRead, QueryRead
 from outage_explorer.domain.datasets import PUBLIC_DATASETS
+from outage_explorer.infrastructure.query_results.preview_encoding import (
+    PreviewEncoding,
+)
 from outage_explorer.infrastructure.query_results.store import (
     BoundedQueryResults,
     ResultBounds,
@@ -206,6 +209,18 @@ class RuntimeHarness:
         started = monotonic()
         try:
             output = self.runtime.query(
+                request,
+                self.profile.execution_bounds,
+                started + self.profile.worker.execution_seconds,
+            )
+            return output, monotonic() - started
+        finally:
+            self.runtime.terminate_and_reap()
+
+    def preview(self, request):
+        started = monotonic()
+        try:
+            output = self.runtime.preview(
                 request,
                 self.profile.execution_bounds,
                 started + self.profile.worker.execution_seconds,
@@ -440,6 +455,7 @@ class OverlapSampler:
             "sampling_overlap_process_failures": 0,
             "sampling_api_probe_failures": 0,
             "sampling_other_failures": 0,
+            "spill_peak_bytes": 0,
         }
 
     def _sample(self):
@@ -516,6 +532,7 @@ class OverlapSampler:
                 for name, root in (
                     ("staging_peak_bytes", self.harness.profile.staging_root),
                     ("cache_peak_bytes", self.harness.profile.cache_root),
+                    ("spill_peak_bytes", self.harness.profile.temporary_root),
                     ("spool_index_peak_bytes", self.harness.profile.result_root),
                 ):
                     self.metrics[name] = max(
@@ -614,7 +631,9 @@ def copy_verified(file, target, deadline):
     return observed
 
 
-def measured_workload(harness, inputs, *, analytical_only=False):
+def measured_workload(
+    harness, inputs, *, analytical_only=False, include_previews=False
+):
     """Copy-only cold/warm cache; old snapshot retained; real query/spool/index."""
     profile = harness.profile
     sampler = OverlapSampler(harness, None if analytical_only else inputs)
@@ -632,6 +651,7 @@ def measured_workload(harness, inputs, *, analytical_only=False):
     copied = 0
     before = resource.getrusage(resource.RUSAGE_SELF)
     metrics = {}
+    preview_metrics = {}
     # Aggregate scans plus sort/output encode; zero new source work.
     sql = " UNION ALL ".join(
         f"SELECT '{d.id}' AS dataset, COUNT(*) AS rows, SUM(outage_mw) AS outage FROM {d.id}"
@@ -698,6 +718,8 @@ def measured_workload(harness, inputs, *, analytical_only=False):
             metrics["spool_index_peak_bytes"] = directory_bytes(
                 Path(profile.result_root)
             )
+            if include_previews:
+                measure_previews(harness, prepared, label, preview_metrics)
         metrics["local_copy_bytes"] = copied
         metrics["old_and_current_retained_bytes"] = directory_bytes(root)
     except Exception:
@@ -707,6 +729,8 @@ def measured_workload(harness, inputs, *, analytical_only=False):
         if sampler_started:
             sampler.close()
         if failed:
+            if include_previews:
+                harness.report.gate("preview_workload", "failed", preview_metrics)
             metrics["local_copy_bytes"] = copied
             metrics.update(sampler.metrics)
             harness.report.gate("analytical_progress", "failed", metrics)
@@ -723,4 +747,65 @@ def measured_workload(harness, inputs, *, analytical_only=False):
     )
     # Linux ru_maxrss is KiB. Measurements require Linux above; never guess Darwin.
     metrics["harness_rss_peak_bytes"] = after.ru_maxrss * 1024
+    if hasattr(harness, "report"):
+        harness.report.gate(
+            "sql_workload", "passed", {"executions": 6, "page_reads": 3}
+        )
+    if include_previews:
+        harness.report.gate("preview_workload", "passed", preview_metrics)
     return metrics
+
+
+def measure_previews(harness, relations, label, metrics):
+    """Actual worker previews: first/default, maximum continuation, changed dates."""
+    encoding = PreviewEncoding(harness.profile.encoding_bounds)
+    for dataset, files in relations:
+        prefix = label + "_" + dataset.id
+        first, first_seconds = harness.preview(
+            PreviewRead(dataset, files, None, None, None, 100)
+        )
+        if not first.rows or not first.keys:
+            raise ValueError("Representative preview empty")
+        following, next_seconds = harness.preview(
+            PreviewRead(dataset, files, None, None, first.keys[-1], 500)
+        )
+        start, end = date(2026, 10, 2), date(2026, 10, 5)
+        filtered, filter_seconds = harness.preview(
+            PreviewRead(dataset, files, start, end, None, 500)
+        )
+        encoded_bytes = 0
+        for output, size, after, filtered_range in (
+            (first, 100, None, False),
+            (following, 500, first.keys[-1], False),
+            (filtered, 500, None, True),
+        ):
+            if (
+                len(output.rows) != len(output.keys)
+                or len(output.rows) > size
+                or any(
+                    a >= b for a, b in zip(output.keys, output.keys[1:], strict=False)
+                )
+                or after is not None
+                and any(key <= after for key in output.keys)
+                or filtered_range
+                and any(
+                    not start.isoformat() <= key[0] <= end.isoformat()
+                    for key in output.keys
+                )
+            ):
+                raise ValueError("Invalid representative preview continuation")
+            document = {
+                "columns": encoding.columns(dataset.columns),
+                "rows": [encoding.row(dataset.columns, row) for row in output.rows],
+                "has_more": output.has_more,
+            }
+            observed = encoding.bytes(document)
+            if observed > harness.profile.worker.output_bytes:
+                raise ValueError("Representative preview output exceeded")
+            encoded_bytes += observed
+        metrics[prefix + "_first_seconds"] = first_seconds
+        metrics[prefix + "_next_seconds"] = next_seconds
+        metrics[prefix + "_filter_seconds"] = filter_seconds
+        metrics[prefix + "_rows"] = len(first.rows) + len(following.rows)
+        metrics[prefix + "_filtered_rows"] = len(filtered.rows)
+        metrics[prefix + "_encoded_bytes"] = encoded_bytes

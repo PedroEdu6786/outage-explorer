@@ -16,6 +16,11 @@ from tests.runtime_validation import (
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--inputs", required=True, type=Path)
+    parser.add_argument(
+        "--include-previews",
+        action="store_true",
+        help="Also verify all-grain native previews/continuation/changed-date filters",
+    )
     args = parser.parse_args()
     harness = RuntimeHarness(
         Path("/var/lib/outage-runtime-validation/candidate.json"),
@@ -50,7 +55,12 @@ def main():
         stage = "workload"
         sys.settrace(trace)
         try:
-            metrics = measured_workload(harness, inputs, analytical_only=True)
+            metrics = measured_workload(
+                harness,
+                inputs,
+                analytical_only=True,
+                include_previews=args.include_previews,
+            )
         finally:
             sys.settrace(None)
         status = (

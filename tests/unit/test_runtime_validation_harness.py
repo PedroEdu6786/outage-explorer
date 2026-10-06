@@ -442,3 +442,69 @@ def test_sampler_records_only_bounded_failure_stage_counters(
         assert counters["sampling_" + stage + "_failures"] == 1
     assert all(type(value) in (int, float) for value in sampler.metrics.values())
     assert "canary" not in json.dumps(sampler.metrics)
+
+
+@pytest.mark.parametrize(
+    "fault", [None, "order", "overlap", "filter", "size", "projection"]
+)
+def test_representative_preview_calls_validate_projection_keys_and_date_range(
+    profile, fault
+):
+    from datetime import date, timedelta
+    from decimal import Decimal
+
+    from outage_explorer.application.errors import AnalyticalResourceError
+    from outage_explorer.application.ports.execution import PreviewRows
+    from outage_explorer.domain.datasets import PUBLIC_DATASETS
+    from tests.runtime_validation import measure_previews
+
+    def preview(request):
+        if request.start is not None:
+            days = [date(2026, 10, 2)]
+            if fault == "filter":
+                days = [date(2026, 4, 2)]
+        elif request.after is not None:
+            days = [date.fromisoformat(request.after[0]) + timedelta(days=1)]
+            if fault == "overlap":
+                days = [date.fromisoformat(request.after[0])]
+        else:
+            count = 101 if fault == "size" else 100
+            days = [date(2026, 4, 2) + timedelta(days=i) for i in range(count)]
+            if fault == "order":
+                days.reverse()
+        rows = []
+        for day in days:
+            values = []
+            for col in request.dataset.columns:
+                values.append(
+                    day
+                    if col.value_type.kind == "date"
+                    else Decimal("1")
+                    if col.value_type.kind == "decimal"
+                    else "value"
+                )
+            rows.append(tuple(values[:-1] if fault == "projection" else values))
+        return PreviewRows(
+            tuple(rows),
+            tuple((day.isoformat(),) for day in days),
+            request.after is None and request.start is None,
+        ), 0.01
+
+    calls = Mock(side_effect=preview)
+    harness = SimpleNamespace(profile=profile, preview=calls)
+    metrics = {}
+    if fault is not None:
+        with pytest.raises((ValueError, AnalyticalResourceError)):
+            measure_previews(harness, [(PUBLIC_DATASETS[0], ())], "old", metrics)
+    else:
+        for label in ("old", "cold", "warm"):
+            measure_previews(
+                harness, [(d, ()) for d in PUBLIC_DATASETS], label, metrics
+            )
+        assert calls.call_count == 27
+        assert len(metrics) == 54
+        assert metrics["warm_generators_filtered_rows"] == 1
+        report = EvidenceReport(profile)
+        report.gate("preview_workload", "passed", metrics)
+        assert len(report.document["gates"]["preview_workload"]["metrics"]) == 54
+        assert "2026-10" not in json.dumps(metrics)
