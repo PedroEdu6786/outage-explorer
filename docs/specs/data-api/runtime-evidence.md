@@ -410,3 +410,38 @@ These checks strengthen code-level rejection, role/ownership checks, snapshot
 retention, one-execution paging, shutdown/restart and unavailable-port evidence.
 They establish no live provider, performance, native revised-image or reviewed
 readiness evidence and complete no Phase 5 task.
+
+## Authorized changed-content acquisition — October 6, 2026
+
+The user authorized representative measurements, chose measurement before budget
+approval, accepted local single-owner topology (ADR-0053) and bounded subprocess
+SQL inspection (ADR-0054), and selected personal readiness review. Numeric budgets,
+parser implementation and complete matching readiness remain outstanding; these
+decisions did not authorize API startup or endpoint enablement.
+
+Decision 6 separately authorized one bounded local-only EIA candidate for April
+2–October 5 inclusive, with source/model interval limits of 187 days and other
+contributor limits unchanged. The sandbox attempt failed at metadata transport;
+its artifacts remain intact. The approved network-enabled retry used fresh staging
+and completed candidate verification plus full local manifest replay. Only the
+existing EIA key was passed privately to source wiring; no AWS credentials,
+sessions or secrets were printed or transferred. No S3 operation, product refresh,
+publication, API startup or measurement harness ran.
+
+- Run: `b0e17b800669417f836c62a8540db901`.
+- Generation: `af59d20d834d4e139771ee56ec4b47f7`.
+- Manifest: `677a0593386ffff9a9899e05408626505609aee8cba7a7166b067059150af9b8`,
+  563,155 bytes.
+- Current coverage: 187 national, 10,285 facility and 17,765 generator rows;
+  187 days and files per grain, all through October 5.
+- Public projection preparation verified schema/digests/rows/keys/days and all
+  exported hashes, preserving the old candidate unchanged. Current has 561
+  partitions against old 549; twelve added public hashes and 604 added rows,
+  zero removed partitions, zero revised shared partition hashes.
+
+The [sanitized unreviewed preparation record](../analytical-runtime/evidence/2026-10-06-changed-public-input-preparation.json)
+documents genuine changed coverage rather than two identical candidate contents.
+It does not establish prior-date revision handling, published serving behavior,
+S3 cold/warm loading, overlap or measured resource budgets. T4.3/T4.C, original
+T1.7/T1.C and analytical Phase 5 remain open. Independently authorized Linux
+API/refresh workload and matching S3 transfer/storage evidence are still absent.

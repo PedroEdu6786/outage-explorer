@@ -361,7 +361,20 @@ review. Endpoint enablement remains a separate later action.
   and termination/recovery implementation and verification. The enforcement
   approach is accepted; measured budgets and actual enforcement remain open.
 
-### Proposed changed-content candidate acquisition (not authorized or run)
+### Changed-content candidate acquisition: proposal and authorized execution
+
+The proposal below is retained as its reviewable scope. On October 6 the user
+accepted Decision 6 and authorized this exact local-only retrieval. It completed
+verified candidate `677a0593386ffff9a9899e05408626505609aee8cba7a7166b067059150af9b8`
+(563,155 manifest bytes), including complete local verification and manifest replay.
+The sandbox failure is preserved in the proposed staging; the network-enabled
+retry used fresh `/private/tmp/outage-readiness-source-network-2026-10-06` staging.
+Public preparation now contains 561 current partitions versus 549 old: twelve
+new public hashes over October 2–5, zero removals and zero changes to the 549
+shared hashes. This demonstrates added source-backed observations, not revisions
+of prior dates. See the [unreviewed preparation record](evidence/2026-10-06-changed-public-input-preparation.json).
+The candidate is neither S3-persisted nor published; serving/overlap/S3 measurements
+and user readiness review remain outstanding.
 
 Existing old/current candidates have identical public hashes. Proposed Decision 6
 is one bounded **local-only connector candidate** retrieval on the trusted host

@@ -1,0 +1,112 @@
+{
+  "candidate_graph_status": "complete_local_verification_and_manifest_replay_passed; not_published_not_S3_persisted",
+  "candidate_manifest_bytes": 563155,
+  "comparison": {
+    "added_partitions": 12,
+    "changed_shared_partitions": 0,
+    "current_partitions": 561,
+    "new_public_hashes": 12,
+    "old_partitions": 549,
+    "removed_partitions": 0,
+    "shared_partitions": 549
+  },
+  "measurement_status": "not_run",
+  "missing": [
+    "representative_serving_measurements",
+    "authorized_Linux_API_refresh_overlap",
+    "matching_S3_transfer_storage_record",
+    "parser_subprocess_implementation",
+    "reviewed_budgets_and_readiness",
+    "separate_endpoint_enablement"
+  ],
+  "old_graph_status": "existing_candidate_public_projection_revalidated; no_new_raw_graph_replay",
+  "public_projection_verification": "manifest_digest_modeled_digests_schema_rows_keys_days_domain_decode; all_exported_public_file_digests_rechecked",
+  "review_status": "unreviewed",
+  "schema": 1,
+  "scope": "authorized-local-only-extended-interval-public-input-preparation",
+  "snapshot_descriptor_bytes": 273273,
+  "snapshot_descriptor_sha256": "9ce9ecb40bf0732365ef97637aa65259fd3509f55af0bbe13874793afe7ad2b5",
+  "snapshots": {
+    "current": {
+      "coverage": {
+        "facilities": {
+          "days": 187,
+          "entities": 55,
+          "files": 187,
+          "first": "2026-04-02",
+          "last": "2026-10-05",
+          "public_bytes": 761818,
+          "rows": 10285
+        },
+        "generators": {
+          "days": 187,
+          "entities": 95,
+          "files": 187,
+          "first": "2026-04-02",
+          "last": "2026-10-05",
+          "public_bytes": 880024,
+          "rows": 17765
+        },
+        "national": {
+          "days": 187,
+          "entities": 1,
+          "files": 187,
+          "first": "2026-04-02",
+          "last": "2026-10-05",
+          "public_bytes": 606762,
+          "rows": 187
+        }
+      },
+      "generation_id": "af59d20d834d4e139771ee56ec4b47f7",
+      "interval": {
+        "end": "2026-10-05",
+        "start": "2026-04-02"
+      },
+      "manifest_sha256": "677a0593386ffff9a9899e05408626505609aee8cba7a7166b067059150af9b8"
+    },
+    "old": {
+      "coverage": {
+        "facilities": {
+          "days": 183,
+          "entities": 55,
+          "files": 183,
+          "first": "2026-04-02",
+          "last": "2026-10-01",
+          "public_bytes": 744980,
+          "rows": 10065
+        },
+        "generators": {
+          "days": 183,
+          "entities": 95,
+          "files": 183,
+          "first": "2026-04-02",
+          "last": "2026-10-01",
+          "public_bytes": 860649,
+          "rows": 17385
+        },
+        "national": {
+          "days": 183,
+          "entities": 1,
+          "files": 183,
+          "first": "2026-04-02",
+          "last": "2026-10-01",
+          "public_bytes": 593718,
+          "rows": 183
+        }
+      },
+      "generation_id": "56aed8d8f2034071875468cc32c3a6f9",
+      "interval": {
+        "end": "2026-10-01",
+        "start": "2026-04-02"
+      },
+      "manifest_sha256": "f74027258fdbf78ba040128b4761166c15249177365df4eba7db1bd5f5232cd0"
+    }
+  },
+  "source_configuration": {
+    "end": "2026-10-05",
+    "interval_days": 187,
+    "local_only": true,
+    "start": "2026-04-02"
+  },
+  "source_run_id": "b0e17b800669417f836c62a8540db901"
+}
