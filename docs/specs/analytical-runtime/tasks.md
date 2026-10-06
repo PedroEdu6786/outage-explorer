@@ -288,6 +288,34 @@ be completed with the user-owned evidence; missing/failed gates cannot close AC7
 T4.3/T4.C and original data-API T1.7/T1.C remain open. No real Docker, source
 refresh, publication, deployment or analytical API enablement occurred in delivery.
 
+### T4.3 partial real isolation execution (October 5, 2026)
+
+The user had no Linux environment and explicitly approved creation/provisioning
+of a dedicated Colima `outage-runtime` VM and synthetic real-runtime execution.
+Native Linux/arm64 Docker 29.5.2 on Ubuntu 24.04.4/kernel 6.8.0-117-generic now
+passed 19 `runtime_docker` probes; one representative measurement test was
+deselected. Final image:
+`sha256:553111d33d88c52344317ee9a75893fc65be4093362c7c79b9c93b9aeb973ff4`.
+Final profile:
+`261ad952916d7334a0e90afac3bbc23a961fd82db2ef29d0147243f9415db7bd`.
+The [bounded unreviewed bundle](evidence/2026-10-05-colima-isolation.json)
+contains 19 matching reports and their hashes, actual capacities and cleanup
+proof: zero owned containers, spill execution directories and recovery ledgers.
+
+The first real attempt failed host preparation because read-only descriptor
+traversal required listing permission on execute-only ancestors. Corrected Linux
+O_PATH traversal preserves no-follow checks and readable selected-root validation.
+A native Linux regression passed; the worker image was rebuilt and all 19 probes
+rerun with the final profile. Host verification: 319 controlled tests passed,
+21 default skips (20 real-runtime tests and the Linux-only regression).
+Ruff lint/format and mypy passed. Desktop context and stopped default Colima profile
+remain preserved; no host mounts, forwarded agent, credentials, API or cloud work.
+
+**T4.3/T4.C remain unchecked:** representative old/current public inputs,
+independently authorized existing refresh/API overlap, S3 transfer/storage evidence
+and measured-budget review remain missing. This run supplies actual isolation,
+quota and lifecycle evidence only; no reviewer or API readiness was fabricated.
+
 ## Phase 5: Separately authorized local API acceptance
 
 - [ ] **T5.1** After T4.C and explicit API-enablement direction, start the delivered

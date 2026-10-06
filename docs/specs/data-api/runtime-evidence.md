@@ -180,7 +180,7 @@ qualified. They do not claim live provider/publication or deployment readiness.
 | AC5 | preview 100/500 rows, exact fixed 15-minute expiry/revisits; http cursor-only validation | Reviewed production preview quotas remain pending. |
 | AC6 | preview exact national precision; query unchanged projection/engine corpus | No live input claim. |
 | AC7 | query joins/CTEs/subquery/window compatibility and unchanged SQL | Controlled DuckDB subprocess. |
-| AC8 | SQL inspection adversarial corpus, role denial before inputs | OS network/file/credential isolation is user-owned T1.7 and unverified. |
+| AC8 | SQL inspection adversarial corpus, role denial before inputs; native Linux synthetic isolation probes | Full user-owned T1.7 measurement/review remains open. |
 | AC9 | query sequence reconstruction/revisits/direct pages; http GET never starts execution | Controlled worker. |
 | AC10 | http strict pagination; retention fixed size and completion expiry | Quotas require review. |
 | AC11 | http expiry/unknown IDs; preview tampering/lost continuation and retention process loss | No durable query metadata added. |
@@ -205,4 +205,43 @@ qualified. They do not claim live provider/publication or deployment readiness.
 | AC30 | coordination commit-loss/read failure and recovery unresolved admission occupancy | Controlled fault injection. |
 | AC31 | recovery stale worker rejected during source; coordination epoch/base fencing | Controlled process/transaction barriers. |
 | AC32 | query exact 1,000-row, UTF-8 byte/schema boundary and contiguous retained prefix | Controlled engine/encoder. |
-| AC33 | lifecycle busy HTTP response, independent health/status; retention controlled timeout/slot/reap seam | Real ten-second worker-tree termination and measured overlap remain user-owned T1.7. |
+| AC33 | lifecycle busy HTTP response, independent health/status; retention controlled timeout/slot/reap seam; native Linux deadline/descendant/recovery probes | Representative measured overlap and full T1.7 review remain open. |
+
+## Partial native Linux analytical validation — October 5, 2026
+
+Explicitly approved synthetic validation ran inside a dedicated Colima
+`outage-runtime` VM: Ubuntu 24.04.4/kernel 6.8.0-117-generic, Linux/arm64,
+Docker 29.5.2, DuckDB 1.5.6 and PyArrow 25.0.1. The VM has candidate 4 CPUs/6 GiB
+RAM/20 GiB data disk; these values are not measured product budgets. The controller
+runs as 65534:65534 with trusted daemon-group access; workers receive no socket,
+host credentials or privileges. Desktop context remains `desktop-linux` and the
+existing default Colima profile remains stopped.
+
+The approved invocation ran the reviewed
+[run helper](../../../infrastructure/analytical-worker/native-linux-validation/run-isolation.sh)
+inside the guest: exact `-m runtime_docker`, clean environment, nonsecret candidate
+profile and actual immutable image. Final execution: **19 passed, one representative
+measurement test deselected, 21.29 seconds**. A focused Linux execute-only ancestor
+regression passed. The initial real setup failures uncovered a secure traversal
+bug; it was fixed without widening filesystem permissions, then the image was
+rebuilt and all probes rerun.
+
+- Image: `sha256:553111d33d88c52344317ee9a75893fc65be4093362c7c79b9c93b9aeb973ff4`.
+- Profile: `261ad952916d7334a0e90afac3bbc23a961fd82db2ef29d0147243f9415db7bd`.
+- [Unreviewed evidence bundle](../analytical-runtime/evidence/2026-10-05-colima-isolation.json),
+  SHA-256 `4312d0dff3c3c1b0eb3c959195690b8090cba9af8f5b49061fd8616948e483ad`.
+- Actual spill filesystem: 16,494,592 allocatable bytes; 1,024 inodes.
+- Final cleanup: zero owned containers, spill execution directories and recovery
+  ledgers; only the owned pool lock file remains.
+
+Actual probes verified canonical transport, namespace/network/mount/environment
+denial, immutable authorized staging, cgroup controls, CPU throttling, memory/PID
+exhaustion, aggregate/open-unlinked disk and inode exhaustion, noexec, deadlines,
+crashes, child termination, cancellation, bounded I/O, failed reap, restart and
+ambiguous creation. No protected production input or product API was used.
+
+**This is partial evidence, not reviewed readiness:** representative old/current
+public inputs, independently authorized existing refresh/API overlap, S3 transfer/
+storage evidence and measured-budget review remain missing. Original T1.7/T1.C,
+analytical T4.3/T4.C and separate Phase 5 API enablement remain open. No source
+refresh, publication, PostgreSQL changes, cloud deployment or API enablement ran.

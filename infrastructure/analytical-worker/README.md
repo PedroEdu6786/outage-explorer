@@ -264,6 +264,77 @@ Primary references: [ext4 kernel structures](https://www.kernel.org/doc/html/lat
 [Docker daemon-host bind mounts](https://docs.docker.com/engine/storage/bind-mounts/),
 and [Docker IPC modes](https://docs.docker.com/reference/cli/docker/container/run/).
 
+### Recorded dedicated Colima validation (October 5, 2026)
+
+An explicitly approved local VM now exists as Colima profile `outage-runtime`:
+native aarch64 Ubuntu 24.04.4, kernel 6.8.0-117-generic, Docker 29.5.2, 4 CPUs,
+6 GiB RAM and a 20 GiB data disk. These VM sizes are validation candidates,
+not measured product budgets. The original `default` profile remains stopped
+and the host Docker context remains `desktop-linux`. No Mac directory mounts,
+SSH-agent forwarding, SSH-config edits or automatic context activation were used.
+
+Reusable, reviewable helpers live in [native-linux-validation](native-linux-validation/).
+They deliberately target only this dedicated VM and fresh guest directories:
+Before exporting HEAD, commit the reviewed implementation, including the O_PATH
+traversal correction: `git archive` omits uncommitted changes. The diff check below
+refuses a stale committed source export; do not remove it to bypass pending edits.
+
+```sh
+sh infrastructure/analytical-worker/native-linux-validation/start-colima.sh
+colima ssh --profile outage-runtime -- sh -s < infrastructure/analytical-worker/native-linux-validation/prepare-guest.sh
+git diff --quiet HEAD -- src tests infrastructure/analytical-worker pyproject.toml README.md
+git archive --format=tar --output=/private/tmp/outage-runtime-source.tar HEAD src tests infrastructure/analytical-worker pyproject.toml README.md
+colima ssh --profile outage-runtime -- sudo tar -xf - -C /opt/outage-runtime-validation < /private/tmp/outage-runtime-source.tar
+colima ssh --profile outage-runtime -- sh -s < infrastructure/analytical-worker/native-linux-validation/build-guest.sh
+```
+
+The archive includes committed code/tests/build files only; it excludes Git
+history, `.env`, AWS configuration and host credentials. Archive the reviewed
+implementation revision. The preparation helper refuses an existing spill image
+or source directory; do not repeat fresh provisioning on the existing VM.
+For the recorded VM these steps are already complete. The root-owned loop image
+contains 1,024 inodes and 16,494,592 allocatable filesystem bytes, under the fixed
+16 MiB worker ceiling. `/var/lib/outage-analytical` stays execute-only to other
+users; secure directory traversal uses Linux O_PATH for ancestors and readable
+descriptors only for the selected private root.
+
+Create the candidate profile as the trusted controller after verifying the
+guest Docker socket's group (991 in the recorded VM):
+
+```sh
+colima ssh --profile outage-runtime -- sudo setpriv --reuid=65534 --regid=65534 --groups=991 env -i PATH=/usr/bin:/bin HOME=/nonexistent /opt/outage-runtime-validation/.venv/bin/python - < infrastructure/analytical-worker/native-linux-validation/create-profile.py
+colima ssh --profile outage-runtime -- sh -s < infrastructure/analytical-worker/native-linux-validation/run-isolation.sh
+```
+
+`create-profile.py` refuses to overwrite an existing profile. The recorded
+candidate already exists at `/var/lib/outage-runtime-validation/candidate.json`;
+it has null readiness evidence and cannot start the product API. An image/config
+change requires a new matching candidate/report review. The run helper executes
+only synthetic `runtime_docker` probes as 65534 with trusted daemon access and a
+clean environment. It never executes representative measurements, starts the
+product API, passes cloud credentials or retrieves/publishes data.
+
+Final execution passed **19 real Docker probes**, with one measurement test
+deselected; the focused native Linux execute-only traversal regression also
+passed. It verified zero owned containers, spill execution directories and
+validation recovery ledgers after cleanup. The bounded
+[unreviewed evidence bundle](../../docs/specs/analytical-runtime/evidence/2026-10-05-colima-isolation.json)
+binds the final immutable image/profile and individual report hashes. Earlier
+setup failures exposed and corrected the ancestor-read-permission bug; the image
+was rebuilt and all probes rerun afterward.
+
+The initial Colima wrapper provisioning exited with a killed subprocess and
+`colima status` reported incomplete wrapper metadata. Bounded native guest
+checks, actual Docker probes and trusted `colima list` verified the VM/daemon
+running. Use the explicit profile SSH command above; no default context repair
+or profile reset was performed. This wrapper metadata observation does not
+establish product runtime readiness.
+
+T4.3 is **partial**: representative old/current public inputs, independently
+authorized existing refresh/API overlap, S3 transfer/storage coverage, measured
+budget review and T4.C remain missing. Synthetic probes do not replace these
+measurements, and Phase 5 API enablement remains gated.
+
 ## Delivered user-owned validation harness (Phase 4)
 
 `tests/acceptance/test_query_runtime.py` now provides the two separate commands

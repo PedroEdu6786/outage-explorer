@@ -462,3 +462,28 @@ delivered but unexecuted. Host provisioning is documented and was not performed.
 The current read-only daemon observation is Docker Desktop/containerd overlayfs;
 the user chose native Linux VM/EC2 for the implementation target. T4.3/T4.C and
 separate API enablement remain open; there is no reviewed Linux-runtime evidence.
+
+## Partial native Linux execution record (October 5, 2026)
+
+After explicit approval, a dedicated Colima VM supplied the selected native Linux
+host without sharing Mac folders/credentials or changing Docker Desktop/default
+profile state. Its finite ext4 pool has 16,494,592 allocatable bytes and 1,024
+inodes. Real startup revealed the ancestor permission issue; Linux O_PATH now
+traverses execute-only parents while final-root validation stays readable and all
+components reject symlinks. The image was rebuilt after correction.
+
+Nineteen real `runtime_docker` probes passed on the final image/profile, including
+aggregate/open-unlinked byte and inode exhaustion, noexec, resource controls,
+denials, deadlines/descendants, immutable staging and cleanup/recovery. The
+native Linux traversal regression also passed. Final cleanup found no owned
+containers, spill request directories or validation ledgers. Host controlled
+regressions/static checks passed. The
+[bounded evidence bundle](evidence/2026-10-05-colima-isolation.json) is unreviewed;
+its identities and individual report hashes distinguish this run from earlier
+failed preparation and preliminary-image runs.
+
+Representative old/current data, authorized refresh/API overlap, S3 transfer/
+storage measurements and measured-budget review remain open. The synthetic VM
+size is not a measured runtime budget. T4.3 is partial; T4.C and separate API
+enablement remain gated. No product API, source retrieval/publication or deployment
+was performed.

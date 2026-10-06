@@ -45,11 +45,19 @@ def validate_native_daemon(profile: RuntimeProfile, raw: bytes) -> None:
 
 
 def _open_directory(path: Path) -> int:
-    fd = os.open("/", os.O_RDONLY | os.O_DIRECTORY)
+    # Linux O_PATH allows traversal through trusted execute-only parents without
+    # granting directory-list access. The selected spill root itself is opened
+    # readably for capacity/ownership checks; no component may be a symlink.
+    traverse = getattr(os, "O_PATH", os.O_RDONLY)
+    fd = os.open("/", traverse | os.O_DIRECTORY)
     try:
-        for part in path.parts[1:]:
+        for index, part in enumerate(path.parts[1:], start=1):
             child = os.open(
-                part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd
+                part,
+                (os.O_RDONLY if index == len(path.parts) - 1 else traverse)
+                | os.O_DIRECTORY
+                | os.O_NOFOLLOW,
+                dir_fd=fd,
             )
             os.close(fd)
             fd = child

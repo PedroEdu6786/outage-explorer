@@ -350,3 +350,21 @@ def test_native_daemon_rejects_desktop_and_mismatch(monkeypatch):
     monkeypatch.setattr(quota.platform, "system", lambda: "Darwin")
     with pytest.raises(RuntimeUnavailableError):
         quota.validate_native_daemon(profile, json.dumps(facts).encode())
+
+
+@pytest.mark.skipif(not hasattr(os, "O_PATH"), reason="Linux path descriptors required")
+def test_secure_traversal_accepts_execute_only_ancestor(tmp_path):
+    ancestor = tmp_path / "traverse"
+    ancestor.mkdir(mode=0o700)
+    selected = ancestor / "private-root"
+    selected.mkdir(mode=0o700)
+    ancestor.chmod(0o111)
+    try:
+        fd = quota._open_directory(selected)
+        try:
+            assert os.fstat(fd).st_ino == selected.stat().st_ino
+            assert os.listdir(fd) == []  # selected root remains readable
+        finally:
+            os.close(fd)
+    finally:
+        ancestor.chmod(0o700)
