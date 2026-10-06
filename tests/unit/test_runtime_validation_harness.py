@@ -412,18 +412,16 @@ def test_sampler_records_only_bounded_failure_stage_counters(
     if fault == "disk":
         sizes.side_effect = OSError("private-path-canary")
     monkeypatch.setattr("tests.runtime_validation.directory_bytes", sizes)
-    command = Mock(
-        return_value=SimpleNamespace(code=0, stdout=b"94MiB / 512MiB|100.0%")
-    )
+    command = Mock(return_value=(94 * 1024**2, 100.0))
     if fault == "control":
         command.side_effect = RuntimeError("private-diagnostic-canary")
     elif fault == "decode":
-        command.return_value.stdout = b"private-invalid-output-canary"
+        command.return_value = ("private-invalid-output-canary", 100.0)
     sampler = OverlapSampler(
         SimpleNamespace(
             profile=profile,
             runtime=SimpleNamespace(_container="owned-test"),
-            command=command,
+            container_stats=command,
         ),
         None,
     )

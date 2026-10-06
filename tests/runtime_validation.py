@@ -46,6 +46,7 @@ from outage_explorer.infrastructure.worker_runtime.docker import (
 )
 from outage_explorer.infrastructure.worker_runtime.inputs import stage_inputs
 from outage_explorer.infrastructure.worker_runtime.ownership import OwnershipLedger
+from tests.runtime_stats import ContainerStats
 
 
 def record_gate(function):
@@ -152,6 +153,7 @@ class RuntimeHarness:
             uuid4().hex,
         )
         self.runtime = DockerRuntime(self.profile, self.control, self.ledger)
+        self.stats = ContainerStats(self.profile.daemon_endpoint)
         self._opened = False
 
     def command(self, arguments, *, data=b"", seconds=None, limit=8192):
@@ -162,6 +164,9 @@ class RuntimeHarness:
             stdout_bytes=limit,
             stderr_bytes=self.profile.stderr_bytes,
         )
+
+    def container_stats(self, identity):
+        return self.stats.sample(identity)
 
     def open(self):
         # Only safe scalar fields, never full inspection (.Config.Env is forbidden).
@@ -547,41 +552,15 @@ class OverlapSampler:
                 identity = self.harness.runtime._container
                 if identity:
                     stage = "container_control"
-                    response = self.harness.command(
-                        (
-                            "stats",
-                            "--no-stream",
-                            "--format",
-                            "{{.MemUsage}}|{{.CPUPerc}}",
-                            identity,
-                        ),
-                        seconds=2,
-                        limit=256,
-                    )
-                    if response.code:
-                        self.metrics["container_control_nonzero"] += 1
-                        raise ValueError("Container sampling unavailable")
+                    memory, cpu = self.harness.container_stats(identity)
                     stage = "container_decode"
-                    memory, cpu = response.stdout.decode().strip().split("|")
-                    number, unit = re.fullmatch(
-                        r"([0-9.]+)([A-Za-z]+).*", memory
-                    ).groups()
-                    factor = {
-                        "B": 1,
-                        "KiB": 1024,
-                        "MiB": 1024**2,
-                        "GiB": 1024**3,
-                        "kB": 1000,
-                        "MB": 1000**2,
-                        "GB": 1000**3,
-                    }[unit]
                     self.metrics["container_memory_peak_bytes"] = max(
                         self.metrics["container_memory_peak_bytes"],
-                        int(float(number) * factor),
+                        memory,
                     )
                     self.metrics["container_cpu_peak_percent"] = max(
                         self.metrics["container_cpu_peak_percent"],
-                        float(cpu.removesuffix("%")),
+                        cpu,
                     )
                 if self.inputs is not None:
                     stage = "api_probe"
