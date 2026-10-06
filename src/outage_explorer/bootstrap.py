@@ -29,6 +29,7 @@ from outage_explorer.application.errors import (
     AccessConfigurationError,
     ConnectorConfigurationError,
     ConnectorDependencyError,
+    RuntimeUnavailableError,
 )
 from outage_explorer.application.ports.analytical_inputs import PublishedInputs
 from outage_explorer.application.ports.artifacts import (
@@ -966,6 +967,16 @@ def build_analytical_resources(
 
     supervisor = AnalyticalSupervisor(profile, evidence, construct, reconcile)
 
+    def start() -> None:
+        try:
+            if inspector is not None:
+                inspector.start()
+            supervisor.start()
+        except BaseException:
+            if inspector is not None:
+                inspector.close()
+            raise
+
     def close() -> None:
         try:
             if inspector is not None:
@@ -980,14 +991,16 @@ def build_analytical_resources(
         supervisor.sequences,
         PreviewEncoding(profile.encoding_bounds),
         profile.worker.output_bytes,
-        supervisor.start,
+        start,
         close,
         profile.identity,
         inspector,
     )
 
 
-def execute_analytical_http(config_path: str, host: str, port: int) -> int:
+def execute_analytical_http(
+    config_path: str, host: str, port: int, inspection_path: str | None = None
+) -> int:
     """Explicit local lifecycle; no reloader or extra serving process is supported."""
     from outage_explorer.infrastructure.worker_runtime.configuration import (
         read_runtime_config,
@@ -1002,7 +1015,18 @@ def execute_analytical_http(config_path: str, host: str, port: int) -> int:
     ):
         raise ValueError("Unsupported analytical serving mode")
     profile, evidence = read_runtime_config(Path(config_path))
-    resources = build_analytical_resources(profile, evidence)
+    inspector = None
+    if inspection_path is not None:
+        from outage_explorer.infrastructure.sql_validation.configuration import (
+            read_inspection_config,
+        )
+
+        parser_profile, parser_review = read_inspection_config(Path(inspection_path))
+        if parser_review is None:
+            raise RuntimeUnavailableError("Reviewed SQL inspection unavailable")
+        parser_review.require_ready(parser_profile)
+        inspector = parser_profile.build()
+    resources = build_analytical_resources(profile, evidence, inspector=inspector)
     app: Flask | None = None
     try:
         app = build_http_app(data_resources=resources)

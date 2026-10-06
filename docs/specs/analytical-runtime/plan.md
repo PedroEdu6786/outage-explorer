@@ -621,3 +621,25 @@ activation is added. Controlled tests may inject the existing parser directly;
 analytical worker reinspection retains its existing implementation. Candidate
 Linux subprocess tests cover semantics, bounds and lifecycle; reviewed budget
 configuration and native resource evidence remain readiness work.
+
+### Parser restart ownership and explicit configuration follow-up
+
+Keep a stable private parser.lock inode under a dedicated configured ownership
+root. Explicit start acquires its nonblocking flock; pass only this descriptor
+to the fixed parser child so owner loss cannot release admission while the child
+is alive. Close descriptors without LOCK_UN/unlink. Setpriv supplies SIGKILL on
+parent death and no-new-privileges before prlimit/Python; the child checks expected
+parent identity before SQL input to close the setup race. This implements the
+existing confirmed-death requirement without PID-based foreign cleanup. Native
+checks must prove owner loss, retained child lock, rejection of replacement while
+owned, and successful new ownership only after child exit.
+
+Use a separate --inspection-config JSON, preserving analytical profile identity.
+Its explicit parser bounds, ownership path, executable paths/hashes and matching
+review record have no defaults. Reject missing/mismatched review before API
+construction; hash-check executables at explicit start before owning the lock.
+The record references controlled/native report digests and human review; code
+validates shape/identity, not the substantive quality of a review. Candidate
+files retain evidence:null and cannot activate SQL. Bootstrap starts/rolls back/
+closes parser ownership with the analytical lifecycle, preserving independent
+refresh and existing readiness gates.

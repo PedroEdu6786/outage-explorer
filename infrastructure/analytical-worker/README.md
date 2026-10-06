@@ -594,3 +594,28 @@ Candidate native checks (no API/Docker/cloud or performance measurement):
 They require Linux and `prlimit`; other platforms skip. Test-only values (four
 seconds wall, one CPU second, 256 MiB address space) are not reviewed budgets.
 Review launcher/interpreter identity and concrete bounds before readiness.
+
+### Parser ownership and review configuration
+
+Use `--inspection-config PATH` alongside the analytical runtime config. The
+separate file has exactly `profile` and `evidence`: profile includes all eight
+`InspectionBounds` fields, `python`, `prlimit`, `setpriv`, `ownership_root` and
+the three corresponding `*_sha256` executable identities. Evidence is null for
+a candidate; a reviewed record has `profile_identity`, `controlled_report`,
+`native_report`, `reviewer`, and ISO `reviewed_on`. Missing/mismatched review
+fails before API construction. Records still require substantive human review;
+well-formed digests do not prove readiness. Parser budgets have no defaults.
+
+Explicit parser start creates the final private ownership directory (its parent
+must already exist) and locks the stable `parser.lock`. Never delete/replace that
+lock or ownership root during recovery. The fixed child inherits only its lease
+descriptor; owner loss retains admission until the child exits. Setpriv applies
+parent-death SIGKILL and no-new-privileges before limits/interpreter startup; the
+child verifies expected parent identity before SQL reading. Replacements acquire
+the lease only after all inherited descriptors close. Foreign PIDs/files are
+never killed or removed. Bootstrap owns explicit start/rollback/close.
+
+These changes preserve the existing analytical image/profile identity. Native
+parser tests now include owner SIGKILL/replacement, inherited lease retention and
+wrong-parent rejection. Candidate verification does not approve limits or enable
+endpoints. Without the flag, SQL inspection remains unavailable.

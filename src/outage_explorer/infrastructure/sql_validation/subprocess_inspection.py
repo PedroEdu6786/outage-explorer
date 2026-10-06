@@ -1,13 +1,16 @@
 """Explicit Linux parser limits and one-slot ownership; never an in-process fallback."""
 
+import hashlib
 import json
 import math
 import os
 import selectors
 import signal
+import stat
 import subprocess
 import sys
 from dataclasses import dataclass
+from pathlib import Path
 from threading import Event, Lock
 from time import monotonic
 from typing import BinaryIO, cast
@@ -19,6 +22,7 @@ from outage_explorer.application.errors import (
     RuntimeUnavailableError,
 )
 from outage_explorer.application.ports.sql_inspection import InspectedSql, SqlRejected
+from outage_explorer.infrastructure.sql_validation.ownership import ParserOwnership
 from outage_explorer.infrastructure.sql_validation.subprocess_protocol import (
     REQUEST_LIMIT,
     RESPONSE_LIMIT,
@@ -70,10 +74,25 @@ class UnavailableSqlInspector:
 
 
 class SubprocessSqlInspector:
-    def __init__(self, bounds: InspectionBounds, *, python: str, prlimit: str) -> None:
-        if not os.path.isabs(python) or not os.path.isabs(prlimit):
+    def __init__(
+        self,
+        bounds: InspectionBounds,
+        *,
+        python: str,
+        prlimit: str,
+        setpriv: str,
+        ownership_root: Path,
+        executable_hashes: tuple[str, str, str] | None = None,
+    ) -> None:
+        if any(
+            not isinstance(path, str) or not os.path.isabs(path) or "\x00" in path
+            for path in (python, prlimit, setpriv)
+        ):
             raise ValueError("Explicit absolute inspection executables required")
         self.bounds, self.python, self.prlimit = bounds, python, prlimit
+        self.setpriv = setpriv
+        self.executable_hashes = executable_hashes
+        self._ownership = ParserOwnership(ownership_root)
         self._slot, self._guard = Lock(), Lock()
         self._cancel = Event()
         self._process: subprocess.Popen[bytes] | None = None
@@ -81,13 +100,42 @@ class SubprocessSqlInspector:
         self._closed = False
         self._pid = os.getpid()
 
+    def start(self) -> None:
+        if os.getpid() != self._pid or sys.platform != "linux":
+            raise RuntimeUnavailableError("Bounded SQL inspection unavailable")
+        with self._guard:
+            if self._closed:
+                raise RuntimeUnavailableError("Bounded SQL inspection unavailable")
+            if self.executable_hashes is not None:
+                for path, expected in zip(
+                    (self.python, self.prlimit, self.setpriv),
+                    self.executable_hashes,
+                    strict=True,
+                ):
+                    try:
+                        with open(path, "rb") as stream:
+                            info = os.fstat(stream.fileno())
+                            if (
+                                not stat.S_ISREG(info.st_mode)
+                                or not 0 < info.st_size <= 64 * 1024**2
+                            ):
+                                raise OSError
+                            actual = hashlib.file_digest(stream, "sha256").hexdigest()
+                        if actual != expected:
+                            raise OSError
+                    except OSError:
+                        raise RuntimeUnavailableError(
+                            "SQL inspection executable identity mismatch"
+                        ) from None
+            self._ownership.open()
+
     def inspect(self, sql: str) -> InspectedSql:
         if os.getpid() != self._pid or sys.platform != "linux":
             raise RuntimeUnavailableError("Bounded SQL inspection unavailable")
         with self._guard:
             if self._running:
                 raise AnalyticalBusyError("SQL inspection busy")
-            if self._closed or self._process is not None:
+            if self._closed or self._process is not None or self._ownership.fd is None:
                 raise RuntimeUnavailableError("Bounded SQL inspection unavailable")
             if not self._slot.acquire(blocking=False):
                 raise AnalyticalBusyError("SQL inspection busy")
@@ -135,6 +183,11 @@ class SubprocessSqlInspector:
         try:
             self._process = subprocess.Popen(
                 (
+                    self.setpriv,
+                    "--pdeathsig",
+                    "KILL",
+                    "--no-new-privs",
+                    "--",
                     self.prlimit,
                     f"--as={b.memory_bytes}:{b.memory_bytes}",
                     f"--cpu={b.cpu_seconds}:{b.cpu_seconds}",
@@ -146,6 +199,8 @@ class SubprocessSqlInspector:
                     "-B",
                     "-m",
                     "outage_explorer.infrastructure.sql_validation.parser_process",
+                    str(self._pid),
+                    str(self._ownership.fd),
                 ),
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
@@ -153,6 +208,9 @@ class SubprocessSqlInspector:
                 env={"PATH": "/usr/bin:/bin", "HOME": "/nonexistent"},
                 cwd="/",
                 close_fds=True,
+                pass_fds=(self._ownership.fd,)
+                if self._ownership.fd is not None
+                else (),
                 start_new_session=True,
             )
         except OSError:
@@ -249,3 +307,4 @@ class SubprocessSqlInspector:
             self._reap()
             if self._slot.locked():
                 self._slot.release()
+            self._ownership.close()

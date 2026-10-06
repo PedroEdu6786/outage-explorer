@@ -470,3 +470,14 @@ budgets and final readiness review retain their existing prerequisites.
   and complete readiness acceptance.
 
 No Phase 5 task is completed by this code checkpoint.
+
+### Parser ownership/configuration continuation
+
+- [x] Persistent private inherited admission lease, parent-death signal and
+  parent-identity check before SQL reading; explicit start/rollback/close.
+- [x] Separate strict --inspection-config with bound/executable/hash/ownership
+  identity and matching review gate; no parser defaults or profile alteration.
+- [x] Controlled unsafe lock, duplicate/invalid config, missing/mismatched review,
+  executable mismatch and inert construction verification.
+- [ ] Revised native owner-loss/replacement and resource suite execution.
+- [ ] User review of concrete parser limits and complete readiness evidence.

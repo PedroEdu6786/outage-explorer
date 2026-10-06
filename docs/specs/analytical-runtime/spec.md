@@ -169,3 +169,8 @@ Bound admission, wall-clock, CPU, address space and transport; validate the full
 response, confirm process/group death before releasing capacity, and retain
 uncertain ownership. No API-process parsing fallback. Explicit candidate budgets
 are not reviewed runtime budgets; missing configuration fails unavailable.
+
+Parser capacity across owner loss must remain unavailable while an inherited
+child ownership lease exists. Configure parser bounds/executable identities and
+review separately without changing the analytical image/profile identity.
+Missing or mismatched parser review must reject SQL activation before API work.

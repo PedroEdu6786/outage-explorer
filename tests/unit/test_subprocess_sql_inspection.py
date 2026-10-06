@@ -133,21 +133,32 @@ def test_parser_denial_is_safe():
 
 
 @pytest.fixture
-def inspector(monkeypatch):
+def inspector(monkeypatch, tmp_path):
     monkeypatch.setattr(
         "outage_explorer.infrastructure.sql_validation.subprocess_inspection.sys.platform",
         "linux",
     )
-    return SubprocessSqlInspector(
-        bounds(), python="/trusted/python", prlimit="/usr/bin/prlimit"
+    adapter = SubprocessSqlInspector(
+        bounds(),
+        python="/trusted/python",
+        prlimit="/usr/bin/prlimit",
+        setpriv="/usr/bin/setpriv",
+        ownership_root=tmp_path / "parser",
     )
+    adapter.start()
+    yield adapter
+    adapter.close()
 
 
-def test_construction_and_unavailable_adapter_do_not_launch(monkeypatch):
+def test_construction_and_unavailable_adapter_do_not_launch(monkeypatch, tmp_path):
     launch = Mock(side_effect=AssertionError)
     monkeypatch.setattr(subprocess, "Popen", launch)
     adapter = SubprocessSqlInspector(
-        bounds(), python="/trusted/python", prlimit="/usr/bin/prlimit"
+        bounds(),
+        python="/trusted/python",
+        prlimit="/usr/bin/prlimit",
+        setpriv="/usr/bin/setpriv",
+        ownership_root=tmp_path / "parser",
     )
     adapter.close()
     adapter.close()
@@ -265,3 +276,58 @@ def test_bootstrap_without_explicit_inspector_never_parses(monkeypatch):
         services.queries.execute("session", "SELECT 1")
     parse.assert_not_called()
     store.active_generation.assert_not_called()
+
+
+def test_ownership_denies_parallel_adapter_and_preserves_lock_inode(inspector):
+    other = SubprocessSqlInspector(
+        bounds(),
+        python="/trusted/python",
+        prlimit="/usr/bin/prlimit",
+        setpriv="/usr/bin/setpriv",
+        ownership_root=inspector._ownership.root,
+    )
+    inode = (inspector._ownership.root / "parser.lock").stat().st_ino
+    with pytest.raises(RuntimeUnavailableError, match="ownership unavailable"):
+        other.start()
+    inspector.close()
+    other.start()
+    assert (other._ownership.root / "parser.lock").stat().st_ino == inode
+    other.close()
+
+
+@pytest.mark.parametrize("kind", ["symlink", "hardlink", "public"])
+def test_ownership_rejects_unsafe_lock(tmp_path, kind):
+    from outage_explorer.infrastructure.sql_validation.ownership import ParserOwnership
+
+    root = tmp_path / "parser"
+    root.mkdir(mode=0o700)
+    foreign = tmp_path / "foreign"
+    foreign.write_text("canary")
+    foreign.chmod(0o600)
+    lock = root / "parser.lock"
+    if kind == "symlink":
+        lock.symlink_to(foreign)
+    elif kind == "hardlink":
+        import os
+
+        os.link(foreign, lock)
+    else:
+        lock.write_text("")
+        lock.chmod(0o644)
+    lease = ParserOwnership(root)
+    with pytest.raises(RuntimeUnavailableError):
+        lease.open()
+    assert lease.fd is None and foreign.read_text() == "canary"
+
+
+def test_ownership_rejects_symlink_ancestor(tmp_path):
+    from outage_explorer.infrastructure.sql_validation.ownership import ParserOwnership
+
+    real = tmp_path / "real"
+    real.mkdir()
+    alias = tmp_path / "alias"
+    alias.symlink_to(real, target_is_directory=True)
+    lease = ParserOwnership(alias / "parser")
+    with pytest.raises(RuntimeUnavailableError):
+        lease.open()
+    assert not (real / "parser").exists()
