@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "review_status": "approved_local_preview_sql",
+  "reviewer": "user",
+  "reviewed_on": "2026-10-06",
+  "approval_recorded_at_utc": "2026-10-06T17:20:00Z",
+  "acceptance_scope": "local-preview-sql",
+  "refresh_during_acceptance": "idle",
+  "api_started": false,
+  "endpoints_activated": false,
+  "analytical": {
+    "profile_identity": "a227d729593bcff61f301df141e2479301c7cf9fbf91ea0ebe8891c33611f57f",
+    "initial_containment_limits_approved": true,
+    "reports": {
+      "controlled_startup_and_host_check": "b5b1f14c936b5b0f4f20cd60f67a28f54f9ef5731a0020fcf3df1e726d2c5634",
+      "isolation_report_bundle": "a64aef298a4588c6d014041793dbc58d66829045990f597cd4c7f728fc642ede",
+      "termination_and_owner_recovery_report": "e878f936de0e8322f2d9ae68c312035872443c43f20f9d4e476d1010c284606b",
+      "quota_storage_report": "d40fb635e75964307129ed759cf6e54ea9b7406b95bd79849a12ce6eb53686b0",
+      "preview_sql_sampled_observations": "55ee09bec87f71188725c2815ce9e7d4d5bb509b54890db638ee632c573f7e78",
+      "independent_cleanup": "38bef0be848f416772b10b6e6f49fd53d9bd658ced198325246ea0773c4091ea"
+    }
+  },
+  "parser": {
+    "candidate_config_sha256": "324f4762246a87da8be89db25966e2a44ce8ffde55179b9bf2137e0e925ab6ef",
+    "profile_identity": "833fd37713f21542d3ffca7bb0d34d237441c7a145c4b35463deef1cc6649669",
+    "limits_approved": {
+      "wall_seconds": 4,
+      "cpu_seconds": 1,
+      "memory_bytes": 268435456,
+      "termination_seconds": 1
+    },
+    "controlled_report": "31d4637a5ee8d2d1fe4e6173af903ea3d94b85ecd79561ec38c7d50b1a6c4e36",
+    "native_owner_loss_report": "af23d5a9009fcf1a40e858aeaf75edd0edf0beef746313386f5c6560bc8ebcda",
+    "candidate_path_check": "21041e66d7b371b2300f4cd9ce8b789491acfd947f051bd14bee1ff740524de9"
+  },
+  "deferred_full_checkpoints": [
+    "T4.3",
+    "T4.C",
+    "data-api T1.7",
+    "data-api T1.C"
+  ],
+  "separate_activation_direction_required": true
+}

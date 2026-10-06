@@ -521,14 +521,18 @@ no historical gate was relabeled. No API, refresh, publication or deployment sta
   retain exact profile matching and early review rejection before parser ownership,
   and ensure final rollback/close attempts. Controlled verification supplies no
   approved evidence or startup direction.
-- [ ] **T4.L2 — USER REVIEW** Review matching analytical and parser reports and
-  explicit initial containment limits. Create actual reviewed records only after
-  approval, with local analytical scope, report digests and reviewer/date.
+- [x] **T4.L2 — USER REVIEW** User approved the matching analytical and parser
+  reports and explicit initial containment limits on October 6. Recorded exact
+  digests/reviewer/date in `evidence/2026-10-06-local-report-review.json` and
+  generated matching reviewed runtime configs under `/private/tmp`; API startup
+  remains prohibited pending other gates and separate direction.
 - [ ] **T4.L3** Confirm actual native Linux serving-host configuration/roots,
   executable identities, quota/daemon profile, existing PostgreSQL/S3 published
   access, current seeded Cognito/application roles and required pooled-IAM/auth
-  evidence. Read-only Mac IAM recheck currently reports `LoginRefreshRequired`;
-  no current connection/provider success or credential transfer is claimed.
+  evidence. Linux host/image/profile/parser-path and filesystem checks pass, and
+  the current Mac IAM/PostgreSQL/Cognito configuration recheck passed. Real
+  Analyst/Admin browser sessions, expiry/reopening, independent-session checks,
+  and host-level published-data integrity evidence remain open.
 - [ ] **T4.LC** Review traceability of essential authorization, isolation, bounds,
   termination/recovery/rollback and local-host checks; explicitly record deferred
   performance coverage and refresh-idle scope. Only then can separately authorized

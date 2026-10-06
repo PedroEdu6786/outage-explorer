@@ -1,9 +1,10 @@
 # Proposed local preview/SQL acceptance scope
 
-Status: **approved by user direction**, October 6, 2026; recorded in
-[ADR-0055](../../adr/0055-scoped-local-analytical-readiness.md). The reviewed
-configuration/report and activation gates remain open. This is the retained
-scope proposal and implementation checklist; it approves no runtime record.
+Status: local scope approved in [ADR-0055](../../adr/0055-scoped-local-analytical-readiness.md);
+matching analytical/parser report and initial-limit review approved by the user
+on October 6, 2026. The review is recorded in
+[local report review evidence](evidence/2026-10-06-local-report-review.json).
+Activation and remaining local auth/resource checks remain open.
 
 ## One scope decision
 
@@ -29,13 +30,15 @@ the original full-evidence checkpoints remain intact.
 
 ## Safeguards retained before any startup
 
-1. The user reviews the actual matching analytical reports, missing coverage and
-   complete configuration, and explicitly accepts initial containment limits.
+1. The user reviewed the actual matching analytical reports, missing coverage
+   and complete configuration, and accepted initial containment limits. The exact
+   profile/report identities and approval are recorded in the review evidence.
    The 10-second execution, 1,000-row/1-MiB output and fixed pagination lifetimes
    remain intact. Parser numeric-cap acceptance alone is insufficient.
-2. The user separately reviews the full parser configuration and matching reports
-   in [parser-review.md](parser-review.md). Both candidate evidence records remain
-   null until actual approval; no reviewer, date or report identity is inferred.
+2. The user separately approved the full parser configuration and matching
+   reports in [parser-review.md](parser-review.md). The source candidate remains
+   inert; matching reviewed local runtime configuration is stored outside the
+   repository, with reviewer/date/report identities recorded.
 3. Use the native Linux controller/daemon boundary, non-root UID/GID, no worker
    network or credentials, exact immutable authorized inputs, hard memory/PID/CPU
    and dedicated ext4 byte/inode/noexec enforcement. Retain confirmed termination,

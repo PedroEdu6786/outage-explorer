@@ -678,3 +678,18 @@ recorded local serving host. Trusted PostgreSQL/S3 access from that Linux host,
 user review of the matching containment/parser reports, live Cognito persona and
 session evidence, local checkpoint review, and separate activation remain open.
 The API and preview/SQL endpoints remain disabled.
+
+## Local analytical/parser report approval — October 6, 2026
+
+The user approved the matching analytical and parser reports and initial
+containment limits for local preview/SQL acceptance with refresh idle. Exact
+profile/report hashes and reviewer/date are recorded in
+[local report review evidence](../analytical-runtime/evidence/2026-10-06-local-report-review.json).
+The reviewed analytical and parser configurations under `/private/tmp` validate
+against the accepted profile identities. This closes T4.L2 only; it does not
+close T4.L3/T4.LC, user-access T5.14/T5.C, original full-evidence T4.3/T4.C or
+data-api T1.7/T1.C. Remaining user-access evidence includes real Analyst/Admin
+browser login and local role resolution, generic invalid-credential behavior,
+fixed expiry and persistent-profile reopening, expired/old-cookie denial, and
+independent sessions surviving another session's logout. The API remains stopped;
+separate activation direction is still required.

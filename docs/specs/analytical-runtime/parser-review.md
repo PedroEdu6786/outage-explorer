@@ -1,10 +1,13 @@
 # Parser readiness review packet
 
-Status: numeric containment caps accepted by the user on October 6, 2026;
-full report/configuration readiness review pending; no activation authorization.
+Status: numeric caps and matching full parser report/configuration review
+approved by the user on October 6, 2026; no activation authorization.
 
-The [candidate configuration](../../../infrastructure/analytical-worker/sql-inspection.candidate.json)
-contains explicit Linux paths/hashes and bounds, with `evidence: null`.
+The source [candidate configuration](../../../infrastructure/analytical-worker/sql-inspection.candidate.json)
+contains explicit Linux paths/hashes and bounds, with `evidence: null`. The
+approved matching runtime config is `/private/tmp/outage-parser-reviewed.json`;
+it binds the exact profile to the approved report digests without making the
+source candidate active.
 [Native evidence](evidence/2026-10-06-linux-sql-parser-owner-loss.json) records
 18 passing resource/lifecycle/owner-loss checks and matching code/executables.
 [Controlled evidence](evidence/2026-10-06-parser-controlled-review.json) records
@@ -25,8 +28,9 @@ reviews and unsafe ownership. Current parser source hashes still match the
 Recommendation: review these as initial local acceptance caps while preserving
 the ten-second analytical execution ceiling. They are candidate containment
 settings and should not be described as measured resource budgets. The user accepted the four numeric containment caps for initial local acceptance.
-This does not approve full readiness or claim measured production budgets. No
-reviewer/date/report approval fields have been invented.
+This does not approve complete runtime readiness or claim measured production
+budgets. The approval is recorded in
+[local report review evidence](evidence/2026-10-06-local-report-review.json).
 
 The exact candidate profile (`833fd37713f21542d3ffca7bb0d34d237441c7a145c4b35463deef1cc6649669`)
 also passed start, constant-SQL inspection, close and confirmed lease/process
@@ -35,16 +39,16 @@ does not validate an independently selected serving host.
 The [path/cap record](evidence/2026-10-06-parser-candidate-path-check.json) records
 that narrower result and the user's numeric-cap acceptance.
 
-Matching review digests, ready for the user's substantive review:
+Matching review digests approved by the user:
 
 - Controlled: `31d4637a5ee8d2d1fe4e6173af903ea3d94b85ecd79561ec38c7d50b1a6c4e36`.
 - Native owner loss: `af23d5a9009fcf1a40e858aeaf75edd0edf0beef746313386f5c6560bc8ebcda`.
 - Path/cap follow-up: `21041e66d7b371b2300f4cd9ce8b789491acfd947f051bd14bee1ff740524de9`.
 
-Recommendation: approve the matching parser configuration/reports for initial
-acceptance on this recorded Linux host, retaining full analytical readiness and
-activation as separate gates. Candidate `evidence` remains null until that
-explicit report/profile review is accepted.
+The reviewed parser configuration validates these report/profile identities.
+Full analytical readiness, live authentication acceptance and activation remain
+separate gates. Candidate `evidence` remains null; only the matching reviewed
+runtime copy carries the review record.
 
 Before SQL activation: review reports and settings; validate the proposed private
 ownership root on the actual serving host; create a matching review record from

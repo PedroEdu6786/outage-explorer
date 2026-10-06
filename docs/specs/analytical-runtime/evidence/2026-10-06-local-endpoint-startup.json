@@ -3,7 +3,7 @@
   "baseline_commit": "cd14de1fa77d341bb5b4580760ef94d007a8d29e",
   "source_state": "verified changes on main before commit",
   "scope": "controlled local endpoint startup and explicit local review admission; no native or live HTTP acceptance",
-  "review_status": "unreviewed",
+  "review_status": "user_approved_local_preview_sql",
   "api_started": false,
   "endpoints_activated": false,
   "scope_decision": "ADR-0055 accepted by explicit user answer; report/configuration approval remains separate",
@@ -64,7 +64,12 @@
     "parser_owner_path_start_inspect_close": "passed",
     "spill_mount": {
       "filesystem": "ext4",
-      "options": ["rw", "nosuid", "nodev", "noexec"],
+      "options": [
+        "rw",
+        "nosuid",
+        "nodev",
+        "noexec"
+      ],
       "owner_uid": 65534,
       "owner_gid": 65534,
       "mode": "0700",
@@ -88,5 +93,8 @@
     "product S3 performance",
     "API/refresh capacity overlap"
   ],
-  "full_checkpoints": "T4.3/T4.C and original T1.7/T1.C open; Phase5 unstarted"
+  "full_checkpoints": "T4.3/T4.C and original T1.7/T1.C open; Phase5 unstarted",
+  "reviewed_by": "user",
+  "reviewed_on": "2026-10-06",
+  "review_scope": "matching analytical reports and initial containment limits; local preview/SQL with refresh idle; no activation"
 }
