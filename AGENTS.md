@@ -48,8 +48,10 @@ per generation and dataset, exactly one modeled Parquet file (prior input,
 verification, persistence) and one public projection file (only worker input).
 Do not write or read daily modeled partitions, or add old-layout compatibility
 code. Readers never rebuild inputs per request; workers scan views over exact
-staged files, without whole-input table imports. The guarded publication-reset
-CLI is the only supported way to clear the active generation pointer.
+staged files, without whole-input table imports. No reset CLI exists:
+[ADR-0058](docs/adr/0058-user-directed-publication-reset.md) records that the
+one-time pointer reset was user-directed SQL. Do not clear the active generation
+pointer or alter publication history without explicit user direction.
 
 - `domain/`: pure policies and types; no framework, engine, SDK, database, or I/O.
 - `application/`: use cases, authorization, transaction orchestration, DTOs,

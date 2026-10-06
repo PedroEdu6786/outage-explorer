@@ -24,9 +24,9 @@
   to the exact staged paths with `allowed_paths`, then set
   `enable_external_access=false` and `lock_configuration=true`. No base table is
   created (TR7, TR3).
-- Add an explicit, guarded operator CLI operation that clears the active
-  publication pointer, so the next refresh admits as an initial load. Immutable
-  history stays as it is (FR14).
+- No reset code. The one-time reset of the publication records, so the next
+  refresh admits as an initial load, was performed by user-directed SQL
+  ([ADR-0058](../../adr/0058-user-directed-publication-reset.md), FR14).
 
 ## Components affected
 
@@ -73,9 +73,7 @@
   profile identity, `settings.py` `ArtifactSettings`, `bootstrap.py`
   `CacheBounds`): byte bound sized for single files; row bounds read as
   per-dataset (TR8, TR10).
-- **Publication reset operation** (new application use case, `RefreshStore` port
-  method, PostgreSQL adapter, CLI entrypoint and startup wrapper registered in
-  `tests/architecture`, Makefile target) (FR14).
+- **Publication reset**: no component. Dropped by the user; see ADR-0058.
 - **Authorization paths** (`application/services/preview.py`, `queries.py`,
   `catalog.py`): no change; regression coverage only (FR15).
 - **Documentation**: connector plan, diagrams, `docs/context/code-structure.md`,
@@ -134,9 +132,8 @@ Delete, don't deprecate. No compatibility shims or old-layout branches remain.
 - **GrainSummary**: adds `first_period: date | None` and
   `last_period: date | None` (min/max candidate row period), computed in build
   and recomputed by verification.
-- **PostgreSQL**: no schema migration. The reset operation sets
-  `refresh_coordination.active_generation_id` to NULL. `refresh_runs` and
-  `published_generations` history stays immutable under the existing triggers.
+- **PostgreSQL**: no schema migration and no reset code. The records of the
+  old-layout generation were removed by user-directed SQL (ADR-0058).
 - **Settings**: raise `ArtifactSettings.file_bytes` (initial unmeasured limit
   under ADR-0041, accepted 32,000,000). `row_group_rows`, `row_group_bytes` and
   `ModelSettings` 30,000-row values are unchanged and are now read per dataset.
@@ -164,13 +161,6 @@ Delete, don't deprecate. No compatibility shims or old-layout branches remain.
 - Worker contract: `PreviewRead.files` and `QueryRead.relations` are unchanged.
   The engine exposes each dataset as a view named by `dataset.id` (preview:
   `approved`).
-- Reset: CLI `reset-publication --expected-generation <uuid>` →
-  `ResetActivePublication.execute(expected_generation_id) -> ResetOutcome
-  {cleared_generation_id}` → `RefreshStore.clear_active_generation(expected)`.
-  The adapter takes the coordination row lock and requires: `active_run_id` and
-  owner are NULL; the latest run is terminal and not `publication_unknown`;
-  `active_generation_id` equals the expected value. Otherwise it fails with an
-  explicit error and changes nothing.
 
 ## Implementation phases
 
@@ -188,15 +178,15 @@ Delete, don't deprecate. No compatibility shims or old-layout branches remain.
    `allowed_paths`; worker image rebuild; new local review record for the
    changed image and profile identity under ADR-0055/0056 (lightweight, no new
    external or browser validation) (FR9, FR10, FR12, FR13, FR15, TR3–TR7).
-6. **Reset operation**: use case, port, adapter, CLI and Make target,
-   architecture rule registration (FR14).
+6. **Reset operation**: dropped by user direction (ADR-0058). No code. The
+   publication records were reset by user-directed SQL.
 7. **Dead-code sweep**: confirm every item in the removal inventory is deleted,
    no symbol or test references the old layout, and no unused imports, settings
    or fixtures remain (FR2, FR9, TR7).
 8. **Documentation**: connector plan (date-partition sections), diagrams, code
    structure, architecture, README; devlog entry (scope).
 9. **User-directed operation** (described here, not executed): stop API and
-   refresh → reset pointer → user deletes S3 data and clears local
+   refresh → (pointer already reset by user-directed SQL) → user deletes S3 data and clears local
    connector staging and private cache → start new build → refresh initial load
    April 2–October 1, 2026 → CLI run with `--prior` → preview/SQL smoke
    (FR14, TR9).
@@ -211,7 +201,7 @@ Delete, don't deprecate. No compatibility shims or old-layout branches remain.
   the plan shows `READ_PARQUET`.
 - S3 through the existing `S3ArtifactStore` and transfer bounds. Downloads must
   allow the raised `file_bytes`.
-- PostgreSQL `refresh_coordination` (reset). Docker/Colima worker image and
+- Docker/Colima worker image and
   reviewed runtime evidence identity.
 - ADRs: 0007, 0008, 0023/0024/0026/0037 (unchanged rules), 0042, 0050 (staging
   stays), 0051, 0052, 0053–0056, and 0057 (accepted).
@@ -230,9 +220,9 @@ Delete, don't deprecate. No compatibility shims or old-layout branches remain.
   reviewed identity. Startup is blocked until a new local review record exists.
 - **R5 Spec mismatch**: resolved; spec and ADR-0057 now state six files per
   generation (one modeled, one public projection per dataset).
-- **R6 Reset misuse**: clearing the pointer while data is valid causes an
-  unplanned initial load. Mitigated by the expected-ID guard, idle
-  preconditions, and an operator-only CLI.
+- **R6 Reset misuse**: dropped with the reset CLI (ADR-0058). No code guards
+  against a manual reset while data is valid; any further reset needs explicit
+  user direction.
 - **R7 Downtime and revisions**: preview/SQL are unavailable until the new
   publication. EIA revisions may differ from the deleted data.
 - **R8 Out of scope**: the 58 s vs 40 s overall deadline gap and the cleanup
@@ -254,8 +244,8 @@ Delete, don't deprecate. No compatibility shims or old-layout branches remain.
   verified summaries.
 - Per-kind byte bound: more precise, but needs kind-aware object checks across
   stores.
-- Reset via documented SQL or TRUNCATE: rejected; it bypasses guards and the
-  immutable history.
+- Reset via documented SQL or TRUNCATE: originally rejected here and in
+  ADR-0057; the user later directed a one-time SQL reset (ADR-0058).
 - Temporary base tables with external access disabled afterwards: violates TR7.
 
 ## Test strategy
@@ -286,8 +276,7 @@ Delete, don't deprecate. No compatibility shims or old-layout branches remain.
 - **AC13**: a corrupt or missing public file returns `DataUnavailableError`
   with no fallback.
 - **AC14**: an initial-load integration test with no base, plus a v1 manifest
-  that is rejected; a reset operation test against PostgreSQL covers the
-  guarded clear and the failure cases.
+  that is rejected. No reset test (ADR-0058).
 - **AC15**: existing role and continuation-owner tests rerun, including
   revocation.
 - **AC16**: schema equality and row-multiset parity of modeled and public files
@@ -331,5 +320,5 @@ Delete, don't deprecate. No compatibility shims or old-layout branches remain.
 
 _None._ Resolved October 6, 2026: ADR-0057 accepted (D1); one modeled plus one
 public projection file per dataset, six per generation, with spec and ADR
-updated (D2); publication reset recorded in ADR-0057 (D3); initial `file_bytes`
+updated (D2); publication reset recorded in ADR-0057 (D3), then dropped in favor of the user-directed SQL reset in ADR-0058; initial `file_bytes`
 32,000,000, unmeasured (D4).

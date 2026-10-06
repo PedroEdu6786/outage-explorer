@@ -1,6 +1,7 @@
 # ADR-0057: Store modeled data as one Parquet file per dataset
 
-Status: **Accepted** (user decision, October 6, 2026)
+Status: **Accepted** (user decision, October 6, 2026). The publication-reset
+bullet is superseded by [ADR-0058](0058-user-directed-publication-reset.md).
 
 ## Context
 
