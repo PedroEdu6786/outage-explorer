@@ -350,6 +350,12 @@ logout and browser gate remains open; see [verification](../specs/user-access/ve
 
 ## Data API HTTP integration
 
+For local analytical acceptance, [ADR-0053](../adr/0053-local-single-owner-analytical-acceptance.md)
+accepts one API serving process with threads, one analytical slot and independently
+supervised refresh. Final EC2 topology remains open. The user authorized
+representative measurements and chose to review budgets after measurements;
+readiness review and separate startup/enablement direction remain prerequisites.
+
 Phase 6 registers strict catalog, preview, query submission/paging and durable
 refresh admission/latest/by-ID routes when `OUTAGE_DATA_HTTP_ENABLED=true`.
 Application use cases enforce current roles and retained ownership; shared

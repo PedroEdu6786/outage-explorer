@@ -333,6 +333,12 @@ ownership handoff still require work. No accepted boundary changes are proposed.
 
 ## Open decisions
 
+October 6 direction: [ADR-0053](../../adr/0053-local-single-owner-analytical-acceptance.md)
+accepts the delivered single-owner topology for local acceptance only. The user
+authorized representative measurements and chose measurement before budget
+approval. Missing workload prerequisites, final EC2 topology, ledger storage,
+parser enforcement and evidence review remain open; no startup was authorized.
+
 - Selected corrective candidate: native Linux Docker and dedicated fixed-capacity
   ext4 spill filesystem. Provisioning, mount/UID semantics and actual enforcement
   evidence remain prerequisites before the real-runtime gate.

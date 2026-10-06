@@ -60,6 +60,12 @@ ADR-0030; the independent-services example is explanatory, not selected.
 
 ## Boundaries agents must preserve
 
+Local analytical endpoint acceptance uses one API serving process with threads,
+one analytical execution slot and independently supervised refresh under
+[ADR-0053](docs/adr/0053-local-single-owner-analytical-acceptance.md). This is a
+local acceptance decision; final EC2 topology remains open. It grants no startup
+or activation permission and does not bypass analytical readiness gates.
+
 Product HTTP refresh uses a configured inclusive date range, without caller
 date overrides, under [ADR-0051](docs/adr/0051-configured-http-refresh-range.md).
 Record the resolved interval at admission; later configuration changes must

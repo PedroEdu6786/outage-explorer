@@ -179,6 +179,12 @@ Avoid a command bus or one repository per analytical row type.
 
 ## State and execution rules
 
+[ADR-0053](../adr/0053-local-single-owner-analytical-acceptance.md) accepts a single
+API serving process with threads, one analytical slot and independently supervised
+refresh for local endpoint acceptance. Process-owned continuations remain ephemeral;
+reloader/fork/multiple-process rejection remains required. This does not settle
+EC2 topology or grant runtime startup/enablement permission.
+
 Under [ADR-0043](../adr/0043-seeded-users-and-role-only-access.md), seed local
 users, roles and assignments with essential Cognito identity linkage. Keep
 credentials in Cognito. Registration and Admin user management are excluded
