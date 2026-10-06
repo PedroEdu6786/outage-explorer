@@ -5,6 +5,7 @@ import os
 import re
 import selectors
 import signal
+import stat
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -524,7 +525,7 @@ class DockerRuntime:
             and (
                 not staging.is_dir()
                 or staging.stat().st_uid != os.getuid()
-                or staging.stat().st_mode & 0o077
+                or stat.S_IMODE(staging.stat().st_mode) not in {0o555, 0o700}
             )
         ):
             raise RuntimeUnavailableError("Invalid orphan analytical staging")

@@ -307,6 +307,24 @@ def test_owner_lock_and_corrupt_bounded_ledger(tmp_path):
         first.close()
 
 
+def test_recover_owned_accepts_sealed_private_staging_directory(runtime):
+    adapter, control, ledger = runtime
+    staging = Path(adapter.profile.staging_root) / "execution-orphan"
+    staging.mkdir(mode=0o555)
+    ledger.intend(str(staging), preparing=True)
+    ledger.close()
+
+    recovered_ledger = OwnershipLedger(ledger.root, "d" * 32)
+    recovered_ledger.open()
+    recovering = DockerRuntime(adapter.profile, control, recovered_ledger)
+    try:
+        recovering.recover_owned()
+        assert recovered_ledger.read() is None
+        assert not staging.exists()
+    finally:
+        recovered_ledger.close()
+
+
 def test_only_exact_authorized_digest_files_bound_readonly(runtime, approved):  # noqa: F811
     from outage_explorer.domain.datasets import PUBLIC_DATASETS
 
