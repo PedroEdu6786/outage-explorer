@@ -50,12 +50,36 @@
     "live_browser_login_session_acceptance": "not_run",
     "prior_sandbox_and-stale-login-attempt": "superseded"
   },
+  "current_local_linux_host_check": {
+    "checked_at_utc": "2026-10-06T17:06:20Z",
+    "scope": "existing Colima outage-runtime Linux host; read-only identity and filesystem checks plus bounded parser constant-SQL lifecycle; API and refresh not started",
+    "status": "passed",
+    "platform": "linux/arm64",
+    "guest_os": "Ubuntu 24.04.4 LTS",
+    "docker_version": "29.5.2",
+    "analytical_image_id": "sha256:1ee90c05fa1c8578b3240f4eb39382103fe948f190d9ec0b8e3593440cd9b176",
+    "analytical_profile_identity": "a227d729593bcff61f301df141e2479301c7cf9fbf91ea0ebe8891c33611f57f",
+    "parser_profile_identity": "833fd37713f21542d3ffca7bb0d34d237441c7a145c4b35463deef1cc6649669",
+    "parser_config_hashes_match": true,
+    "parser_owner_path_start_inspect_close": "passed",
+    "spill_mount": {
+      "filesystem": "ext4",
+      "options": ["rw", "nosuid", "nodev", "noexec"],
+      "owner_uid": 65534,
+      "owner_gid": 65534,
+      "mode": "0700",
+      "bytes": 16494592,
+      "inodes": 1024,
+      "recovery": "existing filesystem image remounted after guest restart; no format or resize"
+    },
+    "api_started": false,
+    "refresh_started": false
+  },
   "missing_local_gates": [
     "analytical containment/report approval",
     "parser full profile/report approval",
-    "actual Linux serving-host identity and trusted resource checks",
+    "trusted PostgreSQL/S3 access from the local Linux serving host",
     "remaining real Cognito persona/browser evidence",
-    "actual Linux serving-host identity and trusted resource checks",
     "local checkpoint review",
     "separate activation direction"
   ],

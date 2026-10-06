@@ -659,3 +659,22 @@ consistency and sdist/wheel build (`--no-isolation`) passed. See the
 [unreviewed controlled startup report](../analytical-runtime/evidence/2026-10-06-local-endpoint-startup.json)
 for exact selection and source hashes. No native worker image was rebuilt;
 prior native image/profile evidence remains scoped to that unchanged image.
+
+## Local Linux host recheck after Docker reinstall — October 6, 2026
+
+The existing Colima `outage-runtime` guest recovered after the host Docker
+reinstall. Read-only checks confirmed Ubuntu 24.04.4 LTS on Linux/arm64, Docker
+29.5.2, and the existing matching analytical image/profile. The parser
+configuration and executable hashes still match the candidate identity; the
+exact restricted-owner path completed start, reference-free constant SQL
+inspection and close. The existing ext4 spill image had not been mounted after
+guest restart, so the documented loop-mount recovery procedure remounted it
+without formatting or resizing. Its ext4 mount retains `noexec,nosuid,nodev`,
+UID/GID 65534 ownership, mode 0700, and remains within the configured byte/inode
+ceilings. This host check did not start the API or refresh.
+
+Linux host identity, image/profile and filesystem checks now pass for the
+recorded local serving host. Trusted PostgreSQL/S3 access from that Linux host,
+user review of the matching containment/parser reports, live Cognito persona and
+session evidence, local checkpoint review, and separate activation remain open.
+The API and preview/SQL endpoints remain disabled.
