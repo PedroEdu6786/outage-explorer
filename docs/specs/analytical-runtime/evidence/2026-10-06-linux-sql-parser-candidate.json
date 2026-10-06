@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "source_commit": "6476439",
+  "review_status": "unreviewed",
+  "api_enabled": false,
+  "scope": "native Linux bounded parser candidate code/resource tests, not performance measurements",
+  "platform": {
+    "kernel": "Linux 6.8.0-117-generic",
+    "python": "3.12.3",
+    "prlimit": "util-linux 2.39.3",
+    "uid": 65534,
+    "gid": 65534,
+    "supplemental_groups": []
+  },
+  "executables": {
+    "prlimit_sha256": "26600e1c720c29d7b7a87eac6beb13f5bc497925349d6c36a5c03751df879fd1",
+    "python_sha256": "c86f21d0da9290ece2d7d49a3f7ed52aed59cb029abdf0ea25c79634f6cbe960"
+  },
+  "source_sha256": {
+    "src/outage_explorer/infrastructure/sql_validation/subprocess_inspection.py": "830aade0d5f2db1de2750fd1ec3df03a571bdc6b895f4424bfdaf66791b1f208",
+    "tests/integration/test_sql_parser_process.py": "61d2263b9cad763ac9abdecc74a47fa70adc543e551a503b5408740cf9cbf9ea"
+  },
+  "candidate_test_bounds": {
+    "wall_seconds": 4,
+    "cpu_seconds": 1,
+    "memory_bytes": 268435456,
+    "termination_seconds": 1,
+    "stderr_bytes": 1024,
+    "max_sql_bytes": 65536,
+    "max_nodes": 10000,
+    "max_depth": 64
+  },
+  "command": ".venv/bin/python -m pytest -q -p no:cacheprovider tests/integration/test_sql_parser_process.py",
+  "results": {
+    "passed": 15,
+    "failed": 0,
+    "skipped": 0,
+    "native_parser_processes_remaining": 0
+  },
+  "coverage": [
+    "Real limited parser preserves SQL and complete scope including unused CTEs",
+    "Unsupported SQL safely rejected",
+    "Wall-clock timeout and CPU/address-space limits",
+    "Stdout/stderr limits, invalid response and sanitized process failure",
+    "Minimal environment and closed inherited descriptors",
+    "Cancellation and confirmed process/group termination before slot release"
+  ],
+  "preparation_failure": {
+    "stage": "initial test collection",
+    "class": "ModuleNotFoundError",
+    "cause": "Guest virtual environment retained an older installed package after source archive extraction",
+    "resolution": "Offline no-deps no-build-isolation reinstall from committed source; no Docker image rebuild"
+  },
+  "limitations": [
+    "Candidate test bounds are not measured or reviewed runtime budgets.",
+    "Reviewed parser configuration for CLI composition remains undelivered.",
+    "API process loss/restart ownership verification remains outstanding; normal cancellation/reaping is tested.",
+    "No API endpoint, Cognito/IAM, preview/spill/S3/refresh-overlap acceptance or complete readiness review performed."
+  ]
+}

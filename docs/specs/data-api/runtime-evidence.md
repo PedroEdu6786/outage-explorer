@@ -493,3 +493,36 @@ The combined harness exit remains failed historically; it does not negate the
 completed SQL behavior. Proceed with remaining implementation and acceptance
 prerequisites without treating this workload as failed SQL. Resource budgets
 and overall readiness are not approved; no API startup or activation follows.
+
+## Bounded SQL parser candidate verification — October 6, 2026
+
+Implemented ADR-0054 candidate parsing behind the application inspection port.
+Bootstrap no longer supplies API-process parsing: missing explicit inspection
+fails unavailable, while controlled tests inject their parser and the analytical
+worker retains SQL reinspection. Linux prlimit sets hard CPU/address-space/core/
+file bounds before isolated Python starts. Strict bounded scope transport, one
+admission slot, cancellation and confirmed process/group termination preserve
+capacity on uncertain cleanup; no diagnostic passthrough or in-process fallback.
+
+Controlled parser/architecture/worker selection passed 258 tests (15 Linux skips);
+updated parser/startup/supervisor selection passed 61; disposable PostgreSQL
+HTTP/lifecycle/catalog/query selection passed 60. Ruff lint/format, mypy on 141
+source files, dependency consistency and sdist/wheel build passed. Local pytest
+runs reported four pre-existing quota cleanup warnings. Initial local database
+connections were sandbox-denied; approved retry used the read-only reverified
+private test data directory, PostgreSQL 18.6 and loopback 127.0.0.1/32.
+
+Native parser selection then passed all 15 tests as UID/GID 65534 with no
+supplemental groups, cloud environment or Docker access. Exporting source alone
+initially left the old installed guest package, causing collection failure; an
+offline package reinstall fixed it without rebuilding the analytical image.
+Verified source hashes matched; no parser processes remained. The
+[unreviewed candidate record](../analytical-runtime/evidence/2026-10-06-linux-sql-parser-candidate.json)
+identifies executable/source hashes, candidate bounds, exact selection and gaps.
+These checks enforce resource limits, not representative budget measurement.
+
+Still open: reviewed numeric parser settings and CLI configuration delivery,
+API-loss/restart parser ownership verification, failed resource sampling and
+remaining preview/spill/S3/overlap coverage. SQL execution success remains passed
+separately. No readiness gate, API startup, activation, refresh, publication,
+cloud provisioning or live authentication acceptance was performed.

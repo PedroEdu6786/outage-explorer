@@ -465,7 +465,8 @@ budgets and final readiness review retain their existing prerequisites.
   unavailable; no API-process parser fallback. Worker reinspection preserved.
 - [x] Controlled safe-error, malformed scope, authorization ordering, admission
   and retained ownership tests.
-- [ ] Native Linux subprocess resource/lifecycle checks (delivered, pending run).
-- [ ] Reviewed parser budgets/configuration and complete readiness acceptance.
+- [x] Native Linux subprocess resource/lifecycle checks: 15 passed as UID 65534.
+- [ ] Reviewed parser budgets/configuration, API-loss/restart ownership verification
+  and complete readiness acceptance.
 
 No Phase 5 task is completed by this code checkpoint.
