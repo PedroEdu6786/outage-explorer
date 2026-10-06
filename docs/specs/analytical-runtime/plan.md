@@ -597,3 +597,27 @@ executions, three retained-result page reads and cleanup are passed in the
 sampling remains failed separately; preserve the original combined report.
 Continue remaining work without rerunning SQL merely to establish execution
 success. Numeric resource budgets and overall readiness remain open.
+
+## ADR-0054 implementation design
+
+Provide an inert infrastructure SqlInspector adapter with one nonblocking slot
+and explicitly supplied positive bounds. On Linux, invoke a trusted absolute
+prlimit executable to set hard CPU/address-space/core/file limits before the
+Python interpreter starts; use isolated Python, a minimal environment, empty
+working directory (/), closed inherited descriptors and a new process group.
+Pass bounded SQL and fixed AST settings via stdin only. The child is fixed
+parser code and receives no application state, inputs or credentials.
+
+Use nonblocking bounded stdin/stdout/stderr transport with monotonic deadlines.
+The child emits only a versioned scope or safe rejection code. Parent strictly
+validates JSON shape/types/duplicates/grains and reconstructs InspectedSql with
+the exact original SQL; no parser is invoked in the parent. Kill/reap the group
+on every outcome; retain slot/process ownership after uncertain death. Explicit
+close interrupts work and retries retained cleanup.
+
+Bootstrap accepts an explicitly injected inspector on DataHttpResources; absent
+inspection uses an unavailable adapter. No implicit parser budget or production
+activation is added. Controlled tests may inject the existing parser directly;
+analytical worker reinspection retains its existing implementation. Candidate
+Linux subprocess tests cover semantics, bounds and lifecycle; reviewed budget
+configuration and native resource evidence remain readiness work.

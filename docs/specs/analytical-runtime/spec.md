@@ -159,3 +159,13 @@ budgets, supported Docker host/daemon/filesystem behavior, API ownership topolog
 recovery/storage policy and the concrete evidence-review mechanism in
 [plan open decisions](plan.md#open-decisions). These remain unaccepted runtime
 choices; neither smoke evidence nor a nonempty evidence string resolves them.
+
+## Bounded SQL inspection follow-up (ADR-0054)
+
+Before SQL endpoint enablement, untrusted SQL parsing/reference inspection must
+use a separate bounded subprocess. Authenticate before inspection and authorize
+the complete returned scope before inputs. Preserve SQL and worker reinspection.
+Bound admission, wall-clock, CPU, address space and transport; validate the full
+response, confirm process/group death before releasing capacity, and retain
+uncertain ownership. No API-process parsing fallback. Explicit candidate budgets
+are not reviewed runtime budgets; missing configuration fails unavailable.

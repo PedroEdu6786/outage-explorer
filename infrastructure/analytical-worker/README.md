@@ -561,3 +561,36 @@ or ingest this external record and does not report those values as observed;
 missing producer instrumentation or unmatched intervals remain explicit missing
 evidence. Use existing measured records only; estimates, candidate allowances and
 local-copy byte counts cannot substitute for S3 transfer or disk-spill evidence.
+
+## Bounded API SQL inspection (ADR-0054)
+
+API composition no longer supplies the in-process SQL parser. Missing explicit
+inspection configuration fails with a safe unavailable result before inputs.
+Controlled tests explicitly inject their parser; the analytical container retains
+its separate SQL reinspection.
+
+`SubprocessSqlInspector` takes `InspectionBounds` and absolute trusted Python and
+Linux `prlimit` paths. No numeric runtime defaults are supplied. Linux hard
+address-space/CPU/core/file limits apply before isolated Python starts; SQL and
+fixed AST limits travel through bounded stdin. The child has a minimal environment,
+closed inherited descriptors and no application state or approved data inputs.
+This is parser resource containment, not a filesystem/network sandbox or a SQL
+execution capability.
+
+Pass the adapter explicitly as `inspector=` to `build_analytical_resources`;
+construction launches no child and its resources close cancels/reaps inspection.
+The current CLI does not invent parser settings from analytical-worker budgets.
+Reviewed configuration delivery remains pending before SQL activation. One slot
+rejects excess work; wall-clock/output bounds and validated scope protect the
+parent. Unknown or uncertain termination retains capacity until explicit cleanup
+confirms process/group death. There is no in-process fallback.
+
+Candidate native checks (no API/Docker/cloud or performance measurement):
+
+```sh
+.venv/bin/python -m pytest -q tests/integration/test_sql_parser_process.py
+```
+
+They require Linux and `prlimit`; other platforms skip. Test-only values (four
+seconds wall, one CPU second, 256 MiB address space) are not reviewed budgets.
+Review launcher/interpreter identity and concrete bounds before readiness.

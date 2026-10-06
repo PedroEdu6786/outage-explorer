@@ -44,6 +44,7 @@ from outage_explorer.application.ports.preview_sequences import PreviewSequences
 from outage_explorer.application.ports.query_results import QueryResults
 from outage_explorer.application.ports.refresh_execution import RefreshConnector
 from outage_explorer.application.ports.source import ROUTES, SourceBounds
+from outage_explorer.application.ports.sql_inspection import SqlInspector
 from outage_explorer.application.ports.tabular_encoding import TabularEncoding
 from outage_explorer.application.services.access import AccessService
 from outage_explorer.application.services.catalog import CatalogService
@@ -124,7 +125,10 @@ from outage_explorer.infrastructure.refresh_worker import (
 )
 from outage_explorer.infrastructure.s3.artifacts import S3ArtifactStore
 from outage_explorer.infrastructure.security import RandomSecurityMaterial
-from outage_explorer.infrastructure.sql_validation.inspection import DuckdbSqlInspector
+from outage_explorer.infrastructure.sql_validation.subprocess_inspection import (
+    SubprocessSqlInspector,
+    UnavailableSqlInspector,
+)
 from outage_explorer.infrastructure.verification_report import LocalReportWriter
 from outage_explorer.infrastructure.worker_runtime.configuration import (
     RuntimeEvidence,
@@ -169,6 +173,7 @@ class DataHttpResources:
     start: Callable[[], None]
     close: Callable[[], None]
     evidence: str
+    inspector: SqlInspector | None = None
 
     def __post_init__(self) -> None:
         if (
@@ -233,7 +238,9 @@ def build_data_services(
         ),
         QueryService(
             access,
-            DuckdbSqlInspector(max_sql_bytes=65536, max_nodes=10000, max_depth=64),
+            resources.inspector
+            if resources is not None and resources.inspector is not None
+            else UnavailableSqlInspector(),
             store,
             inputs,
             execution,
@@ -800,6 +807,9 @@ def build_query_worker(
     from outage_explorer.application.ports.execution import ExecutionBounds
     from outage_explorer.infrastructure.duckdb.previews import execute_preview
     from outage_explorer.infrastructure.duckdb.queries import execute_query
+    from outage_explorer.infrastructure.sql_validation.inspection import (
+        DuckdbSqlInspector,
+    )
     from outage_explorer.infrastructure.worker_runtime.protocol import AnalyticalWorker
     from outage_explorer.settings import AnalyticalWorkerSettings
 
@@ -832,7 +842,10 @@ def build_query_worker(
 
 
 def build_analytical_resources(
-    profile: "RuntimeProfile", evidence: "RuntimeEvidence | None"
+    profile: "RuntimeProfile",
+    evidence: "RuntimeEvidence | None",
+    *,
+    inspector: SubprocessSqlInspector | None = None,
 ) -> DataHttpResources:
     """Build inert forwarding ports; only explicit start may own filesystem/S3."""
     from outage_explorer.infrastructure.local_cache.modeled import (
@@ -952,6 +965,14 @@ def build_analytical_resources(
             raise
 
     supervisor = AnalyticalSupervisor(profile, evidence, construct, reconcile)
+
+    def close() -> None:
+        try:
+            if inspector is not None:
+                inspector.close()
+        finally:
+            supervisor.close()
+
     return DataHttpResources(
         supervisor.inputs,
         supervisor.execution,
@@ -960,8 +981,9 @@ def build_analytical_resources(
         PreviewEncoding(profile.encoding_bounds),
         profile.worker.output_bytes,
         supervisor.start,
-        supervisor.close,
+        close,
         profile.identity,
+        inspector,
     )
 
 

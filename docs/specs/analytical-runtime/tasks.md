@@ -455,3 +455,17 @@ partial T4.3 outcomes; it does not close T4.3/T4.C or authorize T5.1.
 See the [scoped outcome record](evidence/2026-10-06-sql-workload-outcome.json).
 Remaining preview/spill/S3/overlap coverage, parser implementation, reviewed
 budgets and final readiness review retain their existing prerequisites.
+
+## ADR-0054 bounded parser implementation checkpoint
+
+- [x] Explicit candidate bounds, Linux prlimit launcher and bounded protocol.
+- [x] One nonblocking admission slot, process-owned lifecycle, cancellation and
+  confirmed process/group death; uncertain cleanup retains capacity.
+- [x] Bootstrap accepts explicit inspection injection and otherwise fails
+  unavailable; no API-process parser fallback. Worker reinspection preserved.
+- [x] Controlled safe-error, malformed scope, authorization ordering, admission
+  and retained ownership tests.
+- [ ] Native Linux subprocess resource/lifecycle checks (delivered, pending run).
+- [ ] Reviewed parser budgets/configuration and complete readiness acceptance.
+
+No Phase 5 task is completed by this code checkpoint.

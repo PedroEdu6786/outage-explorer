@@ -16,6 +16,7 @@ from outage_explorer.entrypoints.http.data_services import DataServices
 from outage_explorer.infrastructure.query_results.preview_encoding import (
     PreviewEncoding,
 )
+from outage_explorer.infrastructure.sql_validation.inspection import DuckdbSqlInspector
 from tests.integration import test_query_results as retained
 from tests.integration.test_catalog_preview import ENCODING
 from tests.unit.test_data_api_contract import validator
@@ -279,6 +280,9 @@ def supervised_http(system, browsing, tmp_path):
             supervisor.start,
             supervisor.close,
             candidate.identity,
+            inspector=DuckdbSqlInspector(
+                max_sql_bytes=65536, max_nodes=10000, max_depth=64
+            ),
         )
         services = build_data_services(
             system[1]._access,
