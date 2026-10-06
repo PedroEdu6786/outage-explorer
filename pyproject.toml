@@ -30,6 +30,8 @@ addopts = "--import-mode=importlib --strict-markers"
 markers = [
     "acceptance: independent controlled authentication acceptance (requires disposable PostgreSQL)",
     "browser: persistent Chromium profile authentication acceptance (requires installed browser)",
+    "runtime_docker: user-owned opt-in actual Docker isolation and lifecycle evidence",
+    "runtime_measurements: user-owned opt-in representative runtime resource measurements",
     "live_provider: opt-in real provider checks, excluded from required CI",
 ]
 

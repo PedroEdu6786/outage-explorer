@@ -99,17 +99,27 @@ class OwnershipLedger:
             if (
                 len(raw) > 8192
                 or not isinstance(value, dict)
-                or set(value) != {"owner", "name", "staging"}
+                or set(value)
+                not in (
+                    {"owner", "name", "staging"},
+                    {"owner", "name", "staging", "spill"},
+                    {"owner", "name", "staging", "phase"},
+                    {"owner", "name", "staging", "spill", "phase"},
+                )
                 or any(not isinstance(v, str) for v in value.values())
                 or re.fullmatch(r"[0-9a-f]{32}", value["owner"]) is None
                 or value["name"] != "outage-analytical-" + value["owner"]
+                or value.get("phase", "creating")
+                not in {"preparing", "creating", "removed"}
             ):
                 raise ValueError()
             return value
         except (ValueError, TypeError):
             raise RuntimeUnavailableError("Invalid runtime ownership") from None
 
-    def intend(self, staging: str) -> None:
+    def intend(
+        self, staging: str, *, spill: str | None = None, preparing: bool = False
+    ) -> None:
         if self.read() is not None:
             raise RuntimeUnavailableError("Unresolved runtime ownership")
         value = {
@@ -117,6 +127,27 @@ class OwnershipLedger:
             "name": "outage-analytical-" + self.owner,
             "staging": staging,
         }
+        if spill is not None:
+            value["spill"] = spill
+        if preparing:
+            value["phase"] = "preparing"
+        self._write(value)
+
+    def creating(self) -> None:
+        value = self.read()
+        if value is None or value.get("phase") != "preparing":
+            raise RuntimeUnavailableError("Invalid analytical creation transition")
+        value["phase"] = "creating"
+        self._write(value)
+
+    def removed(self) -> None:
+        value = self.read()
+        if value is None:
+            raise RuntimeUnavailableError("Missing analytical removal ownership")
+        value["phase"] = "removed"
+        self._write(value)
+
+    def _write(self, value: dict[str, str]) -> None:
         raw = json.dumps(value, separators=(",", ":")).encode()
         if len(raw) > 8192:
             raise RuntimeUnavailableError("Runtime ownership limit exceeded")
@@ -135,6 +166,7 @@ class OwnershipLedger:
         if self._fd is None:
             raise RuntimeUnavailableError("Runtime ownership unstarted")
         (self.root / "worker.json").unlink(missing_ok=True)
+        (self.root / "worker.partial").unlink(missing_ok=True)
         self._sync()
 
     def _sync(self) -> None:

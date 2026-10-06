@@ -31,6 +31,10 @@ from outage_explorer.infrastructure.worker_runtime.inputs import (
     stage_inputs,
 )
 from outage_explorer.infrastructure.worker_runtime.ownership import OwnershipLedger
+from outage_explorer.infrastructure.worker_runtime.quota import (
+    DiskSpill,
+    validate_native_daemon,
+)
 
 
 @dataclass(frozen=True)
@@ -198,9 +202,9 @@ class DockerRuntime:
     def __init__(
         self, profile: RuntimeProfile, control: DockerControl, ledger: OwnershipLedger
     ) -> None:
-        if (
-            isinstance(control, BoundedDockerControl)
-            and control.endpoint != profile.daemon_endpoint
+        if isinstance(control, BoundedDockerControl) and (
+            control.endpoint != profile.daemon_endpoint
+            or control.executable != profile.docker_executable
         ):
             raise ValueError("Docker endpoint/profile mismatch")
         self.profile, self.control, self.ledger = profile, control, ledger
@@ -212,6 +216,30 @@ class DockerRuntime:
         self._removed = False
         self._death_confirmed = False
         self._removal_attempted = False
+        self._spill: DiskSpill | None = None
+        self._create_attempted = False
+
+    def validate_temporary_backend(self) -> None:
+        """Explicit startup probe; inert construction never touches the host."""
+        if self.profile.temporary_backend != "quota-disk":
+            return
+        self._validate_daemon()
+        spill = DiskSpill(self.profile, self.ledger.owner)
+        spill.open()
+        spill.release()
+
+    def _validate_daemon(self) -> None:
+        raw = self._control(
+            (
+                "info",
+                "--format",
+                '{"version":{{json .ServerVersion}},"os":{{json .OSType}},'
+                '"kernel":{{json .KernelVersion}},"name":{{json .Name}},'
+                '"architecture":{{json .Architecture}}}',
+            ),
+            monotonic() + self.profile.control_seconds,
+        ).stdout
+        validate_native_daemon(self.profile, raw)
 
     def _control(
         self,
@@ -237,10 +265,6 @@ class DockerRuntime:
 
     def _create_arguments(self) -> tuple[str, ...]:
         p = self.profile
-        if p.temporary_backend != "tmpfs-smoke":
-            # A quota-disk storage implementation/evidence must be selected at
-            # its own gate; never silently substitute unbounded disk or tmpfs.
-            raise RuntimeUnavailableError("Analytical temporary backend unavailable")
         args = [
             "create",
             "--name",
@@ -248,6 +272,8 @@ class DockerRuntime:
             "--label",
             "outage.analytical.owner=" + self.ledger.owner,
             "--network",
+            "none",
+            "--ipc",
             "none",
             "--read-only",
             "--cap-drop",
@@ -269,9 +295,20 @@ class DockerRuntime:
             "--restart",
             "no",
             "--interactive",
-            "--tmpfs",
-            f"/tmp:rw,noexec,nosuid,nodev,size={p.worker.temporary_bytes},uid={p.uid},gid={p.gid},mode=700",
         ]
+        if p.temporary_backend == "tmpfs-smoke":
+            args.extend(
+                (
+                    "--tmpfs",
+                    f"/tmp:rw,noexec,nosuid,nodev,size={p.worker.temporary_bytes},uid={p.uid},gid={p.gid},mode=700",
+                )
+            )
+        else:
+            if self._spill is None:
+                raise RuntimeUnavailableError(
+                    "Analytical temporary backend unavailable"
+                )
+            args.extend(("--mount", self._spill.mount_argument()))
         assert self._staging is not None
         for item in self._staging.files:
             if any(c in item.path for c in (",", "\n", "\x00")):
@@ -309,9 +346,10 @@ class DockerRuntime:
         )
         if self.cancel.is_set():
             raise RuntimeUnavailableError("Analytical execution cancelled")
+        self.prepare_temporary()
         arguments = self._create_arguments()
-        self.ledger.intend(str(self._staging.directory))
-        self._intended = True
+        self.ledger.creating()
+        self._create_attempted = True
         created = self._control(arguments, deadline)
         container = created.stdout.decode("ascii", errors="strict").strip()
         if re.fullmatch(r"[0-9a-f]{64}", container) is None:
@@ -333,6 +371,22 @@ class DockerRuntime:
         return self.transport.decode(
             response.stdout, request=request, exit_code=response.code
         )
+
+    def prepare_temporary(self) -> None:
+        """Persist spill/staging intent before creating worker-accessible state."""
+        assert self._staging is not None
+        if self.profile.temporary_backend == "quota-disk":
+            self.validate_temporary_backend()
+            self._spill = DiskSpill(self.profile, self.ledger.owner)
+            self._spill.open()
+        self.ledger.intend(
+            str(self._staging.directory),
+            spill=str(self._spill.directory) if self._spill is not None else None,
+            preparing=True,
+        )
+        self._intended = True
+        if self._spill is not None:
+            self._spill.allocate()
 
     def preview(
         self, request: PreviewRead, bounds: ExecutionBounds, deadline: float
@@ -397,7 +451,7 @@ class DockerRuntime:
         deadline = monotonic() + self.profile.termination_seconds
         if isinstance(self.control, BoundedDockerControl):
             self.control.reap(deadline)
-        if self._intended and not self._removed:
+        if self._intended and self._create_attempted and not self._removed:
             if self._death_confirmed and self._removal_attempted:
                 assert self._container is not None
                 listing = self._control(
@@ -417,14 +471,22 @@ class DockerRuntime:
                     self._removed = True
             if not self._removed:
                 self._reap_container(deadline)
+        if self._intended and self._removed:
+            self.ledger.removed()
+        if self._spill is not None:
+            self._spill.close()
         if self._staging is not None:
             self._staging.close()
             self._staging = None
         if self._intended:
             self.ledger.clear()
+        if self._spill is not None:
+            self._spill.release()
+            self._spill = None
         self._container = None
         self._intended = self._removed = False
         self._death_confirmed = self._removal_attempted = False
+        self._create_attempted = False
         self.cancel.clear()
 
     def _reap_container(self, deadline: float) -> None:
@@ -448,20 +510,38 @@ class DockerRuntime:
             return
         staging = Path(record["staging"])
         root = Path(self.profile.staging_root)
+        no_worker = record.get("phase") in {"preparing", "removed"}
         if (
             staging.parent != root
             or not staging.name.startswith("execution-")
             or staging.is_symlink()
-            or not staging.is_dir()
-            or staging.stat().st_uid != os.getuid()
-            or staging.stat().st_mode & 0o077
+            or not staging.exists()
+            and not no_worker
+            or staging.exists()
+            and (
+                not staging.is_dir()
+                or staging.stat().st_uid != os.getuid()
+                or staging.stat().st_mode & 0o077
+            )
         ):
             raise RuntimeUnavailableError("Invalid orphan analytical staging")
         current_owner = self.ledger.owner
         self.ledger.owner = record["owner"]
         self._intended = True
-        self._staging = StagedInputs(staging, ())
+        self._create_attempted = record.get("phase", "creating") == "creating"
+        self._removed = self._death_confirmed = record.get("phase") == "removed"
+        self._staging = StagedInputs(staging, ()) if staging.exists() else None
         try:
+            if "spill" in record:
+                if self.profile.temporary_backend != "quota-disk":
+                    raise RuntimeUnavailableError("Analytical spill profile changed")
+                self._spill = DiskSpill(self.profile, record["owner"])
+                if record["spill"] != str(self._spill.directory):
+                    raise RuntimeUnavailableError("Invalid orphan analytical spill")
+                self._validate_daemon()
+                self._spill.open(recovering=True)
+            elif self.profile.temporary_backend == "quota-disk":
+                raise RuntimeUnavailableError("Analytical spill ownership missing")
             self.terminate_and_reap()
         finally:
             self.ledger.owner = current_owner

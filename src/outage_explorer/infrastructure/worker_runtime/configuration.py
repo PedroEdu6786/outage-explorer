@@ -74,7 +74,13 @@ class RuntimeProfile:
     gid: int = 65534
     serving_processes: int = 1
     temporary_backend: str = "tmpfs-smoke"
+    temporary_root: str = "/var/lib/outage-analytical/spill"
+    temporary_filesystem_identity: str = "unconfigured"
+    temporary_inodes: int = 4096
+    temporary_layout_version: int = 1
+    docker_executable: str = "/usr/local/bin/docker"
     network: str = "none"
+    ipc: str = "none"
     read_only_root: bool = True
     drop_capabilities: tuple[str, ...] = ("ALL",)
     no_new_privileges: bool = True
@@ -83,6 +89,15 @@ class RuntimeProfile:
     environment: tuple[tuple[str, str], ...] = ()
 
     def __post_init__(self) -> None:
+        if (
+            not isinstance(self.docker_executable, str)
+            or not self.docker_executable.startswith("/")
+            or str(PurePosixPath(self.docker_executable)) != self.docker_executable
+            or ".." in PurePosixPath(self.docker_executable).parts
+            or any(c in self.docker_executable for c in ("\n", "\x00"))
+            or len(self.docker_executable) > 4096
+        ):
+            raise ValueError("Explicit absolute Docker executable required")
         if re.fullmatch(r"sha256:[0-9a-f]{64}", self.image_id) is None:
             raise ValueError("Immutable analytical image identity required")
         if (
@@ -91,7 +106,12 @@ class RuntimeProfile:
             or ".." in self.daemon_endpoint.split("/")
         ):
             raise ValueError("Explicit local Docker endpoint required")
-        roots = (self.staging_root, self.cache_root, self.result_root)
+        roots = (
+            self.staging_root,
+            self.cache_root,
+            self.result_root,
+            self.temporary_root,
+        )
         for root in roots:
             if (
                 not isinstance(root, str)
@@ -110,7 +130,12 @@ class RuntimeProfile:
             if i != j
         ):
             raise ValueError("Separate private runtime roots required")
-        for value in (self.platform, self.daemon_version, self.filesystem_identity):
+        for value in (
+            self.platform,
+            self.daemon_version,
+            self.filesystem_identity,
+            self.temporary_filesystem_identity,
+        ):
             if not isinstance(value, str) or not value or len(value) > 256:
                 raise ValueError("Runtime platform identity required")
         integer_bounds = (
@@ -132,6 +157,7 @@ class RuntimeProfile:
             "termination_seconds",
             "cleanup_interval_seconds",
             "json_nodes",
+            "temporary_inodes",
         )
         if any(
             type(getattr(self, name)) is not int or not 0 < getattr(self, name) <= 2**40
@@ -155,6 +181,7 @@ class RuntimeProfile:
             or type(self.serving_processes) is not int
             or self.serving_processes != 1
             or self.network != "none"
+            or self.ipc != "none"
             or self.read_only_root is not True
             or self.no_new_privileges is not True
             or self.drop_capabilities != ("ALL",)
@@ -162,6 +189,8 @@ class RuntimeProfile:
             or self.mounts != ()
             or self.environment != ()
             or self.temporary_backend not in {"tmpfs-smoke", "quota-disk"}
+            or type(self.temporary_layout_version) is not int
+            or self.temporary_layout_version != 1
             or self.swap_bytes != self.container_memory_bytes
             or self.container_memory_bytes
             <= self.worker.memory_bytes + self.worker.temporary_bytes

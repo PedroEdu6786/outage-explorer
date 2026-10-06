@@ -263,11 +263,20 @@ def test_single_owner_lock_preserves_live_owner(composed):
     assert second._fd is None
 
 
-def test_production_builder_inert_and_quota_closed(tmp_path):
+def test_production_builder_inert_and_quota_prerequisites_closed(tmp_path, monkeypatch):
+    from outage_explorer.infrastructure.worker_runtime.docker import (
+        BoundedDockerControl,
+    )
+
+    monkeypatch.setattr(
+        BoundedDockerControl,
+        "run",
+        Mock(side_effect=RuntimeUnavailableError("controlled daemon unavailable")),
+    )
     candidate = profile(tmp_path)
     resources = build_analytical_resources(candidate, evidence(candidate))
     assert not list(tmp_path.iterdir())
-    with pytest.raises(RuntimeUnavailableError, match="quota storage"):
+    with pytest.raises(RuntimeUnavailableError, match="daemon unavailable"):
         resources.start()
     resources.close()
     assert not Path(candidate.cache_root).exists()
@@ -323,7 +332,11 @@ def test_dead_owner_recovery_precedes_cache_construction(tmp_path):
     order = []
 
     def recover(ledger):
-        DockerRuntime(candidate, control, ledger).recover_owned()
+        # This legacy record was created under the smoke backend. Native disk
+        # recovery is separately exercised with its exact spill ownership.
+        DockerRuntime(
+            replace(candidate, temporary_backend="tmpfs-smoke"), control, ledger
+        ).recover_owned()
         order.append("recovered")
 
     def construct(ledger, key):

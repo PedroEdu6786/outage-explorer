@@ -215,7 +215,7 @@ def test_quota_disk_not_silently_substituted(runtime):
             adapter.profile.execution_bounds,
             monotonic() + 5,
         )
-    assert not control.calls
+    assert all(arguments[0] == "info" for arguments, _ in control.calls)
     adapter.terminate_and_reap()
 
 

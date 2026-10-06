@@ -687,8 +687,9 @@ recovery and preview/result expiry, safe rollback and restart loss of ephemeral
 IDs. It rejects reloaders, inherited resources and multiple serving processes;
 it does not own the refresh worker.
 
-Real analytical execution remains unavailable: tmpfs-smoke cannot pass readiness,
-and enforced quota-disk storage is unresolved and rejected. Phase 3's controlled
-composition tests do not authorize API enablement. See the
+API analytical execution remains gated: tmpfs-smoke cannot pass readiness, while
+quota-disk now supports a separately provisioned finite ext4 filesystem on native
+Linux Docker. Actual isolation/storage/measurement evidence remains unreviewed.
+Controlled implementation tests do not authorize API enablement. See the
 [profile, readiness and local lifecycle contract](infrastructure/analytical-worker/README.md)
 and the remaining [runtime tasks](docs/specs/analytical-runtime/tasks.md).

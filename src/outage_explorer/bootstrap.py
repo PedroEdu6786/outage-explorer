@@ -835,7 +835,6 @@ def build_analytical_resources(
     profile: "RuntimeProfile", evidence: "RuntimeEvidence | None"
 ) -> DataHttpResources:
     """Build inert forwarding ports; only explicit start may own filesystem/S3."""
-    from outage_explorer.application.errors import RuntimeUnavailableError
     from outage_explorer.infrastructure.local_cache.modeled import (
         CacheBounds,
         PublishedReadSessions,
@@ -860,16 +859,15 @@ def build_analytical_resources(
         AnalyticalSupervisor,
     )
 
-    control = BoundedDockerControl(profile.daemon_endpoint)
+    control = BoundedDockerControl(profile.daemon_endpoint, profile.docker_executable)
 
     def reconcile(ledger: OwnershipLedger) -> None:
         DockerRuntime(profile, control, ledger).recover_owned()
 
     def construct(ledger: OwnershipLedger, key: bytes) -> AnalyticalResources:
-        # No backend currently establishes accepted disk-spill enforcement.
-        # Real acceptance must select/deliver one before this can become ready.
-        if profile.temporary_backend == "quota-disk":
-            raise RuntimeUnavailableError("Analytical quota storage unavailable")
+        # Reviewed evidence remains required by supervisor.start. Real storage
+        # prerequisites are checked here, before constructing cloud adapters.
+        DockerRuntime(profile, control, ledger).validate_temporary_backend()
         s3 = s3_settings(os.environ)
         artifacts = ArtifactBounds(**asdict(ArtifactSettings()))
         transfer = TransferBounds(

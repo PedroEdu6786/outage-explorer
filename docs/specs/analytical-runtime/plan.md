@@ -150,6 +150,43 @@ leave spill readiness open. A bind directory or DuckDB setting alone is not a
 hard storage quota. Docker Desktop path/UID behavior and supported Linux host
 storage need evidence. (TR2, TR6)
 
+#### Corrective storage implementation (authorized October 5)
+
+The user selected **native Linux Docker, on a Linux VM or EC2**, for this
+implementation. Implement `quota-disk` using a dedicated, externally provisioned
+fixed-capacity **ext4 filesystem**, mounted `rw,noexec,nosuid,nodev`. Its kernel
+block and inode limits, rather than a directory size check or DuckDB setting,
+enforce the aggregate temporary-storage ceiling. The supervisor and local native
+Docker daemon must share this host and mount namespace; Docker Desktop and remote
+daemons remain unsupported. The controller and worker use UID/GID 65534 so
+private worker directories remain writable and reclaimable without a privileged
+worker or runtime helper. Host provisioning is separate and is not executed by
+the application or this implementation task.
+
+Add explicit volume path, filesystem identity, and inode ceiling to the hashed
+profile. At explicit startup and before each allocation, validate Linux/native
+daemon identity, exact ext4 mount/device/identity, safe mount options, private
+ownership, finite filesystem block/inode totals within the profile, and absence
+of foreign contents. Lock the dedicated filesystem pool and create one private
+request directory, binding only that directory at `/tmp` with recursive binds
+disabled. Preserve the read-only root, non-root worker and all existing limits.
+The kernel enforces capacity for multiple files, open/unlinked files and directory
+metadata. File polls, per-file rlimits and memory-backed tmpfs are not substitutes.
+
+Persist the intended spill path with staging/container ownership before any
+container creation. Retain spill ownership and pool lock while worker death or
+removal is uncertain; recovery reclaims only the exact owned request after
+confirmed container removal. Mount replacement, configuration changes and
+capacity drift invalidate the candidate. Controlled tests verify failure/ownership
+behavior; opt-in real probes must prove aggregate byte and inode exhaustion,
+mount flags, recovery and cleanup on the selected Linux host before T4.C.
+
+This closes a missing implementation task before Phase 4 readiness, not a new
+Phase 5 feature. Kernel ext4 describes finite block/inode structures in its
+[filesystem documentation](https://www.kernel.org/doc/html/latest/filesystems/ext4/overview.html);
+Docker binds resolve on the
+[daemon host](https://docs.docker.com/engine/storage/bind-mounts/).
+
 Replace hardcoded worker bounds with an allowlisted, bounded nonsecret startup
 profile, or require exact matching with the existing image profile and reject
 any difference. Parent budgets cannot advertise configurable enforcement while
@@ -293,8 +330,9 @@ ownership handoff still require work. No accepted boundary changes are proposed.
 
 ## Open decisions
 
-- Supported local Docker platform/daemon and mount path/UID semantics; immutable
-  staging and enforced disk-spill quota backend. Resolve before real-runtime gate.
+- Selected corrective candidate: native Linux Docker and dedicated fixed-capacity
+  ext4 spill filesystem. Provisioning, mount/UID semantics and actual enforcement
+  evidence remain prerequisites before the real-runtime gate.
 - Measured memory/CPU/process/temp/staging/cache/retention/encoding/transport and
   preparation/overall/cleanup bounds; three results per user/ten global remain
   proposals. Resolve from representative cold/warm and overlap evidence.
@@ -378,3 +416,49 @@ records/adapters are not real runtime evidence. No real Docker, T1.7, measured
 budgets, API enablement, deployment or publication was performed. Phase 4 must
 resolve actual evidence and storage readiness; initial artifact/preparation bounds
 remain candidate defaults.
+
+## Phase 4 harness delivery record
+
+Delivered the exact-marker/profile opt-in runtime tests, bounded numeric-only
+unreviewed reports and controlled harness checks. Actual probes reuse production
+Docker control/isolation and immutable file staging; entrypoint overrides remain
+validation-only. Candidate execution accepts null evidence without changing the
+production supervisor. Failed cleanup preserves exact ownership; tmpfs never
+satisfies disk-backed readiness. The disk-quota test explicitly fails unsupported.
+
+Representative measurement delivery verifies all three public grains for old and
+current snapshots, retains inputs/results, scans aggregates and ordered generator
+output through the worker, writes/pages the actual result spool/index, and samples
+an independently authorized existing refresh/API pair on Linux. It records local
+copy-cache cold/warm bytes separately from external S3 transfer. PID-start checks
+reject reuse. Unsupported host sampling, absent external refresh/S3 storage/transfer
+coverage and incomplete container samples cannot become reviewed evidence.
+
+T4.1/T4.2 implementation delivery is complete; T4.3/T4.C and original data-API
+T1.7/T1.C remain open. No real Docker, image build, source refresh, publication,
+API enablement or reviewed budget work was performed. Read the worker README for
+exact nonsecret prerequisites/invocations and remaining evidence limitations.
+
+## Corrective storage checkpoint
+
+T4.S1–T4.SC implement the native Linux dedicated ext4 candidate described above.
+The profile hashes the explicit Docker CLI path, spill root/filesystem identity,
+inode cap and layout/IPC policy. Startup now probes the supported prerequisites
+before constructing cloud resources rather than permanently rejecting quota-disk.
+Finite filesystem blocks/inodes enforce capacity; private directory binding and
+pool locking preserve the existing sandbox. `--ipc none` removes the additional
+shared-memory filesystem while retaining a private IPC namespace.
+
+The ledger records preparing/creating/removed phases and exact spill ownership.
+Preparation crashes recover without inventing a Docker operation; uncertain
+creation still cannot treat a missing listing as confirmed death. Confirmed
+container removal is recorded before filesystem cleanup; retries/restarts preserve
+the pool lock and recover partial cleanup without deleting foreign directories.
+
+Verification: 319 controlled tests passed, including 28 dedicated quota tests;
+20 real-runtime tests skipped by default. Ruff lint/format, mypy and whitespace
+checks passed. Actual ext4 aggregate/open-unlinked/inode/noexec/cleanup probes are
+delivered but unexecuted. Host provisioning is documented and was not performed.
+The current read-only daemon observation is Docker Desktop/containerd overlayfs;
+the user chose native Linux VM/EC2 for the implementation target. T4.3/T4.C and
+separate API enablement remain open; there is no reviewed Linux-runtime evidence.

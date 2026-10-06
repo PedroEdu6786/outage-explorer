@@ -1,6 +1,6 @@
 # Tasks: Docker analytical runtime
 
-> Status: Phases 1–2 implemented and controlled checkpoints passed; Phases 3–5 pending · Slug: analytical-runtime · Plan: [plan.md](plan.md) · Spec: [spec.md](spec.md)
+> Status: Phases 1–3 and corrective storage implemented with controlled checkpoints; Phase 4 real evidence and Phase 5 pending · Slug: analytical-runtime · Plan: [plan.md](plan.md) · Spec: [spec.md](spec.md)
 
 The original task list was planning-only; Phase 1 implementation was explicitly
 authorized on October 5, 2026. Existing
@@ -168,14 +168,43 @@ harness and resolve/report actual evidence and storage enforcement.
 
 ## Phase 4: User-owned runtime evidence and readiness
 
-- [ ] **T4.1** Deliver proposed `tests/acceptance/test_query_runtime.py` with explicit
+### Corrective storage tasks (before readiness; authorized October 5)
+
+- [x] **T4.S1** Add native Linux dedicated ext4 quota-disk profile, bounded daemon
+  and mount/capacity/identity validation, explicit external provisioning instructions,
+  and candidate evidence invalidation. Keep builders inert and Desktop unsupported.
+  User selected native Linux VM/EC2. (TR2, TR5, FR9, FR11)
+- [x] **T4.S2** Implement private spill allocation and exact Docker bind, filesystem
+  pool locking, durable intended ownership, death/removal-gated cleanup and restart
+  reconciliation. Preserve input pins and admission while cleanup is unresolved.
+  Depends on T4.S1. (FR2, FR4–FR5, FR12, TR2–TR3)
+- [x] **T4.S3** Add controlled capacity/identity/mount-race/lifecycle tests and opt-in
+  aggregate bytes/inodes/noexec/cleanup probes, then run available controlled tests,
+  architecture checks, Ruff and mypy. Real Linux-host enforcement remains part of
+  explicitly directed T4.3; no privileged provisioning or API enablement here.
+  Depends on T4.S2. (AC2, AC4, AC5, AC7)
+- [x] **T4.SC** Review corrective implementation and controlled results; keep
+  T4.3/T4.C and API enablement open until the real-runtime evidence passes.
+  Depends on T4.S1–T4.S3. (FR11, TR6)
+
+Corrective checkpoint: 319 controlled quota/profile/transport/Docker/staging/
+supervisor/harness/architecture tests passed; 20 real-runtime tests default-skipped.
+Ruff lint/format (354 files), mypy (138 source files) and whitespace checks passed.
+Controlled coverage verifies AC2/AC4/AC5 mechanisms, not their real-runtime gates.
+The dedicated ext4 backend is implemented; native Linux provisioning and actual
+aggregate/inode/noexec enforcement remain unexecuted. Read-only current-platform
+inspection returned Docker Desktop/containerd overlayfs, which is unsupported by
+this backend; the user selected native Linux VM/EC2. No containers, mounts, API
+enablement, source work, PostgreSQL changes or deployment were performed.
+
+- [x] **T4.1** Deliver proposed `tests/acceptance/test_query_runtime.py` with explicit
   `runtime_docker`/`runtime_measurements` pytest markers registered in
   `pyproject.toml`, documented opt-in/profile/image prerequisites and synthetic
   denied-access canaries. Default suite skips real-runtime tests unless explicitly
   selected/configured. Include namespace/network/mount/env, resource quota,
   child survival, stalled I/O/control failures and cleanup probes. Make report
   bounded and secret-free. Depends on T3.C. (AC2, AC4, AC7, TR6)
-- [ ] **T4.2** Document concrete representative-data/overlap setup and measurement
+- [x] **T4.2** Document concrete representative-data/overlap setup and measurement
   invocation in `infrastructure/analytical-worker/README.md`; parameterize the
   harness with a nonsecret profile and verified representative public inputs,
   cold/warm cache runs, encoding/spool/index work, retained old snapshot,
@@ -186,7 +215,7 @@ harness and resolve/report actual evidence and storage enforcement.
   direction. Record actual commands/platform/image/results/failures and review
   budgets in `docs/specs/data-api/runtime-evidence.md`. Keep
   `docs/specs/data-api/tasks/phase-1.md` T1.7/T1.C open until their full evidence
-  exists. Depends on T4.1–T4.2. (AC2, AC4, AC7)
+  exists. Depends on T4.1–T4.2 and T4.SC. (AC2, AC4, AC7)
 - [ ] **T4.C** Review the complete matching readiness record, isolation/termination
   evidence, storage enforcement and representative budgets; resolve plan open
   decisions. Record failed/skipped gates explicitly and invalidate stale evidence.
@@ -195,8 +224,8 @@ harness and resolve/report actual evidence and storage enforcement.
 
 ### T1.7 runnable local checklist (not executed)
 
-Commands below are a **future delivered interface**, runnable after T4.1/T4.2;
-`tests/acceptance/test_query_runtime.py` and its options currently do not exist.
+Commands below use the delivered T4.1/T4.2 harness. They have **not been executed**;
+implementation alone does not authorize user-owned validation.
 The harness must document `OUTAGE_RUNTIME_TEST_PROFILE` as a path to the
 nonsecret reviewed/candidate profile, not a credentials file. Run from repository
 root; keep shell tracing off. Do not dump `env`, Docker inspection environment,
@@ -215,7 +244,8 @@ request bodies, real credentials, `.env` or session values into evidence.
    ```
 
 3. Set the profile's exact image identity and run the delivered isolation and
-   lifecycle harness (one serving process; supported quota storage required):
+   lifecycle harness (one serving process; disk-quota enforcement requires the
+   provisioned native Linux backend and matching candidate profile):
 
    ```sh
    OUTAGE_RUNTIME_TEST_PROFILE=/private/tmp/outage-runtime-profile.json \
@@ -232,6 +262,7 @@ request bodies, real credentials, `.env` or session values into evidence.
 
    ```sh
    OUTAGE_RUNTIME_TEST_PROFILE=/private/tmp/outage-runtime-profile.json \
+   OUTAGE_RUNTIME_MEASUREMENT_INPUTS=/private/tmp/outage-runtime-inputs.json \
      .venv/bin/python -m pytest -q tests/acceptance/test_query_runtime.py -m runtime_measurements
    ```
 
@@ -242,6 +273,20 @@ request bodies, real credentials, `.env` or session values into evidence.
 5. Review sanitized reports, set measured budgets, rerun affected gates for changed
    profiles and record user approval/evidence identity. Missing coverage keeps
    readiness closed. Do not tick original T1.7 merely for `SELECT 42` success.
+
+### Phase 4 implementation delivery (evidence still pending)
+
+T4.1/T4.2 deliver an opt-in runnable candidate harness and controlled correctness
+checks. Candidate execution is independent of production readiness. Corrective
+T4.S1–T4.SC add the native Linux disk backend and its real enforcement probes;
+disk-quota enforcement remains not run, external refresh/S3 transfer evidence not run,
+and all records unreviewed. Representative Linux sampling uses an already running
+refresh/API pair; it does not initiate either workload. Cold/warm means the bounded
+validation-owned local-copy cache, not a measured S3 download/cache lifecycle.
+Full representative host/storage/transfer coverage and measured budget review must
+be completed with the user-owned evidence; missing/failed gates cannot close AC7.
+T4.3/T4.C and original data-API T1.7/T1.C remain open. No real Docker, source
+refresh, publication, deployment or analytical API enablement occurred in delivery.
 
 ## Phase 5: Separately authorized local API acceptance
 

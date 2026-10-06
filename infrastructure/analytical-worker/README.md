@@ -124,11 +124,11 @@ single admission slot, staging and application leases through unconfirmed death,
 removal or cleanup; only confirmed cleanup permits reuse. The supervisor will
 invoke the explicit recovery owner rather than relying on garbage collection.
 
-Only the candidate `tmpfs-smoke` backend is implemented. `quota-disk` returns
-safe unavailable until a supported disk-backed quota implementation is selected
-and validated; it never falls back to tmpfs or unrestricted disk. These adapter
-and controlled-test changes do not close real isolation/termination evidence,
-measured budgets, user-owned T1.7 or the separate API-enablement gate.
+The corrective implementation adds `quota-disk` for native Linux Docker with a
+dedicated finite ext4 spill filesystem. `tmpfs-smoke` remains smoke-only. Unsupported
+or missing filesystem prerequisites fail closed without fallback. Controlled
+tests do not close real isolation/termination evidence, measured budgets,
+user-owned T1.7 or the separate API-enablement gate.
 
 ## Explicit local supervision (Phase 3)
 
@@ -181,9 +181,279 @@ Reloader, debug, fork-inherited resources and multiple-process modes are rejecte
 `--workers`/`--reload` are unsupported and `WEB_CONCURRENCY` must be absent or `1`.
 This constraint does not select the final production WSGI topology.
 
-**Readiness remains closed:** tmpfs profiles fail evidence validation, and the
-production composition rejects `quota-disk` because its enforcement backend is
-not implemented/selected. No profile supplied today can enable this executable's
-analytical runtime. Controlled injected resources test composition only. Phase 4
-must supply real isolation/termination/storage/measurement evidence and resolve
-storage enforcement before separately authorized Phase 5 enablement.
+**Readiness remains closed:** tmpfs profiles fail evidence validation. The disk
+backend now validates real host prerequisites at explicit startup; there is no
+reviewed real-runtime record yet. Phase 4 must supply isolation, termination,
+storage and measurement evidence before separately authorized Phase 5 enablement.
+
+## Native Linux disk spill prerequisites (corrective T4.S1–T4.S3)
+
+The selected target is **native Linux Docker on a Linux VM or EC2**. The controller
+must run on that daemon host, in its mount namespace, under UID/GID **65534:65534**.
+It needs trusted host access to the root-owned `/run/docker.sock` (the conventional
+`/var/run/docker.sock` symlink is accepted). Worker containers receive no socket,
+host credentials, devices or privileges. Docker Desktop and remote/proxied daemons
+are unsupported by this disk backend. A Linux VM on your Mac is a suitable host;
+the Mac's existing Docker Desktop daemon is a different target.
+
+Provision a **new, dedicated, fixed-capacity ext4 filesystem**, owned by 65534,
+mounted `rw,noexec,nosuid,nodev`, with no nested mounts or foreign files. The current
+internal image profile caps temporary storage at 16,777,216 bytes and 4,096 inodes.
+Actual filesystem `f_blocks * f_frsize` and `f_files` must be positive and no larger
+than those bounds. The entire filesystem is reserved to one analytical runtime;
+its kernel allocation ceiling covers multiple files, open/unlinked files and
+directory metadata. DuckDB's limit is an additional engine constraint.
+
+The following is a **reviewable Linux host setup example, not executed here**.
+It creates a fresh ordinary image file and mounts it via a loop device; it does
+not format any existing device. Run only on the chosen Linux host after approval
+of that host's provisioning. `set -e` and the existence check stop reuse of an
+existing image. This is a candidate local setup, not an EC2 storage deployment.
+
+```sh
+set -e
+test ! -e /var/lib/outage-analytical/spill.img
+sudo install -d -m 0711 /var/lib/outage-analytical
+sudo install -d -m 0700 /var/lib/outage-analytical/spill
+sudo install -m 0600 /dev/null /var/lib/outage-analytical/spill.img
+sudo fallocate -l 16777216 /var/lib/outage-analytical/spill.img
+sudo mkfs.ext4 -F -m 0 -N 1024 -O ^has_journal /var/lib/outage-analytical/spill.img
+sudo mount -o loop,rw,noexec,nosuid,nodev /var/lib/outage-analytical/spill.img /var/lib/outage-analytical/spill
+sudo rmdir /var/lib/outage-analytical/spill/lost+found
+sudo chown 65534:65534 /var/lib/outage-analytical/spill
+sudo chmod 0700 /var/lib/outage-analytical/spill
+```
+
+Configure the normal application supervisor/test command to run as 65534 with
+trusted Docker-socket access; private staging/cache/result roots must also be
+owned by that user. Do not run the worker privileged or loosen spill-root ownership
+to work around host setup. The API code never mounts, formats or resizes storage.
+For host restart, provision the mount again before startup; a missing mount fails
+closed. Any changed filesystem identity requires a new profile and evidence review.
+
+After setup, run this read-only command as the configured controller user to
+obtain the explicit filesystem identity and capacity for the candidate profile:
+
+```sh
+python3 -c 'import os; p="/var/lib/outage-analytical/spill"; s=os.stat(p); v=os.statvfs(p); print(f"{os.major(s.st_dev)}:{os.minor(s.st_dev)}:{v.f_fsid}", v.f_blocks*v.f_frsize, v.f_files)'
+```
+
+Set `temporary_backend: "quota-disk"`, `temporary_root` to that exact mount,
+`temporary_filesystem_identity` to the first printed value, `temporary_inodes`
+to 4096, and `docker_executable` to the actual absolute Linux CLI path (commonly
+`/usr/bin/docker`). These fields and the fixed `ipc: "none"` policy participate
+in the profile digest. Old profile/report identities are invalidated.
+
+Startup checks native daemon version/platform/kernel/hostname/socket and the
+ext4 mount, identity, flags, ownership and capacity. Each execution locks the
+filesystem pool and durably records its exact spill path before allocating a
+private directory. Only that directory is bound at `/tmp`; recursive binds are
+disabled. Docker `--ipc none` retains a private IPC namespace and disables the
+extra `/dev/shm` mount. Uncertain worker death or removal retains the spill, input
+pins, admission slot and pool lock. Durable preparing/creating/removed phases
+support restart recovery without treating an absent ambiguous create as death.
+Foreign pool contents, symlinks, replacement, capacity drift and failed cleanup
+fail closed; recovery never deletes unrelated host files.
+
+Host setup and controlled tests are not proof of enforcement. T4.3 must execute
+the native Linux aggregate/open-unlinked byte, inode, noexec, lifecycle/recovery
+and measurement probes; T4.C reviews their exact matching reports. API enablement
+remains a separate later authorization.
+
+Primary references: [ext4 kernel structures](https://www.kernel.org/doc/html/latest/filesystems/ext4/overview.html),
+[Docker daemon-host bind mounts](https://docs.docker.com/engine/storage/bind-mounts/),
+and [Docker IPC modes](https://docs.docker.com/reference/cli/docker/container/run/).
+
+## Delivered user-owned validation harness (Phase 4)
+
+`tests/acceptance/test_query_runtime.py` now provides the two separate commands
+below. These commands are **instructions for a later explicitly directed run**;
+implementing this harness has not built an image or contacted Docker. The entire
+normal suite skips these tests. Both an exact `-m runtime_docker` or
+`-m runtime_measurements` selection and `OUTAGE_RUNTIME_TEST_PROFILE` are required.
+Setting the profile alone, selecting a file alone, `-m 'not runtime_docker'`, or
+compound marker expressions cannot start Docker. An explicit selected run fails
+on invalid prerequisites; it never substitutes controlled adapters or enables API
+resources. The test harness accepts `evidence: null` candidate profiles directly;
+it does not change the production supervisor's matching-evidence requirements.
+
+Prepare a dedicated, nonsecret JSON profile with the Phase 3 format. Use **new,
+private validation-only roots**, never the running product's cache/staging/result
+roots. On a Linux Docker host, a minimal candidate looks like:
+
+```json
+{
+  "profile": {
+    "image_id": "sha256:<exact 64 lowercase hex digits from image inspection>",
+    "daemon_endpoint": "unix:///var/run/docker.sock",
+    "docker_executable": "/usr/bin/docker",
+    "platform": "linux/amd64",
+    "daemon_version": "<exact local server version>",
+    "filesystem_identity": "<reviewed identity of this validation filesystem>",
+    "staging_root": "/tmp/outage-runtime-validation/staging",
+    "cache_root": "/tmp/outage-runtime-validation/cache",
+    "result_root": "/tmp/outage-runtime-validation/results",
+    "temporary_backend": "quota-disk",
+    "temporary_root": "/var/lib/outage-analytical/spill",
+    "temporary_filesystem_identity": "<exact major:minor:fsid from provisioned mount>",
+    "temporary_inodes": 4096
+  },
+  "evidence": null
+}
+```
+
+Replace placeholders using the bounded scalar commands in the T1.7 checklist;
+use `linux/arm64` when that is the actual daemon platform. Bind mounts must be
+available at the same absolute paths to the native Linux daemon. Provision the
+disk mount above and run as the configured UID/GID. Docker Desktop fails this
+backend's host validation. The profile's immutable image ID must exist locally.
+`OUTAGE_RUNTIME_DOCKER_EXECUTABLE` may select an absolute executable path; otherwise
+the harness resolves Docker on PATH once; it must match `docker_executable` in
+the hashed profile. The production controller then runs
+that exact executable with an explicit daemon endpoint, clean environment, bounded
+I/O and no shell. No image pull/build occurs inside the tests.
+
+After explicit user direction, run isolation/lifecycle validation:
+
+```sh
+OUTAGE_RUNTIME_TEST_PROFILE=/private/tmp/outage-runtime-profile.json \
+  .venv/bin/python -m pytest -q tests/acceptance/test_query_runtime.py -m runtime_docker
+```
+
+The harness validates exact image/daemon identities before preparing private
+resources. It exercises the actual worker entrypoint/canonical response and uses
+probe-only Python entrypoint overrides with the production launcher's same image,
+UID, capabilities, root/network policy, selected temporary filesystem and exact input-file staging. Probe
+scripts contain synthetic public values and fake credential canaries only. The
+probes cover PID/IPC/network namespace policy, fake host repository/raw/cache/
+credential denial, Docker socket denial, environment isolation, read-only inputs
+and source replacement, cgroup v2 CPU/memory/PID ceilings, actual CPU throttling,
+OOM kill, process-limit exhaustion, aggregate disk/inode ENOSPC, deadlines, crashes, surviving
+child termination, cancellation and stalled/overflowing stdin/stdout/stderr.
+Lifecycle probes induce lost-create responses and failed removal against real
+containers without stopping the daemon. They prove busy admission and retained
+input files/leases until death/removal reconciliation, and restart recovery of a
+persisted container intent. A missing synthetic daemon endpoint is also checked.
+Control failures are induced locally; the harness does not reboot the host or
+restart a real Docker daemon. Logical cleanup/recovery does not wait 900 seconds
+or establish wall-clock expiry evidence by itself.
+
+`test_disk_spill_readiness_requires_supported_backend` now proves aggregate
+open/unlinked-file exhaustion, inode exhaustion, noexec and spill reclamation on
+the selected disk backend. `tmpfs-smoke` still fails this gate. No real Linux
+quota probe was executed in the corrective implementation; a passing subset of
+the harness cannot establish readiness.
+
+### Representative public inputs and existing overlap workload
+
+Measurements currently require a **Linux host with procfs and cgroup v2 Docker**.
+Other hosts produce an explicit unsupported measurement gate. Prepare two
+independently approved, already verified immutable public-projection snapshots:
+`old` (retained while `current` runs) and `current`. Each must contain usable
+national/facility/generator data over the initial inclusive April 2–October 1,
+2026 interval or a reviewed larger retained interval. Use the public projection
+schemas from `PUBLIC_DATASETS`, not modeled provenance/raw artifacts. Include
+all verified files, exact SHA-256, bytes and rows. Record actual grain/date/entity
+coverage and why these are representative with the separately reviewed evidence;
+the harness never labels its small synthetic canaries representative.
+
+Create a separate nonsecret manifest (maximum 64 KiB), with exactly these fields:
+
+```json
+{
+  "old": {
+    "national": [{"path":"/absolute/old/national.parquet","sha256":"<64 lowercase hex>","byte_count":123,"rows":183}],
+    "facilities": [{"path":"/absolute/old/facilities.parquet","sha256":"<64 lowercase hex>","byte_count":456,"rows":10000}],
+    "generators": [{"path":"/absolute/old/generators.parquet","sha256":"<64 lowercase hex>","byte_count":789,"rows":20000}]
+  },
+  "current": {
+    "national": [{"path":"/absolute/current/national.parquet","sha256":"<64 lowercase hex>","byte_count":123,"rows":183}],
+    "facilities": [{"path":"/absolute/current/facilities.parquet","sha256":"<64 lowercase hex>","byte_count":456,"rows":10000}],
+    "generators": [{"path":"/absolute/current/generators.parquet","sha256":"<64 lowercase hex>","byte_count":789,"rows":20000}]
+  },
+  "refresh_pid": 12345,
+  "api_pid": 12346,
+  "api_port": 8000
+}
+```
+
+Numbers/hashes above are format examples, **not measurements or verified inputs**.
+The manifest rejects unknown/duplicate keys, symlinks, nonpublic columns,
+empty grains, invalid PID/port values, wrong hashes/bytes/rows and input budgets.
+The worker rechecks full public types before executing. `refresh_pid` must identify
+an independently authorized, already running refresh workload; `api_pid` identifies
+its separately running local API. The sampler reads numeric resource metrics and
+Linux process-start ticks to reject PID reuse; it neither starts nor restarts either
+process. Keep those processes running throughout the measurement interval and
+record their approved workload identity/timestamps separately. API sampling sends
+only bounded, unauthenticated `GET /health` to `127.0.0.1:api_port`; it sends no
+cookies, credentials, SQL, refresh requests or publication operations. It establishes
+health responsiveness during overlap, not authenticated product API acceptance.
+
+After separate explicit user direction for measurements:
+
+```sh
+OUTAGE_RUNTIME_TEST_PROFILE=/private/tmp/outage-runtime-profile.json \
+OUTAGE_RUNTIME_MEASUREMENT_INPUTS=/private/tmp/outage-runtime-inputs.json \
+  .venv/bin/python -m pytest -q tests/acceptance/test_query_runtime.py -m runtime_measurements
+```
+
+The workload scans all three grains with count/outage aggregation, then runs an
+ordered full generator projection through the real bounded worker/encoder. It
+retains each completed immutable canonical result in the real spool/index and
+pages the result without another SQL execution. It retains the old snapshot's
+input bytes/results throughout current cold/warm runs. Each run reports preparation,
+aggregate/output execution and page latency, output bytes and retained rows. The
+cold/warm terminology means a **validation-owned verified local-copy cache**;
+it does not measure the product S3 cache, S3 downloads, or drop host page caches.
+Shared old/current content is a documented cache hit, not a cold transfer. Reports
+record cumulative local-copy bytes so warm transfers can be compared exactly.
+
+Overlap sampling records observed cache/staging/spool/index high-water bytes,
+container memory/CPU, host available memory, refresh/API RSS and CPU counters,
+harness CPU/RSS, health response latency/failures and sampling coverage/failures.
+These are sampled maxima, not guaranteed peaks; representative queries must last
+long enough to obtain container samples. Linux host memory and process samplers
+fail closed when unavailable. Background `docker stats` output is capped and uses
+only numeric formatting, never full inspection. Very short workloads, process
+exit/PID reuse, inaccessible measurements or unavailable health fail the run.
+
+Disk spill remains an unsupported gate. External refresh/S3 transfer evidence is
+explicitly `not_run`; obtain it from the independently authorized existing refresh
+record and correlate its interval, identity and measured resources during review.
+The harness never starts a refresh or publication merely to fill these gaps. API
+health-only sampling cannot close Phase 5 live authorization/paging acceptance.
+Review preparation/overall/control/termination bounds, API latency and host pressure
+alongside all measured allowances before recording approved budgets. Defaults remain
+candidates; reports never mutate them or grant readiness.
+
+### Reports and recovery after a failed validation run
+
+Every configured test writes a new private (0600), bounded (64-KiB maximum) JSON
+report under the profile staging root's parent, `validation-reports/`. Reports contain
+image/profile/platform identities, fixed gate names/statuses and numeric metrics
+only. They never copy stdout/stderr, exception text, script bodies, public cells,
+host paths, environment dumps or auth data. The representative manifest is referenced
+by SHA-256. Files are exclusive, cannot overwrite evidence, and remain `unreviewed`.
+Record exact invocation/host/image/profile, failures and report digests in
+`docs/specs/data-api/runtime-evidence.md` only after the actual user-owned run.
+
+Failed cleanup retains its exact private ledger/staging instead of claiming death
+or releasing ownership. Preserve those files and container identity for explicit
+reconciliation; do not blindly delete directories or use global Docker prune.
+Normal successful tests remove only their own container, staging, ledger, copy
+cache and result spools. Validation roots themselves and sanitized reports remain.
+No test enables the analytical API, changes production readiness, deploys, accesses
+operational PostgreSQL/S3 credentials, performs source retrieval, or publishes.
+
+For correlation, separately export only the following numeric fields from the
+**existing authorized** refresh/S3 measurement record: `interval_start_epoch_seconds`,
+`interval_end_epoch_seconds`, `refresh_process_start_ticks`, `bytes_transferred`,
+`cache_peak_bytes`, `refresh_disk_peak_bytes`, `spill_peak_bytes`, and
+`refresh_cpu_seconds`. Include immutable generation/report SHA-256 identities,
+collector identity/version and whether peaks are sampled or enforced. Preserve
+its digest and interval alongside the harness report. The harness does not create
+or ingest this external record and does not report those values as observed;
+missing producer instrumentation or unmatched intervals remain explicit missing
+evidence. Use existing measured records only; estimates, candidate allowances and
+local-copy byte counts cannot substitute for S3 transfer or disk-spill evidence.

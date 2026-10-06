@@ -434,3 +434,14 @@ bootstrap callable to its argument parser. Imports, HTTP factories and help
 perform no runtime startup. One local owner, explicit lifecycle and ephemeral
 restart loss are adapter constraints; real quota storage/readiness and deployment
 remain open. No refresh ownership is added to analytical HTTP shutdown.
+
+The analytical corrective storage pass implements native Linux `quota-disk` in
+`infrastructure/worker_runtime/quota.py`: a separately provisioned finite ext4
+filesystem, strict mount/identity/capacity checks, private request directories and
+one retained filesystem lock. Bootstrap probes these prerequisites only at
+explicit start. The ownership ledger persists spill paths and preparing/creating/
+removed phases; cleanup retains ownership until confirmed worker removal and
+complete reclamation. Docker Desktop is unsupported by this backend. Controlled
+verification is complete; Linux host provisioning, real runtime enforcement and
+reviewed readiness remain open. See the
+[storage checklist](../../infrastructure/analytical-worker/README.md).
