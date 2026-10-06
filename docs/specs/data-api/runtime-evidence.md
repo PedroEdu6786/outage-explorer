@@ -15,13 +15,32 @@ retained-result paging are configured at their existing `/api` paths.
 [Activation evidence](../analytical-runtime/evidence/2026-10-06-local-api-activation.json)
 records the exact profile identities and listener/health outcome.
 
-This is a transient local service. To stop it:
-`colima ssh --profile outage-runtime -- sudo systemctl stop outage-api-local`.
-While the guest and current credentials remain available, restart with
-`colima ssh --profile outage-runtime -- sudo systemctl restart outage-api-local`.
-Guest reboot requires reactivation; trusted API credentials retain the existing
-AWS session expiry and are held only in private `/run/outage-api` files. No
-credentials were logged or supplied to the parser or analytical containers.
+Use `make run-analytical` for the already provisioned service and keep the command
+running. It renews the existing local AWS login exports every minute into private
+`/run/outage-api` files; SDK credential-process expiration makes long-lived S3
+clients and new IAM signers consume renewed credentials. Ctrl+C stops the API;
+`make stop-analytical` separately stops its guest service. Guest reboot still
+requires reactivation. No credentials are logged or supplied to the parser or
+analytical containers. Plain `make run` starts Flask without analytical resources
+and cannot provide preview/SQL execution.
+
+### Follow-up: preview 503 and local credential renewal
+
+The reported preview 503 reached a competing macOS Flask process on port 8000,
+not the configured Linux API (which had received no preview requests). Stopped
+that process and restarted the existing Linux service to restore loopback
+forwarding. A subsequent real session request exposed a second failure: the
+initial one-time exported IAM credentials had expired. A targeted, sanitized
+connection diagnosis returned PAM authentication failure; the same connection
+passed after credential renewal and again through the corrected credential-process
+configuration. No database queries or writes were needed for this diagnosis.
+
+The local launcher now maintains credentials without API restarts. Five controlled
+launcher tests pass, including rotation within one existing SDK session, rejection
+of expired exports, private atomic transfer, profile command validation and error
+redaction. Ruff, mypy and 123 startup/architecture tests pass. The user's
+authenticated preview retry remains the functional check; a health response and
+successful database connection do not establish preview success.
 
 Date: 2026-10-05. Client contract and adapter work are available; **runtime
 feasibility remains pending**. No data routes, product query executor, worker

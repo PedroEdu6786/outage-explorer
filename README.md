@@ -670,6 +670,28 @@ live provider readiness, deployment or measured production resource budgets.
 
 ### Explicit analytical startup
 
+For the already provisioned and approved local `outage-runtime` Colima service:
+
+```sh
+make run-analytical
+# API: http://localhost:8000; keep the command running. Ctrl+C stops it.
+# Or, from another terminal:
+make stop-analytical
+```
+
+Use `run-analytical` for preview and SQL. `make run` starts a separate macOS Flask
+process without analytical resources, whose preview/SQL calls return 503. Do not
+run both on port 8000. The analytical target restarts only the existing configured
+service and renews its trusted application credentials every minute from the
+existing local AWS login. A private SDK credential process makes both IAM signing
+and long-lived S3 clients consume renewed credentials without restarting the API.
+It does not provision a runtime, start refresh, or fall back to Flask. Restart
+discards process-owned cursors/results. The guest must retain its reviewed
+`/run/outage-api` configuration; guest reboot requires reactivation. Credentials
+are never logged or supplied to parser/analytical workers. If the local AWS login
+expires, renew that existing login; the launcher retries credential export. See
+[local activation evidence](docs/specs/data-api/runtime-evidence.md).
+
 Analytical-runtime Phase 3 delivers an inert `build_analytical_resources` builder
 and a process-owned supervisor. Imports and HTTP factories create no cache,
 Docker process or cleanup thread. Its explicit executable accepts a bounded

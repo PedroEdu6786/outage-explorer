@@ -18,12 +18,14 @@ PRIOR ?=
 STAGING ?= $(if $(strip $(CONFIG)),,data/connector-local)
 shell_quote = '$(subst ','"'"',$(1))'
 
-.PHONY: help setup run health connector connector-help test check check-env check-test-env test-postgres test-postgres-stop test-browser-setup
+.PHONY: help setup run run-analytical stop-analytical health connector connector-help test check check-env check-test-env test-postgres test-postgres-stop test-browser-setup
 
 help:
 	@printf '%s\n' \
 	  'make setup   Install the pinned dependencies in .venv' \
-	  'make run     Start the local API at http://127.0.0.1:8000' \
+	  'make run     Start Flask without preview/SQL execution resources' \
+	  'make run-analytical   Serve the configured Colima API with AWS credential renewal' \
+	  'make stop-analytical  Stop the configured Colima API' \
 	  'make health  Call GET /health on the running API' \
 	  'make connector START=YYYY-MM-DD END=YYYY-MM-DD   Build and verify a candidate in S3' \
 	  'make connector CONFIG=path.json   Run with optional JSON configuration' \
@@ -50,7 +52,15 @@ check-env:
 	@test -x .venv/bin/flask || { printf '%s\n' 'Run make setup first.'; exit 1; }
 
 run: check-env
+	@printf '%s\n' 'This Flask startup has no preview/SQL execution resources. For the configured local runtime, use make run-analytical.'
 	$(VENV_PYTHON) -m flask --app outage_explorer.entrypoints.http.startup:create_app run --host $(HOST) --port $(PORT)
+
+# Uses the explicitly provisioned/reviewed local service. Never falls back to Flask.
+run-analytical: check-env
+	$(VENV_PYTHON) scripts/local_analytical.py
+
+stop-analytical:
+	colima ssh --profile outage-runtime -- sudo systemctl stop outage-api-local
 
 health:
 	curl --fail --silent --show-error --include http://$(HOST):$(PORT)/health
