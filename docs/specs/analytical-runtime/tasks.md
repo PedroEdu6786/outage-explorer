@@ -316,6 +316,38 @@ independently authorized existing refresh/API overlap, S3 transfer/storage evide
 and measured-budget review remain missing. This run supplies actual isolation,
 quota and lifecycle evidence only; no reviewer or API readiness was fabricated.
 
+### T4.3 measurement continuation and T4.C failed review (October 5, 2026)
+
+Existing local connector/refresh candidate graphs supplied genuine public
+projections for both snapshots, preserving 549 daily partitions each over April
+2–October 1. Both have 183 national, 10,065 facility and 17,385 generator rows;
+all 549 public hashes match across generations. These are candidate preparation,
+not proof of publication or an old/new content revision. Their descriptor manifest
+exposed the former 64-KiB harness cap; the corrected 1-MiB cap retains independent
+file/cache limits and the 64-KiB report cap.
+
+Actual partial analytical execution on the original image/profile failed before
+launch: mount argv **141,646 bytes > 131,072**, while the worker request is
+58,458 bytes. Verified local-copy preparation copied 2,199,347 bytes in 0.044035
+seconds; 10 host/storage samples passed, and cleanup passed. No completed SQL,
+spool/index, cold/warm execution, container memory or spill measurement exists.
+The [failed sanitized report](evidence/2026-10-05-colima-measurements-failed.json)
+records this candidate insufficiency. Image/profile and prior isolation evidence
+remain unchanged; no controller allowance was increased to force a pass.
+
+Read-only discovery found no Linux API/refresh pair. A separately existing
+Darwin API on port 8000 responded to `/health`, but its child process was not
+identified as refresh and Darwin PIDs cannot satisfy the Linux overlap sampler.
+Historical S3 connector records contain elapsed/RSS/graph/staging values, not
+matching transfer intervals/start ticks/observed transfer/spill metrics.
+
+**T4.3/T4.C remain unchecked; T4.C review does not pass.** The failed supported
+input-layout gate, missing execution/overlap/S3 coverage, candidate budget and
+ownership/parser/reviewer choices remain explicit in
+[runtime evidence](../data-api/runtime-evidence.md). Original T1.7/T1.C and Phase
+5 remain open. No refresh, publication, deployment, credential transfer or API
+enablement ran.
+
 ## Phase 5: Separately authorized local API acceptance
 
 - [ ] **T5.1** After T4.C and explicit API-enablement direction, start the delivered

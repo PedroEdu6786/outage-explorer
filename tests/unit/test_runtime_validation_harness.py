@@ -1,5 +1,6 @@
 """Controlled validation-harness checks; never invoke Docker or source services."""
 
+import hashlib
 import json
 from dataclasses import asdict, replace
 from pathlib import Path
@@ -14,6 +15,7 @@ from outage_explorer.infrastructure.query_results.encoding import retain_result
 from outage_explorer.infrastructure.worker_runtime.configuration import RuntimeProfile
 from outage_explorer.infrastructure.worker_runtime.docker import ControlResult
 from tests.runtime_validation import (
+    MEASUREMENT_MANIFEST_BYTES,
     EvidenceReport,
     RepresentativeInputs,
     RuntimeHarness,
@@ -197,13 +199,92 @@ def test_representative_input_manifest_fails_closed(profile, tmp_path, bad):
     if bad == "duplicate":
         path.write_text('{"old":{},"old":{}}')
     elif bad == "too_big":
-        path.write_bytes(b" " * 65537)
+        path.write_bytes(b" " * (MEASUREMENT_MANIFEST_BYTES + 1))
     elif bad == "symlink":
         link = tmp_path / "link"
         link.symlink_to(path)
         path = link
     with pytest.raises(ValueError):
         read_representative_inputs(path, profile)
+
+
+def test_initial_interval_partition_manifest_and_independent_limits(profile, tmp_path):
+    from datetime import date
+    from decimal import Decimal
+
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    from outage_explorer.domain.datasets import PUBLIC_DATASETS
+    from outage_explorer.infrastructure.parquet.schemas import schema_for
+
+    snapshot = {}
+    total_bytes = 0
+    for dataset in PUBLIC_DATASETS:
+        schema = schema_for("modeled", dataset.grain)
+        public_schema = pa.schema([schema.field(c.name) for c in dataset.columns])
+        path = tmp_path / (dataset.id + ".parquet")
+        pq.write_table(
+            pa.Table.from_pylist(
+                [
+                    {
+                        c.name: date(2026, 4, 2)
+                        if c.name == "period"
+                        else Decimal(1)
+                        if c.value_type.kind == "decimal"
+                        else "public"
+                        for c in dataset.columns
+                    }
+                ],
+                schema=public_schema,
+            ),
+            path,
+        )
+        descriptor = {
+            "path": str(path),
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            "byte_count": path.stat().st_size,
+            "rows": 1,
+        }
+        snapshot[dataset.id] = [descriptor] * 183
+        total_bytes += descriptor["byte_count"] * 183 * 2
+    path = tmp_path / "partitioned.json"
+    path.write_text(
+        json.dumps(
+            {
+                "old": snapshot,
+                "current": snapshot,
+                "refresh_pid": 3,
+                "api_pid": 4,
+                "api_port": 8000,
+            }
+        )
+    )
+    assert 65_536 < path.stat().st_size < MEASUREMENT_MANIFEST_BYTES
+    inputs = read_representative_inputs(path, profile)
+    assert sum(len(files) for _, files in inputs.old + inputs.current) == 1098
+    for limited in (
+        replace(profile, input_files=1097),
+        replace(profile, cache_bytes=total_bytes - 1),
+    ):
+        with pytest.raises(ValueError, match="input budget exceeded"):
+            read_representative_inputs(path, limited)
+    document = json.loads(path.read_text())
+    with pytest.raises(ValueError, match="Invalid representative manifest"):
+        read_representative_inputs(path, profile, analytical_only=True)
+    partial = {k: document[k] for k in ("old", "current")}
+    path.write_text(json.dumps(partial))
+    assert (
+        read_representative_inputs(path, profile, analytical_only=True).api_pid is None
+    )
+    with pytest.raises(ValueError, match="Invalid representative manifest"):
+        read_representative_inputs(path, profile)
+    path.write_text('{"old":{},"old":{},"current":{}}')
+    with pytest.raises(ValueError, match="Duplicate representative key"):
+        read_representative_inputs(path, profile, analytical_only=True)
+    path.write_text(json.dumps({**partial, "unknown": 1}))
+    with pytest.raises(ValueError, match="Invalid representative manifest"):
+        read_representative_inputs(path, profile, analytical_only=True)
 
 
 def test_measurements_retain_snapshots_encode_spool_page_without_source_work(

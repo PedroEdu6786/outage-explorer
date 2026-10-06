@@ -59,6 +59,7 @@ def record_gate(function):
 
 MARKERS = frozenset({"runtime_docker", "runtime_measurements"})
 CANARY = "OUTAGE_VALIDATION_FAKE_SECRET_DO_NOT_PROPAGATE"
+MEASUREMENT_MANIFEST_BYTES = 1_048_576
 
 
 def opted_in(mark_expression, environment):
@@ -271,13 +272,13 @@ class RepresentativeInputs:
     api_pid: int
 
 
-def read_representative_inputs(path, profile):
+def read_representative_inputs(path, profile, *, analytical_only=False):
     """Only pre-existing, public projection files. No fetch, refresh or publish."""
     if path.is_symlink():
         raise ValueError("Invalid representative manifest")
     with path.open("rb") as stream:
-        raw = stream.read(65_537)
-    if len(raw) > 65_536:
+        raw = stream.read(MEASUREMENT_MANIFEST_BYTES + 1)
+    if len(raw) > MEASUREMENT_MANIFEST_BYTES:
         raise ValueError("Representative manifest too large")
 
     def unique(pairs):
@@ -289,15 +290,14 @@ def read_representative_inputs(path, profile):
         return value
 
     document = json.loads(raw, object_pairs_hook=unique)
-    if not isinstance(document, dict) or set(document) != {
-        "old",
-        "current",
-        "refresh_pid",
-        "api_port",
-        "api_pid",
-    }:
+    required = (
+        {"old", "current"}
+        if analytical_only
+        else {"old", "current", "refresh_pid", "api_port", "api_pid"}
+    )
+    if not isinstance(document, dict) or set(document) != required:
         raise ValueError("Invalid representative manifest")
-    if (
+    if not analytical_only and (
         type(document["refresh_pid"]) is not int
         or document["refresh_pid"] <= 1
         or document["refresh_pid"] == os.getpid()
@@ -379,9 +379,9 @@ def read_representative_inputs(path, profile):
         hashlib.sha256(raw).hexdigest(),
         old,
         current,
-        document["refresh_pid"],
-        document["api_port"],
-        document["api_pid"],
+        document.get("refresh_pid"),
+        document.get("api_port"),
+        document.get("api_pid"),
     )
 
 
@@ -412,9 +412,11 @@ class OverlapSampler:
         self.harness, self.inputs = harness, inputs
         self.stop = Event()
         self.thread = Thread(target=self._sample, daemon=True)
-        self.process_tokens = {
-            pid: process_token(pid) for pid in (inputs.refresh_pid, inputs.api_pid)
-        }
+        self.process_tokens = (
+            {pid: process_token(pid) for pid in (inputs.refresh_pid, inputs.api_pid)}
+            if inputs is not None
+            else {}
+        )
         self.metrics = {
             "samples": 0,
             "api_requests": 0,
@@ -436,49 +438,57 @@ class OverlapSampler:
     def _sample(self):
         while not self.stop.is_set():
             try:
-                for pid, token in self.process_tokens.items():
-                    if process_token(pid) != token:
-                        raise ValueError("Overlap process identity changed")
-                os.kill(self.inputs.refresh_pid, 0)
-                # ps selects only numeric RSS/CPU time, never args/environment.
-                import subprocess
+                if self.inputs is not None:
+                    for pid, token in self.process_tokens.items():
+                        if process_token(pid) != token:
+                            raise ValueError("Overlap process identity changed")
+                    os.kill(self.inputs.refresh_pid, 0)
+                    # ps selects only numeric RSS/CPU time, never args/environment.
+                    import subprocess
 
-                raw = subprocess.run(
-                    ("/bin/ps", "-p", str(self.inputs.refresh_pid), "-o", "rss=,time="),
-                    capture_output=True,
-                    timeout=1,
-                    check=True,
-                    env={"PATH": "/usr/bin:/bin", "HOME": "/nonexistent"},
-                ).stdout
-                if len(raw) > 256:
-                    raise ValueError("Sampling output exceeded")
-                rss, cpu = raw.decode().split()
-                fields = cpu.split(":")
-                if len(fields) not in (2, 3):
-                    raise ValueError("Unsupported process CPU format")
-                cpu_seconds = sum(
-                    float(x) * 60**i for i, x in enumerate(reversed(fields))
-                )
-                self.metrics["refresh_rss_peak_bytes"] = max(
-                    self.metrics["refresh_rss_peak_bytes"], int(rss) * 1024
-                )
-                self.metrics["refresh_cpu_seconds"] = max(
-                    self.metrics["refresh_cpu_seconds"], cpu_seconds
-                )
-                api_stat = (
-                    Path(f"/proc/{self.inputs.api_pid}/stat")
-                    .read_text()
-                    .rsplit(")", 1)[1]
-                    .split()
-                )
-                self.metrics["api_rss_peak_bytes"] = max(
-                    self.metrics["api_rss_peak_bytes"],
-                    int(api_stat[21]) * os.sysconf("SC_PAGE_SIZE"),
-                )
-                self.metrics["api_cpu_seconds"] = max(
-                    self.metrics["api_cpu_seconds"],
-                    (int(api_stat[11]) + int(api_stat[12])) / os.sysconf("SC_CLK_TCK"),
-                )
+                    raw = subprocess.run(
+                        (
+                            "/bin/ps",
+                            "-p",
+                            str(self.inputs.refresh_pid),
+                            "-o",
+                            "rss=,time=",
+                        ),
+                        capture_output=True,
+                        timeout=1,
+                        check=True,
+                        env={"PATH": "/usr/bin:/bin", "HOME": "/nonexistent"},
+                    ).stdout
+                    if len(raw) > 256:
+                        raise ValueError("Sampling output exceeded")
+                    rss, cpu = raw.decode().split()
+                    fields = cpu.split(":")
+                    if len(fields) not in (2, 3):
+                        raise ValueError("Unsupported process CPU format")
+                    cpu_seconds = sum(
+                        float(x) * 60**i for i, x in enumerate(reversed(fields))
+                    )
+                    self.metrics["refresh_rss_peak_bytes"] = max(
+                        self.metrics["refresh_rss_peak_bytes"], int(rss) * 1024
+                    )
+                    self.metrics["refresh_cpu_seconds"] = max(
+                        self.metrics["refresh_cpu_seconds"], cpu_seconds
+                    )
+                    api_stat = (
+                        Path(f"/proc/{self.inputs.api_pid}/stat")
+                        .read_text()
+                        .rsplit(")", 1)[1]
+                        .split()
+                    )
+                    self.metrics["api_rss_peak_bytes"] = max(
+                        self.metrics["api_rss_peak_bytes"],
+                        int(api_stat[21]) * os.sysconf("SC_PAGE_SIZE"),
+                    )
+                    self.metrics["api_cpu_seconds"] = max(
+                        self.metrics["api_cpu_seconds"],
+                        (int(api_stat[11]) + int(api_stat[12]))
+                        / os.sysconf("SC_CLK_TCK"),
+                    )
                 # Linux MemAvailable is measured, not total installed RAM.
                 meminfo = Path("/proc/meminfo")
                 if not meminfo.is_file():
@@ -536,21 +546,22 @@ class OverlapSampler:
                         self.metrics["container_cpu_peak_percent"],
                         float(cpu.removesuffix("%")),
                     )
-                started = monotonic()
-                connection = http.client.HTTPConnection(
-                    "127.0.0.1", self.inputs.api_port, timeout=1
-                )
-                try:
-                    connection.request("GET", "/health")
-                    response = connection.getresponse()
-                    if response.status != 200 or len(response.read(8193)) > 8192:
-                        self.metrics["api_failures"] += 1
-                finally:
-                    connection.close()
-                self.metrics["api_requests"] += 1
-                self.metrics["api_max_seconds"] = max(
-                    self.metrics["api_max_seconds"], monotonic() - started
-                )
+                if self.inputs is not None:
+                    started = monotonic()
+                    connection = http.client.HTTPConnection(
+                        "127.0.0.1", self.inputs.api_port, timeout=1
+                    )
+                    try:
+                        connection.request("GET", "/health")
+                        response = connection.getresponse()
+                        if response.status != 200 or len(response.read(8193)) > 8192:
+                            self.metrics["api_failures"] += 1
+                    finally:
+                        connection.close()
+                    self.metrics["api_requests"] += 1
+                    self.metrics["api_max_seconds"] = max(
+                        self.metrics["api_max_seconds"], monotonic() - started
+                    )
                 self.metrics["samples"] += 1
             except Exception:
                 self.metrics["sampling_failures"] += 1
@@ -588,10 +599,10 @@ def copy_verified(file, target, deadline):
     return observed
 
 
-def measured_workload(harness, inputs):
+def measured_workload(harness, inputs, *, analytical_only=False):
     """Copy-only cold/warm cache; old snapshot retained; real query/spool/index."""
     profile = harness.profile
-    sampler = OverlapSampler(harness, inputs)
+    sampler = OverlapSampler(harness, None if analytical_only else inputs)
     root = Path(profile.cache_root) / ("validation-" + uuid4().hex)
     private_directory(root)
     results = BoundedQueryResults(
@@ -602,6 +613,7 @@ def measured_workload(harness, inputs):
         ),
     )
     sampler_started = False
+    failed = False
     copied = 0
     before = resource.getrusage(resource.RUSAGE_SELF)
     metrics = {}
@@ -673,9 +685,16 @@ def measured_workload(harness, inputs):
             )
         metrics["local_copy_bytes"] = copied
         metrics["old_and_current_retained_bytes"] = directory_bytes(root)
+    except Exception:
+        failed = True
+        raise
     finally:
         if sampler_started:
             sampler.close()
+        if failed:
+            metrics["local_copy_bytes"] = copied
+            metrics.update(sampler.metrics)
+            harness.report.gate("analytical_progress", "failed", metrics)
         results.close()
         shutil.rmtree(root)
     after = resource.getrusage(resource.RUSAGE_SELF)

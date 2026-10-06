@@ -245,3 +245,82 @@ public inputs, independently authorized existing refresh/API overlap, S3 transfe
 storage evidence and measured-budget review remain missing. Original T1.7/T1.C,
 analytical T4.3/T4.C and separate Phase 5 API enablement remain open. No source
 refresh, publication, PostgreSQL changes, cloud deployment or API enablement ran.
+
+## Representative measurement continuation and failed readiness review — October 5
+
+The existing local connector candidate `56aed8d8f2034071875468cc32c3a6f9`
+(manifest `f74027258fdbf78ba040128b4761166c15249177365df4eba7db1bd5f5232cd0`)
+and refresh candidate `99af365f-c549-49bc-9ccc-c6b70d838d9f`
+(manifest `27e8b47f7d904d6aa4991637f1effc915cf668ccfcdb02a2080d1eab02b88ad2`)
+were revalidated locally, then projected through the same modeled domain decoder,
+schema and public column mapping as the product cache. This verified manifest and
+modeled digests/sizes/schema/rows/keys/days, not full raw/disposition graph replay
+or publication. No source retrieval ran. Only the resulting public files and
+contributor harness were copied to the existing guest; no credentials transferred.
+The [preparation record](../analytical-runtime/evidence/2026-10-05-public-input-preparation.json)
+is unreviewed and contains no public cells or private configuration.
+
+| Public grain (each snapshot) | Daily files | Rows | Entities | Public bytes |
+| --- | ---: | ---: | ---: | ---: |
+| National | 183 | 183 | 1 | 593,718 |
+| Facilities | 183 | 10,065 | 55 | 744,980 |
+| Generators | 183 | 17,385 | 95 | 860,649 |
+
+Both cover April 2–October 1 inclusive and all 549 public hashes match. Keeping
+their partition layout produced a 274,689-byte descriptor manifest; the former
+64-KiB harness cap was insufficient. The corrected 1-MiB manifest bound retains
+independent file/cache limits; evidence reports remain bounded to 64 KiB. No
+image/profile change was needed for this contributor-harness correction.
+
+Actual guest invocation used the original nonsecret `candidate.json`, clean
+environment, controller 65534:65534 with Docker supplementary group, the existing
+checkout and `run-analytical-only.py --inputs` pointing at the verified public
+snapshot manifest. The partial mode makes zero health/refresh/source requests.
+The final invocation occurred October 6, 04:02 UTC (October 5 local time).
+The [failed measurement report](../analytical-runtime/evidence/2026-10-05-colima-measurements-failed.json)
+SHA-256 is `27982988121795e0f3fb55f00ec290d7ea695bc2965ac772b19c18644b56720b`.
+It matches the original image/profile above and records a concrete admission
+failure: **141,646 mount argv bytes exceed the 131,072-byte controller cap** for
+549 authorized files. The worker JSON request was 58,458 bytes and fit its bound.
+This is candidate controller insufficiency; no larger allowance was invented.
+
+The real local-copy stage transferred 2,199,347 public bytes in 0.044035125
+seconds. Ten numeric host/storage samples succeeded; sampled cache/staging maxima
+were each 2,199,347 bytes and minimum host `MemAvailable` was 5,704,568,832 bytes.
+These are partial local preparation measurements, not S3 transfer, guaranteed
+peaks or complete worker budgets. No container launched; zero container memory,
+CPU, spool/index or API/refresh fields mean unobserved coverage. SQL/encoding/
+pagination/cold-warm execution and representative spill remain unmeasured.
+Cleanup passed; [final owned-resource verification](../analytical-runtime/evidence/2026-10-05-colima-measurement-cleanup.json)
+found zero owned containers, spill execution directories, recovery ledgers and
+staging/cache/result entries on the unchanged image/profile.
+
+Read-only workload discovery found no API/refresh process in the Linux guest.
+On the contributor Mac, PID 38632 listened on `127.0.0.1:8000` and `/health`
+returned `ok`/`outage-explorer` at `2026-10-06T03:59:01.885311Z`; child PID 38744
+had no listener and was not established as an active refresh. No process arguments
+or environment were inspected. These Darwin processes cannot supply Linux
+co-located resource sampling. Existing historical connector S3 records under
+`/private/tmp/outage-phase6-evidence/` contain elapsed/RSS/object/graph/staging
+measurements, but lack matching interval/start ticks, observed transfer bytes,
+spill/cache/refresh peaks and collector metadata. They cannot close overlap/S3
+coverage for this execution. No new refresh or publication was initiated.
+
+| T4.C gate / open decision | Review outcome |
+| --- | --- |
+| Exact image/profile/daemon, synthetic isolation and termination | Prior 19 real probes match unchanged candidate; evidence remains unreviewed. |
+| Dedicated ext4 aggregate/inode/noexec enforcement | Prior matching real probes passed; representative query spill high-water coverage missing. |
+| Genuine partitioned old/current public inputs | Prepared and verified from existing candidates; identical public content and representativeness/publication limitations require review. |
+| Supported input admission and preparation/controller bounds | Failed: 141,646 mount argv bytes exceed 131,072; worker request fits. |
+| Cold/warm query, encoding, retained old result, spool/index, paging | Not completed after admission failure; local-copy cold cannot replace product S3 cold. |
+| Container/host/API/refresh resource and latency overlap | Partial host/storage only; no Linux workload pair or container samples. |
+| S3 transfer/cache/refresh/spill correlated numeric record | Missing; historical records have unmatched scope and incomplete fields. |
+| Measured memory/CPU/process/temp/cache/output/retention/deadlines | Candidate values remain unapproved; successful execution and overlap measurements required. |
+| API owner/supervisor topology and recovery-ledger storage | Proposed local single-owner configuration has controlled/isolated evidence; operational topology/storage choice remains unreviewed. |
+| Evidence reviewer and invalidation | Profile-bound implementation exists; no approval/reviewer was fabricated. Image/profile changes require affected evidence reruns. |
+| SQL parser wall-clock enforcement | Remains open in the plan; parser/static controlled checks do not resolve host wall-clock enforcement. |
+
+**T4.C review does not pass.** T4.3, T4.C and original data-API T1.7/T1.C stay
+open. Existing isolation evidence is preserved; this failed report adds matching
+evidence rather than replacing it. Preview/SQL remain disabled and Phase 5 still
+requires complete readiness plus explicit enablement direction.

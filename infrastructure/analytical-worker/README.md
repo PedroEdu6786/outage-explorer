@@ -428,7 +428,7 @@ all verified files, exact SHA-256, bytes and rows. Record actual grain/date/enti
 coverage and why these are representative with the separately reviewed evidence;
 the harness never labels its small synthetic canaries representative.
 
-Create a separate nonsecret manifest (maximum 64 KiB), with exactly these fields:
+Create a separate nonsecret measurement manifest (maximum 1 MiB; reports remain 64 KiB), with exactly these fields:
 
 ```json
 {
@@ -489,8 +489,9 @@ fail closed when unavailable. Background `docker stats` output is capped and use
 only numeric formatting, never full inspection. Very short workloads, process
 exit/PID reuse, inaccessible measurements or unavailable health fail the run.
 
-Disk spill remains an unsupported gate. External refresh/S3 transfer evidence is
-explicitly `not_run`; obtain it from the independently authorized existing refresh
+Dedicated native Linux ext4 spill enforcement passed the matching isolation probes;
+representative query spill high-water coverage remains unmeasured. External
+refresh/S3 transfer evidence is explicitly `not_run`; obtain it from the independently authorized existing refresh
 record and correlate its interval, identity and measured resources during review.
 The harness never starts a refresh or publication merely to fill these gaps. API
 health-only sampling cannot close Phase 5 live authorization/paging acceptance.
@@ -499,6 +500,33 @@ alongside all measured allowances before recording approved budgets. Defaults re
 candidates; reports never mutate them or grant readiness.
 
 ### Reports and recovery after a failed validation run
+
+October 5 measurement continuation found two existing local initial-interval
+candidate graphs and derived their exact public projections using the same domain
+decoder/schema/column mapping as the product cache. The preparation helper is
+[`prepare-public-inputs.py`](native-linux-validation/prepare-public-inputs.py);
+it preserves all 549 daily partitions per snapshot, verifies modeled identities,
+and exports only public columns. It does not replay the full raw/disposition
+graph or establish publication. Its private `snapshots.json` deliberately omits
+overlap PIDs until a real independently authorized Linux workload is available.
+Both candidates have identical public content; the current snapshot is a cache
+hit, not a second cold transfer. Descriptor size is 274,689 bytes, which exposed
+the former 64-KiB manifest cap; a bounded 1-MiB cap now admits the layout without
+changing independent file/cache limits or the 64-KiB evidence limit.
+
+The partial guest runner
+[`run-analytical-only.py`](native-linux-validation/run-analytical-only.py) accepts
+only `old`/`current` keys and samples numeric host/storage/container metrics with
+no API requests or refresh process. Invoke in the existing guest checkout with
+the same clean environment/controller identity as `run-isolation.sh`, add
+`PYTHONPATH=/opt/outage-runtime-validation`, and pass `--inputs` to the guest's
+private snapshot manifest. It always leaves full representative overlap/S3 gates
+`not_run`; it cannot produce readiness. Preparation and failed-query metrics are
+retained. The actual run failed before container creation: **141,646 mount argv
+bytes exceed the unchanged 131,072-byte controller allowance**, although the
+worker request is only 58,458 bytes. No product budget was enlarged to force a
+pass. See the [failed measurement report](../../docs/specs/analytical-runtime/evidence/2026-10-05-colima-measurements-failed.json)
+and [review gaps](../../docs/specs/data-api/runtime-evidence.md).
 
 Every configured test writes a new private (0600), bounded (64-KiB maximum) JSON
 report under the profile staging root's parent, `validation-reports/`. Reports contain

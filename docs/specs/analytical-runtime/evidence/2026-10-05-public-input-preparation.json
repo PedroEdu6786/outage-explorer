@@ -1,0 +1,88 @@
+{
+  "graph_verification": "manifest_digest_modeled_digests_schema_rows_keys_days_domain_decode; raw_disposition_evidence_graph_not_replayed",
+  "measurement_status": "not_run",
+  "partition_layout_preserved": true,
+  "review_status": "unreviewed",
+  "schema": 1,
+  "scope": "existing-local-candidate-public-projection-preparation-only",
+  "shared_public_sha256_count": 549,
+  "snapshot_descriptor_bytes": 274689,
+  "snapshot_descriptor_sha256": "a31a0df3115c7a91a2611a7e633d4cc1d39c64fb9b8b1457b1c5e77a63eebf13",
+  "snapshots": {
+    "current": {
+      "coverage": {
+        "facilities": {
+          "days": 183,
+          "entities": 55,
+          "files": 183,
+          "first": "2026-04-02",
+          "last": "2026-10-01",
+          "public_bytes": 744980,
+          "rows": 10065
+        },
+        "generators": {
+          "days": 183,
+          "entities": 95,
+          "files": 183,
+          "first": "2026-04-02",
+          "last": "2026-10-01",
+          "public_bytes": 860649,
+          "rows": 17385
+        },
+        "national": {
+          "days": 183,
+          "entities": 1,
+          "files": 183,
+          "first": "2026-04-02",
+          "last": "2026-10-01",
+          "public_bytes": 593718,
+          "rows": 183
+        }
+      },
+      "generation_id": "99af365f-c549-49bc-9ccc-c6b70d838d9f",
+      "interval": {
+        "end": "2026-10-01",
+        "start": "2026-04-02"
+      },
+      "manifest_sha256": "27e8b47f7d904d6aa4991637f1effc915cf668ccfcdb02a2080d1eab02b88ad2"
+    },
+    "old": {
+      "coverage": {
+        "facilities": {
+          "days": 183,
+          "entities": 55,
+          "files": 183,
+          "first": "2026-04-02",
+          "last": "2026-10-01",
+          "public_bytes": 744980,
+          "rows": 10065
+        },
+        "generators": {
+          "days": 183,
+          "entities": 95,
+          "files": 183,
+          "first": "2026-04-02",
+          "last": "2026-10-01",
+          "public_bytes": 860649,
+          "rows": 17385
+        },
+        "national": {
+          "days": 183,
+          "entities": 1,
+          "files": 183,
+          "first": "2026-04-02",
+          "last": "2026-10-01",
+          "public_bytes": 593718,
+          "rows": 183
+        }
+      },
+      "generation_id": "56aed8d8f2034071875468cc32c3a6f9",
+      "interval": {
+        "end": "2026-10-01",
+        "start": "2026-04-02"
+      },
+      "manifest_sha256": "f74027258fdbf78ba040128b4761166c15249177365df4eba7db1bd5f5232cd0"
+    }
+  },
+  "source_graph_status": "candidate_not_publication_evidence"
+}
