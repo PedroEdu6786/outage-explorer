@@ -242,8 +242,14 @@ class RuntimeEvidence:
     measurement_report: str
     reviewer: str
     reviewed_on: date
+    acceptance_scope: str = "complete-runtime"
 
     def __post_init__(self) -> None:
+        if not isinstance(self.acceptance_scope, str) or self.acceptance_scope not in {
+            "complete-runtime",
+            "local-preview-sql",
+        }:
+            raise ValueError("Unsupported analytical acceptance scope")
         for name, value in vars(self).items():
             if name == "reviewed_on":
                 if type(value) is not date:
@@ -262,9 +268,15 @@ class RuntimeEvidence:
             if re.fullmatch(r"[0-9a-f]{64}", value) is None:
                 raise ValueError("Evidence report digest required")
 
-    def require_ready(self, profile: RuntimeProfile, *, started: bool) -> None:
+    def require_ready(
+        self, profile: RuntimeProfile, *, started: bool, local_acceptance: bool = False
+    ) -> None:
         if (
             started is not True
+            or (
+                self.acceptance_scope == "local-preview-sql"
+                and local_acceptance is not True
+            )
             or profile.temporary_backend != "quota-disk"
             or self.profile_identity != profile.identity
         ):

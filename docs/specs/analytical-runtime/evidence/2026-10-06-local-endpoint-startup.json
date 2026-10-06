@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "baseline_commit": "cd14de1fa77d341bb5b4580760ef94d007a8d29e",
+  "source_state": "verified changes on main before commit",
+  "scope": "controlled local endpoint startup and explicit local review admission; no native or live HTTP acceptance",
+  "review_status": "unreviewed",
+  "api_started": false,
+  "endpoints_activated": false,
+  "scope_decision": "ADR-0055 accepted by explicit user answer; report/configuration approval remains separate",
+  "command": ".venv/bin/python -m pytest -q tests/integration/test_analytical_supervisor.py tests/unit/test_sql_inspection_configuration.py tests/integration/test_startup.py tests/unit/test_analytical_runtime_configuration.py tests/architecture",
+  "results": {
+    "passed": 201,
+    "failed": 0,
+    "skipped": 0,
+    "existing_quota_fixture_cleanup_warnings": 4
+  },
+  "checks": {
+    "ruff_lint": "passed",
+    "ruff_format": "passed",
+    "mypy_144_source_files": "passed",
+    "dependency_consistency": "passed",
+    "sdist_wheel_no_isolation": "passed",
+    "inert_cli_help": "passed",
+    "whitespace": "passed"
+  },
+  "source_sha256": {
+    "src/outage_explorer/bootstrap.py": "95bb7928eea9cfe07220759f1342fabb4828daaeee3f245eb079ded8bf18a624",
+    "src/outage_explorer/infrastructure/worker_runtime/configuration.py": "331f046a6a6bb86be47b195fe9b7734dc602f3f28b3c6e771a16890bb44c9816",
+    "src/outage_explorer/infrastructure/worker_runtime/supervisor.py": "94fb4f19c11ab5d0a737feea0d47674fe794d816d082be8cb0118f09450c9c03",
+    "tests/integration/test_analytical_supervisor.py": "85e49450403d655c871d097674737a08a3dc44e6e911054751fe3e63d1aab771"
+  },
+  "reused_native_image": "sha256:1ee90c05fa1c8578b3240f4eb39382103fe948f190d9ec0b8e3593440cd9b176",
+  "reused_native_profile": "a227d729593bcff61f301df141e2479301c7cf9fbf91ea0ebe8891c33611f57f",
+  "native_image_rebuilt": false,
+  "parser_source_hashes_match_native_owner_loss": true,
+  "current_readonly_iam_probe": {
+    "status": "failed",
+    "sdk_failure": "LoginRefreshRequired",
+    "bounded_signing": "unavailable",
+    "application_pool": "unavailable",
+    "cognito_revalidation": "not_run"
+  },
+  "missing_local_gates": [
+    "analytical containment/report approval",
+    "parser full profile/report approval",
+    "actual Linux serving-host identity and trusted resource checks",
+    "current IAM connection/provider revalidation after login refresh",
+    "remaining real Cognito persona/browser evidence",
+    "local checkpoint review",
+    "separate activation direction"
+  ],
+  "deferred_full_gates": [
+    "complete high-water/spill workload",
+    "product S3 performance",
+    "API/refresh capacity overlap"
+  ],
+  "full_checkpoints": "T4.3/T4.C and original T1.7/T1.C open; Phase5 unstarted"
+}

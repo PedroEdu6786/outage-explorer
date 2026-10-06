@@ -375,7 +375,13 @@ data-API T1.7/T1.C and Phase 5 remain open; no API, refresh or publication ran.
 
 ## Phase 5: Separately authorized local API acceptance
 
-- [ ] **T5.1** After T4.C and explicit API-enablement direction, start the delivered
+Under [ADR-0055](../../adr/0055-scoped-local-analytical-readiness.md), either the
+full T4.C checkpoint or the separately reviewed T4.LC checkpoint below may satisfy
+the readiness dependency for **local preview/SQL acceptance with refresh idle**.
+Separate activation direction remains required; Phase 5 is still unstarted.
+Original T4.3/T4.C and data-api T1.7/T1.C remain open for complete evidence.
+
+- [ ] **T5.1** After T4.C or scoped T4.LC and explicit API-enablement direction, start the delivered
   supervisor using a matching reviewed profile. Confirm previously configured
   trusted auth/PostgreSQL/S3 access without reading/logging secrets; do not deploy
   or publish. Record safe health/catalog/readiness outcomes. Update
@@ -505,3 +511,25 @@ an interval counter observation, not a reviewed CPU limit. Spill zero does not
 exercise spill. Warm local-copy bytes remained2,248,604; this is not S3 retrieval.
 Original CLI sampling failures and later failed one-shot attempts stay preserved;
 no historical gate was relabeled. No API, refresh, publication or deployment started.
+
+## Scoped local readiness checkpoint (ADR-0055)
+
+- [x] **T4.L0** User approved deferring complete high-water/spill, product S3
+  performance and API/refresh capacity-overlap evidence for local preview/SQL
+  acceptance with refresh idle. Original complete-evidence tasks remain open.
+- [x] **T4.L1** Encode local-only evidence scope, reject it for generic readiness,
+  retain exact profile matching and early review rejection before parser ownership,
+  and ensure final rollback/close attempts. Controlled verification supplies no
+  approved evidence or startup direction.
+- [ ] **T4.L2 — USER REVIEW** Review matching analytical and parser reports and
+  explicit initial containment limits. Create actual reviewed records only after
+  approval, with local analytical scope, report digests and reviewer/date.
+- [ ] **T4.L3** Confirm actual native Linux serving-host configuration/roots,
+  executable identities, quota/daemon profile, existing PostgreSQL/S3 published
+  access, current seeded Cognito/application roles and required pooled-IAM/auth
+  evidence. Read-only Mac IAM recheck currently reports `LoginRefreshRequired`;
+  no current connection/provider success or credential transfer is claimed.
+- [ ] **T4.LC** Review traceability of essential authorization, isolation, bounds,
+  termination/recovery/rollback and local-host checks; explicitly record deferred
+  performance coverage and refresh-idle scope. Only then can separately authorized
+  local Phase 5 start. No full T4.C/T1.C or production acceptance is implied.

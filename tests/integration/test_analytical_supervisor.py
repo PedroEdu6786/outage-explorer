@@ -302,6 +302,56 @@ def test_config_round_trip_missing_evidence_and_strict_rejection(tmp_path):
             read_runtime_config(path)
 
 
+def test_local_review_cannot_satisfy_complete_runtime_readiness(tmp_path):
+    candidate = profile(tmp_path)
+    local = replace(evidence(candidate), acceptance_scope="local-preview-sql")
+    with pytest.raises(RuntimeUnavailableError):
+        local.require_ready(candidate, started=True)
+    local.require_ready(candidate, started=True, local_acceptance=True)
+    construct, recover = Mock(), Mock()
+    supervisor = AnalyticalSupervisor(candidate, local, construct, recover)
+    with pytest.raises(RuntimeUnavailableError):
+        supervisor.start()
+    construct.assert_not_called()
+    recover.assert_not_called()
+    assert not list(tmp_path.iterdir())
+    inspector = Mock()
+    resources = build_analytical_resources(candidate, local, inspector=inspector)
+    with pytest.raises(RuntimeUnavailableError):
+        resources.start()
+    inspector.start.assert_not_called()
+    resources.close()
+    with pytest.raises(ValueError):
+        replace(local, acceptance_scope="unknown")
+
+
+def test_local_review_roundtrip_and_explicit_supervisor_admission(tmp_path):
+    candidate = profile(tmp_path)
+    local = replace(evidence(candidate), acceptance_scope="local-preview-sql")
+    record = asdict(local)
+    record["reviewed_on"] = record["reviewed_on"].isoformat()
+    path = tmp_path / "local-fixture.json"
+    path.write_text(json.dumps({"profile": asdict(candidate), "evidence": record}))
+    assert read_runtime_config(path) == (candidate, local)
+    order = []
+
+    def stop_after_review(ledger, key):
+        order.append("construct")
+        raise RuntimeUnavailableError("controlled construction stop")
+
+    supervisor = AnalyticalSupervisor(
+        candidate,
+        local,
+        stop_after_review,
+        lambda ledger: order.append("recover"),
+        local_acceptance=True,
+    )
+    with pytest.raises(RuntimeUnavailableError, match="controlled construction stop"):
+        supervisor.start()
+    assert order == ["recover", "construct"]
+    assert supervisor._ledger._fd is None
+
+
 def test_command_help_and_reloader_multi_mode_rejection():
     execute = Mock()
     with pytest.raises(SystemExit) as help_exit:
@@ -355,10 +405,88 @@ def test_missing_evidence_explicit_startup_never_serves(tmp_path, monkeypatch):
     with pytest.raises(RuntimeUnavailableError):
         bootstrap.execute_analytical_http(str(path), "127.0.0.1", 5000)
     app.run.assert_not_called()
-    app.extensions["outage_data_close"].assert_called_once()
+    bootstrap.build_http_app.assert_not_called()
+    app.extensions["outage_data_close"].assert_not_called()
     assert not (tmp_path / "staging").exists()
     assert not (tmp_path / "cache").exists()
     assert not (tmp_path / "results").exists()
+
+
+@pytest.mark.parametrize("invalid", ["missing", "mismatched", "smoke"])
+def test_runtime_review_rejected_before_parser_ownership(tmp_path, invalid):
+    candidate = profile(tmp_path)
+    record = evidence(candidate)
+    if invalid == "missing":
+        record = None
+    elif invalid == "mismatched":
+        candidate = replace(candidate, cpu_millicores=500)
+    else:
+        candidate = replace(candidate, temporary_backend="tmpfs-smoke")
+    inspector = Mock()
+    resources = build_analytical_resources(candidate, record, inspector=inspector)
+    with pytest.raises(RuntimeUnavailableError):
+        resources.start()
+    inspector.start.assert_not_called()
+    assert not list(tmp_path.iterdir())
+    resources.close()
+
+
+@pytest.mark.parametrize(
+    "host,port", [("0.0.0.0", 5000), ("127.0.0.1", True), ("localhost", 65536)]
+)
+def test_direct_startup_rejects_invalid_bind_before_config(tmp_path, host, port):
+    from outage_explorer.bootstrap import execute_analytical_http
+
+    with pytest.raises(ValueError, match="Unsupported analytical serving mode"):
+        execute_analytical_http(str(tmp_path / "absent.json"), host, port)
+
+
+@pytest.mark.parametrize("failure", ["factory", "start", "serve", "close"])
+def test_explicit_startup_rollback_always_closes_resources(
+    tmp_path, monkeypatch, failure
+):
+    from outage_explorer import bootstrap
+
+    candidate = profile(tmp_path)
+    path = tmp_path / "reviewed-fixture.json"
+    record = asdict(evidence(candidate))
+    record["reviewed_on"] = record["reviewed_on"].isoformat()
+    path.write_text(json.dumps({"profile": asdict(candidate), "evidence": record}))
+    order = []
+
+    def step(name):
+        def operation(*args, **kwargs):
+            order.append(name)
+            if failure == name:
+                raise RuntimeUnavailableError("controlled rollback")
+
+        return operation
+
+    resources = Mock()
+    resources.start.side_effect = step("start")
+    resources.close.side_effect = step("resources-close")
+    app = Mock()
+    app.run.side_effect = step("serve")
+    app.extensions = {"outage_data_close": Mock(side_effect=step("close"))}
+
+    def factory(**kwargs):
+        step("factory")()
+        assert kwargs == {"data_resources": resources}
+        return app
+
+    monkeypatch.setattr(bootstrap, "build_http_app", factory)
+    monkeypatch.setattr(
+        bootstrap, "build_analytical_resources", Mock(return_value=resources)
+    )
+    with pytest.raises(RuntimeUnavailableError, match="controlled rollback"):
+        bootstrap.execute_analytical_http(str(path), "127.0.0.1", 5000)
+    assert order[-1] == "resources-close"
+    if failure in {"factory", "start"}:
+        app.run.assert_not_called()
+    if failure == "factory":
+        app.extensions["outage_data_close"].assert_not_called()
+    else:
+        app.extensions["outage_data_close"].assert_called_once()
 
 
 def test_dead_owner_recovery_precedes_cache_construction(tmp_path):

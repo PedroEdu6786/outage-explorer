@@ -358,9 +358,16 @@ readiness review and separate startup/enablement direction remain prerequisites.
 
 [ADR-0054](../adr/0054-bounded-subprocess-sql-inspection.md) accepts separate
 bounded subprocess parsing/reference inspection before SQL endpoint enablement.
-The current in-process inspector still requires replacement and verification;
-numeric budgets remain open. Authentication precedes inspection, and complete
+The bounded subprocess inspector and native owner-loss/resource checks are
+implemented. Initial parser caps are user-accepted; full matching report/profile
+review remains pending. Authentication precedes inspection, and complete
 application-role authorization precedes analytical input access.
+
+[ADR-0055](../adr/0055-scoped-local-analytical-readiness.md) permits separately
+reviewed local preview/SQL acceptance with refresh idle before complete capacity
+measurements. Original full-evidence checkpoints remain open. Local-scope evidence
+is explicitly identified and rejected by generic readiness; containment/report,
+actual Linux serving-host/auth checks and separate activation remain prerequisites.
 
 Phase 6 registers strict catalog, preview, query submission/paging and durable
 refresh admission/latest/by-ID routes when `OUTAGE_DATA_HTTP_ENABLED=true`.

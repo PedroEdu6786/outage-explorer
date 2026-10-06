@@ -66,6 +66,13 @@ one analytical execution slot and independently supervised refresh under
 local acceptance decision; final EC2 topology remains open. It grants no startup
 or activation permission and does not bypass analytical readiness gates.
 
+[ADR-0055](docs/adr/0055-scoped-local-analytical-readiness.md) adds a separately
+reviewed local preview/SQL readiness path with refresh idle. Complete high-water/
+spill, S3 performance and API/refresh capacity-overlap evidence remains deferred
+to the original open full checkpoints. Preserve authorization, isolation, hard
+bounds, lifecycle and actual-host/auth checks; local-scope review must not imply
+complete runtime acceptance. Scope approval grants no startup or activation.
+
 Before SQL endpoint enablement, enforce user-SQL parsing/reference inspection in
 a separate bounded subprocess under
 [ADR-0054](docs/adr/0054-bounded-subprocess-sql-inspection.md). Preserve application

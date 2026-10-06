@@ -60,9 +60,12 @@ class AnalyticalSupervisor:
         evidence: RuntimeEvidence | None,
         construct: Callable[[OwnershipLedger, bytes], AnalyticalResources],
         reconcile: Callable[[OwnershipLedger], None],
+        *,
+        local_acceptance: bool = False,
     ) -> None:
         self.profile, self.evidence = profile, evidence
         self._construct, self._reconcile = construct, reconcile
+        self._local_acceptance = local_acceptance
         self._pid = os.getpid()
         self._ledger = OwnershipLedger(Path(profile.staging_root), uuid4().hex)
         self._resources: AnalyticalResources | None = None
@@ -95,7 +98,9 @@ class AnalyticalSupervisor:
                 return
             if self.evidence is None:
                 raise RuntimeUnavailableError("Reviewed analytical runtime unavailable")
-            self.evidence.require_ready(self.profile, started=True)
+            self.evidence.require_ready(
+                self.profile, started=True, local_acceptance=self._local_acceptance
+            )
             try:
                 self._ledger.open()
                 self._reconcile(self._ledger)

@@ -129,6 +129,14 @@ counts/limits/keys and oversized output are rejected. No diagnostic passthrough.
 
 ## Acceptance Criteria
 
+[ADR-0055](../../adr/0055-scoped-local-analytical-readiness.md) accepts a separate
+local readiness path for Phase 5 with refresh idle. Local review retains all
+authorization/isolation/bounded execution/lifecycle and actual-host safeguards,
+but defers complete high-water/spill, S3 performance and capacity-overlap evidence
+to the original full AC7/T4.3/T4.C and data-api T1.7/T1.C gates, which remain open.
+An approved local-scope record and separate activation direction are still needed;
+this scope decision does not itself satisfy readiness or close any AC below.
+
 - [ ] **AC1:** Denied/revoked roles cause zero input reads or launches; cache hits,
   expression-only SQL and continuation requests retain application authorization.
   (FR1, TR1)

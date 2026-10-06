@@ -847,6 +847,7 @@ def build_analytical_resources(
     evidence: "RuntimeEvidence | None",
     *,
     inspector: SubprocessSqlInspector | None = None,
+    local_acceptance: bool = False,
 ) -> DataHttpResources:
     """Build inert forwarding ports; only explicit start may own filesystem/S3."""
     from outage_explorer.infrastructure.local_cache.modeled import (
@@ -965,9 +966,15 @@ def build_analytical_resources(
             wire.close()
             raise
 
-    supervisor = AnalyticalSupervisor(profile, evidence, construct, reconcile)
+    supervisor = AnalyticalSupervisor(
+        profile, evidence, construct, reconcile, local_acceptance=local_acceptance
+    )
 
     def start() -> None:
+        # Reject an unreviewed runtime before acquiring parser ownership, too.
+        if evidence is None:
+            raise RuntimeUnavailableError("Reviewed analytical runtime unavailable")
+        evidence.require_ready(profile, started=True, local_acceptance=local_acceptance)
         try:
             if inspector is not None:
                 inspector.start()
@@ -1007,7 +1014,10 @@ def execute_analytical_http(
     )
 
     if (
-        any(
+        host not in {"127.0.0.1", "localhost"}
+        or type(port) is not int
+        or not 1 <= port <= 65535
+        or any(
             os.environ.get(name) not in (None, "", "0", "false")
             for name in ("WERKZEUG_RUN_MAIN", "FLASK_DEBUG")
         )
@@ -1026,14 +1036,21 @@ def execute_analytical_http(
             raise RuntimeUnavailableError("Reviewed SQL inspection unavailable")
         parser_review.require_ready(parser_profile)
         inspector = parser_profile.build()
-    resources = build_analytical_resources(profile, evidence, inspector=inspector)
+    if evidence is None:
+        raise RuntimeUnavailableError("Reviewed analytical runtime unavailable")
+    evidence.require_ready(profile, started=True, local_acceptance=True)
+    resources = build_analytical_resources(
+        profile, evidence, inspector=inspector, local_acceptance=True
+    )
     app: Flask | None = None
     try:
         app = build_http_app(data_resources=resources)
         resources.start()
         app.run(host=host, port=port, debug=False, use_reloader=False, threaded=True)
     finally:
-        if app is not None:
-            app.extensions["outage_data_close"]()
-        resources.close()
+        try:
+            if app is not None:
+                app.extensions["outage_data_close"]()
+        finally:
+            resources.close()
     return 0

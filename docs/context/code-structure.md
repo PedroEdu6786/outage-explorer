@@ -189,7 +189,16 @@ EC2 topology or grant runtime startup/enablement permission.
 SQL inspection behind the application port, with concrete launch/transport in
 infrastructure and wiring in bootstrap. Admission, time/CPU/memory/output and
 termination must be bounded before SQL enablement; no API-process fallback.
-Implementation and numeric budgets remain pending.
+The bounded Linux subprocess implementation and native owner-loss/resource checks
+are delivered. The user accepted initial 4-second wall, 1 CPU-second, 256-MiB
+address-space and 1-second termination caps; full parser/report readiness remains
+pending. Bootstrap supplies no API-process parsing fallback.
+
+[ADR-0055](../adr/0055-scoped-local-analytical-readiness.md) separates local
+preview/SQL readiness with refresh idle from complete capacity evidence. Local
+review retains actual-host/auth, isolation, bounds and lifecycle gates; original
+full checkpoints stay open. Explicit local-scope evidence cannot satisfy generic
+runtime readiness and grants no implicit activation.
 
 Under [ADR-0043](../adr/0043-seeded-users-and-role-only-access.md), seed local
 users, roles and assignments with essential Cognito identity linkage. Keep

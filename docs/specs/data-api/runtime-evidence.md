@@ -1,5 +1,10 @@
 # Data API Phase 1 evidence
 
+Current local enablement prerequisites are summarized in the
+[accepted local scope](../analytical-runtime/local-acceptance-proposal.md) under
+[ADR-0055](../../adr/0055-scoped-local-analytical-readiness.md). Full checkpoints
+remain open; local report/configuration review and activation remain pending.
+
 Date: 2026-10-05. Client contract and adapter work are available; **runtime
 feasibility remains pending**. No data routes, product query executor, worker
 launcher, publication or deployment was enabled. The current API never imports
@@ -586,3 +591,65 @@ startup was created. The historical authentication status above remains scoped:
 Viewer session/logout and application-pool checks were accepted earlier; detailed
 Admin/Analyst, invalid-credential, expiry/reopening, independent-session and live
 pooled-IAM evidence still needs completion. No fresh live-provider attestation ran.
+
+## Endpoint startup safeguards and current dependency check — October 6, 2026
+
+Continued directly on clean `main` from `cd14de1`, preserving completed phases.
+The endpoint routes, authorized use cases, retained pagination and explicit
+supervisor composition already exist. Bootstrap now rejects absent, mismatched
+or smoke analytical review before parser ownership; explicit HTTP startup also
+rejects it before app construction. Direct calls validate loopback and a real
+integer port. The final resource-close attempt runs even when the application
+close hook raises. Controlled regressions cover factory/start/serve/close errors,
+inert rejection and no HTTP serving on failed prerequisites.
+
+Verification actually run:
+
+- Startup/supervisor, parser configuration, inert factory and architecture:
+  **175 passed**.
+- Parser/SQL, transport, Docker/decoder/profile and controlled IAM:
+  **255 passed, 18 native-Linux skips** on macOS; no native suite rerun.
+- PostgreSQL HTTP/combined lifecycle, preview/catalog, SQL and retained-result
+  regressions: **78 passed** against the read-only reverified existing disposable
+  PostgreSQL 18.6 process/data directory and loopback port 5432. Test clients and
+  controlled workers supplied endpoint behavior; only disposable test databases
+  were created/migrated/seeded/dropped. Initial sandbox attempt had 16 passes and
+  62 connection setup errors; the network-approved retry passed all 78.
+- Ruff lint/format, strict mypy (**144 source files**), dependency consistency,
+  CLI help and whitespace checks passed. Each pytest selection reported four
+  existing quota-fixture temporary-directory cleanup warnings.
+- All current parser source hashes match the 18-check native owner-loss record;
+  parser profile remains `833fd37713f21542d3ffca7bb0d34d237441c7a145c4b35463deef1cc6649669`
+  with null review. The analytical image/profile and prior passing reports were
+  reused without rebuilding the image or rerunning measurements.
+
+A new read-only current dependency probe attempted configured runtime-user IAM
+pool checkout/replacement and Cognito seed/configuration verification. The sandbox
+attempt failed; the approved outside-sandbox retry also failed at bounded IAM
+credentials. The existing sanitized diagnostic then reported **SDK signing:
+`LoginRefreshRequired`; bounded signing/application pool unavailable**. Refresh
+the existing local AWS login before a current RDS/pool/Cognito recheck. No live
+binding, replacement-connection or Cognito success is claimed from these attempts;
+the historical October 5 successes remain dated evidence. No credentials were
+printed, changed or transferred; no application database writes or API startup ran.
+
+The user subsequently approved the narrow local scope in ADR-0055: local acceptance
+may precede complete capacity measurements, preserving safety/report/budget review,
+actual serving-host checks, current auth dependencies and separate activation.
+Readiness records explicitly identify `local-preview-sql`; generic readiness
+rejects them unless the caller opts into local acceptance. The loopback-only
+startup propagates that scope through the inert builder and supervisor. Candidate
+reviews remain null; no reviewer/date/digest approval was inferred.
+Original T4.3/T4.C, data-api T1.7/T1.C, auth T5.14/T5.C and analytical Phase 5 stay
+open. Local T4.L0/T4.L1 record only the accepted scope and delivered safeguards;
+T4.L2/T4.L3/T4.LC and all Phase 5 tasks remain open. No activation flag or reviewed
+record was changed, and no unperformed check was marked passed.
+
+After scoped-record wiring, the final startup/profile/parser-configuration/
+architecture selection passed **201 tests**, including local-record rejection by
+generic readiness, explicit local admission, legacy complete-runtime record
+round-trip, profile invalidation and rollback. Ruff lint/format, mypy, dependency
+consistency and sdist/wheel build (`--no-isolation`) passed. See the
+[unreviewed controlled startup report](../analytical-runtime/evidence/2026-10-06-local-endpoint-startup.json)
+for exact selection and source hashes. No native worker image was rebuilt;
+prior native image/profile evidence remains scoped to that unchanged image.

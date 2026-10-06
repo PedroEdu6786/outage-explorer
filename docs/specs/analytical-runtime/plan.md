@@ -336,6 +336,23 @@ ownership handoff still require work. No accepted boundary changes are proposed.
 
 ## Open decisions
 
+October 6 endpoint prioritization: accepted
+[ADR-0055](../../adr/0055-scoped-local-analytical-readiness.md) adds local readiness
+with refresh idle, deferring complete capacity measurements while retaining all
+essential safety/auth/actual-host gates. `RuntimeEvidence.acceptance_scope` defaults
+to `complete-runtime` for existing records; `local-preview-sql` requires explicit
+local admission in builder/supervisor. The loopback-only startup opts into that
+scope without bypassing review/profile match. Generic runtime readiness rejects
+local records. No candidate evidence has been promoted or activation authorized.
+
+The [accepted scope/checklist](local-acceptance-proposal.md) and new T4.LC checkpoint
+define remaining local prerequisites. T4.3/T4.C and original T1.7/T1.C still own
+complete high-water/spill, S3 performance and API/refresh capacity-overlap evidence.
+Parser report approval, analytical containment settings/report review, actual
+Linux serving-host identities and live auth dependencies remain unresolved.
+Current read-only Mac IAM signing reports `LoginRefreshRequired`; use the existing
+local identity/resources after login refresh, without credentials in evidence.
+
 October 6 direction: [ADR-0053](../../adr/0053-local-single-owner-analytical-acceptance.md)
 accepts the delivered single-owner topology for local acceptance only. The user
 authorized representative measurements and chose measurement before budget

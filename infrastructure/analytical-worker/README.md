@@ -619,3 +619,32 @@ These changes preserve the existing analytical image/profile identity. Native
 parser tests now include owner SIGKILL/replacement, inherited lease retention and
 wrong-parent rejection. Candidate verification does not approve limits or enable
 endpoints. Without the flag, SQL inspection remains unavailable.
+
+## Scoped local readiness (ADR-0055)
+
+The user accepted a [local preview/SQL path](../../docs/specs/analytical-runtime/local-acceptance-proposal.md)
+with refresh idle, before complete capacity measurements. Full T4.3/T4.C and
+original T1.7/T1.C remain open. Local containment/report review, actual Linux
+serving-host and Cognito/application-role/pooled-IAM checks still apply; scope
+approval does not authorize startup or endpoint activation.
+
+A future approved analytical `evidence` record must include
+`"acceptance_scope": "local-preview-sql"` for that path. Omitting the field means
+`complete-runtime`, preserving existing records. Generic readiness rejects a
+local record; only explicit local admission may use it. The loopback-only
+analytical startup forwards local admission to builder/supervisor. Report digests,
+complete profile identity and actual user reviewer/date remain required; do not
+create a reviewed record from this documentation or the scope decision alone.
+Both analytical and separate parser reviews must pass before ownership/startup.
+
+After readiness and separate activation direction, SQL acceptance uses both flags:
+
+```sh
+.venv/bin/python -m outage_explorer.entrypoints.http.analytical_startup \
+  --config /private/tmp/outage-runtime-reviewed.json \
+  --inspection-config /private/tmp/outage-sql-inspection-reviewed.json
+```
+
+This command is not executed here. CLI help remains inert. Missing/mismatched/
+smoke analytical review is rejected before parser ownership or app construction;
+failure in app shutdown still triggers the final resource-close attempt.
