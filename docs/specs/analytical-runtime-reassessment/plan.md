@@ -1,0 +1,69 @@
+# Plan: Small-team analytical runtime assessment
+> Status: draft recommendation; no runtime change · Slug: analytical-runtime-reassessment · Spec: ./spec.md
+
+## Approach
+Keep isolated, short-lived DuckDB containers as the **leading candidate for evaluation**, because they preserve the selected engine, current local S3/Parquet boundary and useful real synthetic-denial evidence. Before building concurrent machinery, compare managed services against the actual SQL/result/snapshot/auth contracts, operator duties and cost drivers. For a bounded local experiment, replace per-file Docker binds with one read-only bind of a sealed, request-private directory containing exactly the copied and digest-verified authorized files; measure this change independently. Then test aggregate admission with 2 and 4 simultaneous requests as scenarios only. This is not an accepted deployment or capacity choice. (FR1–FR6, TR1–TR6)
+
+## Components affected
+- `infrastructure/worker_runtime/inputs.py` — candidate exact-entry directory identity/sealing lifecycle and post-run ownership; one directory must never mean the shared cache (FR2, FR4).
+- `infrastructure/worker_runtime/docker.py` — candidate one-directory mount, explicitly disabled recursive inclusion, bounded argument check independent of JSON payload limits (FR2, TR5).
+- `launcher.py`, `quota.py`, `supervisor.py` and configuration — later only if local candidate passes: aggregate request admission, preparation/control budgets, lane ownership, spill backing, recovery and daemon-wide closure (FR1, FR4–FR5).
+- Existing query/preview application and retained-result ports — preserve authorization-before-data, snapshot binding and one-execution pagination; alter user-facing busy/queue behavior only through explicit product decision (FR1, FR3, TR1–TR3).
+- Assessment documents and evidence — capture managed comparison, decision gates, unchanged prior evidence, changed-profile invalidation scope and unresolved acceptance inputs (FR6, TR4, TR6).
+
+## Data model changes
+No operational PostgreSQL changes, new product APIs, or durable query IDs are proposed. A local concurrency candidate needs bounded private ownership per admitted lane: lane/owner and execution identities; exact input-directory identity; storage device/filesystem identity; resource reservation; container/control state; recovery disposition. It must contain no SQL, output, credentials or session tokens. The exact ledger schema and location remain open until choosing a runtime.
+
+## Interfaces & contracts
+- Candidate admission: reserve the worker **and** preparation/control, input/staging/cache, spill, result and host-capacity budgets before analytical reads. Excess demand returns existing busy behavior unless a product decision accepts another contract. (FR1, FR5)
+- Candidate worker input: one exact request-owned directory, read-only, with fixed digest-based filenames and a bounded manifest. Permit no shared root, siblings, nested mounts, symlinks, unexpected entries, mutable hardlinks, host writes or path reuse through confirmed termination. Bind recursive behavior off and verify the selected daemon's actual semantics. (FR2, TR5)
+- Recovery: a lane remains reserved while worker death, container removal or controller operations are uncertain. Any daemon-wide uncertainty closes all admissions; reopening requires exclusive controller ownership, reconciliation of every persisted creation intent and retained reservation, and evidence outstanding control calls cannot later create/start an unaccounted worker. An empty container listing or dead CLI alone is insufficient. If this cannot be proven, remain unavailable and require an operator-assisted recovery procedure. (FR4–FR5)
+- Public preview/query/paging envelopes, role checks, result ownership, snapshot identity and expiry remain unchanged for the comparison. (FR3, TR1–TR2)
+- Managed alternatives must specify identity/authorization, file access, result transport/retention, cancellation/recovery, concurrency/cost controls, SQL/type compatibility and latency; no provider substitution is a drop-in assumption. (FR6)
+
+## Implementation phases
+1. **Workload and alternatives decision (planning/research only).** Specify demand ranges, mixed preview/heavy-SQL workloads, SLO/overload questions and acceptable operator/spend limits. Compare Docker+DuckDB, Athena, MotherDuck, managed container execution and an OS sandbox using the same product contract and documented unknowns. Decide whether any managed candidate warrants a separately authorized proof of concept. (FR6; TR1–TR6)
+2. **Pre-experiment acceptance gate.** Before starting even a bounded measurement, record the actual workload envelope, numeric preview/SQL latency and busy-rate acceptance thresholds, resource/operations ceiling, and the limited experiment scope with expected decision (accept/reject/follow-up). Keep 2/4 as mere comparison points. If product/operations cannot define these inputs, stop at “comparison prepared; capacity undetermined”; do not tune or interpret a passing sample as readiness. (FR1, FR5–FR6; TR4, TR6; AC2, AC6)
+3. **Single-worker input-shape experiment.** Only if local execution remains viable, implement and test the sealed exact-directory mount against cross-request reads/writes, replacement races, unexpected entries, child mounts and uncertain worker death. Bound manifests and argument bytes independently. Rebuild the image and invalidate/rerun only affected matching evidence plus all required gates. Do not enlarge capacity allowances from one observation without workload/OS bounds. (FR2, FR4; AC1, AC3, AC5)
+4. **Aggregate boundary design and accepted decision.** Account for worker CPU/memory/PIDs plus API, refresh, host preparation/control, duplicated staging, cache, retained results and total physical spill backing. Resolve ownership and global daemon failure/reopen semantics. Evaluate whether a concurrent pool is feasible within actual host/operations constraints. Present candidate budgets and failure behavior for user acceptance; do not infer targets from 2/4 scenarios. (FR1, FR4–FR6; AC2, AC5–AC6)
+5. **Bounded concurrency candidate and validation.** Only after the user accepts the measured workload envelope/thresholds, an implementation decision and the aggregate boundary, test two workers then four only if the prior gate passes. Include mixed preview/heavy query load, cold/warm preparation, spill/exhaustion, one worker timeout/OOM, delayed/ambiguous kill/remove, daemon outage, API/refresh headroom, overload, per-user busy outcomes/starvation and restart reconciliation. Actual accepted simultaneous demand/SLOs govern pass/fail. (FR1–FR6; AC2–AC6)
+6. **Readiness review.** Maintain an applicability matrix for each gate: preserved, invalidated by changed image/profile/mount, newly required, or still missing. Bind reports to exact image/profile/host/storage and review measured budgets, external S3 transfer and independently authorized refresh/API overlap. Passing the input or concurrency experiment cannot replace changed-content snapshot, correlated S3 or API/refresh evidence. If required workloads cannot be independently authorized or measured, record incomplete readiness and stop; do not create an implementation loop to compensate. Resolve plan-level parser/runtime ownership gaps. Keep original T1.7/T1.C open until their full separate requirements pass; API enablement remains a later explicit authorization. (FR3–FR6; TR4, TR6; AC1–AC6)
+
+## Dependencies & integrations
+- Existing Linux host/daemon and candidate dataset snapshots for local experiments; actual refresh/API overlap and numeric S3 transfer records must already be independently authorized and co-located for their own measurements.
+- Primary documentation for Athena, Fargate, MotherDuck and NsJail, plus product-specific contract compatibility research. A paid service trial, credential transfer, cloud deployment or dataset upload requires separate authorization and is not part of this plan.
+- Any local concurrent ext4 layout must prove physical backing capacity, absence of sparse overcommit, unique mount identities, reboot ordering, fail-closed missing/replaced mounts and aggregate disk availability for worker spill, cache, staging, results, refresh and OS. Per-filesystem logical limits alone do not establish a safe host budget.
+
+## Risks & tradeoffs
+- Increasing `request_bytes` is the smallest diagnostic unblock for the known 549-file launch, but does not remove file-count growth, admit concurrency or show compute saturation. A private directory mount removes the per-file mount list while manifest, verification and copy work still grow with inputs.
+- Concurrent container ceilings do not bound host-side hashing/copying, daemon control or aggregate storage. Reserve measured API/refresh headroom and close globally on shared daemon uncertainty.
+- A read-only bind does not establish immutability or an exact verified file set. The controller must retain inode/directory ownership and prohibit mutation/reuse until proven worker removal; nested/recursive binds must be rejected.
+- One ext4 filesystem per lane may be operationally expensive and still compete for physical backing. It remains a candidate, not the chosen solution. Shared project quotas or managed storage need an equally concrete enforcement/recovery proof.
+- Immediate 503/busy behavior can starve previews behind SQL work. Measure mixed traffic and report per-operation latency, busy rate and starvation; do not imply fairness or invent a queue/priority policy.
+- **Managed alternatives considered:** Athena removes the local DuckDB worker but changes dialect, asynchronous job lifecycle, S3/IAM access, cancellation, snapshot and output handling; it is strongest only if SQL/HTTP contract changes are acceptable. MotherDuck remains DuckDB-based and may reduce engine operation work, but account/token boundaries, cloud data access, pinned-version compatibility, output canonicalization, cancellation and spend remain unverified. Fargate keeps a container worker and can supply task-level isolation without host cluster management, but remote file mounts become input/result transport and orchestration still owns authorization, snapshot and recovery. NsJail can avoid Docker control but still requires native Linux isolation, quotas, termination, staging and supervisor expertise. None has application-specific acceptance evidence.
+
+### Alternatives considered
+- **Raise Docker argv cap now:** use only as an explicitly bounded single-worker diagnostic option if the directory-mount experiment is delayed; this does not meet the long-term count-growth objective.
+- **Keep one execution slot:** safest minimal immediate runtime once measurements pass, but does not meet the user's newly requested concurrent-team evaluation; preserve it as the fallback if a safe aggregate candidate cannot meet agreed operations/SLO constraints.
+- **Adopt managed execution immediately:** rejected as a current implementation choice because no service has been tested against the exact role, SQL, snapshot, result and timeout contract. Advance a service only if the comparison identifies a decisive operations or capacity advantage and an authorized experiment can verify remaining unknowns.
+
+## Test strategy
+- **AC1:** Verify comparison claims against primary service docs and current adapters; label vendor claims, inferences, product-specific unknowns and missing cost inputs.
+- **AC2:** Exercise mixed previews and expensive SQL at scenario concurrency 2/4, busy/overload and repeated/sustained contention; report per-operation time-to-first-page, busy rates and starvation. No scenario result becomes a budget without agreed acceptance thresholds.
+- **AC3:** Real Linux worker tests attempt sibling/unlisted reads, input writes, nested mounts, source replacement, path reuse, races during launch and cross-request access.
+- **AC4:** Compare preview snapshots, current-role enforcement, SQL page concatenation and revisits with one retained execution across competing requests and publication fixtures.
+- **AC5:** Inject failure in each lane plus daemon-wide outage; require uncertain ownership retention, global admission closure, bounded controller processes and reconciliation of all potentially live creates before reopening.
+- **AC6:** Correlate real old/current snapshot identities, cold/warm work, ext4/other spill high-water, API/refresh/S3 transfers and resource/latency intervals. Missing workload, SLO, cost or overlap inputs fail readiness rather than receiving an estimate.
+
+## Assumptions
+- 2 and 4 are comparison scenarios only. Peak demand, acceptable latency/busy rate, data growth, operator availability and spend remain open.
+- The already accepted 10-second execution maximum, broad DuckDB SQL contract and exact retained-result semantics remain baseline for comparing alternatives; any different service contract requires explicit proposal.
+- Previous 19 real synthetic Docker probes stay evidence only for their exact profile/image and tested isolation/lifecycle properties.
+
+## Open decisions
+- Define peak simultaneous requests, preview/SQL workload mix, time-to-first-page, acceptable busy/starvation behavior and growth horizon.
+- Define available runtime operator/support time and acceptable recurring spend before selecting a self-managed pool or managed service.
+- Select whether the product should retain synchronous busy semantics or accept bounded waiting/asynchronous jobs.
+- Select candidate runtime only after primary-source/contract comparison and, if required, an explicitly authorized service proof of concept.
+- Resolve parser wall-clock isolation and the selected API/supervisor/recovery-ledger ownership topology.
+- No ext4 per-slot provisioning, capacity, image/argument limit change, runtime adapter, service account, deployment or API enablement is authorized by this proposal.
