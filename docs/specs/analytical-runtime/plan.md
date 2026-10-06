@@ -340,7 +340,11 @@ October 6 direction: [ADR-0053](../../adr/0053-local-single-owner-analytical-acc
 accepts the delivered single-owner topology for local acceptance only. The user
 authorized representative measurements and chose measurement before budget
 approval. Missing workload prerequisites, final EC2 topology, ledger storage,
-parser enforcement and evidence review remain open; no startup was authorized.
+parser implementation and evidence validation remain open; no startup was authorized.
+The user will personally review complete readiness evidence and proposed budgets;
+no agent review, reviewer identity/date or approval is inferred. Prepare actual
+report contents, failed/missing coverage and exact image/profile matches for that
+review. Endpoint enablement remains a separate later action.
 
 - Selected corrective candidate: native Linux Docker and dedicated fixed-capacity
   ext4 spill filesystem. Provisioning, mount/UID semantics and actual enforcement
@@ -350,11 +354,55 @@ parser enforcement and evidence review remain open; no startup was authorized.
   proposals. Resolve from representative cold/warm and overlap evidence.
 - Final API process/supervisor topology and private recovery-ledger storage; local
   single-owner profile is proposed and must be explicitly enforced/reviewed.
-- Evidence record schema/reviewer/profile invalidation. Define and test before
-  readiness; no guessed production values.
+- Evidence record schema, actual report validation and profile invalidation.
+  The user is the selected reviewer. Define and test the implementation before
+  readiness; no guessed production values or implicit approval.
 - ADR-0054 parser subprocess launcher/protocol, admission/resource/transport bounds
   and termination/recovery implementation and verification. The enforcement
   approach is accepted; measured budgets and actual enforcement remain open.
+
+### Proposed changed-content candidate acquisition (not authorized or run)
+
+Existing old/current candidates have identical public hashes. Proposed Decision 6
+is one bounded **local-only connector candidate** retrieval on the trusted host
+for April 2–October 5, 2026 inclusive (187 days), keeping the existing April
+2–October 1 candidate as the old snapshot. The additional four days can supply
+source-backed changes if usable observations exist; no availability or changed
+hash is assumed. Accept the extended interval for validation only, not as a
+product HTTP refresh-range change. Do not synthesize modifications to real data.
+
+Proposed config, prepared privately at
+`/private/tmp/outage-readiness-source-candidate.json`:
+
+```json
+{
+  "start": "2026-04-02",
+  "end": "2026-10-05",
+  "staging": "/private/tmp/outage-readiness-source-2026-10-06",
+  "source": {"interval_days": 187},
+  "model": {"interval_days": 187}
+}
+```
+
+Proposed invocation, **only after explicit approval**:
+
+```sh
+.venv/bin/python -m outage_explorer.entrypoints.cli.connector_startup \
+  --config /private/tmp/outage-readiness-source-candidate.json --local-only
+```
+
+Use the existing environment-only EIA key on the trusted host, with no output or
+transfer of credentials. Fresh validation staging keeps old candidates intact.
+Other contributor allowances remain bounded defaults: 30,000 source/output rows,
+100 pages, 200 attempts, 10-second requests, 1,800-second candidate budget,
+256 MB artifacts and 600 MB staging admission. Failure does not authorize
+increasing limits. No S3 persistence, product refresh, publication, API startup,
+deployment or credential transfer is included. Only verified public projections
+may subsequently reach the already approved validation host.
+
+Full candidate verification and observed changed-content/grain/date coverage are
+required before treating this as representative evidence. This does not resolve
+the missing authorized Linux API/refresh overlap or S3 transfer/storage record.
 
 ## Phase 1 implementation record
 
