@@ -688,8 +688,26 @@ profile/report hashes and reviewer/date are recorded in
 The reviewed analytical and parser configurations under `/private/tmp` validate
 against the accepted profile identities. This closes T4.L2 only; it does not
 close T4.L3/T4.LC, user-access T5.14/T5.C, original full-evidence T4.3/T4.C or
-data-api T1.7/T1.C. Remaining user-access evidence includes real Analyst/Admin
-browser login and local role resolution, generic invalid-credential behavior,
+data-api T1.7/T1.C. Analyst access is user-confirmed; remaining user-access
+evidence includes Admin browser login and local role resolution, generic
+invalid-credential behavior,
 fixed expiry and persistent-profile reopening, expired/old-cookie denial, and
 independent sessions surviving another session's logout. The API remains stopped;
 separate activation direction is still required.
+
+## User-confirmed Analyst access and S3 publication — October 6, 2026
+
+The user confirms Analyst users are accessible and were already validated, and
+that the dataset has been published to the existing S3 bucket. These user
+confirmations are recorded in
+[the sanitized follow-up evidence](../analytical-runtime/evidence/2026-10-06-user-confirmations-and-publication-check.json).
+They supersede any claim that Analyst access or publication existence is unknown.
+They do not assert the unreported Admin/session-lifecycle criteria or a fresh
+read of the active manifest through the runtime's configured S3 path.
+
+A bounded read-only attempt on October 6 completed IAM token signing, then failed
+at the configured PostgreSQL connection with `OperationalError`; the active
+generation query did not run and no S3 request or write occurred. This does not
+contradict the user's S3 publication confirmation. It does leave a discrepancy
+against the earlier successful pooled-IAM check at 16:14 UTC, so current
+database-backed active-manifest access remains unresolved. No API was started.

@@ -65,14 +65,17 @@ the original full-evidence checkpoints remain intact.
 ## Exact authentication requirements
 
 The October 5 user acceptance establishes integrated Viewer login, session and
-logout behavior; it does not supply all-persona/browser evidence. Preserve it.
-Remaining user-access T5.14/T5.C requires real Analyst/Admin login and local role
-resolution, generic invalid-credential presentation, fixed one-hour expiry,
+logout behavior. On October 6, the user also confirmed Analyst access was already
+validated. Preserve these as user-confirmed behavior without inferring unreported
+session details. Remaining user-access T5.14/T5.C requires Admin login and local
+role resolution, generic invalid-credential presentation, fixed one-hour expiry,
 persistent-browser reopening without renewal, expiry/old-cookie denial and
 independent sessions surviving another session's logout. Existing controlled
 tests cover these policies; no further implementation is implied by missing live
-evidence. Verify current seeded issuer/subject bindings, confirmed provider users,
-exact callback/origins/scopes and confidential/public-client configuration.
+evidence. Analyst access was user-validated, and current seeded issuer/subject
+bindings, confirmed provider users, exact callback/origins/scopes and confidential/
+public-client configuration were rechecked read-only. Admin and session-lifecycle
+acceptance remains open.
 
 Pooled IAM requires current trusted runtime-user TLS connectivity through the
 application pool, fresh bounded signing for each new physical connection/retry,

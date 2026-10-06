@@ -529,10 +529,12 @@ no historical gate was relabeled. No API, refresh, publication or deployment sta
 - [ ] **T4.L3** Confirm actual native Linux serving-host configuration/roots,
   executable identities, quota/daemon profile, existing PostgreSQL/S3 published
   access, current seeded Cognito/application roles and required pooled-IAM/auth
-  evidence. Linux host/image/profile/parser-path and filesystem checks pass, and
-  the current Mac IAM/PostgreSQL/Cognito configuration recheck passed. Real
-  Analyst/Admin browser sessions, expiry/reopening, independent-session checks,
-  and host-level published-data integrity evidence remain open.
+  evidence. Linux host/image/profile/parser-path and filesystem checks pass. The
+  current seeded roles/client settings and earlier pooled-IAM check passed; the
+  user confirms Analyst access was validated and the S3 dataset is published.
+  A follow-up read-only active-manifest check could not connect to PostgreSQL,
+  so current published-manifest read access remains unverified. Admin/session
+  lifecycle evidence also remains open; see the sanitized follow-up record.
 - [ ] **T4.LC** Review traceability of essential authorization, isolation, bounds,
   termination/recovery/rollback and local-host checks; explicitly record deferred
   performance coverage and refresh-idle scope. Only then can separately authorized

@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "recorded_at_utc": "2026-10-06T17:34:27Z",
+  "api_started": false,
+  "endpoints_activated": false,
+  "user_confirmations": {
+    "analyst_access": {
+      "status": "user_confirmed_validated",
+      "scope": "User confirms Analyst users are accessible and were already validated.",
+      "not_inferred": [
+        "Admin live session",
+        "invalid-credential presentation",
+        "expiry and persistent-profile reopening",
+        "old-cookie denial",
+        "independent-session logout behavior"
+      ]
+    },
+    "s3_publication_exists": {
+      "status": "user_confirmed_published",
+      "scope": "User confirms the data has been published to the existing S3 bucket.",
+      "not_inferred": [
+        "current active PostgreSQL generation reference",
+        "read access from the local application configuration",
+        "full object-graph integrity readback"
+      ]
+    }
+  },
+  "read_only_active_manifest_check": {
+    "status": "not_completed",
+    "checked_at_utc": "2026-10-06T17:34:00Z",
+    "iam_token_signing": "completed",
+    "postgresql_connection": "OperationalError",
+    "active_generation_query": "not_run",
+    "s3_requests": 0,
+    "writes": 0,
+    "error_details_or_credentials_recorded": false,
+    "prior_pooled_iam_probe": "passed at 2026-10-06T16:14:15Z; current discrepancy unresolved"
+  },
+  "remaining_local_gates": [
+    "resolve current configured PostgreSQL connection discrepancy and verify existing published-manifest read access",
+    "remaining user-access T5.14/T5.C checks listed above",
+    "T4.LC local traceability review",
+    "separate activation direction"
+  ]
+}
