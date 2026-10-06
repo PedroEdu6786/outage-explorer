@@ -75,9 +75,12 @@ completion could strand a worker. (FR4–FR5, FR9–FR12, TR4)
    descriptor; never trust a path check followed by an unrelated reopen.
    Avoid hardlinks to mutable cache inodes. (FR2, TR2–TR3)
 3. Install read-only digest-named staging files atomically; private parent
-   ownership prevents untrusted host modification. Use staged mode 0444 for container UID 65534 with a host-owned 0700
-   parent; exact file binds permit reads without exposing the parent or siblings. Bind each exact regular file read-only at `/inputs/<sha256>.parquet`
-   using Docker structured mount options, never the whole cache. Fail on absent
+   ownership prevents untrusted host modification. Install staged mode `0444`
+   files in a private `0700` execution directory, then seal the verified directory
+   as `0555`. Bind that exact request directory read-only at `/inputs`, with
+   recursive binding disabled; files remain `/inputs/<sha256>.parquet`. Expose
+   no cache parent, raw files or siblings. Use Docker structured mount options
+   and revalidate the sealed directory and files before creation. Fail on absent
    sources (do not use mount syntax that creates directories), duplicate identity
    conflicts, mount count/command-length exhaustion or unsupported host mapping.
    Worker already rechecks files and public schemas. (FR2, TR2)

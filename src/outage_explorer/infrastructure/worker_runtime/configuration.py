@@ -101,7 +101,8 @@ class RuntimeProfile:
         if re.fullmatch(r"sha256:[0-9a-f]{64}", self.image_id) is None:
             raise ValueError("Immutable analytical image identity required")
         if (
-            not self.daemon_endpoint.startswith("unix:///")
+            not isinstance(self.daemon_endpoint, str)
+            or not self.daemon_endpoint.startswith("unix:///")
             or any(c in self.daemon_endpoint for c in ("\n", "\x00", "?", "#"))
             or ".." in self.daemon_endpoint.split("/")
         ):
@@ -313,5 +314,5 @@ def read_runtime_config(path: "Path") -> tuple[RuntimeProfile, RuntimeEvidence |
         record = dict(record)
         record["reviewed_on"] = date.fromisoformat(record["reviewed_on"])
         return profile, RuntimeEvidence(**record)
-    except (ValueError, KeyError, TypeError, UnicodeError):
+    except (ValueError, KeyError, TypeError, UnicodeError, RecursionError):
         raise ValueError("Invalid nonsecret analytical runtime configuration") from None

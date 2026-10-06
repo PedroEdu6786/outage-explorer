@@ -315,6 +315,52 @@ def test_command_help_and_reloader_multi_mode_rejection():
     execute.assert_not_called()
 
 
+@pytest.mark.parametrize(
+    "replacement",
+    [None, True, 123, [], {}],
+)
+def test_malformed_daemon_configuration_is_sanitized(tmp_path, capsys, replacement):
+    candidate = asdict(profile(tmp_path))
+    candidate["daemon_endpoint"] = replacement
+    path = tmp_path / "nonsecret.json"
+    path.write_text(json.dumps({"profile": candidate, "evidence": None}))
+    with pytest.raises(ValueError, match="Invalid nonsecret analytical runtime"):
+        read_runtime_config(path)
+    with pytest.raises(SystemExit) as error:
+        run(
+            lambda config, host, port: read_runtime_config(Path(config)),
+            ["--config", str(path)],
+        )
+    assert error.value.code == 1
+    assert capsys.readouterr().err == "Reviewed analytical runtime unavailable\n"
+
+
+def test_deep_configuration_is_sanitized(tmp_path):
+    path = tmp_path / "nonsecret.json"
+    path.write_text("[" * 20000 + "0" + "]" * 20000)
+    with pytest.raises(ValueError, match="Invalid nonsecret analytical runtime"):
+        read_runtime_config(path)
+
+
+def test_missing_evidence_explicit_startup_never_serves(tmp_path, monkeypatch):
+    from outage_explorer import bootstrap
+
+    path = tmp_path / "nonsecret.json"
+    path.write_text(
+        json.dumps({"profile": asdict(profile(tmp_path)), "evidence": None})
+    )
+    app = Mock()
+    app.extensions = {"outage_data_close": Mock()}
+    monkeypatch.setattr(bootstrap, "build_http_app", Mock(return_value=app))
+    with pytest.raises(RuntimeUnavailableError):
+        bootstrap.execute_analytical_http(str(path), "127.0.0.1", 5000)
+    app.run.assert_not_called()
+    app.extensions["outage_data_close"].assert_called_once()
+    assert not (tmp_path / "staging").exists()
+    assert not (tmp_path / "cache").exists()
+    assert not (tmp_path / "results").exists()
+
+
 def test_dead_owner_recovery_precedes_cache_construction(tmp_path):
     from outage_explorer.infrastructure.worker_runtime.docker import DockerRuntime
     from tests.unit.test_docker_runtime import OWNER, Control

@@ -328,3 +328,85 @@ coverage for this execution. No new refresh or publication was initiated.
 open. Existing isolation evidence is preserved; this failed report adds matching
 evidence rather than replacing it. Preview/SQL remain disabled and Phase 5 still
 requires complete readiness plus explicit enablement direction.
+
+## Code-only endpoint readiness audit — October 6, 2026
+
+Current repository review preserves completed analytical-runtime Phases 1–3 and
+the corrective storage checkpoint. T4.3/T4.C, original data-api T1.7/T1.C and
+analytical-runtime T5.1–T5.C remain unchecked. No product API, measurement harness,
+refresh, publication, deployment or credential transfer ran in this audit.
+
+The production supervisor rejects absent evidence, a changed profile and
+`tmpfs-smoke` before ledger, recovery or resource construction. Forwarding ports
+reject work before start and after close. Explicit startup starts resources before
+HTTP serving, so a missing readiness record cannot reach `app.run`. Controlled
+fixtures test the behavior; they supply no reviewed runtime record. The evidence
+contract validates report-digest shape and profile match, not the contents of
+reports or independent approval. Resolving the review mechanism, parser wall-clock
+boundary, ownership/topology and budgets remains required by T4.C.
+
+Malformed nonstring daemon endpoints previously escaped strict config validation
+as `AttributeError`. Explicit type validation now rejects them, and excessive
+JSON nesting maps to the same sanitized configuration error. Controlled command
+regressions require exit 1 with only `Reviewed analytical runtime unavailable`.
+The explicit-startup regression confirms no HTTP serving or analytical-root
+creation with missing evidence. This source change does not rebuild the worker
+or replace the recorded image/profile. A future rebuilt image requires matching
+affected evidence; the prior bundle cannot attest to that new image.
+
+The latest directory-mount bundle remains **unreviewed synthetic isolation** for
+image `sha256:1ee90c05fa1c8578b3240f4eb39382103fe948f190d9ec0b8e3593440cd9b176`
+and profile `a227d729593bcff61f301df141e2479301c7cf9fbf91ea0ebe8891c33611f57f`.
+This audit rechecked the recorded profile identity, all 19 embedded report
+digests and image/profile matches, unreviewed/disabled flags and zero cleanup
+counters. It did not rerun Docker or independently attest to the current guest.
+The earlier 141,646-byte mount-argv failure belongs to the prior per-file revision;
+it is not a demonstrated directory-mount failure or success on representative
+inputs. The 549 matching old/current public partition hashes still do not
+demonstrate changed content or complete serving behavior.
+
+Auth status is governed by the subsequent local integration section of
+[user-access verification](../user-access/verification.md#subsequent-local-authentication-and-web-integration--2026-10-05).
+It supersedes the initial pending Viewer login/logout and application-pool claims:
+Viewer session/logout were user-confirmed, application-pool checks passed, and
+the user accepted complete web integration. Detailed Admin/Analyst login,
+invalid-credential, expiry/reopening and independent-session evidence remains
+missing; user-access T5.14/T5.C stay open. Controlled IAM tests verify fresh signing
+per physical connection and retry; no new live provider or pooled-IAM check was
+performed by this audit, and these historical observations are not a new live
+environment attestation.
+
+Readiness work requiring further user direction:
+
+- Change the current **no performance measurements** instruction before any
+  representative preview/SQL, cold/warm, spill/high-water or overlap measurement.
+  Obtain representative changed-content old/current inputs and a matching external
+  S3 transfer/storage record. Existing candidates and local-copy metrics cannot
+  substitute for that evidence.
+- Supply an independently authorized existing Linux API/refresh overlap workload
+  and matching workload/interval identity. This audit does not authorize creating
+  benchmark conditions through API startup, refresh, publication or credentials.
+- Complete user-owned T4.3 and original T1.7 evidence, then independently review
+  the matching image/profile, budgets and open decisions at T4.C/T1.C.
+- After those gates pass, give separate Phase 5 enablement direction and complete
+  live auth prerequisites before API startup and endpoint acceptance.
+
+Actual code-only verification (Python 3.14):
+
+- Runtime profile, Docker control/quota/staging, decoder, harness, supervisor,
+  inert startup, architecture and controlled IAM suites: **318 passed, one
+  Linux-only skip**. No real Docker or measurement marker selected.
+- HTTP/combined lifecycle, catalog/preview, retained-query/result lifecycle and
+  transport suites: **132 passed**, using the read-only reverified disposable
+  PostgreSQL 18.6 instance at `/private/tmp/outage-access-pg/data`, loopback 5432.
+  Test clients and controlled worker/source/S3 adapters supplied all endpoint
+  behavior; test databases alone were created, migrated, seeded and dropped.
+- Ruff lint/format, mypy (**138 source files**), dependency consistency,
+  sdist/wheel build (`--no-isolation`) and whitespace checks passed.
+- Both pytest runs reported four existing temporary-directory cleanup warnings
+  from a previous quota fixture. No foreign cleanup or global prune ran.
+
+These checks strengthen code-level rejection, role/ownership checks, snapshot
+retention, one-execution paging, shutdown/restart and unavailable-port evidence.
+They establish no live provider, performance, native revised-image or reviewed
+readiness evidence and complete no Phase 5 task.

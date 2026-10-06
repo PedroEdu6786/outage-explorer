@@ -115,9 +115,12 @@ starts no Docker operation. The adapter implements the existing `ReviewedRuntime
 port; implementing that port does not establish reviewed readiness or inject it
 into the product API. Serving-process composition is still Phase 3.
 
-Inputs are copied/verified into private execution directories and each exact
-digest file is bound read-only. The fixed image receives no request-selected
-image, environment, directory mounts or network. The CLI uses explicit local
+Inputs are copied/verified as `0444` digest files into private `0700` execution
+directories. The completed directory is sealed as `0555` and receives one
+read-only, nonrecursive bind at `/inputs`; its identity and files are revalidated
+before creation. Recovery accepts exactly private `0700` or sealed `0555`
+directories, retaining UID and symlink checks. The fixed image receives no
+request-selected image, environment, mounts or network. The CLI uses explicit local
 `--host` arguments, no shell, and independently bounded concurrent streams.
 Creation intent is persisted before Docker creation. Recovery preserves the
 single admission slot, staging and application leases through unconfirmed death,
