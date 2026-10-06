@@ -1,7 +1,8 @@
 # Parser readiness review packet
 
 Status: numeric caps and matching full parser report/configuration review
-approved by the user on October 6, 2026; no activation authorization.
+approved by the user on October 6, 2026. Subsequent local activation was explicitly
+authorized and completed under [ADR-0056](../../adr/0056-user-directed-local-api-activation.md).
 
 The source [candidate configuration](../../../infrastructure/analytical-worker/sql-inspection.candidate.json)
 contains explicit Linux paths/hashes and bounds, with `evidence: null`. The

@@ -73,6 +73,12 @@ to the original open full checkpoints. Preserve authorization, isolation, hard
 bounds, lifecycle and actual-host/auth checks; local-scope review must not imply
 complete runtime acceptance. Scope approval grants no startup or activation.
 
+[ADR-0056](docs/adr/0056-user-directed-local-api-activation.md) records the user's
+subsequent explicit local activation direction: assume existing services work
+and stop further external-service/browser validation. Those unperformed checks
+remain open evidence rather than startup blockers. Keep normal authorization,
+parser/worker isolation, bounds and lifecycle enforcement; keep refresh idle.
+
 Before SQL endpoint enablement, enforce user-SQL parsing/reference inspection in
 a separate bounded subprocess under
 [ADR-0054](docs/adr/0054-bounded-subprocess-sql-inspection.md). Preserve application

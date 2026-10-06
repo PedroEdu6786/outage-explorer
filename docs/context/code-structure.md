@@ -200,6 +200,11 @@ review retains actual-host/auth, isolation, bounds and lifecycle gates; original
 full checkpoints stay open. Explicit local-scope evidence cannot satisfy generic
 runtime readiness and grants no implicit activation.
 
+[ADR-0056](../adr/0056-user-directed-local-api-activation.md) records explicit
+user authorization for local activation using accepted service assumptions.
+Additional external-service/browser checks no longer block this local startup;
+normal authorization, isolation, bounded execution and cleanup remain enforced.
+
 Under [ADR-0043](../adr/0043-seeded-users-and-role-only-access.md), seed local
 users, roles and assignments with essential Cognito identity linkage. Keep
 credentials in Cognito. Registration and Admin user management are excluded

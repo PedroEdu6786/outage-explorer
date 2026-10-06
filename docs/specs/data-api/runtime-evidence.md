@@ -1,9 +1,27 @@
 # Data API Phase 1 evidence
 
-Current local enablement prerequisites are summarized in the
-[accepted local scope](../analytical-runtime/local-acceptance-proposal.md) under
-[ADR-0055](../../adr/0055-scoped-local-analytical-readiness.md). Full checkpoints
-remain open; local report/configuration review and activation remain pending.
+Current status (October 6): **local API enabled at `http://localhost:8000`** under
+[ADR-0056](../../adr/0056-user-directed-local-api-activation.md), with reviewed
+analytical/parser resources injected. The user directed startup using accepted
+service assumptions and no further service validation. `/health` returned 200;
+authenticated data requests were not repeated. Refresh remains idle. Historical
+blocked statuses below predate this activation; original full checkpoints remain
+open and skipped checks are not passes.
+
+The existing native Linux Colima guest runs `outage-api-local.service` as
+UID/GID 65534 with one threaded API serving process, debug/reloader disabled,
+and existing loopback forwarding. Catalog, dataset preview, SQL submission and
+retained-result paging are configured at their existing `/api` paths.
+[Activation evidence](../analytical-runtime/evidence/2026-10-06-local-api-activation.json)
+records the exact profile identities and listener/health outcome.
+
+This is a transient local service. To stop it:
+`colima ssh --profile outage-runtime -- sudo systemctl stop outage-api-local`.
+While the guest and current credentials remain available, restart with
+`colima ssh --profile outage-runtime -- sudo systemctl restart outage-api-local`.
+Guest reboot requires reactivation; trusted API credentials retain the existing
+AWS session expiry and are held only in private `/run/outage-api` files. No
+credentials were logged or supplied to the parser or analytical containers.
 
 Date: 2026-10-05. Client contract and adapter work are available; **runtime
 feasibility remains pending**. No data routes, product query executor, worker

@@ -378,10 +378,18 @@ data-API T1.7/T1.C and Phase 5 remain open; no API, refresh or publication ran.
 Under [ADR-0055](../../adr/0055-scoped-local-analytical-readiness.md), either the
 full T4.C checkpoint or the separately reviewed T4.LC checkpoint below may satisfy
 the readiness dependency for **local preview/SQL acceptance with refresh idle**.
-Separate activation direction remains required; Phase 5 is still unstarted.
+The user supplied separate activation direction under
+[ADR-0056](../../adr/0056-user-directed-local-api-activation.md). Local startup
+is complete; authenticated Phase 5 functional checks remain unperformed.
 Original T4.3/T4.C and data-api T1.7/T1.C remain open for complete evidence.
 
-- [ ] **T5.1** After T4.C or scoped T4.LC and explicit API-enablement direction, start the delivered
+- [x] **T5.1 — local activation scope (ADR-0056)** Started the delivered
+  supervisor with matching reviewed runtime/parser profiles on October 6.
+  The loopback API is available at `http://localhost:8000`; `/health` returned
+  HTTP 200. External-service/catalog checks were explicitly waived as startup
+  prerequisites and remain unperformed. Refresh stays idle. This completes only
+  the revised local startup task, not functional or full-runtime acceptance.
+  Original wording retained for traceability: after T4.C or scoped T4.LC and explicit API-enablement direction, start the delivered
   supervisor using a matching reviewed profile. Confirm previously configured
   trusted auth/PostgreSQL/S3 access without reading/logging secrets; do not deploy
   or publish. Record safe health/catalog/readiness outcomes. Update
@@ -524,8 +532,8 @@ no historical gate was relabeled. No API, refresh, publication or deployment sta
 - [x] **T4.L2 — USER REVIEW** User approved the matching analytical and parser
   reports and explicit initial containment limits on October 6. Recorded exact
   digests/reviewer/date in `evidence/2026-10-06-local-report-review.json` and
-  generated matching reviewed runtime configs under `/private/tmp`; API startup
-  remains prohibited pending other gates and separate direction.
+  generated matching reviewed runtime configs under `/private/tmp`. Later explicit
+  activation direction is recorded in ADR-0056.
 - [ ] **T4.L3** Confirm actual native Linux serving-host configuration/roots,
   executable identities, quota/daemon profile, existing PostgreSQL/S3 published
   access, current seeded Cognito/application roles and required pooled-IAM/auth
@@ -535,7 +543,14 @@ no historical gate was relabeled. No API, refresh, publication or deployment sta
   A follow-up read-only active-manifest check could not connect to PostgreSQL,
   so current published-manifest read access remains unverified. Admin/session
   lifecycle evidence also remains open; see the sanitized follow-up record.
-- [ ] **T4.LC** Review traceability of essential authorization, isolation, bounds,
+  ADR-0056 removes remaining external-service/browser checks as local startup
+  prerequisites at the user's direction; this evidence task remains incomplete.
+- [x] **T4.LC — local activation exception (ADR-0056)** Matching approved report
+  identities and existing essential isolation, parser, bounds and lifecycle
+  evidence were reused. The production startup enforced the reviewed profiles and
+  native host boundary and reached the listener. External services are explicitly
+  user-assumed; refresh remains idle and complete evidence gates stay open.
+  Original scope: review traceability of essential authorization, isolation, bounds,
   termination/recovery/rollback and local-host checks; explicitly record deferred
   performance coverage and refresh-idle scope. Only then can separately authorized
   local Phase 5 start. No full T4.C/T1.C or production acceptance is implied.

@@ -4,7 +4,11 @@ Status: local scope approved in [ADR-0055](../../adr/0055-scoped-local-analytica
 matching analytical/parser report and initial-limit review approved by the user
 on October 6, 2026. The review is recorded in
 [local report review evidence](evidence/2026-10-06-local-report-review.json).
-Activation and remaining local auth/resource checks remain open.
+Local activation completed under [ADR-0056](../../adr/0056-user-directed-local-api-activation.md)
+at the user's direction to stop service validation and assume availability.
+The API listens at `http://localhost:8000`; refresh remains idle. Remaining
+external-service/browser evidence is deferred, not passed. The prerequisite
+wording below records the earlier proposal and is narrowed by ADR-0056.
 
 ## One scope decision
 
