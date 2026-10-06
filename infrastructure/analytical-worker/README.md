@@ -129,3 +129,61 @@ safe unavailable until a supported disk-backed quota implementation is selected
 and validated; it never falls back to tmpfs or unrestricted disk. These adapter
 and controlled-test changes do not close real isolation/termination evidence,
 measured budgets, user-owned T1.7 or the separate API-enablement gate.
+
+## Explicit local supervision (Phase 3)
+
+The executable is delivered; use `--help` without constructing any resources:
+
+```sh
+.venv/bin/python -m outage_explorer.entrypoints.http.analytical_startup --help
+```
+
+After complete matching runtime evidence and separate API-enablement direction,
+the intended local invocation is:
+
+```sh
+.venv/bin/python -m outage_explorer.entrypoints.http.analytical_startup \
+  --config /private/tmp/outage-runtime-reviewed.json
+```
+
+The bounded nonsecret JSON has exactly `profile` and `evidence` properties.
+`profile` uses the `RuntimeProfile` field names; omit default fields or serialize
+all fields, including the worker limits and fixed isolation policy. `evidence`
+may be `null` for a candidate; candidates cannot start. A reviewed record has
+`profile_identity`, `controlled_report`, `isolation_report`, `termination_report`,
+`storage_report`, `measurement_report`, `reviewer` and ISO-date `reviewed_on`.
+The identity must equal the complete profile digest and each report value must
+be its SHA-256 digest. Digest-shaped fixture values do not establish evidence;
+Phase 4 owns actual reports, their review and readiness. Duplicate/unknown keys,
+unknown worker limits and files larger than 64 KiB are rejected. Never include
+credentials, cookies, SQL, environment dumps or protected cells in this file.
+
+The inert builder forwards to an explicit process-owned supervisor. Start checks
+evidence before opening the single-owner lock; reconciles the prior exact
+container intent before staging/cache reclamation; constructs the verified cache,
+trusted S3 readers, launcher, fresh cursor key and ephemeral results; and starts
+periodic recovery, preview-expiry and result cleanup before admitting work.
+Transfer sessions renew their bounded budget for each serialized cold cache load.
+Existing artifact defaults and the 30,000-row preparation bound remain candidate
+allowances, not representative measurements.
+
+Shutdown stops admission and cancels outstanding work. Active execution, preview
+leases, result readers and unresolved recovery retain their resources and lock;
+repeated close retries after those leases finish. Cleanup proves worker death and
+removal before deleting its exact staging. Expired previews retain active pins;
+results retain active readers. Cache teardown rejects pinned inputs. Unknown
+cache paths fail closed. A restart loses query/cursor mappings and uses a new
+cursor signing key; old query IDs return 404 and old preview cursors 410, without
+re-execution. Catalog, health and the independent refresh worker remain separate.
+
+Only a single serving process on loopback is supported by this local executable.
+Reloader, debug, fork-inherited resources and multiple-process modes are rejected;
+`--workers`/`--reload` are unsupported and `WEB_CONCURRENCY` must be absent or `1`.
+This constraint does not select the final production WSGI topology.
+
+**Readiness remains closed:** tmpfs profiles fail evidence validation, and the
+production composition rejects `quota-disk` because its enforcement backend is
+not implemented/selected. No profile supplied today can enable this executable's
+analytical runtime. Controlled injected resources test composition only. Phase 4
+must supply real isolation/termination/storage/measurement evidence and resolve
+storage enforcement before separately authorized Phase 5 enablement.

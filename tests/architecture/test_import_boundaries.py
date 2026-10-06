@@ -349,3 +349,40 @@ def test_auth_routes_allow_only_inward_services_and_transport_helpers(tmp_path):
         },
     )
     assert violations(root) == []
+
+
+@pytest.mark.parametrize(
+    "addition",
+    [
+        "\nimport os\n",
+        "\napp = execute_analytical_http('x', 'localhost', 5000)\n",
+        "\ndef handler():\n    return execute_analytical_http('x', 'localhost', 5000)\n",
+    ],
+)
+def test_analytical_startup_exception_remains_exact(tmp_path, addition):
+    from .import_rules import ANALYTICAL_STARTUP_SOURCE
+
+    root = source_tree(
+        tmp_path,
+        {
+            "entrypoints/http/analytical_startup.py": ANALYTICAL_STARTUP_SOURCE
+            + addition
+        },
+    )
+    assert any("startup may only compose" in error for error in violations(root))
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "entrypoints/http/routes/bad.py",
+        "application/services/bad.py",
+        "infrastructure/bad.py",
+    ],
+)
+def test_analytical_startup_cannot_be_service_locator(tmp_path, path):
+    root = source_tree(
+        tmp_path,
+        {path: "from outage_explorer.entrypoints.http.analytical_startup import main"},
+    )
+    assert violations(root)

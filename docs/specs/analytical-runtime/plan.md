@@ -349,3 +349,32 @@ The concrete candidate backend uses bounded tmpfs for smoke work only. The
 enforcement without a selected implementation. No real Docker execution or
 readiness was established; supported platforms, storage enforcement, measured
 budgets and evidence-review decisions remain open for their later gates.
+
+## Phase 3 implementation record
+
+The composition root returns inert typed forwarding ports. `AnalyticalSupervisor`
+validates a matching record, acquires one process-owned staging lock, reconciles
+prior creation intent, constructs resources explicitly and starts `QueryCleanup`
+before admission. Each tick reconciles strong recovery leases, expires preview
+sequences while preserving active pins, then expires result files while preserving
+readers. Result orphan cleanup retains live owner locks. Cache teardown requires
+zero pins; bounded known disposable cache reclamation follows worker recovery.
+Trusted S3 transfer budgets renew at each cold manifest load.
+
+Shutdown first closes admission and cancels active transport. Unfinished execution,
+preview readers, result readers or unresolved recovery keep the private owner lock
+and resources; repeated close retries safely. HTTP close retries failed analytical
+cleanup independently of its once-only provider/pool teardown. Restart generates
+fresh cursor material and loses query IDs without reconstructing or rerunning them.
+
+The strict 64-KiB config interface and exact startup exception are delivered for
+`entrypoints.http.analytical_startup`. Loopback/single-process operation rejects
+reloaders/debug/multiple-serving-process configuration and fork-inherited handles.
+This remains a local adapter limitation, not the production topology decision.
+
+Production composition explicitly rejects the unresolved `quota-disk` backend
+before S3/cache construction; tmpfs-smoke still fails readiness. Controlled fixture
+records/adapters are not real runtime evidence. No real Docker, T1.7, measured
+budgets, API enablement, deployment or publication was performed. Phase 4 must
+resolve actual evidence and storage readiness; initial artifact/preparation bounds
+remain candidate defaults.

@@ -182,3 +182,8 @@ class BoundedPreviewSequences:
             for state in self._states.values():
                 state.retired = True
             self.cleanup()
+
+    @property
+    def active_leases(self) -> int:
+        with self._lock:
+            return sum(state.active for state in self._states.values())

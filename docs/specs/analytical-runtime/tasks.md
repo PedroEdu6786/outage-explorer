@@ -111,25 +111,25 @@ real AC2/AC4, AC7 and user-owned T1.7 remain open.
 
 ## Phase 3: Explicit composition and local supervision
 
-- [ ] **T3.1** Build inert forwarding resources in `src/outage_explorer/bootstrap.py`
+- [x] **T3.1** Build inert forwarding resources in `src/outage_explorer/bootstrap.py`
   and proposed `src/outage_explorer/infrastructure/worker_runtime/supervisor.py`;
   explicitly construct `VerifiedModeledCache` during start, connect trusted S3
   reads, launcher, encoding, preview sequences, result lifecycle and bounded
   cleanup/recovery. Validate matching readiness record before accepting work;
   start failure rolls back owned resources. Depends on T2.C. (FR9–FR12, TR5)
-- [ ] **T3.2** Integrate autonomous preview expiry/active-lease cleanup in
+- [x] **T3.2** Integrate autonomous preview expiry/active-lease cleanup in
   `src/outage_explorer/infrastructure/query_results/previews.py` and result
   lifecycle in `cleanup.py`; reconcile private owner containers before removing
   their staging/cache, preserve live readers and unresolved workers, and keep
   refresh independent. Depends on T3.1. (FR4–FR5, FR10, FR12)
-- [ ] **T3.3** Deliver proposed
+- [x] **T3.3** Deliver proposed
   `src/outage_explorer/entrypoints/http/analytical_startup.py`, with corresponding
   exact startup exception coverage in `tests/architecture/test_import_boundaries.py`;
   define `--config` for a nonsecret profile, explicit supervisor start/close and
   rejected reloader/fork/multi-serving-process modes. Update `README.md` and
   `infrastructure/analytical-worker/README.md`. Depends on T3.1–T3.2.
   (FR9–FR11, TR1, TR5)
-- [ ] **T3.C** Add proposed `tests/integration/test_analytical_supervisor.py`, extend
+- [x] **T3.C** Add proposed `tests/integration/test_analytical_supervisor.py`, extend
   `tests/integration/test_data_api_http.py` and
   `tests/acceptance/test_data_api_lifecycle.py`; prove inert import/factory,
   start/rollback/repeated-close/process ownership, dead-owner reconciliation,
@@ -137,6 +137,34 @@ real AC2/AC4, AC7 and user-owned T1.7 remain open.
   zero new worker on GET pagination, current-role denial and healthy independent
   refresh. Run documented checks. Depends on T3.1–T3.3. Gate: controlled AC5–AC6
   hold; no API enablement. (AC1, AC5–AC6)
+
+### Phase 3 checkpoint evidence (October 5, 2026)
+
+Controlled AC1/AC5–AC6 passed: 302 runtime/staging/configuration/decoder,
+supervisor, architecture, inert startup and HTTP transport tests; 11 PostgreSQL
+HTTP/lifecycle acceptance tests; and 67 existing PostgreSQL catalog/preview/query/
+result regressions. A final shutdown-admission ordering/fork-lease guard adjustment
+was rechecked with all 19 supervisor tests plus Ruff/mypy. Ruff lint/format,
+strict mypy (137 source files), whitespace checks and isolated sdist/wheel build
+passed. Initial isolated build was blocked by sandbox DNS; its required escalated
+retry succeeded. The existing disposable PostgreSQL cluster was reverified
+read-only at `/private/tmp/outage-access-pg/data` and used on explicit loopback
+port 5432; no provisioning, repair or RDS operation ran.
+
+Tests prove lazy forwarding/factory construction, evidence rejection before I/O,
+explicit start/idempotence/rollback, live-owner exclusion, fork/reloader/process
+rejection, worker recovery before staging/cache reclamation, preservation of
+uncertain ownership and active preview/execution/result leases, autonomous cleanup,
+repeated close, fresh cursor material/lost IDs, current-role denial and zero SQL
+worker calls on GET pages. Real Parquet/controlled worker HTTP tests preserve old
+snapshots through publication; healthy independent refresh continues through
+actual analytical supervisor close/restart. Fixture publication is confined to
+controlled test stores, not live publication.
+
+No real Docker, runtime readiness, user-owned T1.7, API enablement, deployment or
+live publication. Production composition rejects unresolved quota-disk storage;
+tmpfs-smoke still fails readiness. Phase 4 must deliver the opt-in real-runtime
+harness and resolve/report actual evidence and storage enforcement.
 
 ## Phase 4: User-owned runtime evidence and readiness
 
@@ -235,8 +263,9 @@ request bodies, real credentials, `.env` or session values into evidence.
 
 ### Future local startup and HTTP checks
 
-The proposed command below is **unavailable until T3.3 implements it**. This
-planning change does not run it or change any enablement settings:
+The command below is delivered by T3.3; its production runtime remains closed
+until supported quota storage, matching evidence and separate enablement direction.
+This implementation does not run it or change any enablement settings:
 
 ```sh
 .venv/bin/python -m outage_explorer.entrypoints.http.analytical_startup \

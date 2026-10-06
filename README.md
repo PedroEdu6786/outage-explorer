@@ -667,3 +667,28 @@ The HTTP tests use real PostgreSQL/Parquet and controlled source/S3/analytical
 workers. They verify contract envelopes, current roles, durable acknowledgement,
 refresh/query overlap and retained snapshots; they do not prove Linux isolation,
 live provider readiness, deployment or measured production resource budgets.
+
+### Explicit analytical startup
+
+Analytical-runtime Phase 3 delivers an inert `build_analytical_resources` builder
+and a process-owned supervisor. Imports and HTTP factories create no cache,
+Docker process or cleanup thread. Its explicit executable accepts a bounded
+nonsecret profile/evidence JSON:
+
+```sh
+.venv/bin/python -m outage_explorer.entrypoints.http.analytical_startup --help
+```
+
+After readiness and separate enablement authorization, its intended invocation
+is `--config /private/tmp/outage-runtime-reviewed.json`; authentication/data HTTP
+and trusted PostgreSQL/S3 settings remain host configuration. The local executable
+supports one loopback serving process, explicit start/close, periodic worker
+recovery and preview/result expiry, safe rollback and restart loss of ephemeral
+IDs. It rejects reloaders, inherited resources and multiple serving processes;
+it does not own the refresh worker.
+
+Real analytical execution remains unavailable: tmpfs-smoke cannot pass readiness,
+and enforced quota-disk storage is unresolved and rejected. Phase 3's controlled
+composition tests do not authorize API enablement. See the
+[profile, readiness and local lifecycle contract](infrastructure/analytical-worker/README.md)
+and the remaining [runtime tasks](docs/specs/analytical-runtime/tasks.md).

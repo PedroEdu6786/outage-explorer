@@ -208,3 +208,176 @@ def test_out_of_range_expiry_loss_and_no_rerun(app, system, browsing, queries):
     )
     assert client.get("/api/query?query_id=unknown&page=1").status_code == 404
     assert len(queries[3].calls) == 1
+
+
+@pytest.fixture
+def supervised_http(system, browsing, tmp_path):
+    """Use the delivered forwarding ports with real Parquet/controlled workers."""
+    from outage_explorer.bootstrap import DataHttpResources, build_data_services
+    from outage_explorer.infrastructure.local_cache.modeled import VerifiedModeledCache
+    from outage_explorer.infrastructure.query_results.previews import (
+        BoundedPreviewSequences,
+    )
+    from outage_explorer.infrastructure.query_results.store import BoundedQueryResults
+    from outage_explorer.infrastructure.s3.artifacts import S3ArtifactStore
+    from outage_explorer.infrastructure.security import RandomSecurityMaterial
+    from outage_explorer.infrastructure.worker_runtime.launcher import VerifiedLauncher
+    from outage_explorer.infrastructure.worker_runtime.ownership import RecoveryOwner
+    from outage_explorer.infrastructure.worker_runtime.supervisor import (
+        AnalyticalResources,
+        AnalyticalSupervisor,
+    )
+    from tests.integration.test_analytical_supervisor import evidence, profile
+    from tests.integration.test_catalog_preview import ARTIFACT, CACHE, METADATA
+
+    candidate = profile(tmp_path / "supervisor")
+    clock = browsing[3]
+    states = []
+
+    def construct(ledger, key):
+        objects = S3ArtifactStore(browsing[5], "test-bucket", "connector/", ARTIFACT)
+        # Fresh private cache/output/key on each explicit start.
+        cache = VerifiedModeledCache(
+            tmp_path / f"supervised-cache-{len(states)}", objects, ARTIFACT, CACHE
+        )
+        runtime = retained.QueryRuntime()
+        recovery = RecoveryOwner()
+        launcher = VerifiedLauncher(
+            candidate.execution_bounds,
+            runtime,
+            evidence="controlled supervisor fixture",
+            recovery=recovery,
+        )
+        results = BoundedQueryResults(
+            tmp_path / "supervised-results", clock, retained.BOUNDS
+        )
+        sequences = BoundedPreviewSequences(clock, METADATA, key)
+        state = AnalyticalResources(
+            cache,
+            launcher,
+            results,
+            sequences,
+            recovery,
+            runtime.terminate_and_reap,
+            lambda: None,
+            cache.close,
+        )
+        states.append((state, runtime, cache))
+        return state
+
+    def build():
+        supervisor = AnalyticalSupervisor(
+            candidate, evidence(candidate), construct, lambda ledger: None
+        )
+        resources = DataHttpResources(
+            supervisor.inputs,
+            supervisor.execution,
+            supervisor.results,
+            supervisor.sequences,
+            PreviewEncoding(ENCODING),
+            1024**2,
+            supervisor.start,
+            supervisor.close,
+            candidate.identity,
+        )
+        services = build_data_services(
+            system[1]._access,
+            system[0],
+            RandomSecurityMaterial(),
+            {
+                "OUTAGE_REFRESH_START_DATE": "2026-04-02",
+                "OUTAGE_REFRESH_END_DATE": "2026-10-01",
+            },
+            resources,
+        )
+        app = create_app(
+            HealthService(clock),
+            login_service=Mock(),
+            access_service=system[1]._access,
+            auth_transport=AuthTransport(ORIGIN, frozenset({ORIGIN}), True),
+            data_services=services,
+        )
+        app.extensions["controlled_data_services"] = services
+        return supervisor, app
+
+    supervisor, app = build()
+    try:
+        yield supervisor, app, states, build
+    finally:
+        supervisor.close()
+
+
+def test_supervised_http_start_paging_restart_and_current_role(
+    supervised_http, system, database
+):
+    supervisor, app, states, rebuild = supervised_http
+    client, headers = client_for(app, system, Role.ANALYST)
+    assert client.get("/health").status_code == 200
+    assert client.get("/api/datasets").status_code == 200
+    assert (
+        client.post("/api/query", json={"sql": "SELECT 1"}, headers=headers).status_code
+        == 503
+    )
+    assert states == []
+    supervisor.start()
+    preview = client.get("/api/datasets/national/preview?page_size=1")
+    assert preview.status_code == 200
+    first = client.post(
+        "/api/query?page_size=1",
+        json={"sql": "SELECT period FROM facilities ORDER BY period, facility"},
+        headers=headers,
+    )
+    assert first.status_code == 200
+    calls = len(states[0][1].calls)
+    revisit = client.get(
+        "/api/query", query_string={"query_id": first.json["query_id"], "page": 1}
+    )
+    second = client.get(
+        "/api/query", query_string={"query_id": first.json["query_id"], "page": 2}
+    )
+    assert revisit.json == first.json
+    assert second.status_code == 200
+    assert len(states[0][1].calls) == calls
+    token = system[2][Role.ANALYST]
+    user_id = system[1]._access.current_identity(token).user.id
+    with psycopg.connect(database) as connection:
+        connection.execute(
+            "UPDATE users SET role_code = 'viewer' WHERE id = %s", (user_id,)
+        )
+    # Viewer cannot execute facilities SQL; denial precedes input/launcher.
+    assert (
+        client.post(
+            "/api/query", json={"sql": "SELECT period FROM facilities"}, headers=headers
+        ).status_code
+        == 403
+    )
+    assert len(states[0][1].calls) == calls
+    assert (
+        client.get(
+            "/api/query", query_string={"query_id": first.json["query_id"], "page": 2}
+        ).status_code
+        == 403
+    )
+    assert len(states[0][1].calls) == calls
+    supervisor.close()
+    restarted, fresh_app = rebuild()
+    try:
+        restarted.start()
+        fresh, _ = client_for(fresh_app, system, Role.ANALYST)
+        lost = fresh.get(
+            "/api/query", query_string={"query_id": first.json["query_id"], "page": 2}
+        )
+        assert lost.status_code == 404
+        cursor = fresh.get(
+            "/api/datasets/national/preview",
+            query_string={"cursor": preview.json["page_cursor"]},
+        )
+        assert cursor.status_code == 410
+        assert not states[1][1].calls
+        fresh_admin, _ = client_for(fresh_app, system, Role.ADMIN)
+        assert fresh_admin.get("/api/refresh/latest").status_code == 200
+        assert (
+            fresh.get("/api/datasets/national/preview?page_size=1").status_code == 200
+        )
+    finally:
+        restarted.close()

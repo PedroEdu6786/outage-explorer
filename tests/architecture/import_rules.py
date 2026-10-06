@@ -65,7 +65,21 @@ def main() -> int:
 if __name__ == "__main__":
     raise SystemExit(main())
 """
+ANALYTICAL_STARTUP_SOURCE = """
+from outage_explorer.bootstrap import execute_analytical_http
+from outage_explorer.entrypoints.http.analytical_command import run
+
+def main() -> int:
+    return run(execute_analytical_http)
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+"""
 CLI_WRAPPERS = {
+    f"{ROOT}.entrypoints.http.analytical_startup": (
+        "execute_analytical_http",
+        ANALYTICAL_STARTUP_SOURCE,
+    ),
     f"{ROOT}.entrypoints.query_worker_startup": (
         "build_query_worker",
         QUERY_STARTUP_SOURCE,
@@ -213,6 +227,7 @@ def allowed_dependency(source: str, target: str) -> bool:
             if source
             in {
                 f"{ROOT}.entrypoints.cli.command",
+                f"{ROOT}.entrypoints.http.analytical_command",
                 f"{ROOT}.entrypoints.cli.connector",
                 f"{ROOT}.entrypoints.cli.access_setup",
             }

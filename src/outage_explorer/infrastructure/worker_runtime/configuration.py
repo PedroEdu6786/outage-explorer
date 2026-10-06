@@ -4,7 +4,7 @@ import hashlib
 import re
 from dataclasses import asdict, dataclass, field
 from datetime import date
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 
 from outage_explorer.application.errors import RuntimeUnavailableError
 from outage_explorer.application.ports.execution import ExecutionBounds
@@ -239,3 +239,50 @@ class RuntimeEvidence:
             or self.profile_identity != profile.identity
         ):
             raise RuntimeUnavailableError("Reviewed analytical runtime unavailable")
+
+
+def read_runtime_config(path: "Path") -> tuple[RuntimeProfile, RuntimeEvidence | None]:
+    """Read one bounded strict nonsecret profile and optional reviewed record."""
+    import json
+    from dataclasses import fields
+
+    def unique(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        result: dict[str, object] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("Duplicate runtime configuration key")
+            result[key] = value
+        return result
+
+    with path.open("rb") as stream:
+        raw = stream.read(65_537)
+    try:
+        if len(raw) > 65_536:
+            raise ValueError()
+        document = json.loads(raw, object_pairs_hook=unique)
+        if not isinstance(document, dict) or set(document) != {"profile", "evidence"}:
+            raise ValueError()
+        values = document["profile"]
+        if not isinstance(values, dict) or set(values) - {
+            f.name for f in fields(RuntimeProfile)
+        }:
+            raise ValueError()
+        values = dict(values)
+        if "worker" in values:
+            values["worker"] = WorkerImageLimits(**values["worker"])
+        for name in ("drop_capabilities", "temporary_options", "mounts"):
+            if name in values:
+                values[name] = tuple(values[name])
+        if "environment" in values:
+            values["environment"] = tuple(tuple(v) for v in values["environment"])
+        profile = RuntimeProfile(**values)
+        record = document["evidence"]
+        if record is None:
+            return profile, None
+        if not isinstance(record, dict):
+            raise ValueError()
+        record = dict(record)
+        record["reviewed_on"] = date.fromisoformat(record["reviewed_on"])
+        return profile, RuntimeEvidence(**record)
+    except (ValueError, KeyError, TypeError, UnicodeError):
+        raise ValueError("Invalid nonsecret analytical runtime configuration") from None

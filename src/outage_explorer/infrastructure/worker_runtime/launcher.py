@@ -50,14 +50,25 @@ class VerifiedLauncher:
             raise ValueError("Reviewed runtime evidence reference required")
         self._bounds, self._runtime = bounds, runtime
         self._slot = Lock()
+        self._guard = Lock()
+        self._accepting = True
         self.recovery = recovery if recovery is not None else RecoveryOwner()
 
     def reserve(self) -> "_Reservation":
-        if self._runtime is None:
-            raise RuntimeUnavailableError("Reviewed analytical runtime unavailable")
-        if not self._slot.acquire(blocking=False):
-            raise AnalyticalBusyError("Analytical execution busy")
-        return _Reservation(self._slot, self._runtime, self._bounds, self.recovery)
+        with self._guard:
+            if self._runtime is None or not self._accepting:
+                raise RuntimeUnavailableError("Reviewed analytical runtime unavailable")
+            if not self._slot.acquire(blocking=False):
+                raise AnalyticalBusyError("Analytical execution busy")
+            return _Reservation(self._slot, self._runtime, self._bounds, self.recovery)
+
+    def stop(self) -> None:
+        with self._guard:
+            self._accepting = False
+
+    @property
+    def active(self) -> bool:
+        return self._slot.locked()
 
 
 class _Reservation:

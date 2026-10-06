@@ -7,6 +7,7 @@ import selectors
 import signal
 import subprocess
 from dataclasses import dataclass
+from pathlib import Path
 from threading import Event
 from time import monotonic
 from typing import BinaryIO, Protocol, cast
@@ -306,6 +307,8 @@ class DockerRuntime:
         self._staging = stage_inputs(
             self.profile, files, min(deadline, monotonic() + bounds.preparation_seconds)
         )
+        if self.cancel.is_set():
+            raise RuntimeUnavailableError("Analytical execution cancelled")
         arguments = self._create_arguments()
         self.ledger.intend(str(self._staging.directory))
         self._intended = True
@@ -437,3 +440,28 @@ class DockerRuntime:
         self._removal_attempted = True
         self._control(("rm", self._container), deadline)
         self._removed = True
+
+    def recover_owned(self) -> None:
+        """After acquiring the dead owner's lock, reconcile its exact intent."""
+        record = self.ledger.read()
+        if record is None:
+            return
+        staging = Path(record["staging"])
+        root = Path(self.profile.staging_root)
+        if (
+            staging.parent != root
+            or not staging.name.startswith("execution-")
+            or staging.is_symlink()
+            or not staging.is_dir()
+            or staging.stat().st_uid != os.getuid()
+            or staging.stat().st_mode & 0o077
+        ):
+            raise RuntimeUnavailableError("Invalid orphan analytical staging")
+        current_owner = self.ledger.owner
+        self.ledger.owner = record["owner"]
+        self._intended = True
+        self._staging = StagedInputs(staging, ())
+        try:
+            self.terminate_and_reap()
+        finally:
+            self.ledger.owner = current_owner

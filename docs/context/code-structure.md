@@ -424,3 +424,13 @@ Migration 0003 records actual start/finish times; historical unknown values rema
 null. Verified modeled partitions supply reported refresh coverage.
 See the [Phase 6 checkpoint](../specs/data-api/tasks/phase-6.md) and
 [evidence map](../specs/data-api/runtime-evidence.md).
+
+Analytical-runtime Phase 3 adds inert forwarding ports built in `bootstrap.py`
+and explicit ownership in `infrastructure/worker_runtime/supervisor.py`.
+`QueryCleanup` runs recovery and preview expiry before result expiry; strong
+leases preserve active readers and unresolved execution. The exact-AST
+`entrypoints/http/analytical_startup.py` exception only passes the dedicated
+bootstrap callable to its argument parser. Imports, HTTP factories and help
+perform no runtime startup. One local owner, explicit lifecycle and ephemeral
+restart loss are adapter constraints; real quota storage/readiness and deployment
+remain open. No refresh ownership is added to analytical HTTP shutdown.

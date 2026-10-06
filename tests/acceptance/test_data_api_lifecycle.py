@@ -112,3 +112,79 @@ def test_http_busy_slot_keeps_health_and_status_available(app, system, queries):
         assert not queries[3].calls
     finally:
         reservation.close()
+
+
+supervised_http = http.supervised_http
+
+
+def test_supervisor_close_and_restart_preserve_healthy_refresh(
+    supervised_http, system, database, browsing, tmp_path
+):
+    supervisor, app, _, rebuild = supervised_http
+    supervisor.start()
+    admin, headers = http.client_for(app, system)
+    receipt = admin.post("/api/refresh", json={}, headers=headers)
+    assert receipt.status_code == 202
+    entered, release = Event(), Event()
+
+    class BlockedSource(Wire):
+        def handle_request(self, request):
+            entered.set()
+            assert release.wait(15)
+            return super().handle_request(request)
+
+    values = {
+        grain: [row(grain, period="2026-09-03")]
+        for grain in ("national", "facility", "generator")
+    }
+    worker = composition(
+        database, tmp_path / "independent-refresh", BlockedSource(values), browsing[5]
+    )
+    restarted = None
+    try:
+        with ThreadPoolExecutor() as pool:
+            future = pool.submit(worker.tick)
+            assert entered.wait(5)
+            supervisor.close()
+            restarted, fresh_app = rebuild()
+            restarted.start()
+            fresh, _ = http.client_for(fresh_app, system)
+            assert fresh.get(receipt.headers["Location"]).json["status"] == "running"
+            assert fresh.get("/health").status_code == 200
+            release.set()
+            assert future.result(timeout=15).status.value == "succeeded"
+        assert fresh.get(receipt.headers["Location"]).json["status"] == "succeeded"
+    finally:
+        release.set()
+        if restarted is not None:
+            restarted.close()
+        worker.close()
+
+
+def test_supervised_old_snapshots_across_publication(
+    supervised_http, system, database, browsing, queries, tmp_path, monkeypatch
+):
+    from unittest.mock import Mock
+
+    from outage_explorer.application.services.health import HealthService
+    from outage_explorer.entrypoints.http.app import create_app
+    from outage_explorer.entrypoints.http.auth_transport import AuthTransport
+
+    supervisor, app, states, _ = supervised_http
+    supervisor.start()
+
+    def fresh_factory(*args):
+        return create_app(
+            HealthService(browsing[3]),
+            login_service=Mock(),
+            access_service=system[1]._access,
+            auth_transport=AuthTransport(http.ORIGIN, frozenset({http.ORIGIN}), True),
+            data_services=app.extensions["controlled_data_services"],
+        )
+
+    monkeypatch.setattr(http, "app_for", fresh_factory)
+    test_http_ack_overlap_publication_and_snapshot_survival(
+        app, system, database, browsing, queries, tmp_path
+    )
+    # Original preview, original SQL and one explicit expression query only.
+    assert len(states[0][1].calls) == 4  # two previews plus two SQL executions

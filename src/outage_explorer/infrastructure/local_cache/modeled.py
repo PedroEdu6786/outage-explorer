@@ -2,6 +2,9 @@
 
 import hashlib
 import os
+import re
+import shutil
+import stat
 import tempfile
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
@@ -96,6 +99,7 @@ class VerifiedModeledCache:
         )
         self._entries: dict[tuple[str, str], _Entry] = {}
         self._lock = RLock()
+        self._closed = False
         root.mkdir(mode=0o700, parents=True, exist_ok=True)
         if root.is_symlink() or any(root.iterdir()):
             raise ValueError("Modeled cache requires an empty private directory")
@@ -114,6 +118,8 @@ class VerifiedModeledCache:
 
     def prepare(self, generation: PublishedGeneration, dataset: Dataset) -> _Pin:
         with self._lock:
+            if self._closed:
+                raise DataUnavailableError("Modeled cache closed")
             identity = (generation.manifest_digest, dataset.id)
             started = monotonic()
 
@@ -284,3 +290,68 @@ class VerifiedModeledCache:
                 del self._entries[identity]
         if not fits():
             raise ArtifactLimitError("Pinned modeled cache capacity exhausted")
+
+    def close(self) -> None:
+        """Remove only owned disposable files, after all input leases finish."""
+        with self._lock:
+            if any(entry.pins for entry in self._entries.values()):
+                raise ValueError("Active modeled input leases")
+            for entry in self._entries.values():
+                for file in entry.files:
+                    Path(file.path).unlink(missing_ok=True)
+            self._entries.clear()
+            self._closed = True
+
+
+class PublishedReadSessions:
+    """The serialized cache opens a fresh transfer budget per manifest load."""
+
+    def __init__(self, factory: Callable[[], PublishedObjects]) -> None:
+        self._factory = factory
+        self._current: PublishedObjects | None = None
+
+    def reference(self, key: str, digest: str) -> StoredObject:
+        self._current = self._factory()
+        return self._current.reference(key, digest)
+
+    def read(self, reference: StoredObject) -> Iterator[bytes]:
+        if self._current is None:
+            raise ArtifactError("Published read session unavailable")
+        return self._current.read(reference)
+
+
+def reclaim_private_cache(root: Path, *, file_limit: int) -> None:
+    """Only after exclusive analytical ownership and dead-worker reconciliation.
+
+    This namespace contains disposable modeled files and preparation copies only.
+    Unknown paths fail closed rather than expanding the teardown authority.
+    """
+    root.mkdir(mode=0o700, parents=True, exist_ok=True)
+    info = root.lstat()
+    if (
+        not stat.S_ISDIR(info.st_mode)
+        or info.st_uid != os.getuid()
+        or info.st_mode & 0o077
+    ):
+        raise ValueError("Private modeled cache unavailable")
+    paths: list[Path] = []
+    for path in root.iterdir():
+        if len(paths) >= file_limit:
+            raise ValueError("Private cache recovery limit exceeded")
+        info = path.lstat()
+        if info.st_uid != os.getuid() or path.is_symlink():
+            raise ValueError("Invalid disposable cache file")
+        if stat.S_ISREG(info.st_mode) and re.fullmatch(
+            r"[0-9a-f]{64}-(national|facilities|generators)-[0-9]+\.parquet", path.name
+        ):
+            paths.append(path)
+        elif stat.S_ISDIR(info.st_mode) and path.name.startswith(".preparing-"):
+            # Interrupted download directory contents are not durable artifacts.
+            paths.append(path)
+        else:
+            raise ValueError("Unknown private cache path")
+    for path in paths:
+        if path.is_dir():
+            shutil.rmtree(path)
+        else:
+            path.unlink()

@@ -126,6 +126,10 @@ from outage_explorer.infrastructure.s3.artifacts import S3ArtifactStore
 from outage_explorer.infrastructure.security import RandomSecurityMaterial
 from outage_explorer.infrastructure.sql_validation.inspection import DuckdbSqlInspector
 from outage_explorer.infrastructure.verification_report import LocalReportWriter
+from outage_explorer.infrastructure.worker_runtime.configuration import (
+    RuntimeEvidence,
+    RuntimeProfile,
+)
 from outage_explorer.infrastructure.worker_runtime.unavailable import (
     UnavailableExecution,
     UnavailableInputs,
@@ -273,21 +277,25 @@ def build_http_app(*, data_resources: DataHttpResources | None = None) -> Flask:
     access_logger.addFilter(access_filter)
     owner = os.getpid()
     closed = False
+    data_closed = False
 
     def close() -> None:
-        nonlocal closed
-        if os.getpid() == owner and not closed:
-            closed = True
-            try:
+        nonlocal closed, data_closed
+        if os.getpid() != owner:
+            return
+        try:
+            if data_resources is not None and not data_closed:
+                data_resources.close()
+                data_closed = True
+        finally:
+            if not closed:
+                closed = True
                 try:
-                    if data_resources is not None:
-                        data_resources.close()
-                finally:
                     provider.close()
-            finally:
-                pool.close()
-                access_logger.removeFilter(access_filter)
-                atexit.unregister(close)
+                finally:
+                    pool.close()
+                    access_logger.removeFilter(access_filter)
+                    atexit.unregister(close)
 
     try:
         store = PostgresqlAccessStore(pool, attempt_limit=settings.attempt_limit)
@@ -821,3 +829,167 @@ def build_query_worker(
         PreviewEncoding(encoding),
     )
     return worker.execute
+
+
+def build_analytical_resources(
+    profile: "RuntimeProfile", evidence: "RuntimeEvidence | None"
+) -> DataHttpResources:
+    """Build inert forwarding ports; only explicit start may own filesystem/S3."""
+    from outage_explorer.application.errors import RuntimeUnavailableError
+    from outage_explorer.infrastructure.local_cache.modeled import (
+        CacheBounds,
+        PublishedReadSessions,
+        VerifiedModeledCache,
+        reclaim_private_cache,
+    )
+    from outage_explorer.infrastructure.query_results.previews import (
+        BoundedPreviewSequences,
+        PreviewBounds,
+    )
+    from outage_explorer.infrastructure.worker_runtime.docker import (
+        BoundedDockerControl,
+        DockerRuntime,
+    )
+    from outage_explorer.infrastructure.worker_runtime.launcher import VerifiedLauncher
+    from outage_explorer.infrastructure.worker_runtime.ownership import (
+        OwnershipLedger,
+        RecoveryOwner,
+    )
+    from outage_explorer.infrastructure.worker_runtime.supervisor import (
+        AnalyticalResources,
+        AnalyticalSupervisor,
+    )
+
+    control = BoundedDockerControl(profile.daemon_endpoint)
+
+    def reconcile(ledger: OwnershipLedger) -> None:
+        DockerRuntime(profile, control, ledger).recover_owned()
+
+    def construct(ledger: OwnershipLedger, key: bytes) -> AnalyticalResources:
+        # No backend currently establishes accepted disk-spill enforcement.
+        # Real acceptance must select/deliver one before this can become ready.
+        if profile.temporary_backend == "quota-disk":
+            raise RuntimeUnavailableError("Analytical quota storage unavailable")
+        s3 = s3_settings(os.environ)
+        artifacts = ArtifactBounds(**asdict(ArtifactSettings()))
+        transfer = TransferBounds(
+            elapsed_seconds=profile.worker.preparation_seconds,
+            timeout_seconds=min(10, profile.worker.preparation_seconds),
+            wire_bytes=profile.input_bytes,
+        )
+        session = boto3.Session(profile_name=s3.profile, region_name=s3.region)
+        wire = session.client(
+            "s3",
+            config=Config(
+                connect_timeout=transfer.timeout_seconds,
+                read_timeout=transfer.timeout_seconds,
+                retries={"total_max_attempts": 1},
+                max_pool_connections=1,
+            ),
+        )
+        try:
+            # Fresh bounded transfer session for each cache load, no lifetime budget.
+            objects = PublishedReadSessions(
+                lambda: S3ArtifactStore(wire, s3.bucket, s3.prefix, artifacts, transfer)
+            )
+            reclaim_private_cache(
+                Path(profile.cache_root), file_limit=profile.input_files
+            )
+            cache = VerifiedModeledCache(
+                Path(profile.cache_root),
+                objects,
+                artifacts,
+                CacheBounds(
+                    profile.cache_bytes,
+                    profile.input_files,
+                    30_000,
+                    profile.worker.preparation_seconds,
+                ),
+            )
+            runtime = DockerRuntime(profile, control, ledger)
+            recovery = RecoveryOwner()
+            launcher = VerifiedLauncher(
+                profile.execution_bounds,
+                runtime,
+                evidence=evidence.profile_identity if evidence else None,
+                recovery=recovery,
+            )
+            results = BoundedQueryResults(
+                Path(profile.result_root),
+                SystemClock(),
+                ResultBounds(
+                    profile.results_per_user,
+                    profile.result_count,
+                    profile.result_bytes,
+                    131_072,
+                ),
+            )
+            previews = BoundedPreviewSequences(
+                SystemClock(),
+                PreviewBounds(
+                    profile.results_per_user,
+                    profile.result_count,
+                    profile.result_bytes,
+                    4096,
+                ),
+                key,
+            )
+
+            def close_inputs() -> None:
+                cache.close()
+                wire.close()
+
+            return AnalyticalResources(
+                cache,
+                launcher,
+                results,
+                previews,
+                recovery,
+                runtime.terminate_and_reap,
+                runtime.cancel.set,
+                close_inputs,
+            )
+        except BaseException:
+            wire.close()
+            raise
+
+    supervisor = AnalyticalSupervisor(profile, evidence, construct, reconcile)
+    return DataHttpResources(
+        supervisor.inputs,
+        supervisor.execution,
+        supervisor.results,
+        supervisor.sequences,
+        PreviewEncoding(profile.encoding_bounds),
+        profile.worker.output_bytes,
+        supervisor.start,
+        supervisor.close,
+        profile.identity,
+    )
+
+
+def execute_analytical_http(config_path: str, host: str, port: int) -> int:
+    """Explicit local lifecycle; no reloader or extra serving process is supported."""
+    from outage_explorer.infrastructure.worker_runtime.configuration import (
+        read_runtime_config,
+    )
+
+    if (
+        any(
+            os.environ.get(name) not in (None, "", "0", "false")
+            for name in ("WERKZEUG_RUN_MAIN", "FLASK_DEBUG")
+        )
+        or os.environ.get("WEB_CONCURRENCY", "1") != "1"
+    ):
+        raise ValueError("Unsupported analytical serving mode")
+    profile, evidence = read_runtime_config(Path(config_path))
+    resources = build_analytical_resources(profile, evidence)
+    app: Flask | None = None
+    try:
+        app = build_http_app(data_resources=resources)
+        resources.start()
+        app.run(host=host, port=port, debug=False, use_reloader=False, threaded=True)
+    finally:
+        if app is not None:
+            app.extensions["outage_data_close"]()
+        resources.close()
+    return 0
