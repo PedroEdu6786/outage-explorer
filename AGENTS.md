@@ -43,6 +43,14 @@ S3 target configuration before source work; default success requires full durabl
 readback/replay, with no local-only fallback after S3 failure. Preserve local
 artifacts for explicit persistence retries; a durable receipt is not publication.
 
+Modeled data follows [ADR-0057](docs/adr/0057-single-file-modeled-datasets.md):
+per generation and dataset, exactly one modeled Parquet file (prior input,
+verification, persistence) and one public projection file (only worker input).
+Do not write or read daily modeled partitions, or add old-layout compatibility
+code. Readers never rebuild inputs per request; workers scan views over exact
+staged files, without whole-input table imports. The guarded publication-reset
+CLI is the only supported way to clear the active generation pointer.
+
 - `domain/`: pure policies and types; no framework, engine, SDK, database, or I/O.
 - `application/`: use cases, authorization, transaction orchestration, DTOs,
   and ports; depends on domain, not concrete infrastructure or Flask.
