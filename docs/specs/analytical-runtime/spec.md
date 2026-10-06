@@ -86,7 +86,7 @@ SQL use cases, with explicit startup ownership and unchanged public contracts.
   overall, Docker control operations and stdout/stderr have explicit hard bounds.
   Uncertain death may retain ownership beyond a deadline; it never implies reuse.
 - **TR4:** Preserve 1,000 rows/1,048,576 canonical SQL bytes, existing truncation,
-  preview 100/500 paging and fixed 15-minute preview/result lifetimes. Query-ID
+  preview 100/500 paging and fixed 60-second preview/result lifetimes. Query-ID
   metadata remains bounded and ephemeral outside PostgreSQL.
 - **TR5:** Imports, builders and app construction perform no Docker/S3/database
   access, directory preparation, thread startup or refresh work. Process ownership

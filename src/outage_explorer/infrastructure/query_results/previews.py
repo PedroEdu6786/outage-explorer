@@ -20,6 +20,7 @@ from outage_explorer.application.ports.preview_sequences import (
 )
 from outage_explorer.domain.datasets import Dataset
 from outage_explorer.domain.publication import PublishedGeneration
+from outage_explorer.domain.query_results import LIFETIME_SECONDS
 
 
 @dataclass(frozen=True)
@@ -88,7 +89,7 @@ class BoundedPreviewSequences:
                 start,
                 end,
                 size,
-                self._clock.now() + timedelta(minutes=15),
+                self._clock.now() + timedelta(seconds=LIFETIME_SECONDS),
                 inputs,
             )
             self._states[sequence.id] = _State(sequence, charge)

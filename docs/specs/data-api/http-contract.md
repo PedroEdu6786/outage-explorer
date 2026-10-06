@@ -110,7 +110,7 @@ No matching records returns `200`, empty `rows`, and no next cursor.
 `page_cursor` identifies the current page, including page 1; previous navigation
 resubmits a visited cursor. Identifier ties use ascending binary UTF-8 order.
 
-Accepted cursor lifetime is 15 minutes from first-page creation, without renewal.
+Accepted cursor lifetime is 60 seconds from first-page creation, without renewal.
 Refresh never changes an existing browsing sequence. Expired/lost continuation
 returns `410 preview_unavailable`; user explicitly starts browsing again.
 An unknown or forbidden dataset returns selected generic `404 dataset_unavailable`
@@ -178,7 +178,7 @@ The byte-cap accounting representation is frozen below.
 Accepted total caps remain 1,000 rows or 1 MiB and the execution deadline is
 10 seconds, with one isolated analytical worker at a time. Preparation/overall
 deadlines and result-storage budgets remain open. The user selected a result
-lifetime of 15 minutes from completion, fixed and unrenewed.
+lifetime of 60 seconds from completion, fixed and unrenewed.
 
 Empty result page 1 returns `200`; a positive page beyond the retained range
 returns selected `400 page_out_of_range`, never an automatic rerun. A foreign or

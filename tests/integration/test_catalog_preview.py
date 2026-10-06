@@ -236,10 +236,10 @@ def test_expiry_is_exact_fixed_and_cleanup_releases_pins(system, browsing):
     token = system[2][Role.VIEWER]
     page = service.page(token, "national", size=1)
     created = clock.now()
-    assert page["expires_at"] == (created + timedelta(minutes=15)).isoformat().replace(
+    assert page["expires_at"] == (created + timedelta(seconds=60)).isoformat().replace(
         "+00:00", "Z"
     )
-    clock.value += timedelta(minutes=14, seconds=59)
+    clock.value += timedelta(seconds=59)
     assert service.page(token, "national", cursor=page["page_cursor"]) == page
     clock.value += timedelta(seconds=1)
     sequences.cleanup()  # supervised cleanup does not require another request
@@ -385,7 +385,7 @@ def test_metadata_counts_bytes_and_active_expiry_cleanup():
     with pytest.raises(PreviewCapacityError):
         store.create("a", PUBLIC_DATASETS[0], generation, None, None, 100, inputs)
     position = store.acquire(cursor, "a", PUBLIC_DATASETS[0])
-    clock.value += timedelta(minutes=15)
+    clock.value += timedelta(seconds=60)
     store.cleanup()
     inputs.close.assert_not_called()
     store.release(position.sequence)
@@ -514,7 +514,7 @@ def test_unreaped_worker_keeps_active_preview_pin_through_expiry():
     )
     with pytest.raises(OSError):
         service.page("test-token", "national")
-    clock.value += timedelta(minutes=15)
+    clock.value += timedelta(seconds=60)
     sequences.cleanup()
     inputs.close.assert_not_called()
     assert launcher.recovery.pending == 1

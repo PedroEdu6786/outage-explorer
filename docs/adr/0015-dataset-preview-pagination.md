@@ -1,6 +1,7 @@
 # ADR-0015: Accept dataset preview pagination defaults
 
-Status: **Accepted**
+Status: **Accepted**. The 15-minute lifetime is superseded by
+[ADR-0059](0059-sixty-second-preview-result-lifetime-and-capacity.md).
 
 Date: 2026-10-01
 

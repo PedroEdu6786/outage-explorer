@@ -116,11 +116,11 @@ observable background refresh of all three datasets with verified publication.
   grants no access. Diagnostic responses must not disclose protected data,
   credentials, storage locations or raw provider failures.
 - **TR2:** Preview pages default to 100 rows with an initial configurable maximum
-  of 500; opaque cursors expire 15 minutes after first-page creation without
+  of 500; opaque cursors expire 60 seconds after first-page creation without
   renewal, under [ADR-0015](../../adr/0015-dataset-preview-pagination.md).
 - **TR3:** SQL `page` is a positive integer starting at 1; `page_size` defaults to
   100 with an initial maximum of 500 and remains fixed per execution. Reject
-  invalid values and size mismatches. The retained result expires 15 minutes
+  invalid values and size mismatches. The retained result expires 60 seconds
   after completion without renewal; process/store loss may make it unavailable
   earlier. Preserve one execution's row order and multiplicity, including explicit
   SQL limits; pagination must not inject ordering, limits or offsets.
@@ -246,7 +246,7 @@ observable background refresh of all three datasets with verified publication.
   first with stable ordering. Initial preview supports only date filters.
   (verifies FR4)
 - [ ] **AC5:** Preview defaults to 100 rows, supports the initial maximum 500,
-  remains bound to its original sequence and expires exactly 15 minutes after
+  remains bound to its original sequence and expires exactly 60 seconds after
   first-page creation without extension by access. (verifies FR5, TR2)
 - [ ] **AC6:** National preview exposes both percentage columns, and SQL may select
   them from the national relation with agreed precision/presentation and no
@@ -261,7 +261,7 @@ observable background refresh of all three datasets with verified publication.
   ordering/limits; no continuation triggers another execution. (verifies FR9, TR3)
 - [ ] **AC10:** SQL pages default to 100 and accept up to 500 rows; invalid
   page/size values and changed execution page sizes are rejected. The result's
-  fixed expiry is 15 minutes after completion. (verifies FR9, TR3)
+  fixed expiry is 60 seconds after completion. (verifies FR9, TR3)
 - [ ] **AC11:** Expired/lost previews and SQL IDs return explicit unavailability,
   never substituted page-1 data or a silent rerun. (verifies FR10)
 - [ ] **AC12:** Abandoned expired results and orphaned state are reclaimed without

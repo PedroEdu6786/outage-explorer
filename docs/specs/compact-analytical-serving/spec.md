@@ -79,11 +79,11 @@ existing data rules, generation consistency, authorization and bounds hold.
   isolation](../../adr/0054-bounded-subprocess-sql-inspection.md) stays enforced.
 - **TR4:** Preserve the [preview contract](../data-api/http-contract.md#dataset-preview):
   filters, ordering, default 100/maximum 500 rows, same-snapshot cursors, fixed
-  15-minute lifetime and explicit loss/expiry errors.
+  60-second lifetime and explicit loss/expiry errors.
 - **TR5:** Preserve broad read-only SQL support and submitted semantics under the
   [data contract](../data-api/spec.md), without query rewriting.
 - **TR6:** Preserve the [SQL continuation contract](../data-api/http-contract.md#submit-sql-and-read-pages-on-the-same-path):
-  one retained execution and generation, fixed page size, fixed 15-minute expiry,
+  one retained execution and generation, fixed page size, fixed 60-second expiry,
   explicit errors and 1,000-row/1-MiB total limits with explicit truncation.
 - **TR7:** Reads use bounded scans of dataset files without whole-input import
   before each execution, under [ADR-0007](../../adr/0007-bounded-parquet-query-execution.md).
@@ -195,7 +195,7 @@ existing data rules, generation consistency, authorization and bounds hold.
   replayable. (verifies TR2)
 - [ ] **AC19:** Workers can read only authorized public dataset files.
   (verifies TR3)
-- [ ] **AC20:** Preview filters, ordering, page sizes and 15-minute expiry are
+- [ ] **AC20:** Preview filters, ordering, page sizes and 60-second expiry are
   unchanged. (verifies TR4)
 - [ ] **AC21:** Supported SQL keeps its semantics, including joins, aggregates,
   CTEs, subqueries and windows. (verifies TR5)

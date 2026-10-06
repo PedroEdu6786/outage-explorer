@@ -7,7 +7,9 @@ from outage_explorer.domain.access import AnalyticalGrain
 
 MAX_ROWS = 1000
 MAX_BYTES = 1_048_576
-LIFETIME_SECONDS = 900
+# Fixed, unrenewed lifetime shared by preview sequences and retained SQL results
+# (ADR-0059; previously 900 seconds under ADR-0015/0020).
+LIFETIME_SECONDS = 60
 
 
 def validate_page(page: int, size: int | None = None) -> None:

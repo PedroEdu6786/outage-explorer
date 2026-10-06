@@ -8,6 +8,7 @@ from pathlib import Path, PurePosixPath
 
 from outage_explorer.application.errors import RuntimeUnavailableError
 from outage_explorer.application.ports.execution import ExecutionBounds
+from outage_explorer.domain.query_results import LIFETIME_SECONDS
 from outage_explorer.infrastructure.query_results.encoding import (
     EncodingBounds,
     canonical_json,
@@ -47,8 +48,8 @@ class RuntimeProfile:
     staging_root: str = "/tmp/outage-analytical/staging"
     cache_root: str = "/tmp/outage-analytical/cache"
     result_root: str = "/tmp/outage-analytical/results"
-    preview_lifetime_seconds: int = 900
-    result_lifetime_seconds: int = 900
+    preview_lifetime_seconds: int = LIFETIME_SECONDS
+    result_lifetime_seconds: int = LIFETIME_SECONDS
     engine_version: str = "1.5.6"
     protocol_version: int = 1
     worker: WorkerImageLimits = field(default_factory=WorkerImageLimits)
@@ -61,8 +62,8 @@ class RuntimeProfile:
     staging_bytes: int = 2_147_483_647
     cache_bytes: int = 2_147_483_647
     result_bytes: int = 10_485_760
-    result_count: int = 10
-    results_per_user: int = 3
+    result_count: int = 100
+    results_per_user: int = 100
     request_bytes: int = 131_072
     stdout_bytes: int = 1_179_648
     stderr_bytes: int = 65_536
@@ -169,9 +170,9 @@ class RuntimeProfile:
             raise ValueError("Worker limits must match internal v1 image profile")
         if (
             type(self.preview_lifetime_seconds) is not int
-            or self.preview_lifetime_seconds != 900
+            or self.preview_lifetime_seconds != LIFETIME_SECONDS
             or type(self.result_lifetime_seconds) is not int
-            or self.result_lifetime_seconds != 900
+            or self.result_lifetime_seconds != LIFETIME_SECONDS
             or type(self.protocol_version) is not int
             or self.protocol_version != 1
             or self.engine_version != "1.5.6"

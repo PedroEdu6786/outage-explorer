@@ -129,8 +129,8 @@ def test_fixed_completion_expiry_and_unavailable_after_loss(queries, system):
     result = service.execute(token, "SELECT 1")
     identity = store._records[result["query_id"]].identity
     assert identity.completed_at == clock.now()
-    assert identity.expires_at == clock.now() + timedelta(minutes=15)
-    clock.value += timedelta(seconds=899)
+    assert identity.expires_at == clock.now() + timedelta(seconds=60)
+    clock.value += timedelta(seconds=59)
     assert service.page(token, identity.id)["expires_at"] == result["expires_at"]
     clock.value += timedelta(seconds=1)
     with pytest.raises(QueryExpiredError):
@@ -205,7 +205,7 @@ def test_active_readers_survive_expiry_cleanup_then_release(tmp_path):
     identity = complete(store)
     reader = store.acquire(identity.id, "user")
     path = store._records[identity.id].path
-    clock.value += timedelta(minutes=15)
+    clock.value += timedelta(seconds=60)
     with ThreadPoolExecutor(2) as executor:
         assert executor.submit(store.cleanup).result() == 0
         assert executor.submit(reader.page, 1).result()["rows"] == [["1"], ["2"]]
@@ -230,7 +230,7 @@ def test_autonomous_cleanup_without_next_request_and_inert_bootstrap(tmp_path):
     lifecycle.start()
     identity = complete(store)
     path = store._records[identity.id].path
-    clock.value += timedelta(minutes=15)
+    clock.value += timedelta(seconds=60)
     deadline = __import__("time").monotonic() + 3
     while path.exists() and __import__("time").monotonic() < deadline:
         Event().wait(0.02)

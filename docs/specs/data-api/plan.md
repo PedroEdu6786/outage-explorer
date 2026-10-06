@@ -147,7 +147,7 @@ contain references/summaries, never analytical rows or query-ID metadata.
 - Return a cursor for the current page, including page 1. Previous navigation
   resubmits a visited cursor; it never requests a fresh first page. A cursor
   cannot change user, dataset, filters, page size, generation or expiry.
-  Its sequence expires 15 minutes after first-page creation. Empty filters
+  Its sequence expires 60 seconds after first-page creation. Empty filters
   return a valid empty page. A page-size/filter change starts a new sequence.
   (FR5, FR10, FR20, TR2)
 - Preview is a bounded page read, not a retained SQL execution subject to the
@@ -205,7 +205,7 @@ contain references/summaries, never analytical rows or query-ID metadata.
   pagination counts remain bounded JSON integers. Verify engine types before
   claiming support; representation failures are explicit, never lossy coercions.
   (FR6–FR9, FR12, TR4, TR7, TR9)
-- Complete retention before returning any page. The fixed 15-minute expiry
+- Complete retention before returning any page. The fixed 60-second expiry
   starts at completion. Release input cache pins once SQL materialization ends;
   the immutable retained result needs its generation identity, not the original
   input files. Preview sequences retain generation references and may reload
@@ -403,7 +403,7 @@ bounded error details so the caller can GET page 1 without repeating execution.
 - Broker/separate refresh service — unnecessary for one replica and durable
   PostgreSQL claim/reconciliation; retain one release. (FR13–FR15, FR25–FR30)
 - Rerun SQL for numbered pages or keep a live engine cursor — violates stable
-  one-execution paging or holds scarce execution resources for 15 minutes.
+  one-execution paging or holds scarce execution resources for 60 seconds.
   (FR7, FR9, TR3, TR5)
 - Durable query metadata/shared cache service — unnecessary durability and an
   additional stack for the accepted ephemeral single-replica scope. (TR6)

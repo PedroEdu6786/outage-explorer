@@ -32,7 +32,7 @@ run. Error fixtures include 429 user capacity and 503 global capacity.
   omitted date side is unbounded within stored coverage.
 - Empty rows differ from unavailable data and from a byte-truncated first row.
   `has_more` concerns retained pages; `truncated` concerns total query output.
-  Fixed expiry is 15 minutes. A 404/410 continuation requires explicit restart;
+  Fixed expiry is 60 seconds. A 404/410 continuation requires explicit restart;
   do not silently execute again. Initial `page_out_of_range` can include owned
   `query_id`/`expires_at` in error details for GET recovery.
 - Use current session cookies and the existing Origin/CSRF transport. Production

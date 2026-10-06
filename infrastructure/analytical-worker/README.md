@@ -72,7 +72,7 @@ Docker process and prepares no directories. A profile requires an immutable
 identities and separate private staging/cache/result roots. It accepts only UID/GID
 65534, one serving process, no network, read-only root, dropped capabilities,
 no-new-privileges and no extra mounts/environment. All integer budgets are finite,
-positive and independently identified; public lifetimes stay 900 seconds.
+positive and independently identified; public lifetimes stay 60 seconds.
 
 The internal v1 worker uses exact image-profile matching. Startup settings are
 validated by `build_query_worker()` and translated into execution/encoding bounds;
@@ -411,7 +411,7 @@ containers without stopping the daemon. They prove busy admission and retained
 input files/leases until death/removal reconciliation, and restart recovery of a
 persisted container intent. A missing synthetic daemon endpoint is also checked.
 Control failures are induced locally; the harness does not reboot the host or
-restart a real Docker daemon. Logical cleanup/recovery does not wait 900 seconds
+restart a real Docker daemon. Logical cleanup/recovery does not wait 60 seconds
 or establish wall-clock expiry evidence by itself.
 
 `test_disk_spill_readiness_requires_supported_backend` now proves aggregate

@@ -2,6 +2,9 @@
 
 Status: **Accepted direction; execution mechanism and pagination budgets pending**
 
+The inherited 15-minute lifetime is superseded by
+[ADR-0059](0059-sixty-second-preview-result-lifetime-and-capacity.md).
+
 Date: 2026-10-01
 
 Supersedes [ADR-0019](0019-default-dataset-query-order.md).

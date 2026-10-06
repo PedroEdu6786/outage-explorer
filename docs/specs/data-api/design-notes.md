@@ -161,7 +161,7 @@ Exact key syntax and broader run-record retention remain design details.
 
 Already accepted: one analytical worker at a time; 10-second execution deadline;
 1,000 rows or 1 MiB total serialized result; SQL page default 100/max 500; fixed
-15-minute result lifetime. Page size does not increase the total output cap.
+60-second result lifetime. Page size does not increase the total output cap.
 
 ### Retained results
 
@@ -178,7 +178,7 @@ not measured worker/process memory budgets or accepted production sizing.
 - Reclaim expired state without waiting for another request; clean orphaned
   private result files after store loss. Query-ID metadata remains ephemeral.
 - Release the analytical worker after the bounded result is retained; the
-  15-minute paging lifetime must not occupy the execution slot.
+  60-second paging lifetime must not occupy the execution slot.
 - Charge UTF-8 serialized columns, retained rows and fixed result metadata once
   against the full-result byte budget. Bound page-envelope/schema overhead too;
   do not multiply the allowance by page count or omit large column labels/types.

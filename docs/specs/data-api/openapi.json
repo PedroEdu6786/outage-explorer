@@ -340,7 +340,7 @@
             "SessionCookie": []
           }
         ],
-        "description": "Requires current session and application authorization. All responses use no-store. Duplicate/unknown parameters and unsupported bodies are rejected. Initial dates are inclusive; omitted sides are unbounded. A cursor cannot be combined with filters/page_size. page_cursor revisits this page; next_cursor advances. Fixed 15-minute expiry."
+        "description": "Requires current session and application authorization. All responses use no-store. Duplicate/unknown parameters and unsupported bodies are rejected. Initial dates are inclusive; omitted sides are unbounded. A cursor cannot be combined with filters/page_size. page_cursor revisits this page; next_cursor advances. Fixed 60-second expiry."
       }
     },
     "/api/query": {
@@ -544,7 +544,7 @@
             "SessionCookie": []
           }
         ],
-        "description": "Requires current session and application authorization. All responses use no-store. Duplicate/unknown parameters and unsupported bodies are rejected. SQL is executed only by POST and is never modified for pagination. GET reads an owned immutable result. Default page size 100, maximum 500; expiry is 15 minutes from execution completion.",
+        "description": "Requires current session and application authorization. All responses use no-store. Duplicate/unknown parameters and unsupported bodies are rejected. SQL is executed only by POST and is never modified for pagination. GET reads an owned immutable result. Default page size 100, maximum 500; expiry is 60 seconds from execution completion.",
         "requestBody": {
           "required": true,
           "content": {
@@ -724,7 +724,7 @@
             "SessionCookie": []
           }
         ],
-        "description": "Requires current session and application authorization. All responses use no-store. Duplicate/unknown parameters and unsupported bodies are rejected. SQL is executed only by POST and is never modified for pagination. GET reads an owned immutable result. Default page size 100, maximum 500; expiry is 15 minutes from execution completion."
+        "description": "Requires current session and application authorization. All responses use no-store. Duplicate/unknown parameters and unsupported bodies are rejected. SQL is executed only by POST and is never modified for pagination. GET reads an owned immutable result. Default page size 100, maximum 500; expiry is 60 seconds from execution completion."
       }
     },
     "/api/refresh": {

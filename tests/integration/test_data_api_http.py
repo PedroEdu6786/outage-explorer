@@ -193,7 +193,7 @@ def test_out_of_range_expiry_loss_and_no_rerun(app, system, browsing, queries):
         "/api/query", query_string={"query_id": identity, "page": 1}
     ).json["rows"] == [["42"]]
     preview = client.get("/api/datasets/national/preview")
-    browsing[3].value += timedelta(minutes=15)
+    browsing[3].value += timedelta(seconds=60)
     assert (
         client.get(
             "/api/datasets/national/preview",

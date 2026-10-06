@@ -103,10 +103,23 @@ def test_settings_and_adapter_image_limits_match():
     [
         {"staging_root": "/"},
         {"cache_root": "/tmp/outage-analytical/staging/child"},
-        {"result_lifetime_seconds": 901},
+        {"result_lifetime_seconds": 61},
+        {"result_lifetime_seconds": 900},  # The superseded ADR-0015/0020 value.
+        {"preview_lifetime_seconds": 900},
         {"preview_lifetime_seconds": True},
     ],
 )
 def test_private_roots_and_fixed_lifetimes(changes):
     with pytest.raises(ValueError):
         profile(**changes)
+
+
+def test_lifetimes_are_sixty_seconds_and_capacity_is_one_hundred_per_user():
+    from outage_explorer.domain.query_results import LIFETIME_SECONDS
+
+    value = profile()
+    assert LIFETIME_SECONDS == 60
+    assert (value.preview_lifetime_seconds, value.result_lifetime_seconds) == (60, 60)
+    assert (value.results_per_user, value.result_count) == (100, 100)
+    with pytest.raises(ValueError):  # A user can never exceed the global count.
+        profile(results_per_user=101)
