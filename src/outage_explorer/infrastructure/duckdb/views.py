@@ -24,11 +24,17 @@ from outage_explorer.infrastructure.parquet.schemas import schema_for
 
 def verify_approved_file(file: ApprovedFile, dataset: Dataset) -> None:
     path = Path(file.path)
-    if (
-        path.is_symlink()
-        or path.stat().st_size != file.byte_count
-        or hashlib.sha256(path.read_bytes()).hexdigest() != file.sha256
-    ):
+    if path.is_symlink() or path.stat().st_size != file.byte_count:
+        raise DataUnavailableError("Approved input file integrity mismatch")
+    digest = hashlib.sha256()
+    count = 0
+    with path.open("rb") as source:
+        while chunk := source.read(65536):
+            count += len(chunk)
+            if count > file.byte_count:
+                raise DataUnavailableError("Approved input file integrity mismatch")
+            digest.update(chunk)
+    if count != file.byte_count or digest.hexdigest() != file.sha256:
         raise DataUnavailableError("Approved input file integrity mismatch")
     if not pq.read_schema(path).equals(
         schema_for("resource", dataset.grain), check_metadata=True

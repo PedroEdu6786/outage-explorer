@@ -350,8 +350,12 @@ transport metadata, with no publication authority.
 receipt identity/coverage, and atomically publishes exact descriptors and quality
 through `PostgresqlResourcePublicationStore`. Its per-run composition checks the
 lease during I/O and uses separate frozen candidate/persistence deadlines.
-`VerifiedResourceCache` downloads only the approved dataset file; analytical
-workers scan public-only views over the exact staged resource. Factories/imports
+`VerifiedResourceCache` downloads only the approved dataset file. Local immutable
+storage streams incoming chunks to a temporary file while counting and hashing,
+checks exact identity and session admission bounds, then links it atomically.
+Failed transfers remove their temporary file; independent source reads remain
+outside the admission lock. Worker input checksums also use bounded reads.
+Analytical workers scan public-only views over the exact staged resource. Factories/imports
 remain inert and API shutdown never owns the independent refresh worker.
 Legacy publication rows remain immutable and fail closed under ADR-0062.
 

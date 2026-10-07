@@ -26,6 +26,7 @@ from outage_explorer.domain.publication import (
     DatasetSummary,
     ResourcePublishedGeneration,
 )
+from outage_explorer.infrastructure.duckdb.views import verify_approved_file
 from outage_explorer.infrastructure.local_cache import modeled as cache_module
 from outage_explorer.infrastructure.local_cache.modeled import VerifiedResourceCache
 from tests.integration import test_connector_cli as connector
@@ -138,6 +139,27 @@ def test_cache_pins_exact_resource_file_without_rewriting(tmp_path, published):
     assert "modeled_from_record" not in Path(cache_module.__file__).read_text()
     assert len(list((tmp_path / "cache").glob("*.parquet"))) == 3
     for pin in pins.values():
+        pin.close()
+
+
+def test_worker_checksum_streams_and_still_rejects_same_size_corruption(
+    tmp_path, published
+):
+    _, manifest, counts = published
+    reader = cache(tmp_path, published)
+    dataset = PUBLIC_DATASETS[0]
+    pin = reader.prepare(generation(manifest, counts), dataset)
+    try:
+        (file,) = pin.files
+        with patch.object(Path, "read_bytes", side_effect=AssertionError("whole file")):
+            verify_approved_file(file, dataset)
+        path = Path(file.path)
+        path.chmod(0o600)
+        with path.open("r+b") as target:
+            target.write(b"xxxx")
+        with pytest.raises(DataUnavailableError):
+            verify_approved_file(file, dataset)
+    finally:
         pin.close()
 
 

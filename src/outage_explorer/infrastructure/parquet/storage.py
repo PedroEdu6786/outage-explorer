@@ -166,52 +166,61 @@ class LocalParquetStore:
     ) -> StoredObject:
         if expected is not None:
             self._path(expected)
-        data = _LimitedBuffer(self.bounds.file_bytes)
-        for chunk in chunks:
-            self.check()
-            if not isinstance(chunk, bytes):
-                raise ArtifactError("Object chunks must be bytes")
-            data.write(chunk)
-        payload = data.getvalue()
-        if not payload:
-            raise ArtifactError("Empty object")
-        digest = hashlib.sha256(payload).hexdigest()
-        reference = StoredObject(digest, digest, len(payload))
-        if expected is not None and reference != expected:
-            raise ArtifactError("Object differs from expected exact identity")
-        path = self._path(reference)
-        with self._lock:
-            if digest not in self._objects:
-                if len(self._objects) >= self.bounds.objects:
-                    raise ArtifactLimitError("Exceeded object count")
-                if (
-                    self._bytes + self._transient_bytes + len(payload)
-                    > self.bounds.total_bytes
-                ):
-                    raise ArtifactLimitError("Exceeded total bytes")
-                temporary: Path | None = None
-                try:
-                    with tempfile.NamedTemporaryFile(
-                        dir=self.root, prefix=".staging-", delete=False
-                    ) as target:
-                        temporary = Path(target.name)
-                        target.write(payload)
-                        target.flush()
-                        os.fsync(target.fileno())
+        temporary: Path | None = None
+        try:
+            digest = hashlib.sha256()
+            count = 0
+            with tempfile.NamedTemporaryFile(
+                dir=self.root, prefix=".staging-", delete=False
+            ) as target:
+                temporary = Path(target.name)
+                for chunk in chunks:
+                    self.check()
+                    if not isinstance(chunk, bytes):
+                        raise ArtifactError("Object chunks must be bytes")
+                    count += len(chunk)
+                    if count > self.bounds.file_bytes:
+                        raise ArtifactLimitError("Exceeded file bytes")
+                    if expected is not None and count > expected.byte_count:
+                        raise ArtifactError(
+                            "Object differs from expected exact identity"
+                        )
+                    target.write(chunk)
+                    digest.update(chunk)
+                self.check()
+                if not count:
+                    raise ArtifactError("Empty object")
+                checksum = digest.hexdigest()
+                reference = StoredObject(checksum, checksum, count)
+                if expected is not None and reference != expected:
+                    raise ArtifactError("Object differs from expected exact identity")
+                target.flush()
+                os.fsync(target.fileno())
+            path = self._path(reference)
+            # Source reads stay outside the lock so independent transfers can proceed.
+            with self._lock:
+                if reference.key not in self._objects:
+                    if len(self._objects) >= self.bounds.objects:
+                        raise ArtifactLimitError("Exceeded object count")
+                    if (
+                        self._bytes + self._transient_bytes + count
+                        > self.bounds.total_bytes
+                    ):
+                        raise ArtifactLimitError("Exceeded total bytes")
                     try:
                         os.link(temporary, path)
                     except FileExistsError:
                         self.verify_object(reference)
-                except OSError as exc:
-                    raise ArtifactError("Cannot persist immutable object") from exc
-                finally:
-                    if temporary is not None:
-                        temporary.unlink(missing_ok=True)
-                self._objects.add(digest)
-                self._bytes += len(payload)
-            else:
-                self.verify_object(reference)
-        return reference
+                    self._objects.add(reference.key)
+                    self._bytes += count
+                else:
+                    self.verify_object(reference)
+            return reference
+        except OSError as exc:
+            raise ArtifactError("Cannot persist immutable object") from exc
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
 
     def verify_object(self, reference: StoredObject) -> None:
         path = self._path(reference)
@@ -222,6 +231,7 @@ class LocalParquetStore:
             count = 0
             with path.open("rb") as source:
                 while chunk := source.read(min(65536, self.bounds.file_bytes)):
+                    self.check()
                     count += len(chunk)
                     if count > reference.byte_count:
                         raise ArtifactError("Object grew while reading")
