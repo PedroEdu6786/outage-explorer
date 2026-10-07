@@ -40,3 +40,11 @@ Do not prescribe a checkout directory. Select the installed Homebrew Python 3.12
 without asking users to change PATH. `make setup` creates private local files,
 preserving an existing `.env`. Provide a named Make command for the RDS TLS CA
 bundle and explain that it verifies server identity, not AWS login.
+
+## Documentation navigation
+
+Use one sequential first-time guide for installation and backend/web configuration.
+The existing local-setup page serves daily startup/settings changes after setup;
+it must not duplicate installation or environment-value examples. README routes
+developers by first-time versus existing installation. The Make reference explains
+commands without becoming another competing setup sequence.

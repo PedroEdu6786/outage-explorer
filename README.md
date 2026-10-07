@@ -11,23 +11,28 @@ and inspect the daily share of fleet capacity offline.
 
 ## Run locally
 
-**New machine? Follow the [step-by-step walkthrough](docs/development/fresh-machine.md).**
-It covers Docker and the dedicated Colima VM, AWS settings, containment review and startup
-for this Flask backend and the separate
-[web client](https://github.com/PedroEdu6786/outage-explorer-web).
-Use Apple Silicon macOS with the dedicated Colima `outage-runtime` VM,
-matching the environment used for this project.
-Full application startup needs configured RDS, Cognito, S3 and published data.
-The [application setup reference](docs/development/local-setup.md) summarizes settings.
+Start with the page that matches your situation:
 
-Run `make local-help` for the setup sequence; the
-[command reference](docs/development/local-commands.md) explains each step. Once configured, run these in separate terminals:
+- **First time on this machine:** follow the [fresh-machine walkthrough](docs/development/fresh-machine.md)
+  in order. It includes installation, AWS/backend settings, containment review and web setup.
+- **Already set up:** use [daily development](docs/development/local-setup.md) to start,
+  stop or change settings.
+- **Need to understand a Make command:** use the [command reference](docs/development/local-commands.md).
+
+The required environment is Apple Silicon macOS with the dedicated Colima
+`outage-runtime` VM and configured RDS, Cognito, S3 and published data. The
+[web client](https://github.com/PedroEdu6786/outage-explorer-web) is a sibling checkout.
+
+For an existing installation, keep these running in separate terminals:
 
 ```sh
-# Backend checkout on macOS: dedicated Colima outage-runtime VM
+# Backend checkout, terminal 1
 make run-analytical
 
-# Web checkout
+# Backend checkout, terminal 2
+make local-forward
+
+# Web checkout, terminal 3
 npm run dev
 ```
 

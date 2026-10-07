@@ -20,3 +20,8 @@ Host simplification: Make discovers python3.12 (falling back to python3); a smal
 standard-library setup helper creates private ignored files without replacing
 existing settings. local-ca uses HTTPS and a temporary file before replacing the
 public RDS trust bundle. Keep AWS login/resource configuration explicit.
+
+Navigation follow-up: keep first-time installation and all configuration examples
+in fresh-machine.md. Rewrite local-setup.md as daily development for a reviewed
+existing installation, with file ownership and explicit settings-apply workflow.
+Route README by developer situation and include all three runtime terminals.

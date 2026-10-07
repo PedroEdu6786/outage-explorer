@@ -1,6 +1,11 @@
 # Local Make commands
 
-[Fresh-machine walkthrough](fresh-machine.md) · [README](../../README.md)
+[First-time setup](fresh-machine.md) · [Daily development](local-setup.md) ·
+[README](../../README.md)
+
+This page explains commands; the [first-time walkthrough](fresh-machine.md)
+defines their installation order. For an existing installation, use
+[daily development](local-setup.md).
 
 Run these commands from the backend checkout on **Apple Silicon macOS**.
 They use the dedicated Colima `outage-runtime` Linux VM. Run setup stages one

@@ -1,35 +1,25 @@
 # Fresh-machine walkthrough
 
-[README](../../README.md) · [Application settings](local-setup.md) ·
+[README](../../README.md) · [Daily development](local-setup.md) ·
 [Web repository](https://github.com/PedroEdu6786/outage-explorer-web)
 
-Follow the numbered steps in order. Commands are manual: reading this document
-installs nothing. Replace example resource identifiers with values from your
-environment owner. Keep credentials out of Git and terminal output.
+**This is the first-time setup guide. Follow steps 1–10 in order on this page.**
+Backend configuration is in step 5 and web configuration is in step 10; you do
+not need a second application setup guide. Use
+[daily development](local-setup.md) only after installation is complete, and
+[the Make reference](local-commands.md) when you need a command explained.
 
-See the [Make command reference](local-commands.md) for each command’s
-prerequisites, actions, outputs, repeat behavior and running processes.
+| Steps | Result |
+| --- | --- |
+| 1–2 | Confirm the required machine and obtain resource/account settings. |
+| 3–5 | Clone, install host tools, log in to AWS and fill in backend `.env`. |
+| 6–8 | Install the Colima runtime, check/review containment and install API settings. |
+| 9–10 | Start API/forwarding, configure the web client and sign in. |
+| 11 | Stop, restart or recover an existing runtime. |
 
-## Make command checklist
-
-After cloning and installing Homebrew, run from the backend checkout:
-
-```sh
-make local-dependencies
-# Follow Homebrew’s nvm shell setup instructions.
-make setup
-make local-runtime
-make local-candidate
-make local-validate
-make local-reports
-make local-review REVIEWER="Your name"
-```
-
-Read the reports before the review command. Configure your AWS login and `.env`
-using steps 4–5, then run `make local-configure`. Start `make run-analytical`
-and `make local-forward` in separate terminals. Start the web client with
-`npm run dev` in its checkout after step 10. `make local-help` prints this sequence.
-The details below explain prerequisites and what each step does.
+Commands run only when you execute them. Replace example values with your
+environment's settings and keep credentials out of Git and terminal output.
+Run each setup command separately; stop and resolve a failure before continuing.
 
 ## 1. Use the required environment
 
@@ -150,24 +140,11 @@ If you prefer a browser download, save the official
 as `rds-ca.pem` in `.local-runtime`. The filename can also be `ca.pem`; what
 matters is that the database setting points to the actual file.
 
-### Configure the CA path
+### Fill in `.env`
 
-For IAM mode, put the absolute path printed by `make local-ca` in `.env`:
-
-```dotenv
-OUTAGE_ACCESS_DATABASE_SSLROOTCERT=/absolute/path/to/outage-explorer/.local-runtime/rds-ca.pem
-```
-
-For password mode, set `sslrootcert` to that absolute path inside
-`OUTAGE_ACCESS_DATABASE_DSN`, together with `sslmode=verify-full`; do not add
-IAM-only settings to password mode.
-
-If your existing settings already point to a valid CA file supplied for this
-environment, you can keep that path instead. A file’s existence alone does not
-prove it trusts the RDS certificate. `make local-configure` copies your selected
-file into the VM and adjusts the path; it does not require a particular filename
-on your Mac. After the review steps below, run `make local-configure` with the
-API stopped to install changed settings.
+Keep an existing CA file supplied for this environment, or use the absolute
+path printed by `make local-ca`. `make local-configure` copies the selected file
+into the VM in step 8; you are only editing host settings at this step.
 
 Edit `.env`, preserving secrets privately. For IAM mode, **remove the entire
 `OUTAGE_ACCESS_DATABASE_DSN=` line**, even if empty. Set these values with your
@@ -374,9 +351,10 @@ if `mountpoint /var/lib/outage-analytical/spill` reports it is not mounted:
 sudo mount -o loop,rw,noexec,nosuid,nodev /var/lib/outage-analytical/spill.img /var/lib/outage-analytical/spill
 ```
 
-Exit the guest shell, then repeat step 8 from macOS and start the API. If filesystem, daemon, image or parser
-identities changed, preserve the previous candidate/reports/review as an archive
-outside the active report directory and repeat steps 7–8 for the new identities.
+Exit the guest shell, then repeat step 8 from macOS and start the API. If
+filesystem, daemon, image or parser identities changed, preserve the previous candidate/reports/review as an archive
+outside the active report directory. Capture new candidates (step 6), then
+repeat steps 7–8 for the new identities.
 Do not patch old evidence. Source updates require installing the new committed
 revision and rebuilding the image before collecting new evidence. Fresh
 preparation is not an update command. See the
@@ -386,3 +364,6 @@ The guide and setup helpers have controlled automated coverage. A complete
 fresh Colima installation has not been executed for this documentation
 change; the actual-host tests in step 7 are mandatory evidence for your host.
 Existing integrated acceptance was confirmed by the user on October 7, 2026.
+
+After completing installation, use [daily development](local-setup.md) for
+regular startup and configuration changes.

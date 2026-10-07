@@ -27,3 +27,8 @@ Alternative guide routes and the native launcher option have been removed.
   installed Python in Make while preserving explicit overrides.
 - [x] Prepare ignored private settings during make setup without replacing .env.
 - [x] Add local-ca with safe replacement and document public RDS TLS trust purpose.
+
+- [x] Establish one first-time setup/configuration guide; remove duplicated recipes.
+- [x] Rewrite local-setup as daily start/stop/settings changes for existing installs.
+- [x] Route README/reference links clearly and include the forwarding terminal.
+- [x] Verify links/anchors, shell syntax and first-time/daily navigation consistency.
