@@ -1,0 +1,211 @@
+{
+  "format": "gzip-json-utf8-original-source-files-v1",
+  "archive_sha256": "8516768d0e36dc5778b783c5dab60f181e9249ccf14be26904ba6601937a01cf",
+  "archive_bytes": 692837,
+  "files": {
+    "eia/2013/manifest.json": {
+      "sha256": "52bfaca924c1df021919e4184d671634f8407aca5c28a685cbfe8bdbb66927a5",
+      "bytes": 4132
+    },
+    "eia/2013/national/metadata.json": {
+      "sha256": "08b6ab006b6d7f34c5c688802ba067b76af44348d6a352109ff9964e7ab0d73d",
+      "bytes": 1074
+    },
+    "eia/2013/national/page-000.json": {
+      "sha256": "8a255141a24ffd09c9fb9c7c330c9479985e388080a625b787d034d686172488",
+      "bytes": 10970
+    },
+    "eia/2013/national/page-001.json": {
+      "sha256": "3fab434d04c374e6e5d307d2517679b77790b394bf624ffea12a5b8bcc368a5f",
+      "bytes": 850
+    },
+    "eia/2013/facility/metadata.json": {
+      "sha256": "4a7083ed8c5a7bd6be715ceece0e37fc109cc62e209d2e1edd91acf8d351cede",
+      "bytes": 1188
+    },
+    "eia/2013/facility/page-000.json": {
+      "sha256": "c2adb41e28773fb4ff88d678a77d8cb80c725d22fe6c75192bfd56c0b15b7a77",
+      "bytes": 776290
+    },
+    "eia/2013/facility/page-001.json": {
+      "sha256": "d9678df31183102caa60aa1dec0ae4c7f4f6c688faa3bda6d77419a97bf26c27",
+      "bytes": 937
+    },
+    "eia/2013/generator/metadata.json": {
+      "sha256": "da1961200e1d05bc242c749abb1edd8d85173c0251d29bb96c75fee837d0e449",
+      "bytes": 1292
+    },
+    "eia/2013/generator/page-000.json": {
+      "sha256": "07ba7fd0bc5369b0e8c35125eb9606ee40f8557c3a2340e9f62c50acce078a4e",
+      "bytes": 1334085
+    },
+    "eia/2013/generator/page-001.json": {
+      "sha256": "e25fed2b15017f385cb4639e92a77ee762f14089ebecc10c9658cd642480eeb1",
+      "bytes": 1008
+    },
+    "eia/2015/manifest.json": {
+      "sha256": "3fecc92f542df58f78c1e8c9b5a38d422fcb6796b98d14c450dd08e59c674158",
+      "bytes": 4132
+    },
+    "eia/2015/national/metadata.json": {
+      "sha256": "40149abacbb8c32c6174e01eb4b92a9fbab6ed2e06e207f64d98a54a1bcefe1e",
+      "bytes": 1074
+    },
+    "eia/2015/national/page-000.json": {
+      "sha256": "12b4c404516aa618709eb2c82b6ced4adc1bb9cc646192d41c0b55d9c012db20",
+      "bytes": 10310
+    },
+    "eia/2015/national/page-001.json": {
+      "sha256": "a2a0367a9a6155f98c0805b37c8b13d6ee06895a63aeb4a36b3f4451e29a3edb",
+      "bytes": 850
+    },
+    "eia/2015/facility/metadata.json": {
+      "sha256": "87a4a537024e4574c423f4b519a03226513e64243fed63716d6c5837124b94ff",
+      "bytes": 1188
+    },
+    "eia/2015/facility/page-000.json": {
+      "sha256": "234d66317d6090751baba1e062dbe307a54f520a938e8f432559940e8d8057b0",
+      "bytes": 712103
+    },
+    "eia/2015/facility/page-001.json": {
+      "sha256": "88acb9407f7cc2b21049e9cfb5d1a93378c2bf8a23909d5f7fb9113de1c4fa2e",
+      "bytes": 937
+    },
+    "eia/2015/generator/metadata.json": {
+      "sha256": "d0644c824e447d453d19b1aa990defad3da1e3f9f9452c91e2d42b1886791004",
+      "bytes": 1292
+    },
+    "eia/2015/generator/page-000.json": {
+      "sha256": "2dc0840212e470e146a540436c40436fc70447b440e9a3dd74e54abdf618e1ca",
+      "bytes": 1227342
+    },
+    "eia/2015/generator/page-001.json": {
+      "sha256": "e9f50abc522a8d0c1bd43ce3185121c2b7c75487693ea4ead8ff59b994b771ee",
+      "bytes": 1008
+    },
+    "eia/2017/manifest.json": {
+      "sha256": "c6b28f59e400c80fb78367a0776fb6696f36607b6f7701b7b3d3be8bbc41404a",
+      "bytes": 4132
+    },
+    "eia/2017/national/metadata.json": {
+      "sha256": "b6bb9f5e28dc5f77cb6caf0672f9f1fd390d3339e88e96b0c1e700a837597348",
+      "bytes": 1074
+    },
+    "eia/2017/national/page-000.json": {
+      "sha256": "e162b658b0587526151693eff484889ecdff71a7fed6e187c91175f007239962",
+      "bytes": 10195
+    },
+    "eia/2017/national/page-001.json": {
+      "sha256": "c7ec09852c97208e901d766cb9d82893f29c1ed640e3d1e01c51c846f812cacc",
+      "bytes": 850
+    },
+    "eia/2017/facility/metadata.json": {
+      "sha256": "0d5917c9d76b5db9cca12d46c4502d0da54f997c7c7a0edbd251c2bd5f3f4259",
+      "bytes": 1188
+    },
+    "eia/2017/facility/page-000.json": {
+      "sha256": "f9fa4489924b6b37696c9e135a933fe32f9c36d3f8c51d85640387ad7813537c",
+      "bytes": 696692
+    },
+    "eia/2017/facility/page-001.json": {
+      "sha256": "7b96a2e65f95460b9a76ba52c7fa1418ffdebc9d521e988ee1593436abb27123",
+      "bytes": 937
+    },
+    "eia/2017/generator/metadata.json": {
+      "sha256": "8d47820cf64b5d70b68a823dfbe9b6ca5fb82867030b02274ee8a8643891c95e",
+      "bytes": 1292
+    },
+    "eia/2017/generator/page-000.json": {
+      "sha256": "971094fd2c20e6898ef396c7c7e92f3f32d5fe80029efd9277a43beb85c0ea6e",
+      "bytes": 1222658
+    },
+    "eia/2017/generator/page-001.json": {
+      "sha256": "489e5fc742e3ceaec51f44ecd1242eefa50ea0ec1dbb65773abdb4f8bba30c54",
+      "bytes": 1008
+    },
+    "eia/2007/manifest.json": {
+      "sha256": "3373ee7aeead0984058b615dce234e4aca86ae740632dbc08f0839c594e86dc6",
+      "bytes": 4132
+    },
+    "eia/2007/national/metadata.json": {
+      "sha256": "cf573ba6dbbbb4cdcb4b0aa4e709238f39b14871eb109f1072b3708a7668934d",
+      "bytes": 1074
+    },
+    "eia/2007/national/page-000.json": {
+      "sha256": "bbce978f40ded6d8bdaf6ad401bf2258d78b76730c3d8f25ae9c14255ed0e411",
+      "bytes": 11549
+    },
+    "eia/2007/national/page-001.json": {
+      "sha256": "70c6d7abb72b302b167f8224f6345665c82fd98fb3eabc1722cdfe92b1697050",
+      "bytes": 850
+    },
+    "eia/2007/facility/metadata.json": {
+      "sha256": "96367025f4296a09661d3e674d5a679015ba6937a83a9d3da4fca375d675123e",
+      "bytes": 1188
+    },
+    "eia/2007/facility/page-000.json": {
+      "sha256": "72193dcc86b90920bbe9169fa6aab39bf7921efff99a6f55e9da7a37a7790817",
+      "bytes": 863958
+    },
+    "eia/2007/facility/page-001.json": {
+      "sha256": "c85e2ede42b2351a192bb2dbd34b962d5169cbd92bb11f6ed1a95521ea77bf4f",
+      "bytes": 937
+    },
+    "eia/2007/generator/metadata.json": {
+      "sha256": "923ba6f0844133eedb3256bb789ff28dd86add5b29f80ba803607d7b93ef253e",
+      "bytes": 1292
+    },
+    "eia/2007/generator/page-000.json": {
+      "sha256": "c8403a64b0354b10e4d745f214c297cc8d2b6e1aafa39c2d01cc0139e4d2131e",
+      "bytes": 1467976
+    },
+    "eia/2007/generator/page-001.json": {
+      "sha256": "9a9cd0f4dadb4d404c3960a109b3d08aa6811e238200c87cddbf75741b6ebdd7",
+      "bytes": 1008
+    },
+    "nrc/2013.txt": {
+      "sha256": "cf38d1ae66b19326ba148ecd9bd0224f635cea672fbc3982d3639a3c401c175a",
+      "bytes": 1047734
+    },
+    "nrc/2015.txt": {
+      "sha256": "0f94fb03e3bcea143fe473bc6ee65a0f9990a4bd9fc6ba7f8e08e9fed1c998fa",
+      "bytes": 1020181
+    },
+    "nrc/2007.txt": {
+      "sha256": "c5f4f50c69902fad73f6df62f6472f04a01145c7ff676fa67724a815682d23d7",
+      "bytes": 1068689
+    },
+    "nrc/20130724.html": {
+      "sha256": "9d690bce611c166d2238df0b9af4abf4c79b91a22e3aef0738c75326340df5fb",
+      "bytes": 156607
+    },
+    "nrc/20151003.html": {
+      "sha256": "de67c5f15ab36748e9c6bb0b61a91717b44c307eef3a31d57d14a491223a334c",
+      "bytes": 155092
+    },
+    "nrc/20151027.html": {
+      "sha256": "50c26126234b8d748d68773d5814f11f8c163c3db477dc0f58c28e1b39615a3a",
+      "bytes": 155696
+    }
+  },
+  "nrc_urls": {
+    "nrc/2013.txt": "https://www.nrc.gov/reading-rm/doc-collections/event-status/reactor-status/2013/2013.txt",
+    "nrc/2015.txt": "https://www.nrc.gov/reading-rm/doc-collections/event-status/reactor-status/2015/2015.txt",
+    "nrc/2007.txt": "https://www.nrc.gov/reading-rm/doc-collections/event-status/reactor-status/2007/2007.txt",
+    "nrc/20130724.html": "https://www.nrc.gov/reading-rm/doc-collections/event-status/reactor-status/2013/20130724ps.html",
+    "nrc/20151003.html": "https://www.nrc.gov/reading-rm/doc-collections/event-status/reactor-status/2015/20151003ps.html",
+    "nrc/20151027.html": "https://www.nrc.gov/reading-rm/doc-collections/event-status/reactor-status/2015/20151027ps.html"
+  },
+  "eia_local_bundles": {
+    "2013": "data/investigations/eia-2013-july-capacity/20261007T052626Z",
+    "2015": "data/investigations/eia-history-2015-10-01_2015-11-05/20261007T052706Z",
+    "2017": "data/investigations/eia-history-2017-07-01_2017-08-05/20261007T052743Z",
+    "2007": "data/investigations/eia-history-2007-01-01_2007-02-10/20261007T053119Z"
+  },
+  "limitations": [
+    "EIA files omit credential-bearing echoed request fields; they are sanitized evidence, not original wire bytes.",
+    "Sequential source requests are not an atomic upstream snapshot.",
+    "No 2017 NRC file was downloaded; 2017 omissions are supported by EIA coverage only."
+  ],
+  "nrc_retrieval_note": "Downloaded during the October 7, 2026 UTC investigation; individual NRC request timestamps were not captured."
+}

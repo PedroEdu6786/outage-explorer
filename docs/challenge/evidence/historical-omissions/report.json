@@ -1,0 +1,2753 @@
+{
+  "source_archive_sha256": "8516768d0e36dc5778b783c5dab60f181e9249ccf14be26904ba6601937a01cf",
+  "nrc_daily_vs_annual_checks": [
+    {
+      "date": "2013-07-24",
+      "unit": "River Bend 1",
+      "power": 100
+    },
+    {
+      "date": "2015-10-03",
+      "unit": "River Bend 1",
+      "power": 100
+    },
+    {
+      "date": "2015-10-27",
+      "unit": "River Bend 1",
+      "power": 100
+    }
+  ],
+  "samples": {
+    "2007": {
+      "interval": [
+        "2007-01-01",
+        "2007-02-10"
+      ],
+      "retrieved_at_utc": "2026-10-07T05:31:19.464766+00:00",
+      "rows": {
+        "national": 41,
+        "facility": 2706,
+        "generator": 4264
+      },
+      "reconciled_days": 41,
+      "reconciled_facility_day_groups": 2706,
+      "capacity_and_outage_gaps_mw": "0",
+      "river_bend_missing_days": [],
+      "missing_days_by_weekday": {},
+      "daily": [
+        {
+          "date": "2007-01-01",
+          "capacity_mw": "101764.9",
+          "outage_mw": "1995.074",
+          "reported_percent": "1.96",
+          "calculated_percent": "1.960473601408737197206502438",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-01",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-02",
+          "capacity_mw": "101764.9",
+          "outage_mw": "1683.354",
+          "reported_percent": "1.65",
+          "calculated_percent": "1.654159734839812155271611332",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-02",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-03",
+          "capacity_mw": "101764.9",
+          "outage_mw": "1542.804",
+          "reported_percent": "1.52",
+          "calculated_percent": "1.516047281528306911322076669",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-03",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-04",
+          "capacity_mw": "101764.9",
+          "outage_mw": "2585.756",
+          "reported_percent": "2.54",
+          "calculated_percent": "2.540911453752718275161671657",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-04",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-05",
+          "capacity_mw": "101764.9",
+          "outage_mw": "1880.426",
+          "reported_percent": "1.85",
+          "calculated_percent": "1.847813931915621201416205391",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-05",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-06",
+          "capacity_mw": "101764.9",
+          "outage_mw": "4069.404",
+          "reported_percent": "4",
+          "calculated_percent": "3.998828672754554861253732869",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-06",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-07",
+          "capacity_mw": "101764.9",
+          "outage_mw": "3694.458",
+          "reported_percent": "3.63",
+          "calculated_percent": "3.630385329322782216658199438",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-07",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-08",
+          "capacity_mw": "101764.9",
+          "outage_mw": "1693.484",
+          "reported_percent": "1.66",
+          "calculated_percent": "1.664114051111925624650542574",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-08",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-09",
+          "capacity_mw": "101764.9",
+          "outage_mw": "1303.494",
+          "reported_percent": "1.28",
+          "calculated_percent": "1.280887614491833628294235046",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-09",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-10",
+          "capacity_mw": "101764.9",
+          "outage_mw": "1343.014",
+          "reported_percent": "1.32",
+          "calculated_percent": "1.319722222495182523640272825",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-10",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-11",
+          "capacity_mw": "101764.9",
+          "outage_mw": "1926.634",
+          "reported_percent": "1.89",
+          "calculated_percent": "1.893220550504152217513111102",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-11",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-12",
+          "capacity_mw": "101764.9",
+          "outage_mw": "3078.054",
+          "reported_percent": "3.02",
+          "calculated_percent": "3.024671571435730787334336299",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-12",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-13",
+          "capacity_mw": "101764.9",
+          "outage_mw": "4040.092",
+          "reported_percent": "3.97",
+          "calculated_percent": "3.970025028275957623895861933",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-13",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-14",
+          "capacity_mw": "101764.9",
+          "outage_mw": "3475.804",
+          "reported_percent": "3.42",
+          "calculated_percent": "3.415523427036237445327416427",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-14",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-15",
+          "capacity_mw": "101764.9",
+          "outage_mw": "2549.004",
+          "reported_percent": "2.5",
+          "calculated_percent": "2.504796840560939970461328022",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-15",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-16",
+          "capacity_mw": "101764.9",
+          "outage_mw": "1938.994",
+          "reported_percent": "1.91",
+          "calculated_percent": "1.905366192076049797130444780",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-16",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-17",
+          "capacity_mw": "101764.9",
+          "outage_mw": "1938.994",
+          "reported_percent": "1.91",
+          "calculated_percent": "1.905366192076049797130444780",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-17",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-18",
+          "capacity_mw": "101764.9",
+          "outage_mw": "1939.678",
+          "reported_percent": "1.91",
+          "calculated_percent": "1.906038329522261604934510819",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-18",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-19",
+          "capacity_mw": "101764.9",
+          "outage_mw": "1956.146",
+          "reported_percent": "1.92",
+          "calculated_percent": "1.922220726399770451304919476",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-19",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-20",
+          "capacity_mw": "101764.9",
+          "outage_mw": "2007.884",
+          "reported_percent": "1.97",
+          "calculated_percent": "1.973061438668932018800195352",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-20",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-21",
+          "capacity_mw": "101764.9",
+          "outage_mw": "2726.918",
+          "reported_percent": "2.68",
+          "calculated_percent": "2.679625293200307768199054880",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-21",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-22",
+          "capacity_mw": "101764.9",
+          "outage_mw": "2491.568",
+          "reported_percent": "2.45",
+          "calculated_percent": "2.448356948220850214563174533",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-22",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-23",
+          "capacity_mw": "101764.9",
+          "outage_mw": "2414.088",
+          "reported_percent": "2.37",
+          "calculated_percent": "2.372220677266916196055810992",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-23",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-24",
+          "capacity_mw": "101764.9",
+          "outage_mw": "3246.818",
+          "reported_percent": "3.19",
+          "calculated_percent": "3.190508711746387998219425362",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-24",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-25",
+          "capacity_mw": "101764.9",
+          "outage_mw": "3003.782",
+          "reported_percent": "2.95",
+          "calculated_percent": "2.951687664410813551627329266",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-25",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-26",
+          "capacity_mw": "101764.9",
+          "outage_mw": "3927.112",
+          "reported_percent": "3.86",
+          "calculated_percent": "3.859004430800796738364603120",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-26",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-27",
+          "capacity_mw": "101764.9",
+          "outage_mw": "9029.083",
+          "reported_percent": "8.87",
+          "calculated_percent": "8.872492381950947723625729500",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-27",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "324.06",
+            "percentOutage": "33",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-28",
+          "capacity_mw": "101764.9",
+          "outage_mw": "8282.744",
+          "reported_percent": "8.14",
+          "calculated_percent": "8.139097075710780436083561228",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-28",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "88.38",
+            "percentOutage": "9",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-29",
+          "capacity_mw": "101764.9",
+          "outage_mw": "7496.124",
+          "reported_percent": "7.37",
+          "calculated_percent": "7.366119359425499361764223224",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-29",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-30",
+          "capacity_mw": "101764.9",
+          "outage_mw": "6934.698",
+          "reported_percent": "6.81",
+          "calculated_percent": "6.814430122763349642165422459",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-30",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-01-31",
+          "capacity_mw": "101764.9",
+          "outage_mw": "6261.734",
+          "reported_percent": "6.15",
+          "calculated_percent": "6.153137280142760421324051810",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-01-31",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-02-01",
+          "capacity_mw": "101764.9",
+          "outage_mw": "6165.336",
+          "reported_percent": "6.06",
+          "calculated_percent": "6.058411102452810350130545994",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-02-01",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-02-02",
+          "capacity_mw": "101764.9",
+          "outage_mw": "3622.848",
+          "reported_percent": "3.56",
+          "calculated_percent": "3.560017255458414443486899707",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-02-02",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-02-03",
+          "capacity_mw": "101764.9",
+          "outage_mw": "3209.066",
+          "reported_percent": "3.15",
+          "calculated_percent": "3.153411441469504711349394536",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-02-03",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-02-04",
+          "capacity_mw": "101764.9",
+          "outage_mw": "3469.088",
+          "reported_percent": "3.41",
+          "calculated_percent": "3.408923902052672385075797254",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-02-04",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-02-05",
+          "capacity_mw": "101764.9",
+          "outage_mw": "3582.23",
+          "reported_percent": "3.52",
+          "calculated_percent": "3.520103689975620277718545392",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-02-05",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-02-06",
+          "capacity_mw": "101764.9",
+          "outage_mw": "4112.159",
+          "reported_percent": "4.04",
+          "calculated_percent": "4.040842176428218373918708710",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-02-06",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-02-07",
+          "capacity_mw": "101764.9",
+          "outage_mw": "4748.582",
+          "reported_percent": "4.67",
+          "calculated_percent": "4.666227746501986441297539721",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-02-07",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-02-08",
+          "capacity_mw": "101764.9",
+          "outage_mw": "5256.151",
+          "reported_percent": "5.16",
+          "calculated_percent": "5.164994020531637136183497453",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-02-08",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-02-09",
+          "capacity_mw": "101764.9",
+          "outage_mw": "5023.289",
+          "reported_percent": "4.94",
+          "calculated_percent": "4.936170526379920778185798836",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-02-09",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2007-02-10",
+          "capacity_mw": "101764.9",
+          "outage_mw": "5082.398",
+          "reported_percent": "4.99",
+          "calculated_percent": "4.994254404023391169253838996",
+          "generator_count": 104,
+          "river_bend": {
+            "period": "2007-02-10",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "982",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        }
+      ]
+    },
+    "2013": {
+      "interval": [
+        "2013-06-25",
+        "2013-08-02"
+      ],
+      "retrieved_at_utc": "2026-10-07T05:26:26.786369+00:00",
+      "rows": {
+        "national": 39,
+        "facility": 2427,
+        "generator": 3870
+      },
+      "reconciled_days": 39,
+      "reconciled_facility_day_groups": 2427,
+      "capacity_and_outage_gaps_mw": "0",
+      "river_bend_missing_days": [
+        {
+          "date": "2013-06-25",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-06-26",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-06-27",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-06-28",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-06-29",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-06-30",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-07-01",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-07-02",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-07-03",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-07-04",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-07-05",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-07-06",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-07-07",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-07-08",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-07-09",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-07-10",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-07-11",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-07-12",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-07-13",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-07-14",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-07-15",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-07-16",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-07-17",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-07-18",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-07-19",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-07-20",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-07-21",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-07-22",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-07-23",
+          "nrc_power": 100
+        },
+        {
+          "date": "2013-07-24",
+          "nrc_power": 100
+        }
+      ],
+      "missing_days_by_weekday": {
+        "Tuesday": 5,
+        "Wednesday": 5,
+        "Thursday": 4,
+        "Friday": 4,
+        "Saturday": 4,
+        "Sunday": 4,
+        "Monday": 4
+      },
+      "daily": [
+        {
+          "date": "2013-06-25",
+          "capacity_mw": "98163.3",
+          "outage_mw": "4510.266",
+          "reported_percent": "4.59",
+          "calculated_percent": "4.594656047626760714034674873",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-06-26",
+          "capacity_mw": "98163.3",
+          "outage_mw": "4681.337",
+          "reported_percent": "4.77",
+          "calculated_percent": "4.768927898715711472617566850",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-06-27",
+          "capacity_mw": "98163.3",
+          "outage_mw": "3994.42",
+          "reported_percent": "4.07",
+          "calculated_percent": "4.069158229195636251022530824",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-06-28",
+          "capacity_mw": "98163.3",
+          "outage_mw": "6094.429",
+          "reported_percent": "6.21",
+          "calculated_percent": "6.208459780793840467873431313",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-06-29",
+          "capacity_mw": "98163.3",
+          "outage_mw": "7489.468",
+          "reported_percent": "7.63",
+          "calculated_percent": "7.629600879351040562002296174",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-06-30",
+          "capacity_mw": "98163.3",
+          "outage_mw": "7137.274",
+          "reported_percent": "7.27",
+          "calculated_percent": "7.270817097632210816058547339",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-01",
+          "capacity_mw": "98163.3",
+          "outage_mw": "6202.843",
+          "reported_percent": "6.32",
+          "calculated_percent": "6.318902278142645978690610442",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-02",
+          "capacity_mw": "98163.3",
+          "outage_mw": "5681.423",
+          "reported_percent": "5.79",
+          "calculated_percent": "5.787726166500107473974489448",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-03",
+          "capacity_mw": "98163.3",
+          "outage_mw": "5766.357",
+          "reported_percent": "5.87",
+          "calculated_percent": "5.874249337583394201295188731",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-04",
+          "capacity_mw": "98163.3",
+          "outage_mw": "6397.61",
+          "reported_percent": "6.52",
+          "calculated_percent": "6.517313496999387754894140682",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-05",
+          "capacity_mw": "98163.3",
+          "outage_mw": "4870.07",
+          "reported_percent": "4.96",
+          "calculated_percent": "4.961192217458052041852708701",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-06",
+          "capacity_mw": "98163.3",
+          "outage_mw": "4066.174",
+          "reported_percent": "4.14",
+          "calculated_percent": "4.142254793797682025767267400",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-07",
+          "capacity_mw": "98163.3",
+          "outage_mw": "4225.7",
+          "reported_percent": "4.3",
+          "calculated_percent": "4.304765630332313603964006915",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-08",
+          "capacity_mw": "98163.3",
+          "outage_mw": "4939.161",
+          "reported_percent": "5.03",
+          "calculated_percent": "5.031575955576065596816732934",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-09",
+          "capacity_mw": "98163.3",
+          "outage_mw": "5445.478",
+          "reported_percent": "5.55",
+          "calculated_percent": "5.547366480140745064601536419",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-10",
+          "capacity_mw": "98163.3",
+          "outage_mw": "3952.78",
+          "reported_percent": "4.03",
+          "calculated_percent": "4.026739117368711117087546975",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-11",
+          "capacity_mw": "98163.3",
+          "outage_mw": "5023.419",
+          "reported_percent": "5.12",
+          "calculated_percent": "5.117410478254092924748862355",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-12",
+          "capacity_mw": "98163.3",
+          "outage_mw": "4445.691",
+          "reported_percent": "4.53",
+          "calculated_percent": "4.528872806843290720666481261",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-13",
+          "capacity_mw": "98163.3",
+          "outage_mw": "4396.63",
+          "reported_percent": "4.48",
+          "calculated_percent": "4.478893843218392209715851036",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-14",
+          "capacity_mw": "98163.3",
+          "outage_mw": "3539.734",
+          "reported_percent": "3.61",
+          "calculated_percent": "3.605964754648631413165612810",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-15",
+          "capacity_mw": "98163.3",
+          "outage_mw": "2785.55",
+          "reported_percent": "2.84",
+          "calculated_percent": "2.837669475251952613655001411",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-16",
+          "capacity_mw": "98163.3",
+          "outage_mw": "2530.13",
+          "reported_percent": "2.58",
+          "calculated_percent": "2.577470398815035761837672531",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-17",
+          "capacity_mw": "98163.3",
+          "outage_mw": "2844.282",
+          "reported_percent": "2.9",
+          "calculated_percent": "2.897500389656826940414594864",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-18",
+          "capacity_mw": "98163.3",
+          "outage_mw": "2868.19",
+          "reported_percent": "2.92",
+          "calculated_percent": "2.921855724084255521157092315",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-19",
+          "capacity_mw": "98163.3",
+          "outage_mw": "3119.28",
+          "reported_percent": "3.18",
+          "calculated_percent": "3.177643783369141012985504766",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-20",
+          "capacity_mw": "98163.3",
+          "outage_mw": "3210.47",
+          "reported_percent": "3.27",
+          "calculated_percent": "3.270540008333053187902199702",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-21",
+          "capacity_mw": "98163.3",
+          "outage_mw": "4746.135",
+          "reported_percent": "4.83",
+          "calculated_percent": "4.834938311976064374363942532",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-22",
+          "capacity_mw": "98163.3",
+          "outage_mw": "3730.155",
+          "reported_percent": "3.8",
+          "calculated_percent": "3.799948656982803145371029703",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-23",
+          "capacity_mw": "98163.3",
+          "outage_mw": "2454.155",
+          "reported_percent": "2.5",
+          "calculated_percent": "2.500073856522753411916673543",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-24",
+          "capacity_mw": "98163.3",
+          "outage_mw": "2140.68",
+          "reported_percent": "2.18",
+          "calculated_percent": "2.180733532796880300478895881",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2013-07-25",
+          "capacity_mw": "99132.3",
+          "outage_mw": "2725.27",
+          "reported_percent": "2.75",
+          "calculated_percent": "2.749124150251734298508155263",
+          "generator_count": 100,
+          "river_bend": {
+            "period": "2013-07-25",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "969",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2013-07-26",
+          "capacity_mw": "99132.3",
+          "outage_mw": "2753.595",
+          "reported_percent": "2.78",
+          "calculated_percent": "2.777697077541830462926815982",
+          "generator_count": 100,
+          "river_bend": {
+            "period": "2013-07-26",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "969",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2013-07-27",
+          "capacity_mw": "99132.3",
+          "outage_mw": "5949.203",
+          "reported_percent": "6",
+          "calculated_percent": "6.001276072480916916080833391",
+          "generator_count": 100,
+          "river_bend": {
+            "period": "2013-07-27",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "969",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2013-07-28",
+          "capacity_mw": "99132.3",
+          "outage_mw": "4933.726",
+          "reported_percent": "4.98",
+          "calculated_percent": "4.976910653742523879704193285",
+          "generator_count": 100,
+          "river_bend": {
+            "period": "2013-07-28",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "969",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2013-07-29",
+          "capacity_mw": "99132.3",
+          "outage_mw": "5436.856",
+          "reported_percent": "5.48",
+          "calculated_percent": "5.484444525144680391759295406",
+          "generator_count": 100,
+          "river_bend": {
+            "period": "2013-07-29",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "969",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2013-07-30",
+          "capacity_mw": "99132.3",
+          "outage_mw": "5253.543",
+          "reported_percent": "5.3",
+          "calculated_percent": "5.299526995742053800829800176",
+          "generator_count": 100,
+          "river_bend": {
+            "period": "2013-07-30",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "969",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2013-07-31",
+          "capacity_mw": "99132.3",
+          "outage_mw": "6075.26",
+          "reported_percent": "6.13",
+          "calculated_percent": "6.128436443016050268176971582",
+          "generator_count": 100,
+          "river_bend": {
+            "period": "2013-07-31",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "969",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2013-08-01",
+          "capacity_mw": "99132.3",
+          "outage_mw": "5469.646",
+          "reported_percent": "5.52",
+          "calculated_percent": "5.517521534353586066297261337",
+          "generator_count": 100,
+          "river_bend": {
+            "period": "2013-08-01",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "969",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2013-08-02",
+          "capacity_mw": "99132.3",
+          "outage_mw": "4730.798",
+          "reported_percent": "4.77",
+          "calculated_percent": "4.772206435238565028754502821",
+          "generator_count": 100,
+          "river_bend": {
+            "period": "2013-08-02",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "969",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        }
+      ]
+    },
+    "2015": {
+      "interval": [
+        "2015-10-01",
+        "2015-11-05"
+      ],
+      "retrieved_at_utc": "2026-10-07T05:27:06.411191+00:00",
+      "rows": {
+        "national": 36,
+        "facility": 2219,
+        "generator": 3555
+      },
+      "reconciled_days": 36,
+      "reconciled_facility_day_groups": 2219,
+      "capacity_and_outage_gaps_mw": "0",
+      "river_bend_missing_days": [
+        {
+          "date": "2015-10-03",
+          "nrc_power": 100
+        },
+        {
+          "date": "2015-10-04",
+          "nrc_power": 100
+        },
+        {
+          "date": "2015-10-10",
+          "nrc_power": 100
+        },
+        {
+          "date": "2015-10-11",
+          "nrc_power": 100
+        },
+        {
+          "date": "2015-10-14",
+          "nrc_power": 100
+        },
+        {
+          "date": "2015-10-17",
+          "nrc_power": 100
+        },
+        {
+          "date": "2015-10-18",
+          "nrc_power": 100
+        },
+        {
+          "date": "2015-10-24",
+          "nrc_power": 100
+        },
+        {
+          "date": "2015-10-25",
+          "nrc_power": 100
+        },
+        {
+          "date": "2015-10-27",
+          "nrc_power": 100
+        },
+        {
+          "date": "2015-10-29",
+          "nrc_power": 100
+        },
+        {
+          "date": "2015-10-31",
+          "nrc_power": 100
+        },
+        {
+          "date": "2015-11-01",
+          "nrc_power": 100
+        }
+      ],
+      "missing_days_by_weekday": {
+        "Saturday": 5,
+        "Sunday": 5,
+        "Wednesday": 1,
+        "Tuesday": 1,
+        "Thursday": 1
+      },
+      "daily": [
+        {
+          "date": "2015-10-01",
+          "capacity_mw": "101001.4",
+          "outage_mw": "13772.24",
+          "reported_percent": "13.64",
+          "calculated_percent": "13.63569217852425807959097597",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2015-10-01",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2015-10-02",
+          "capacity_mw": "101001.4",
+          "outage_mw": "13782.485",
+          "reported_percent": "13.65",
+          "calculated_percent": "13.64583560227878029413453675",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2015-10-02",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2015-10-03",
+          "capacity_mw": "100034.4",
+          "outage_mw": "14532.875",
+          "reported_percent": "14.53",
+          "calculated_percent": "14.52787741017090120998376558",
+          "generator_count": 98,
+          "river_bend": null
+        },
+        {
+          "date": "2015-10-04",
+          "capacity_mw": "100034.4",
+          "outage_mw": "17393.895",
+          "reported_percent": "17.39",
+          "calculated_percent": "17.38791355773613876826371728",
+          "generator_count": 98,
+          "river_bend": null
+        },
+        {
+          "date": "2015-10-05",
+          "capacity_mw": "101001.4",
+          "outage_mw": "18247.715",
+          "reported_percent": "18.07",
+          "calculated_percent": "18.06679412364581085014663163",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2015-10-05",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2015-10-06",
+          "capacity_mw": "101001.4",
+          "outage_mw": "18103.825",
+          "reported_percent": "17.92",
+          "calculated_percent": "17.92433075185096444207704052",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2015-10-06",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2015-10-07",
+          "capacity_mw": "101001.4",
+          "outage_mw": "17121.621",
+          "reported_percent": "16.95",
+          "calculated_percent": "16.95186502365313748126263596",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2015-10-07",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2015-10-08",
+          "capacity_mw": "101001.4",
+          "outage_mw": "17391.835",
+          "reported_percent": "17.22",
+          "calculated_percent": "17.21939992910989352622834931",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2015-10-08",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2015-10-09",
+          "capacity_mw": "101001.4",
+          "outage_mw": "17620.21",
+          "reported_percent": "17.45",
+          "calculated_percent": "17.44551065628793264251782649",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2015-10-09",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2015-10-10",
+          "capacity_mw": "100034.4",
+          "outage_mw": "19141.542",
+          "reported_percent": "19.13",
+          "calculated_percent": "19.13495957390657613780859384",
+          "generator_count": 98,
+          "river_bend": null
+        },
+        {
+          "date": "2015-10-11",
+          "capacity_mw": "100034.4",
+          "outage_mw": "17975.608",
+          "reported_percent": "17.97",
+          "calculated_percent": "17.96942651727805634861607607",
+          "generator_count": 98,
+          "river_bend": null
+        },
+        {
+          "date": "2015-10-12",
+          "capacity_mw": "101001.4",
+          "outage_mw": "18540.718",
+          "reported_percent": "18.36",
+          "calculated_percent": "18.35689208268400239996673313",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2015-10-12",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2015-10-13",
+          "capacity_mw": "101001.4",
+          "outage_mw": "18244.6",
+          "reported_percent": "18.06",
+          "calculated_percent": "18.06371000798008740472904336",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2015-10-13",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2015-10-14",
+          "capacity_mw": "100034.4",
+          "outage_mw": "18321.609",
+          "reported_percent": "18.32",
+          "calculated_percent": "18.31530853386435066337180010",
+          "generator_count": 98,
+          "river_bend": null
+        },
+        {
+          "date": "2015-10-15",
+          "capacity_mw": "101001.4",
+          "outage_mw": "18217.616",
+          "reported_percent": "18.04",
+          "calculated_percent": "18.03699354662410620050811177",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2015-10-15",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2015-10-16",
+          "capacity_mw": "101001.4",
+          "outage_mw": "18242.91",
+          "reported_percent": "18.06",
+          "calculated_percent": "18.06203676384683776660521537",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2015-10-16",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2015-10-17",
+          "capacity_mw": "100034.4",
+          "outage_mw": "19634.003",
+          "reported_percent": "19.63",
+          "calculated_percent": "19.62725122557840103004566429",
+          "generator_count": 98,
+          "river_bend": null
+        },
+        {
+          "date": "2015-10-18",
+          "capacity_mw": "100034.4",
+          "outage_mw": "21405.183",
+          "reported_percent": "21.4",
+          "calculated_percent": "21.39782214918068184544516686",
+          "generator_count": 98,
+          "river_bend": null
+        },
+        {
+          "date": "2015-10-19",
+          "capacity_mw": "101001.4",
+          "outage_mw": "23402.023",
+          "reported_percent": "23.17",
+          "calculated_percent": "23.16999863368230539378662078",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2015-10-19",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2015-10-20",
+          "capacity_mw": "101001.4",
+          "outage_mw": "23355.963",
+          "reported_percent": "23.12",
+          "calculated_percent": "23.12439530541160815592655151",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2015-10-20",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2015-10-21",
+          "capacity_mw": "101001.4",
+          "outage_mw": "23136.152",
+          "reported_percent": "22.91",
+          "calculated_percent": "22.90676366862241513483971509",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2015-10-21",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2015-10-22",
+          "capacity_mw": "101001.4",
+          "outage_mw": "22082.139",
+          "reported_percent": "21.86",
+          "calculated_percent": "21.86320090612605369826556860",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2015-10-22",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2015-10-23",
+          "capacity_mw": "101001.4",
+          "outage_mw": "22975.264",
+          "reported_percent": "22.75",
+          "calculated_percent": "22.74747082713704958545129077",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2015-10-23",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2015-10-24",
+          "capacity_mw": "100034.4",
+          "outage_mw": "20758.244",
+          "reported_percent": "20.75",
+          "calculated_percent": "20.75110561966683460889454028",
+          "generator_count": 98,
+          "river_bend": null
+        },
+        {
+          "date": "2015-10-25",
+          "capacity_mw": "100034.4",
+          "outage_mw": "20802.731",
+          "reported_percent": "20.8",
+          "calculated_percent": "20.79557732140143790536055597",
+          "generator_count": 98,
+          "river_bend": null
+        },
+        {
+          "date": "2015-10-26",
+          "capacity_mw": "101001.4",
+          "outage_mw": "20033.026",
+          "reported_percent": "19.83",
+          "calculated_percent": "19.83440427558429883150134553",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2015-10-26",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2015-10-27",
+          "capacity_mw": "101198.4",
+          "outage_mw": "22569.692",
+          "reported_percent": "22.3",
+          "calculated_percent": "22.30241980110357476007525811",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2015-10-28",
+          "capacity_mw": "101001.4",
+          "outage_mw": "21098.529",
+          "reported_percent": "20.89",
+          "calculated_percent": "20.88934311801618591425465390",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2015-10-28",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2015-10-29",
+          "capacity_mw": "101198.4",
+          "outage_mw": "22015.549",
+          "reported_percent": "21.75",
+          "calculated_percent": "21.75483900931240019605053044",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2015-10-30",
+          "capacity_mw": "101001.4",
+          "outage_mw": "19910.79",
+          "reported_percent": "19.71",
+          "calculated_percent": "19.71338021057133861510830543",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2015-10-30",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2015-10-31",
+          "capacity_mw": "101198.4",
+          "outage_mw": "21275.992",
+          "reported_percent": "21.02",
+          "calculated_percent": "21.02403990576926117408970893",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2015-11-01",
+          "capacity_mw": "101198.4",
+          "outage_mw": "20694.39",
+          "reported_percent": "20.45",
+          "calculated_percent": "20.44932528577526917421619314",
+          "generator_count": 99,
+          "river_bend": null
+        },
+        {
+          "date": "2015-11-02",
+          "capacity_mw": "101001.4",
+          "outage_mw": "19843.373",
+          "reported_percent": "19.65",
+          "calculated_percent": "19.64663163084868130540764781",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2015-11-02",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2015-11-03",
+          "capacity_mw": "101001.4",
+          "outage_mw": "20054.285",
+          "reported_percent": "19.86",
+          "calculated_percent": "19.85545249867823614326138054",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2015-11-03",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2015-11-04",
+          "capacity_mw": "101001.4",
+          "outage_mw": "20323.345",
+          "reported_percent": "20.12",
+          "calculated_percent": "20.12184484571500989095200661",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2015-11-04",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2015-11-05",
+          "capacity_mw": "101001.4",
+          "outage_mw": "20298.925",
+          "reported_percent": "20.1",
+          "calculated_percent": "20.09766696303219559332840931",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2015-11-05",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        }
+      ]
+    },
+    "2017": {
+      "interval": [
+        "2017-07-01",
+        "2017-08-05"
+      ],
+      "retrieved_at_utc": "2026-10-07T05:27:43.225063+00:00",
+      "rows": {
+        "national": 36,
+        "facility": 2180,
+        "generator": 3548
+      },
+      "reconciled_days": 36,
+      "reconciled_facility_day_groups": 2180,
+      "capacity_and_outage_gaps_mw": "0",
+      "river_bend_missing_days": [
+        {
+          "date": "2017-07-01",
+          "nrc_power": null
+        },
+        {
+          "date": "2017-07-02",
+          "nrc_power": null
+        },
+        {
+          "date": "2017-07-03",
+          "nrc_power": null
+        },
+        {
+          "date": "2017-07-06",
+          "nrc_power": null
+        },
+        {
+          "date": "2017-07-07",
+          "nrc_power": null
+        },
+        {
+          "date": "2017-07-08",
+          "nrc_power": null
+        },
+        {
+          "date": "2017-07-09",
+          "nrc_power": null
+        },
+        {
+          "date": "2017-07-10",
+          "nrc_power": null
+        },
+        {
+          "date": "2017-07-15",
+          "nrc_power": null
+        },
+        {
+          "date": "2017-07-16",
+          "nrc_power": null
+        },
+        {
+          "date": "2017-07-22",
+          "nrc_power": null
+        },
+        {
+          "date": "2017-07-23",
+          "nrc_power": null
+        },
+        {
+          "date": "2017-07-29",
+          "nrc_power": null
+        },
+        {
+          "date": "2017-07-30",
+          "nrc_power": null
+        },
+        {
+          "date": "2017-08-04",
+          "nrc_power": null
+        },
+        {
+          "date": "2017-08-05",
+          "nrc_power": null
+        }
+      ],
+      "missing_days_by_weekday": {
+        "Saturday": 6,
+        "Sunday": 5,
+        "Monday": 2,
+        "Thursday": 1,
+        "Friday": 2
+      },
+      "daily": [
+        {
+          "date": "2017-07-01",
+          "capacity_mw": "98661.4",
+          "outage_mw": "4822.07",
+          "reported_percent": "4.89",
+          "calculated_percent": "4.887493994611874552763289392",
+          "generator_count": 98,
+          "river_bend": null
+        },
+        {
+          "date": "2017-07-02",
+          "capacity_mw": "98661.4",
+          "outage_mw": "4051.429",
+          "reported_percent": "4.11",
+          "calculated_percent": "4.106397233365835068223236240",
+          "generator_count": 98,
+          "river_bend": null
+        },
+        {
+          "date": "2017-07-03",
+          "capacity_mw": "98661.4",
+          "outage_mw": "3918.91",
+          "reported_percent": "3.97",
+          "calculated_percent": "3.972080266446654922796554681",
+          "generator_count": 98,
+          "river_bend": null
+        },
+        {
+          "date": "2017-07-04",
+          "capacity_mw": "99628.9",
+          "outage_mw": "4219.41",
+          "reported_percent": "4.24",
+          "calculated_percent": "4.235126554644284941417600716",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2017-07-04",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967.5",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2017-07-05",
+          "capacity_mw": "99628.9",
+          "outage_mw": "4216.728",
+          "reported_percent": "4.23",
+          "calculated_percent": "4.232434564669488471718547530",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2017-07-05",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967.5",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2017-07-06",
+          "capacity_mw": "98661.4",
+          "outage_mw": "4074.296",
+          "reported_percent": "4.13",
+          "calculated_percent": "4.129574484043405019592262019",
+          "generator_count": 98,
+          "river_bend": null
+        },
+        {
+          "date": "2017-07-07",
+          "capacity_mw": "98661.4",
+          "outage_mw": "4186.286",
+          "reported_percent": "4.24",
+          "calculated_percent": "4.243083921371478612709732479",
+          "generator_count": 98,
+          "river_bend": null
+        },
+        {
+          "date": "2017-07-08",
+          "capacity_mw": "98661.4",
+          "outage_mw": "4459.33",
+          "reported_percent": "4.52",
+          "calculated_percent": "4.519832477544409465099826275",
+          "generator_count": 98,
+          "river_bend": null
+        },
+        {
+          "date": "2017-07-09",
+          "capacity_mw": "98661.4",
+          "outage_mw": "4270.68",
+          "reported_percent": "4.33",
+          "calculated_percent": "4.328622946765401666710587930",
+          "generator_count": 98,
+          "river_bend": null
+        },
+        {
+          "date": "2017-07-10",
+          "capacity_mw": "98661.4",
+          "outage_mw": "3284.175",
+          "reported_percent": "3.33",
+          "calculated_percent": "3.328733425635557573681297853",
+          "generator_count": 98,
+          "river_bend": null
+        },
+        {
+          "date": "2017-07-11",
+          "capacity_mw": "99628.9",
+          "outage_mw": "2868.655",
+          "reported_percent": "2.88",
+          "calculated_percent": "2.879340231599465616904331976",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2017-07-11",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967.5",
+            "outage": "367.65",
+            "percentOutage": "38",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2017-07-12",
+          "capacity_mw": "99628.9",
+          "outage_mw": "2798.669",
+          "reported_percent": "2.81",
+          "calculated_percent": "2.809093546149761765913304272",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2017-07-12",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967.5",
+            "outage": "183.825",
+            "percentOutage": "19",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2017-07-13",
+          "capacity_mw": "99628.9",
+          "outage_mw": "2697.874",
+          "reported_percent": "2.71",
+          "calculated_percent": "2.707923102633874307555337859",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2017-07-13",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967.5",
+            "outage": "38.7",
+            "percentOutage": "4",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2017-07-14",
+          "capacity_mw": "99628.9",
+          "outage_mw": "3690.022",
+          "reported_percent": "3.7",
+          "calculated_percent": "3.703766678142587140879804956",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2017-07-14",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967.5",
+            "outage": "174.15",
+            "percentOutage": "18",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2017-07-15",
+          "capacity_mw": "98661.4",
+          "outage_mw": "2837.974",
+          "reported_percent": "2.88",
+          "calculated_percent": "2.876478541759999351316725690",
+          "generator_count": 98,
+          "river_bend": null
+        },
+        {
+          "date": "2017-07-16",
+          "capacity_mw": "98661.4",
+          "outage_mw": "2831.96",
+          "reported_percent": "2.87",
+          "calculated_percent": "2.870382946116718392400675441",
+          "generator_count": 98,
+          "river_bend": null
+        },
+        {
+          "date": "2017-07-17",
+          "capacity_mw": "99628.9",
+          "outage_mw": "3000.08",
+          "reported_percent": "3.01",
+          "calculated_percent": "3.011254766438252354487503124",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2017-07-17",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967.5",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2017-07-18",
+          "capacity_mw": "99628.9",
+          "outage_mw": "3955.33",
+          "reported_percent": "3.97",
+          "calculated_percent": "3.970062903434645971199119934",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2017-07-18",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967.5",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2017-07-19",
+          "capacity_mw": "99628.9",
+          "outage_mw": "3887.645",
+          "reported_percent": "3.9",
+          "calculated_percent": "3.902125788802245131683678130",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2017-07-19",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967.5",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2017-07-20",
+          "capacity_mw": "99628.9",
+          "outage_mw": "4163.737",
+          "reported_percent": "4.18",
+          "calculated_percent": "4.179246182583567619435725979",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2017-07-20",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967.5",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2017-07-21",
+          "capacity_mw": "99628.9",
+          "outage_mw": "4091.831",
+          "reported_percent": "4.11",
+          "calculated_percent": "4.107072345474054215192579663",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2017-07-21",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967.5",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2017-07-22",
+          "capacity_mw": "98661.4",
+          "outage_mw": "4061.893",
+          "reported_percent": "4.12",
+          "calculated_percent": "4.117003204900802137411388851",
+          "generator_count": 98,
+          "river_bend": null
+        },
+        {
+          "date": "2017-07-23",
+          "capacity_mw": "98661.4",
+          "outage_mw": "4186.689",
+          "reported_percent": "4.24",
+          "calculated_percent": "4.243492389120770635729880176",
+          "generator_count": 98,
+          "river_bend": null
+        },
+        {
+          "date": "2017-07-24",
+          "capacity_mw": "99628.9",
+          "outage_mw": "3907.35",
+          "reported_percent": "3.92",
+          "calculated_percent": "3.921904186435863489409197532",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2017-07-24",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967.5",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2017-07-25",
+          "capacity_mw": "99628.9",
+          "outage_mw": "4819.75",
+          "reported_percent": "4.84",
+          "calculated_percent": "4.837702714774528274426396357",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2017-07-25",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967.5",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2017-07-26",
+          "capacity_mw": "99628.9",
+          "outage_mw": "3765.35",
+          "reported_percent": "3.78",
+          "calculated_percent": "3.779375261595781946804591840",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2017-07-26",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967.5",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2017-07-27",
+          "capacity_mw": "99628.9",
+          "outage_mw": "3999.64",
+          "reported_percent": "4.01",
+          "calculated_percent": "4.014537950333688317345669781",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2017-07-27",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967.5",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2017-07-28",
+          "capacity_mw": "99628.9",
+          "outage_mw": "4088.03",
+          "reported_percent": "4.1",
+          "calculated_percent": "4.103257187422524990238776098",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2017-07-28",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967.5",
+            "outage": "0",
+            "percentOutage": "0",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2017-07-29",
+          "capacity_mw": "98661.4",
+          "outage_mw": "3933.92",
+          "reported_percent": "3.99",
+          "calculated_percent": "3.987293916364454589130095458",
+          "generator_count": 98,
+          "river_bend": null
+        },
+        {
+          "date": "2017-07-30",
+          "capacity_mw": "98661.4",
+          "outage_mw": "3595.702",
+          "reported_percent": "3.64",
+          "calculated_percent": "3.644487104379220242161574841",
+          "generator_count": 98,
+          "river_bend": null
+        },
+        {
+          "date": "2017-07-31",
+          "capacity_mw": "99628.9",
+          "outage_mw": "3657.818",
+          "reported_percent": "3.67",
+          "calculated_percent": "3.671442723948573154978123817",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2017-07-31",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967.5",
+            "outage": "212.85",
+            "percentOutage": "22",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2017-08-01",
+          "capacity_mw": "99628.9",
+          "outage_mw": "3423.324",
+          "reported_percent": "3.44",
+          "calculated_percent": "3.436075275346812019404008275",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2017-08-01",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967.5",
+            "outage": "116.1",
+            "percentOutage": "12",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2017-08-02",
+          "capacity_mw": "99628.9",
+          "outage_mw": "2797.326",
+          "reported_percent": "2.81",
+          "calculated_percent": "2.807745543712717896112473389",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2017-08-02",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967.5",
+            "outage": "328.95",
+            "percentOutage": "34",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2017-08-03",
+          "capacity_mw": "99628.9",
+          "outage_mw": "2142.575",
+          "reported_percent": "2.15",
+          "calculated_percent": "2.150555712248152895394810140",
+          "generator_count": 99,
+          "river_bend": {
+            "period": "2017-08-03",
+            "facility": "6462",
+            "facilityName": "River Bend Station",
+            "generator": "1",
+            "capacity": "967.5",
+            "outage": "106.425",
+            "percentOutage": "11",
+            "capacity-units": "megawatts",
+            "outage-units": "megawatts",
+            "percentOutage-units": "percent"
+          }
+        },
+        {
+          "date": "2017-08-04",
+          "capacity_mw": "98661.4",
+          "outage_mw": "2776.247",
+          "reported_percent": "2.81",
+          "calculated_percent": "2.813914053520424401032217260",
+          "generator_count": 98,
+          "river_bend": null
+        },
+        {
+          "date": "2017-08-05",
+          "capacity_mw": "98661.4",
+          "outage_mw": "3403.72",
+          "reported_percent": "3.45",
+          "calculated_percent": "3.449900366303336461878708391",
+          "generator_count": 98,
+          "river_bend": null
+        }
+      ]
+    }
+  },
+  "limitations": [
+    "EIA files omit credential-bearing echoed request fields; they are sanitized evidence, not original wire bytes.",
+    "Sequential source requests are not an atomic upstream snapshot.",
+    "No 2017 NRC file was downloaded; 2017 omissions are supported by EIA coverage only."
+  ]
+}
