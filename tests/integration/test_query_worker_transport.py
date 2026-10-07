@@ -8,8 +8,6 @@ import sys
 from datetime import date
 from decimal import Decimal
 
-import pytest
-
 from outage_explorer.domain.datasets import PUBLIC_DATASETS
 
 
@@ -18,7 +16,7 @@ def test_worker_query_subprocess():
         [sys.executable, "-m", "outage_explorer.entrypoints.query_worker_startup"],
         input=json.dumps(
             {
-                "version": 2,
+                "version": 1,
                 "operation": "query",
                 "sql": "SELECT 42 AS answer",
                 "relations": [],
@@ -38,7 +36,7 @@ def test_worker_query_subprocess():
 def test_worker_subprocess_fails_safely_without_credentials():
     result = subprocess.run(
         [sys.executable, "-m", "outage_explorer.entrypoints.query_worker_startup"],
-        input='{"version":2,"operation":"query","sql":"SELECT * FROM read_csv(\'/secret\')","relations":[]}',
+        input='{"version":1,"operation":"query","sql":"SELECT * FROM read_csv(\'/secret\')","relations":[]}',
         text=True,
         capture_output=True,
         timeout=20,
@@ -79,7 +77,7 @@ def test_worker_preview_subprocess_checks_real_parquet(tmp_path):
     digest = hashlib.sha256(raw).hexdigest()
     original.rename(tmp_path / (digest + ".parquet"))
     payload = {
-        "version": 2,
+        "version": 1,
         "operation": "preview",
         "dataset": "national",
         "files": [{"sha256": digest, "byte_count": len(raw), "rows": 1}],
@@ -87,7 +85,6 @@ def test_worker_preview_subprocess_checks_real_parquet(tmp_path):
         "end_date": None,
         "after": None,
         "page_size": 100,
-        "facility": None,
     }
     program = """
 import sys
@@ -217,7 +214,7 @@ raise SystemExit(run(build_query_worker(inputs_root=Path(sys.argv[1])), sys.stdi
             store.root / ref.object.key, inputs / (ref.object.sha256 + ".parquet")
         )
         payload = {
-            "version": 2,
+            "version": 1,
             "operation": "preview",
             "dataset": dataset.id,
             "files": [
@@ -231,7 +228,6 @@ raise SystemExit(run(build_query_worker(inputs_root=Path(sys.argv[1])), sys.stdi
             "end_date": None,
             "after": None,
             "page_size": 100,
-            "facility": None,
         }
         result = subprocess.run(
             [sys.executable, "-c", program, str(inputs)],
@@ -248,130 +244,3 @@ raise SystemExit(run(build_query_worker(inputs_root=Path(sys.argv[1])), sys.stdi
             c.name for c in dataset.columns
         ]
         assert "origin" not in result.stdout
-
-
-@pytest.mark.parametrize("dataset_id", ["facilities", "generators"])
-def test_filtered_preview_real_parquet_subprocess_pages(tmp_path, dataset_id):
-    """Actual bound predicates and keyset pages; no OS isolation claim."""
-    from dataclasses import replace
-
-    from outage_explorer.application.ports.analytical_inputs import ApprovedFile
-    from outage_explorer.application.ports.execution import PreviewRead
-    from outage_explorer.infrastructure.parquet.storage import LocalParquetStore
-    from outage_explorer.infrastructure.worker_runtime.configuration import (
-        RuntimeProfile,
-    )
-    from outage_explorer.infrastructure.worker_runtime.decoding import WorkerTransport
-    from tests.integration.test_connector_parquet import ARTIFACT_BOUNDS, raw
-    from tests.integration.test_resource_candidates import build
-
-    days = ["2026-09-01", "2026-09-02", "2026-09-03"]
-    facilities = ["001", "1", "A' OR 1=1 --", "é"]
-    source = {
-        "national": [raw("national", period=day) for day in days],
-        "facility": [
-            raw("facility", period=day, facility=facility)
-            for day in days
-            for facility in facilities
-        ],
-        "generator": [
-            raw("generator", period=day, facility=facility, generator=generator)
-            for day in days
-            for facility in facilities
-            for generator in ["é", "A", "01"]
-        ],
-    }
-    store = LocalParquetStore(tmp_path / "candidate", ARTIFACT_BOUNDS)
-    candidate = build(store, values=source)
-    dataset = next(d for d in PUBLIC_DATASETS if d.id == dataset_id)
-    ref = next(r for r in candidate.resources if r.grain == dataset.grain)
-    inputs = tmp_path / "inputs"
-    inputs.mkdir()
-    path = inputs / (ref.object.sha256 + ".parquet")
-    shutil.copyfile(store.root / ref.object.key, path)
-    transport = WorkerTransport(
-        RuntimeProfile(
-            image_id="sha256:" + "a" * 64,
-            daemon_endpoint="unix:///var/run/docker.sock",
-            platform="controlled-subprocess",
-            daemon_version="not-run",
-            filesystem_identity="synthetic",
-        )
-    )
-    base = PreviewRead(
-        dataset,
-        (
-            ApprovedFile(
-                str(path), ref.object.sha256, ref.object.byte_count, ref.row_count
-            ),
-        ),
-        None,
-        None,
-        None,
-        2,
-    )
-    program = """
-import sys
-from pathlib import Path
-from outage_explorer.bootstrap import build_query_worker
-from outage_explorer.entrypoints.query_worker import run
-raise SystemExit(run(build_query_worker(inputs_root=Path(sys.argv[1])), sys.stdin.buffer, sys.stdout.buffer))
-"""
-
-    def page(request):
-        response = subprocess.run(
-            [sys.executable, "-c", program, str(inputs)],
-            input=transport.request(request),
-            capture_output=True,
-            timeout=20,
-            check=False,
-        )
-        assert response.returncode == 0, response.stderr
-        assert json.loads(response.stdout)["version"] == 2
-        return transport.decode(
-            response.stdout, request=request, exit_code=response.returncode
-        )
-
-    identities = [
-        c.name for c in dataset.columns if c.name in {"facility", "generator"}
-    ]
-    expected = [
-        (day, facility, *([generator] if dataset_id == "generators" else []))
-        for day in reversed(days)
-        for facility in sorted(facilities, key=str.encode)
-        for generator in (
-            sorted(["é", "A", "01"], key=str.encode)
-            if dataset_id == "generators"
-            else [None]
-        )
-    ]
-    for facility, start, end in [
-        (None, None, None),
-        (None, date(2026, 9, 2), date(2026, 9, 2)),
-        ("001", None, None),
-        ("1", None, None),
-        ("A' OR 1=1 --", None, None),
-        ("é", date(2026, 9, 2), date(2026, 9, 3)),
-        ("missing", None, None),
-    ]:
-        request = replace(base, facility=facility, start=start, end=end)
-        first = page(request)
-        assert page(request) == first  # Deterministic revisit of the same key.
-        collected = list(first.keys)
-        current = first
-        while current.has_more:
-            request = replace(request, after=current.keys[-1])
-            current = page(request)
-            collected.extend(current.keys)
-        matching = [
-            key
-            for key in expected
-            if (facility is None or key[1] == facility)
-            and (start is None or key[0] >= start.isoformat())
-            and (end is None or key[0] <= end.isoformat())
-        ]
-        assert collected == matching
-        assert len(collected) == len(set(collected))
-        assert len(first.rows) <= 2
-        if first.rows:
-            assert len(first.keys[0]) == len(identities) + 1

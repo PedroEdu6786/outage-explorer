@@ -386,25 +386,3 @@ def test_analytical_startup_cannot_be_service_locator(tmp_path, path):
         {path: "from outage_explorer.entrypoints.http.analytical_startup import main"},
     )
     assert violations(root)
-
-
-@pytest.mark.parametrize(
-    "dependency", ["urllib.request", "urllib.request.urlopen", "urllib", "urllib.parse"]
-)
-def test_query_decoder_exception_does_not_allow_network_or_broad_urllib(
-    tmp_path, dependency
-):
-    root = source_tree(
-        tmp_path, {"entrypoints/http/data_schemas.py": f"import {dependency}"}
-    )
-    assert violations(root)
-
-
-def test_query_decoder_may_decode_percent_bytes_only(tmp_path):
-    root = source_tree(
-        tmp_path,
-        {
-            "entrypoints/http/data_schemas.py": "from urllib.parse import unquote_to_bytes"
-        },
-    )
-    assert violations(root) == []

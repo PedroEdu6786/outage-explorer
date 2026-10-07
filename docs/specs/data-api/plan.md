@@ -221,14 +221,12 @@ contain references/summaries, never analytical rows or query-ID metadata.
 
 ### Refresh lifecycle and publication
 
-- Resolve operator-managed `refresh.start_date`, `refresh.end_date` and
-  `refresh.max_interval_days` in typed startup configuration, with candidate and
-  S3 budgets validated together. Changes require controlled configuration reload
-  at process restart, not a new endpoint. Persist resolved nonsecret settings and
-  contract versions; queued work executes that snapshot. Initially cap the
-  configurable interval at 183 days, matching the accepted initial interval and
-  connector starting profile, subject to resource verification; a broader range
-  needs evidence/config review. With no active generation require exactly
+- Resolve operator-managed `refresh.start_date` and candidate/S3 budgets at
+  startup. Under [ADR-0063](../../adr/0063-configured-start-current-end-refresh.md),
+  resolve today's UTC end at each new admission and freeze the inclusive span
+  into all three saved interval-budget fields. There is no fixed day-count ceiling;
+  all non-date resource limits remain. Start/budget changes require an API restart.
+  Queued work executes the saved snapshot. With no active generation require exactly
   April 2–October 1, 2026 rather than silently overriding configuration.
   (FR14, FR23–FR24, TR8)
 - Validate an opaque 16–128-character ASCII key from letters, digits, hyphen and
@@ -479,9 +477,9 @@ bounded error details so the caller can GET page 1 without repeating execution.
 - **Q5:** omitted-side unbounded filters, binary identifier ties and visited
   `page_cursor` navigation resolve the contract without adding identifier filters
   or arbitrary numbered preview jumps. (FR4–FR5, TR2)
-- **Q6:** operator-owned startup configuration and a provisional 183-day maximum
-  preserve the existing initial interval; this is an admission starting limit,
-  not a measured capacity claim. Queued configuration snapshots contain no secrets.
+- **Q6:** operator-owned start configuration and admission-time UTC end follow
+  ADR-0063, replacing the provisional 183-day ceiling. Preserve the explicit
+  initial interval and non-date budgets. Queued snapshots contain no secrets.
   (FR14, FR23, TR8)
 - **Q7:** explicit publication enum/nonterminal unknown state and typed connector
   quality mapping are recommended; database unavailability remains an HTTP error,

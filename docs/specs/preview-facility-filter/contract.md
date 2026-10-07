@@ -1,18 +1,17 @@
-# Preview facility-filter contract
+# Proposed preview facility-filter contract
 
-Status: **implemented in backend source; phase 4 acceptance/evidence remains open**.
-Phase 3 carries the field through HTTP, application sequences and isolated worker
-protocol version 2, with public catalog/OpenAPI updates. Running services need a
-matching rebuilt/reviewed worker image and runtime identity; no deployment or
-activation is implied. The examples in [contract-cases.json](contract-cases.json)
-are synthetic contract cases, not recorded HTTP responses. See the
-[specification](spec.md) and [tasks](tasks.md) for scoped verification.
+Status: **proposed contract; runtime facility filtering is not implemented**.
+Phase 1 defines the identifier rule and examples. Active HTTP handling, catalog
+capabilities, both OpenAPI copies and data API fixtures remain date-only until
+Phase 3 delivers the complete worker path. The examples in
+[contract-cases.json](contract-cases.json) describe planned behavior, not recorded
+HTTP responses. See the [specification](spec.md) and [tasks](tasks.md).
 
 ## Initial request
 
-`GET /api/datasets/{dataset}/preview` accepts one optional `facility` query
+`GET /api/datasets/{dataset}/preview` will accept one optional `facility` query
 parameter for `facilities` and `generators`. Analyst/Admin authorization remains
-required before analytical access. National preview rejects the parameter,
+required before analytical access. National preview will reject the parameter,
 including an empty value; Viewer cannot use it to access detail datasets.
 
 Facility is an opaque string of **1–256 UTF-8 bytes**, preserving case, leading
@@ -43,9 +42,9 @@ Ordering, revisits, fixed 60-second expiry, authorization on every page and
 cleanup/pin bounds remain unchanged. A new publication cannot change an existing
 sequence's selected data or facility.
 
-The catalog `supported_filters` arrays, in order, are:
+The planned catalog `supported_filters` arrays, in order, are:
 
-| Dataset | Supported filters |
+| Dataset | Planned supported filters |
 | --- | --- |
 | `national` | `start_date`, `end_date` |
 | `facilities` | `start_date`, `end_date`, `facility` |
@@ -57,9 +56,8 @@ and acceptance do not depend on changes to the separate web project.
 
 ## Example scope
 
-The JSON examples retain their original proposed-outcome labels and identifier
-validity; they are not runtime evidence.
+The JSON examples label both planned request outcomes and identifier validity.
 The pure validator proves only identifier validity: it cannot establish dataset
 support, duplicate rejection, authorization, cursor rules, date intersection,
-empty-result execution or HTTP status. Phase checkpoints separately record
-behavioral tests. Full-feature AC1–AC6 evidence is reviewed in phase 4.
+empty-result execution or HTTP status. Later phase checkpoints verify those
+behaviors. AC1–AC6 remain incomplete after this phase.

@@ -48,7 +48,7 @@ DOCUMENT = retain_result(
         "sha256:" + "a" * 64, "unix:///tmp/docker.sock", "test", "test", "test"
     ).encoding_bounds,
 ).document
-RESPONSE = b'{"version":2,"operation":"query","result":' + DOCUMENT + b"}"
+RESPONSE = b'{"version":1,"operation":"query","result":' + DOCUMENT + b"}"
 
 
 class Control:

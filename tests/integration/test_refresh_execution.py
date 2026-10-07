@@ -137,6 +137,48 @@ def test_frozen_admission_dates_and_limits_ignore_worker_configuration(
         process.close()
 
 
+def test_subsequent_refresh_beyond_183_days_uses_frozen_source_model_span(
+    system, database, tmp_path, monkeypatch
+):
+    from datetime import UTC, datetime
+
+    from outage_explorer.bootstrap import build_data_services
+    from outage_explorer.infrastructure.clock import SystemClock
+
+    client = RefreshS3()
+    execute(system, database, tmp_path, client=client)
+    store, service, tokens, _, _ = system
+    monkeypatch.setattr(
+        SystemClock, "now", lambda self: datetime(2026, 10, 7, tzinfo=UTC)
+    )
+    refresh = build_data_services(
+        service._access,
+        store,
+        service._security,
+        {"OUTAGE_REFRESH_START_DATE": "2026-04-02"},
+    ).refresh
+    run = refresh.admit(tokens[Role.ADMIN], "long-interval-key", {})
+    assert run.configuration.max_interval_days == 189
+    wire = Wire(
+        {
+            grain: [row(grain, period="2026-10-07")]
+            for grain in ("national", "facility", "generator")
+        }
+    )
+    process = composition(database, tmp_path, wire, client)
+    try:
+        result = process.tick()
+        assert result.status is RunStatus.SUCCEEDED
+        assert result.configuration == run.configuration
+        assert store.active_generation().run_id == run.id
+        requests = [r for r in wire.calls if r.url.path.endswith("/data/")]
+        assert len({r.url.path for r in requests}) == 3
+        assert all(r.url.params["start"] == "2026-04-02" for r in requests)
+        assert all(r.url.params["end"] == "2026-10-07" for r in requests)
+    finally:
+        process.close()
+
+
 def test_all_excluded_retains_pointer_with_overlapping_reasons(
     system, database, tmp_path
 ):

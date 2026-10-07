@@ -65,7 +65,6 @@ class RefreshConfiguration:
             any(type(value) is not int or value <= 0 for value in limits)
             or self.start > self.end
             or (self.end - self.start).days + 1 > min(limits[:3])
-            or self.max_interval_days > 183
             or self.contract_version != "v1"
             or type(self.s3_workers) is not int
             or not 1 <= self.s3_workers <= 3

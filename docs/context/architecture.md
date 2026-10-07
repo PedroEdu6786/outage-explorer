@@ -105,14 +105,16 @@ application integration exists. Controlled tests do not prove all live behavior.
 
 ## HTTP, analytical preparation and execution
 
+HTTP refresh uses the configured start through today's UTC date, resolved at
+admission and saved with the run. There is no fixed 183-day ceiling; all non-date
+resource bounds and the explicit initial-load policy remain enforced under
+[ADR-0063](../adr/0063-configured-start-current-end-refresh.md).
+
 Opt-in data HTTP mounts seven operations: catalog, dataset preview, SQL submission
 and retained paging, and refresh admission/latest/by-ID. Auth routes handle login,
 callback, session and logout. See the implemented [HTTP contract](../specs/data-api/http-contract.md)
 and [OpenAPI](../specs/data-api/openapi.json). Public dataset/SQL names are
-`national`, `facilities` and `generators`. Preview supports date bounds and one
-exact facility ID for facility/generator datasets; national is date-only. The
-[facility-filter checkpoint](../specs/preview-facility-filter/tasks.md) records
-verification limits and the required matching version-2 worker image/profile.
+`national`, `facilities` and `generators`; preview filters are date-only.
 
 SQL inspection runs in a separate bounded subprocess under ADR-0054. Authentication
 precedes inspection; complete reference authorization precedes analytical inputs.

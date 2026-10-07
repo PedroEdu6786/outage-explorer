@@ -171,17 +171,6 @@
               "minLength": 1,
               "maxLength": 256
             }
-          },
-          {
-            "name": "facility",
-            "in": "query",
-            "required": false,
-            "description": "One exact opaque facility ID for facilities/generators only, 1–256 UTF-8 bytes; preserve case and leading zeros. Reject empty, controls, surrounding whitespace, repeated parameters and cursor combinations. Inclusive dates intersect this selection. Unknown valid IDs return an empty preview.",
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 256
-            }
           }
         ],
         "responses": {
@@ -3227,20 +3216,9 @@
             "$ref": "#/components/schemas/Columns"
           },
           "supported_filters": {
-            "oneOf": [
-              {
-                "const": [
-                  "start_date",
-                  "end_date"
-                ]
-              },
-              {
-                "const": [
-                  "start_date",
-                  "end_date",
-                  "facility"
-                ]
-              }
+            "const": [
+              "start_date",
+              "end_date"
             ]
           },
           "coverage": {
@@ -3256,39 +3234,7 @@
           "supported_filters",
           "coverage"
         ],
-        "additionalProperties": false,
-        "allOf": [
-          {
-            "if": {
-              "properties": {
-                "id": {
-                  "const": "national"
-                }
-              }
-            },
-            "then": {
-              "properties": {
-                "supported_filters": {
-                  "const": [
-                    "start_date",
-                    "end_date"
-                  ]
-                }
-              }
-            },
-            "else": {
-              "properties": {
-                "supported_filters": {
-                  "const": [
-                    "start_date",
-                    "end_date",
-                    "facility"
-                  ]
-                }
-              }
-            }
-          }
-        ]
+        "additionalProperties": false
       },
       "Catalog": {
         "type": "object",

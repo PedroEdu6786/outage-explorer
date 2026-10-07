@@ -47,7 +47,6 @@ def create_datasets_blueprint(
                     end=values.end,
                     size=values.size,
                     cursor=values.cursor,
-                    facility=values.facility,
                 )
             )
         except (DatasetUnavailableError, ForbiddenError) as error:

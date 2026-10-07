@@ -60,8 +60,7 @@ remain sufficient; registration and automatic refresh scheduling are excluded.
   capacity offline share; reconcile at least 30 days across the three grains
   and document at least three real anomalies with reproducible evidence.
 - **Backend:** provide authentication, an authorized dataset catalog,
-  date-filtered previews with backend pagination and optional exact facility
-  selection on facility/generator datasets, read-only SQL,
+  date-filtered previews with backend pagination, read-only SQL,
   and Admin-only refresh with an outcome.
 
 The technical challenge remains the requirements source for these three parts.
@@ -230,8 +229,7 @@ do not infer a choice from the epic list.
 
 ## Users
 
-- **Analyst:** access all analytical datasets, preview by date and facility on
-  detail datasets,
+- **Analyst:** access all analytical datasets, preview by date, filter by facility in SQL,
   and run read-only SQL.
 - **Viewer:** national trends only; no facility or generator detail through
   any backend path.

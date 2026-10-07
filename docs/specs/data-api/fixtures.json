@@ -284,8 +284,7 @@
             ],
             "supported_filters": [
               "start_date",
-              "end_date",
-              "facility"
+              "end_date"
             ],
             "coverage": {
               "start_date": "2026-04-02",
@@ -363,8 +362,7 @@
             ],
             "supported_filters": [
               "start_date",
-              "end_date",
-              "facility"
+              "end_date"
             ],
             "coverage": {
               "start_date": "2026-04-02",
@@ -545,8 +543,7 @@
             ],
             "supported_filters": [
               "start_date",
-              "end_date",
-              "facility"
+              "end_date"
             ],
             "coverage": {
               "start_date": "2026-04-02",
@@ -624,8 +621,7 @@
             ],
             "supported_filters": [
               "start_date",
-              "end_date",
-              "facility"
+              "end_date"
             ],
             "coverage": {
               "start_date": "2026-04-02",

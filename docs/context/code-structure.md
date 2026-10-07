@@ -43,8 +43,9 @@ shared CLI/refresh/bootstrap use these settings. Controlled tests live in
 `tests/integration/test_resource_artifacts.py`; publication, exact analytical cache
 reads and the composed end-to-end flow passed the phase-4 checkpoint.
 
-Under [ADR-0051](../adr/0051-configured-http-refresh-range.md), HTTP refresh
-admission resolves a configured inclusive interval and records it for background
+Under [ADR-0063](../adr/0063-configured-start-current-end-refresh.md), HTTP refresh
+admission resolves the configured start through today's UTC date, with no fixed
+183-day ceiling, and records the inclusive interval for background
 execution; routes accept no caller date overrides. Configuration wiring belongs
 in bootstrap/settings and admission orchestration in the application layer.
 

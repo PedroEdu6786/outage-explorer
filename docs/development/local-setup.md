@@ -51,8 +51,13 @@ OUTAGE_AUTH_UI_ORIGIN=http://localhost:3000
 OUTAGE_AUTH_RETURN_PATHS=/,/overview,/datasets,/query
 OUTAGE_AUTH_DEVELOPMENT_HTTP=true
 OUTAGE_REFRESH_START_DATE=2026-04-02
-OUTAGE_REFRESH_END_DATE=2026-10-01
 ```
+
+New Admin refreshes use this configured start through today's UTC date, with no
+fixed day-count ceiling. The exact range is saved per run; EIA publication can
+lag behind today. Finite connector resource budgets still apply. See
+[refresh configuration](connector.md#product-refresh-worker) for limits and
+obsolete settings to remove. Changing the start requires an API restart.
 
 Register the exact callback above and the sign-out URL
 `http://localhost:3000/sign-in` in the Cognito app client. Configure
@@ -129,4 +134,3 @@ expected. This is user acceptance of that behavior; no additional automated or
 browser validation is claimed here. Clean-machine analytical provisioning and
 the remaining release evidence are separate from these startup instructions.
 EC2 deployment is not required for this local workflow.
-

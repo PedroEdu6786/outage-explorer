@@ -34,11 +34,9 @@ observable background refresh of all three datasets with verified publication.
   verified published observations, independently of upstream source availability.
 - **FR4:** WHEN an authorized user browses a table THE SYSTEM SHALL return records
   within the selected inclusive date range, or all available dates when no range
-  is supplied, newest observations first with deterministic ordering. Facility and
-  generator previews additionally accept one optional exact facility ID, combined
-  with date bounds; national rejects that filter.
+  is supplied, newest observations first with deterministic ordering.
 - **FR5:** WHEN an authorized user continues a table preview THE SYSTEM SHALL
-  preserve its original caller, dataset, dates, facility selection, ordering, page size and generation
+  preserve its original caller, dataset, dates, ordering, page size and generation
   for the browsing sequence's fixed lifetime.
 - **FR6:** WHEN national data is exposed for browsing and querying THE SYSTEM
   SHALL make calculated and reported percentages from the same stored national
@@ -151,7 +149,7 @@ observable background refresh of all three datasets with verified publication.
   for claiming these guarantees; narrowing support requires demonstrated reasons.
 - **TR8:** Apply the [connector specification](../data-connector/spec.md),
   [initial-load/retention policy](../../adr/0037-connector-initial-load-and-retention.md),
-  [configured-range policy](../../adr/0051-configured-http-refresh-range.md), and
+  [configured-start/current-end policy](../../adr/0063-configured-start-current-end-refresh.md), and
   [interruption policy](../../adr/0052-interrupted-refresh-recovery.md).
   A durable candidate receipt alone does not establish active publication.
 - **TR9:** National percentages retain calculation precision and use two-decimal,
@@ -208,8 +206,7 @@ observable background refresh of all three datasets with verified publication.
 
 ### In scope
 
-- Authorized catalog, date previews with optional exact facility selection for
-  facility/generator datasets, the national metric within national
+- Authorized catalog and date-only previews, the national metric within national
   data, user-submitted SQL and retained numbered result pages.
 - All-dataset background refresh, configured admission range, status/quality,
   active/latest rediscovery, complete publication and interruption reconciliation.
@@ -229,8 +226,7 @@ observable background refresh of all three datasets with verified publication.
 
 ## Assumptions
 
-- This effort refines the existing backend scope: date previews (subsequently
-  extended by [single-facility filtering](../preview-facility-filter/spec.md)),
+- This effort refines the existing backend scope: date-only initial previews,
   national metric placement, SQL paging defaults/lifetime and configured refresh
   supersede older open proposals on those points. Other accepted policies persist.
 - Accepted product behavior can be planned while identified contract and resource
@@ -247,8 +243,7 @@ observable background refresh of all three datasets with verified publication.
 - [ ] **AC3:** With upstream retrieval unavailable, published observations remain
   browsable/queryable; unpublished candidates are never served. (verifies FR3)
 - [ ] **AC4:** Date bounds are inclusive; omitted dates show all coverage newest
-  first with stable ordering. Facility/generator previews also accept one exact
-  facility ID; national remains date-only.
+  first with stable ordering. Initial preview supports only date filters.
   (verifies FR4)
 - [ ] **AC5:** Preview defaults to 100 rows, supports the initial maximum 500,
   remains bound to its original sequence and expires exactly 60 seconds after

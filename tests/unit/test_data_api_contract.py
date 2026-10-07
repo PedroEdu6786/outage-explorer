@@ -77,9 +77,6 @@ def test_catalog_matches_shared_ordered_projection_and_role_matrix():
                     datasets[descriptor["id"]].columns
                 )
                 assert descriptor["id"] == descriptor["sql_name"]
-                assert descriptor["supported_filters"] == ["start_date", "end_date"] + (
-                    [] if descriptor["id"] == "national" else ["facility"]
-                )
         if fixture["schema"] == "Preview":
             body = fixture["body"]
             assert body["columns"] == column_descriptors(
@@ -190,25 +187,3 @@ def test_corrected_examples_are_consistent():
     assert row_limit["retained_row_count"] == row_limit["limits"]["max_rows"] == 1000
     assert len(row_limit["rows"]) == row_limit["page_size"] == 1
     assert by_name["query_reference_free"]["body"]["generation_id"] is None
-
-
-def test_facility_capabilities_are_bound_to_dataset_and_parameter_is_documented():
-    parameters = CONTRACT["paths"]["/api/datasets/{dataset}/preview"]["get"][
-        "parameters"
-    ]
-    facility = next(p for p in parameters if p["name"] == "facility")
-    assert facility["in"] == "query"
-    assert facility["required"] is False
-    assert facility["schema"] == {"type": "string", "minLength": 1, "maxLength": 256}
-    assert "UTF-8" in facility["description"]
-    for fixture in FIXTURES:
-        if fixture["schema"] != "Catalog":
-            continue
-        for descriptor in fixture["body"]["datasets"]:
-            changed = copy.deepcopy(descriptor)
-            changed["supported_filters"] = (
-                ["start_date", "end_date", "facility"]
-                if descriptor["id"] == "national"
-                else ["start_date", "end_date"]
-            )
-            assert list(validator("Dataset").iter_errors(changed))

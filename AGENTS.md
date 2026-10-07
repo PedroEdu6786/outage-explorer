@@ -110,8 +110,11 @@ authorization before analytical inputs, bounded admission/resources/transport,
 confirmed termination and no API-process parsing fallback. Numeric parser budgets
 and concrete runtime verification remain open.
 
-Product HTTP refresh uses a configured inclusive date range, without caller
-date overrides, under [ADR-0051](docs/adr/0051-configured-http-refresh-range.md).
+Product HTTP refresh uses a configured start through today's UTC date, without
+caller date overrides or a fixed 183-day ceiling, under
+[ADR-0063](docs/adr/0063-configured-start-current-end-refresh.md).
+Source/model interval budgets use the resolved inclusive span; all non-date
+resource bounds remain enforced. Legacy end/date-cap environment settings are ignored.
 Record the resolved interval at admission; later configuration changes must
 not change a run. Initial-load dates and connector CLI behavior remain governed
 by their existing ADRs.

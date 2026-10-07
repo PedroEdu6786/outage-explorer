@@ -355,14 +355,13 @@ def test_admission_and_publication_history_immutable(system, database):
 def test_refresh_settings_validate_together():
     env = {
         "OUTAGE_REFRESH_START_DATE": "2026-04-02",
-        "OUTAGE_REFRESH_END_DATE": "2026-10-01",
     }
     assert refresh_settings(env).start_date == CONFIG.start
     for overrides in (
-        {"OUTAGE_REFRESH_MAX_INTERVAL_DAYS": "182"},
-        {"OUTAGE_REFRESH_SOURCE_INTERVAL_DAYS": "1"},
         {"OUTAGE_REFRESH_CANDIDATE_SECONDS": "0"},
-        {"OUTAGE_REFRESH_END_DATE": "2026-04-01"},
+        {"OUTAGE_REFRESH_PERSISTENCE_SECONDS": "0"},
+        {"OUTAGE_REFRESH_S3_WORKERS": "4"},
+        {"OUTAGE_REFRESH_START_DATE": "2026-02-30"},
     ):
         with pytest.raises(ValueError):
             refresh_settings(env | overrides)

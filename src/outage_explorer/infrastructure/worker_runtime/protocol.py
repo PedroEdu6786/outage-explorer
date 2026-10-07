@@ -20,13 +20,9 @@ from outage_explorer.application.ports.execution import (
 from outage_explorer.application.ports.query_results import QueryOutput
 from outage_explorer.application.ports.sql_inspection import SqlInspector, SqlRejected
 from outage_explorer.domain.datasets import PUBLIC_DATASETS, Dataset
-from outage_explorer.domain.preview_filters import validate_facility_identifier
 from outage_explorer.infrastructure.query_results.encoding import canonical_json
 from outage_explorer.infrastructure.query_results.preview_encoding import (
     PreviewEncoding,
-)
-from outage_explorer.infrastructure.worker_runtime.configuration import (
-    WORKER_PROTOCOL_VERSION,
 )
 
 MAX_REQUEST_BYTES = 131_072
@@ -120,7 +116,7 @@ class AnalyticalWorker:
         )
         if not isinstance(payload, dict) or type(payload.get("version")) is not int:
             raise InvalidRequestError("Invalid worker request")
-        if payload["version"] != WORKER_PROTOCOL_VERSION:
+        if payload["version"] != 1:
             raise InvalidRequestError("Invalid worker request")
         operation = payload.get("operation")
         if operation == "preview":
@@ -135,15 +131,9 @@ class AnalyticalWorker:
                     "end_date",
                     "after",
                     "page_size",
-                    "facility",
                 },
             )
             dataset = _dataset(fields["dataset"])
-            facility = fields["facility"]
-            if facility is not None:
-                facility = validate_facility_identifier(facility)
-                if dataset.id == "national":
-                    raise InvalidRequestError("Invalid worker request")
             start, end = _day(fields["start_date"]), _day(fields["end_date"])
             if start is not None and end is not None and start > end:
                 raise InvalidRequestError("Invalid worker request")
@@ -167,11 +157,10 @@ class AnalyticalWorker:
                 end,
                 None if after is None else tuple(after),
                 _positive(fields["page_size"], 500),
-                facility=facility,
             )
             preview = self._preview(read)
             return {
-                "version": WORKER_PROTOCOL_VERSION,
+                "version": 1,
                 "operation": operation,
                 "result": {
                     "columns": self._encoding.columns(dataset.columns),
@@ -209,7 +198,7 @@ class AnalyticalWorker:
             if len(output.document) > 1_048_576:
                 raise AnalyticalResourceError("Worker output limit")
             return {
-                "version": WORKER_PROTOCOL_VERSION,
+                "version": 1,
                 "operation": operation,
                 "result": json.loads(output.document),
             }
@@ -231,6 +220,4 @@ class AnalyticalWorker:
             code = "data_unavailable"
         except Exception:
             code = "worker_execution_failed"
-        return canonical_json(
-            {"version": WORKER_PROTOCOL_VERSION, "error": {"code": code}}
-        )
+        return canonical_json({"version": 1, "error": {"code": code}})

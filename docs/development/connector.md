@@ -99,8 +99,20 @@ S3 configuration and private `OUTAGE_REFRESH_STAGING` (default
 `data/refresh-local`). It claims only admitted runs. Start it only when refresh
 processing is intended; ordinary browsing works with refresh idle.
 
-The HTTP API freezes `OUTAGE_REFRESH_START_DATE` and `OUTAGE_REFRESH_END_DATE`
-at admission; callers cannot override dates. Complete three-file readback precedes
+The HTTP API uses configured `OUTAGE_REFRESH_START_DATE` through today's UTC date,
+resolved and frozen at each new admission; callers cannot override dates. There
+is no 183-day ceiling for subsequent HTTP refreshes. Source/model interval budgets
+use that saved inclusive span, while finite row, page, request, byte, memory and
+time budgets still apply. Large ranges can fail those budgets without publication.
+Update the start and restart the API to narrow the range if needed. Remove obsolete
+`OUTAGE_REFRESH_END_DATE`, `OUTAGE_REFRESH_MAX_INTERVAL_DAYS`,
+`OUTAGE_REFRESH_SOURCE_INTERVAL_DAYS` and `OUTAGE_REFRESH_MODEL_INTERVAL_DAYS`
+settings; HTTP refresh ignores them. Today's observations may not yet be published
+by EIA. Initial loading retains its explicit April 2–October 1, 2026 interval;
+the connector CLI still uses explicit dates and its configurable resource profile.
+See [ADR-0063](../adr/0063-configured-start-current-end-refresh.md).
+
+Complete three-file readback precedes
 fenced PostgreSQL publication. Worker loss is reconciled; unpublished interrupted
 runs require explicit Admin retry. The API never starts this worker itself.
 

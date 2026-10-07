@@ -7,6 +7,7 @@ import shutil
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, replace
+from datetime import UTC
 from pathlib import Path
 from threading import Event
 from typing import Any
@@ -31,6 +32,7 @@ from outage_explorer.application.errors import (
     AccessConfigurationError,
     ConnectorConfigurationError,
     ConnectorDependencyError,
+    InvalidRequestError,
     RuntimeUnavailableError,
 )
 from outage_explorer.application.ports.analytical_inputs import PublishedResourceInputs
@@ -203,19 +205,27 @@ def build_data_services(
     resources: DataHttpResources | None = None,
 ) -> DataServices:
     configuration = refresh_settings(environment)
-    refresh = RefreshService(
-        access,
-        store,
-        lambda: RefreshConfiguration(
+
+    def refresh_configuration() -> RefreshConfiguration:
+        end = SystemClock().now().astimezone(UTC).date()
+        days = (end - configuration.start_date).days + 1
+        if days <= 0:
+            raise InvalidRequestError("Refresh start date is after today")
+        return RefreshConfiguration(
             configuration.start_date,
-            configuration.end_date,
-            configuration.max_interval_days,
-            configuration.source_interval_days,
-            configuration.model_interval_days,
+            end,
+            days,
+            days,
+            days,
             configuration.candidate_seconds,
             configuration.persistence_seconds,
             s3_workers=configuration.s3_workers,
-        ),
+        )
+
+    refresh = RefreshService(
+        access,
+        store,
+        refresh_configuration,
         security,
     )
     # With no reviewed runtime, reserve fails before preparation or source access.
@@ -876,7 +886,7 @@ def build_query_worker(
 
     settings = AnalyticalWorkerSettings() if settings is None else settings
     if settings != AnalyticalWorkerSettings():
-        raise ValueError("Worker limits must match the paired image profile")
+        raise ValueError("Worker limits must match internal v1 image profile")
     bounds = ExecutionBounds(
         settings.preparation_seconds,
         settings.overall_seconds,
