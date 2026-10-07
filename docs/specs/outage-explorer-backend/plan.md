@@ -1,248 +1,182 @@
 # Plan: Outage Explorer data and backend
-> Status: draft — one replica, S3 + Parquet + DuckDB and analytical schema contracts confirmed; mechanisms pending · Slug: outage-explorer-backend · Spec: ./spec.md
+> Status: current implementation map; deployment and full acceptance remain open · Slug: outage-explorer-backend · Spec: ./spec.md
 
-Connector policy update: [ADR-0037](../../adr/0037-connector-initial-load-and-retention.md)
-and the [connector plan](../data-connector/plan.md) supersede the older seed
-provisioning, interval-deletion and source-absence proposals below. Initial live
-loading uses April 2–October 1, 2026 inclusive with usable output in every grain;
-refresh preserves absent keys and wholly excluded routes while other valid
-updates proceed. Storage/publication and live enablement remain unimplemented.
-
-HTTP contract update: [ADR-0051](../../adr/0051-configured-http-refresh-range.md)
-replaces the proposed per-request refresh dates below with a configured interval.
-The [data API draft](../data-api/http-contract.md) consolidates current proposals
-and the user-selected shared `/api/query` path for SQL execution/page requests.
+This living plan replaces obsolete implementation proposals with the code now in
+this repository. It does not alter historical ADRs, mark all acceptance criteria
+complete or authorize runtime changes. Detailed feature plans/checkpoints remain
+the evidence sources linked below.
 
 ## Approach
-The user selected one active backend replica, Amazon S3 as Parquet's durable home and DuckDB as the analytical SQL engine, serving all authorized clients through the API. [ADR-0001](../../adr/0001-s3-parquet-duckdb.md) records the rationale and alternatives. Python/Flask is accepted in [ADR-0028](../../adr/0028-python-flask-backend.md); PostgreSQL operational storage on Amazon RDS is accepted in [ADR-0032](../../adr/0032-postgresql-on-rds.md). Amazon Cognito User Pools is selected for managed login and OAuth2 token issuance in [ADR-0018](../../adr/0018-cognito-authentication.md). Authlib, HTTPX, PyArrow and SQLGlot remain candidate supporting tools. The selected query path authorizes the complete request, resolves one manifest, reuses or downloads verified modeled Parquet in a bounded local disk cache, and exposes only permitted files to a DuckDB worker without bucket credentials or network access. [ADR-0008](../../adr/0008-local-parquet-file-cache.md) records this delegated choice; workers scan files in batches under ADR-0007. EC2 deployment is selected in [ADR-0038](../../adr/0038-ec2-deployment-local-development.md); no EC2 instance is needed for local development. The user confirmed Cognito setup and the RDS connection complete. Deployment configuration, application integration, exact cache/resource budgets and SQL isolation runtime still require implementation and feasibility checks. (FR1–FR16, TR1–TR8)
+
+Use the accepted layer-first Python/Flask monolith (ADR-0030), one backend replica,
+PostgreSQL on RDS (ADR-0032), Cognito Authorization Code with PKCE (ADR-0018), S3
+resource Parquet and isolated DuckDB analytical execution. EC2 is the deployment
+target; local development needs no EC2 instance (ADR-0038). No microservice split,
+new persistence stack or distributed broker is selected.
+
+Concrete adapters are injected in `bootstrap.py`. Domain owns pure policies;
+application owns use cases and authorization; infrastructure owns I/O; entrypoints
+translate transport. Follow [AGENTS.md](../../../AGENTS.md) and the
+[structure guide](../../context/code-structure.md). HTTPX, PyArrow, PyJWT,
+cryptography, SQLGlot, DuckDB, Psycopg and Alembic are declared dependencies in
+`pyproject.toml`; Authlib and `joserfc` were removed as unused.
 
 ## Components affected
 
-The accepted [layered monolith structure](../../context/code-structure.md)
-(ADR-0030) uses `domain`, `application`, `infrastructure`, and `entrypoints`,
-with inward dependencies and a composition root. Agents must follow root
-[AGENTS.md](../../../AGENTS.md). The [architecture study](architecture-options.md)
-compares alternatives and retains proposed process/state ownership details.
-Runtime topology remains open; the layer-first organization and monolith are
-accepted, and Flask is selected in ADR-0028.
-
-- **Connector and validation** — fetch daily EIA metadata/pages, validate source-specific fields/keys and preserve raw evidence; bounded failures and safe reruns. (FR1–FR4, TR1, TR5)
-- **Model and evidence** — three verified grain datasets, national fleet metric, reconciliation and retained findings inputs. (FR12–FR14, TR5–TR6)
-- **Identity and policy** — authenticated operational users, accepted expiring application-session behavior, and application-owned authorization tables (ADR-0016) with shared role-only policy and seeded users/roles/assignments (ADR-0043); Cognito managed login and OAuth2 Authorization Code with PKCE are selected (ADR-0018); client configuration, session mapping, essential user fields remain open; each user has exactly one role (ADR-0044); PostgreSQL on RDS is the selected metadata store; driver, migrations, connectivity and connection limits remain open. (FR5–FR8, FR10–FR11, FR15–FR16, TR2, TR8)
-- **Catalog and preview** — trusted schema metadata, applicable filters, verified unique ordering, generation-bound finite cursors, consistent error contract. (FR6–FR8, TR3, TR6)
-- **SQL validation and isolated execution** — authorize nested references and functions before analytical reads; broad positive query coverage plus sandbox/resource boundaries. (FR6, FR9–FR10, TR3)
-- **Refresh/publication** — application-owned background run, serialized refresh, validated interval replacement, durable outcome and atomic active-generation update. (FR1–FR4, FR11, FR15, TR6)
-- **Delivery and verification** — reproducible environment, documentation, adversarial tests, independent metric checks, incremental commits and Engineering Notes. (FR1–FR15, TR4, TR7)
-- **Deployment and durable storage** — one active backend replica, Amazon S3 bucket for Parquet independent of API/worker lifetimes, separately durable operational state, protected API transport and server-held credentials; EC2 deployment is selected; deployment configuration and deployed RDS connectivity remain open. (FR16, TR7–TR8, AC13)
+| Area | Current implementation | Evidence and remaining scope |
+| --- | --- | --- |
+| Connector/model | Bounded EIA pages, pure selection/merge, three unified resource files | [Connector plan](../data-connector/plan.md); historical source completeness remains bounded by evidence |
+| Persistence | Conditional S3 writes, exact readback, explicit retry/recovery receipts | [Refresh-persistence checkpoints](../refresh-persistence/tasks.md); receipts do not publish |
+| Identity/policy | Seeded PostgreSQL users/roles, fixed sessions, Cognito verification, application authorization | [User-access plan](../user-access/plan.md) and [verification](../user-access/verification.md); user-accepted web auth is distinct from complete live-case evidence |
+| Catalog/preview/SQL | Seven opt-in data operations, pinned inputs, isolated inspection/execution, finite continuations | [Data API plan](../data-api/plan.md), [HTTP contract](../data-api/http-contract.md), [runtime evidence](../data-api/runtime-evidence.md) |
+| Refresh | Frozen admission, independent lease-owning worker, fenced atomic publication/recovery | [Refresh execution](../../../src/outage_explorer/application/services/refresh_execution.py), ADR-0051/0052 |
+| Delivery | Backend setup, tests, recorded findings; separate implemented web client | [Local setup](../../development/local-setup.md), [challenge findings](../../challenge/README.md), [UI handoff](../../context/ui-client/README.md) |
+| Deployment | One EC2 backend replica selected | Ingress/TLS, supervision, provisioning and measured production capacity remain open |
 
 ## Data model changes
-- **Accepted data-quality direction:** follow API documentation for required fields; where unspecified, use consistently recurring collected attributes and identifying attributes. Exclude invalid rows from modeled output with raw evidence and visible accounting; collapse identical duplicates and use the latest valid value for revised observations. See [ADR-0023](../../adr/0023-exclude-invalid-source-records.md) and [ADR-0024](../../adr/0024-collapse-duplicates-and-use-latest-values.md). National same-day conflicts within one retrieval use the last valid record in recorded source order (ADR-0034). Exact fields/keys, nullability/parsing and historical guarantees remain open; ADR-0036 extends the same fallback to facility and generator verification keys. [ADR-0026](../../adr/0026-retain-valid-data-on-invalid-refresh.md) accepts keeping current data after an all-excluded refresh and retaining older valid rows for invalid replacements; initial analytical data is assumed seeded. The basic Admin quality report is accepted in [ADR-0025](../../adr/0025-admin-refresh-quality-report.md); detailed format/storage and optional additions remain open.
-- **Accepted modeling approach:** use analytical datasets with versioned schema contracts in the codebase, as recorded in [ADR-0002](../../adr/0002-analytical-dataset-contracts.md). Contracts define row grain, columns/types, units, nullability, verified keys, source mappings and validation rules; each published generation identifies its contract versions. ORM entities per observation are not required. Add facility/generator reference datasets only if verified source semantics and application needs justify them. This does not settle exact source schemas or the refresh mechanism. (FR2–FR3, TR4–TR5)
-- Raw and modeled Parquet remain separate. Model one relation per source grain; exact natural keys, parent relationships, column types and units await EIA investigation. This does not block independent backend/hosting decisions, but source-dependent implementation must use verified mappings. Preserve source identifiers; do not impose guessed foreign keys or discard mismatches that are legitimate findings. (FR2, FR12–FR14, TR1, TR5)
-- Proposed logical analytical names: `national_daily`, `facility_daily`, `generator_daily`, and `fleet_offline_share_daily`. These are product contracts, not asserted EIA field names. Viewer may use only national and national-derived metric relations; Analyst/Admin may use all analytical relations. (FR6–FR9, FR12)
-- Preserve the three reported grains independently. Aggregate to verified common keys before reconciliation joins to avoid repeating higher-level totals; do not replace reported national observations with facility sums or treat genuine disagreements as malformed extraction. (FR12–FR14, TR5)
-- Accepted ready-made metric: national same-day `outage / capacity` as a fraction, or `100 * outage / capacity` as percent; show source `percentOutage` alongside the calculated percentage from the same stored observation. ADR-0031 preserves calculation precision with two-decimal, halfway-up presentation and no agreement labels, discrepancy flags or exclusion solely for percentage differences. No live lookup is involved in verification. Source fields are verified in MW. Expose a prepared daily relation so Analysts need not derive the formula; existing Viewer access to national-derived data remains. [ADR-0006](../../adr/0006-daily-fleet-offline-share.md) records evidence and limits. ADR-0027 settles required national values and positive-capacity handling. ADR-0035 includes full outages and partial reductions in daily reported status, using national MW directly rather than reconstructing capacity. This is not a full-day average, outage-duration, lost-energy or cause measure. Exact historical capacity vintage is an evidence limitation; remaining measurement validation and historical verification remain open. (FR12, TR5)
-- Each immutable generation has raw/modeled file hashes, schemas, verified keys, coverage, per-route/page retrieval windows, source parameters, row/validation counts, transformation revision and dependency/engine versions. Local publication does not claim a simultaneous EIA snapshot. (FR1–FR4, FR13–FR14, TR5–TR6)
-- Operational metadata holds seeded persona records bound to verified Cognito issuer/subject, application-session state as required by the selected OAuth2/login integration, preview continuation metadata where required by its implementation, refresh runs/idempotency keys, trusted catalog metadata, generation references and evidence pins. PostgreSQL on RDS is the selected operational store for the single backend; configuration, migrations and refresh ownership remain open. These records never enter user SQL. Query-ID metadata is separately bounded and in-memory under ADR-0022, not a durable PostgreSQL record. No role-management schema or UI beyond the three fixed roles. (FR5–FR8, FR11, FR16, TR2, TR6, TR8)
-- Findings pin raw/model hashes, generation ID, exact reproduction query/command, transformation revision, dependency lock, metric definition and observed values; causal hypotheses are explicitly labeled. Keep findings inputs available; automated snapshot retention is deferred. (FR13–FR14, TR4–TR6)
 
-## Interfaces & contracts
+Exactly three unified Parquet resources are durable per generation (ADR-0060):
+national, facilities and generators. Each includes original numeric strings,
+units, natural identity, private provenance and exact calculation evidence.
+Analytical views expose only public columns. Raw/pages/dispositions/ledgers are
+bounded transient candidate inputs; there is no durable supporting graph,
+S3 manifest, daily modeled partition layout or second public-only file set.
 
-### Shared deployment and storage — revised scope
-- Clients connect to one authenticated API service and see the common published generation through role permissions. They never need Parquet copies, storage credentials or EIA keys. Protect remote credential/session transport; EC2 deployment is selected; host supervision, ingress and TLS mechanism remain open. (FR5–FR6, FR16, TR2, TR7)
-- Persist both raw/modeled snapshots and necessary operational state outside disposable API/query containers. Document database reconnection and application recovery during replacement and verify it without contacting EIA. Acceptable deployment interruption and database recovery behavior must be stated; backup/recovery-policy work is deferred under ADR-0010; no zero-downtime or infrastructure-loss SLA has been promised. (FR4, FR16, TR8)
-- **Selected topology/storage/engine:** one active backend replica serving multiple clients, Amazon S3 for persistent raw/modeled Parquet snapshots and DuckDB for analytical SQL. Backend analytical disk is disposable; necessary operational metadata lives in PostgreSQL on RDS independently of application process and EC2 host lifecycles. Replacement must prevent competing backend owners. ADR-0038 replaces ECS with EC2 deployment and explicitly keeps development local without an EC2 instance. ADR-0032 preserves RDS independently of host storage; process supervision and the analytical worker runtime remain open. (FR11, FR16, TR6–TR8)
-- One replica does not determine API process/thread count, concurrent user/query capacity or the number of disposable isolated query workers. Define refresh ownership and admission consistently across any internal processes; do not assume a process-local lock works merely because replica count is one. (FR3, FR8, FR11, TR3, TR6–TR7)
-- **Deferred:** multiple replicas, cross-host publication/lease coordination and horizontal autoscaling. No multi-replica implementation is in scope. Object storage was chosen for independent persistence, not because multiple replicas are required. (FR16, TR7–TR8)
-- Query preparation is trusted: authorize all query references/functions before fetching analytical objects. Resolve logical tables to exact object keys in one published manifest; reuse verified cache entries or stream missing permitted modeled inputs to disk, verify manifest hashes and atomically expose complete cache files. Pin local entries against eviction before handing them to a worker; concurrent requests for one object share its download. A trusted service identity owns bucket access; the user and SQL worker receive neither arbitrary object paths nor storage credentials/network access. Worker launching must fit the hosting platform; no host Docker daemon/socket is assumed. (FR6, FR9–FR10, TR2–TR3, TR7)
-- **Accepted query resource approach:** scan modeled Parquet in batches without mandatory full-dataset in-memory import; bound worker memory, temporary disk, concurrent queries and result fetching as recorded in [ADR-0007](../../adr/0007-bounded-parquet-query-execution.md). Under ADR-0008, stream cache misses to disk and register named views over exact authorized local files. Keep narrowly scoped read access to those inputs; disabling all file access would prevent scans. Direct S3 execution is not selected and is not an automatic fallback. Exact limits and runtime remain open. (FR9–FR10, TR3)
-- After execution, remove request-specific worker state and release local cache and snapshot references. Retain cache files under a byte quota and evict only unpinned entries by least recent use; durable bucket retention is separate. Reserve local space for downloads, spill and refresh; size RDS storage separately. Missing uncached inputs still need S3; no object-store outage availability is promised. See ADR-0008 for recovery and preparation failure behavior. (FR4, TR3, TR8)
-- Development should emulate the selected persistence and API contracts through environment configuration. The one-replica scope does not require multiple storage adapters or a distributed platform. (TR7–TR8)
+Physical S3 keys are
+`<configured-prefix>generations/<generation-id>/{national,facilities,generators}.parquet`
+(ADR-0061). Local storage uses content hashes. PostgreSQL owns publication
+identity, exact descriptors, active pointer, refresh status and quality. Legacy
+manifest-format publications fail closed without conversion/reset (ADR-0062).
 
-PostgreSQL on RDS and bounded local Parquet caching are selected; the RDS connection is user-confirmed complete, while application integration, single-refresh details and worker runtime below remain open. Worker mounts expose exact authorized pinned cache files read-only, never the full cache. Direct S3 querying and cross-query result caching are not selected; temporary query continuation state is required by ADR-0020; cold/warm performance and capacity remain measurement tasks. Q2 concerns EC2 deployment/scratch configuration, deployed RDS connectivity, runtime and budgets rather than replica count, hosting service, storage provider or query engine.
+Public dataset/SQL names are `national`, `facilities`, `generators`. Natural keys
+are date, date/facility and date/facility/generator. The national public columns
+include both calculated and source percentages; no separate fleet metric relation
+is required. Public schema and source contracts are in
+[domain datasets](../../../src/outage_explorer/domain/datasets.py),
+[national verification](../national-data-verification/contract.md) and
+[detail verification](../facility-generator-verification/verification.md).
+Historical contract guarantees and capacity-data vintage remain evidence limits.
+
+## Duplicate prevention and data integrity
+
+Invalid rows are excluded with visible quality counts. Identical duplicates
+collapse; within one retrieval, the last valid source observation wins under
+ADR-0034/0036. Retained rows preserve original provenance and calculation evidence.
+Complete route counts use the shared domain eligibility policy.
+
+Initial loading uses April 2–October 1, 2026 inclusive and requires usable output
+in every grain (ADR-0037). Later refreshes preserve invalid replacements' prior
+valid rows, absent keys and wholly excluded routes while other valid changes
+proceed. An entirely excluded refresh retains the active generation. Empty
+required routes and failed retrieval/storage are failures, not retention success.
+No interval deletion or mandatory seeded analytical base is selected.
+
+The fleet metric uses reported national outage/capacity in MW, preserves exact
+arithmetic and presents percentages to two decimals with halfway-up rounding.
+It includes partial reductions and is not duration, lost energy or cause.
+Reconciliation and the three real findings have recorded inputs and commands in
+[challenge evidence](../../challenge/README.md). Do not equate source discrepancy
+with a proven cause or silently replace reported national totals with detail sums.
+
+## Interfaces and contracts
 
 ### Authentication and shared authorization
-- ADR-0045 retains fixed one-hour sessions without automatic renewal, preserves browser reopening within a valid session, and excludes special sign-in recovery across backend restarts/outages. Signing in again after an interruption is acceptable.
-- **Accepted in ADR-0014 and refined in ADR-0017:** OAuth2 without required OIDC, configurable one-hour application sessions, re-login on expiry, no automatic renewal initially, independent concurrent sessions and current-session logout. ADR-0018 selects Cognito User Pools, managed login and Authorization Code with PKCE; exact app-client, callbacks and token/session integration remain open. No password grant. A custom bearer-token endpoint alone does not establish OAuth2 compliance. (FR5, TR2)
-- Provision the three seeded login accounts in Cognito with public registration disabled; bind verified Cognito issuer/subject to local operational users without a duplicate local password store. Validate access-token signature/algorithm, purpose, intended app client/resource, expiry and expected issuer with an established library and controlled JWKS caching/rotation. Application logout must invalidate the current session rather than merely discard a client token. Token/session lifetime mapping and current-session revocation enforcement need explicit design; signature/expiry validation alone does not detect Cognito revocation; no OIDC ID-token or discovery requirement remains. (FR5, TR2)
-- Authenticate and resolve seeded local users and role assignments from our own PostgreSQL tables on every protected request (ADR-0016, ADR-0043). Provider groups/roles and OAuth scopes do not grant application data access; unassigned authenticated identities have no permissions by default. Viewer is national-only; Analyst/Admin may access analytical datasets; only Admin may create/read refresh runs. No user SQL access to identity, session, run, filesystem or engine metadata. Registration and Admin user administration are excluded throughout implementation. No separate read/write/delete permissions, per-user grants, ABAC or row/column policies are included for now (ADR-0043). (FR6, FR15)
-- Enforce the same policy in catalog schemas, preview, metric, SQL, cursor continuation and diagnostics. Role restrictions must also hold in nested queries, joins, aggregates, filters and ordering. Workers receive only role-authorized analytical inputs; response filtering alone cannot enforce access. Runtime enforcement and verification remain pending. (FR6–FR10, FR12, FR15)
-- Fail before unauthorized data retrieval; public errors omit forbidden schemas, paths, records and raw engine output. The exact Problem Details/error contract remains proposed.
 
-### Catalog, previews, and SQL
-- `GET /datasets`: authorized dataset IDs and column/type metadata only. Source/file paths are not part of the response. (FR7)
-- Proposed `GET /api/datasets/{dataset}/preview`: initial date-range filters only, page size default 100 / initial configurable maximum 500 (ADR-0015), optional opaque cursor → schema, rows, generation ID and next cursor. Reject unsupported filter combinations explicitly. (FR8)
-- Cursor records bind principal, generation, dataset, normalized filters, unique-key ordering, next position and an accepted fixed 15-minute expiry from the first page; continuation does not renew it. Reauthorize each page. Expired cursors return `410 cursor_expired` with a restart instruction; never silently change generations. Retain generation for the cursor's finite lifetime and every active query. All internal API processes must use the same cursor/reference state. (FR6, FR8, FR16, TR6, TR8)
-- Proposed `POST /api/query` submits one SQL statement with positive, 1-based `page` and `page_size` query parameters → columns/types, requested result page, opaque `query_id`, generation ID, effective page/size, `has_more` and total-result limit metadata. Proposed `GET /api/query?query_id=…&page=…` reads another page of the same result, without replacement SQL or a separate page endpoint. User-selected SQL page size is 100 by default, maximum 500; retained results expire 15 minutes after execution completion. ADR-0021 replaces cursor-only requests with numbered page selection. Reject size changes within an execution; index retained results at `(page - 1) * page_size`, preserving boundaries on repeat visits. Preserve query semantics without adding ORDER BY, LIMIT or OFFSET. Page boundaries and total-result truncation are distinct. Errors distinguish authentication, denied access, unsupported/malformed queries, unavailable data, busy worker, resource limit and expired/lost result state. Exact error/out-of-range responses and result-storage budgets remain proposed. (FR9–FR10, FR9a, TR3)
-- ADR-0020 supersedes default SQL ordering: paginate one execution’s result sequence on one snapshot for every supported result shape, preserving explicit clauses and duplicate rows. Bind the opaque query ID and retained state to principal, execution, snapshot and effective page size; reauthorize every request. Never independently rerun an unordered query for each page or silently restart on expiry. ADR-0022 selects bounded, expiring in-memory query-ID metadata, separate from durable application records; no per-query PostgreSQL insert is required. Store loss or expiry explicitly invalidates continuation, never substitutes page 1, and requires an explicit rerun with a new ID. The exact in-memory implementation remains open. Propose a bounded private result spool with retry-stable positions; choose its format, quotas, fixed TTL, cleanup and worker-release timing before implementation. Reclaim abandoned metadata and payloads, including orphaned files after store loss, without deleting active results or durable source data. Enforce per-user/global memory and retained-storage budgets; volatile metadata does not require all rows in RAM. Retained results are continuation state, not a cross-query result cache. Existing ADR-0013 total caps remain the baseline pending explicit revision; preview cursor defaults do not automatically apply. (FR9a, AC7a)
-- The metric appears as an authorized analytical relation in catalog/preview/SQL; no separate metric service is required. Its national-only lineage must be verified before exposure to Viewer. (FR7–FR9, FR12)
+Cognito supplies identity; PostgreSQL seeded issuer/subject mappings and one role
+per user determine permissions. Viewer is national-only; Analyst/Admin can read
+all grains; only Admin can initiate/read refresh. No registration, Admin user
+management, per-user grants or row/column authorization is in scope (ADR-0043/0044).
 
-### Query execution boundary
-1. Authenticate; parse the full request without opening analytical files. Use a pinned SQLGlot DuckDB dialect and scope-aware relation resolution against trusted logical metadata. Traverse all branches, unused CTEs, aliases/shadowing, qualified/quoted names, nested expression subqueries, and function calls. (FR6, FR9–FR10)
-2. Authorize every physical dataset and supported function/operator. Reject writes, schema/admin/configuration operations, multiple statements, external references, arbitrary table functions, dynamic SQL, extensions and engine metadata. Unknown/unresolvable forms fail closed. No user-derived planning, binding, `EXPLAIN`, or file loading before this check. (FR6, FR10, TR3)
-3. Generate the validated statement and revalidate that exact representation before execution. Do not claim that two successful parses establish semantic equivalence: pinned-version composition/adversarial tests are a release gate. (FR9–FR10, AC7–AC8)
-4. Admit a worker only after authorization and bounded trusted cache preparation. Mount only authorized, locally pinned modeled files for the selected generation, read-only. No bucket credentials, host home, raw extracts, secrets, identity DB, broad data-root mount or Docker socket enters the worker. Run without network, as non-root, with dropped capabilities, no-new-privileges, bounded scratch, process count, CPU, memory and lifetime. The trusted launcher uses fixed argument construction; SQL and identifiers cannot become shell, object-key or mount arguments. Platform support remains an open gate. (FR6, FR10, TR2–TR3, TR7–TR8)
-5. In the selected local cache path, trusted bootstrap registers views over the exact authorized Parquet files. Restrict external access to those read-only inputs, disable extension autoinstall/autoload and unneeded capabilities, then lock engine configuration. Provide bounded spill storage and a DuckDB memory budget below the worker's enforced memory ceiling. A fresh worker avoids state leakage; engine flags supplement the sandbox. Verify file access and spilling on the pinned runtime. (FR6, FR9–FR10, TR3)
-6. Parent enforcement terminates/reaps expired or failed workers and obtains bounded result batches under row/byte/resource caps. ADR-0020 requires retaining one result sequence for pagination; finalize the retained-result lifecycle before deciding when to release worker and input references. A retained result must not depend on already-released inputs. Client pauses must not bypass execution deadlines or occupy the sole worker indefinitely. Resource exhaustion fails the query without taking down the API. Return a retryable busy response for the occupied execution slot; bound preparation, execution, serialization and retained-result storage separately. (TR3, TR7, FR9a)
+The implemented HTTPX/PyJWT adapter verifies access tokens and bounded JWKS
+rotation, supports public/confidential PKCE and discards provider tokens. Sessions
+are opaque, digest-backed, fixed one-hour leases by default without automatic
+renewal. Logout invalidates only the current session. Browser-bound attempts are
+single-use; expired attempts are reclaimed transactionally before admission caps.
+Application use cases recheck current roles before analytical inputs and on pages.
 
-Target broad DuckDB read-only analytical syntax and functions, including compositions of joins, CTEs, nested/correlated subqueries, aggregates, windows and set operations (ADR-0012). Do not preemptively exclude recursive CTEs or other analytical features. SQLGlot is a candidate whose compatibility must be tested; revise the validator where practical, and record concrete limitations with examples. Unresolvable access still fails closed and unsupported features return a suitable stable error. (FR9, Q4)
+Cookie/Origin/CSRF/CORS and sanitized errors follow the
+[user-access contract](../user-access/http-contract.md). IAM signing on each new
+physical PostgreSQL connection, migrations, typed configuration and bounded pools
+are implemented. No connection may cross a process fork. See the dated auth
+verification for user acceptance and still-open comprehensive live-persona cases.
+
+### Catalog, previews and SQL
+
+The implemented [contract](../data-api/http-contract.md) selects:
+
+- `GET /api/datasets`: authorized catalog metadata.
+- `GET /api/datasets/{dataset}/preview`: date-only filters and snapshot cursor.
+- `POST /api/query`: one SQL execution; `page` and `page_size` are query parameters.
+- `GET /api/query?query_id=...&page=...`: another page of that retained execution.
+- `POST /api/refresh`, `GET /api/refresh/latest`, `GET /api/refresh/{run_id}`:
+  Admin admission and durable outcomes.
+
+Page size defaults to 100 and is at most 500. Preview sequences expire 60 seconds
+after creation; SQL results expire 60 seconds after completion, without renewal
+(ADR-0059 supersedes the earlier 15-minute lifetimes). Query metadata is bounded
+in memory; private result spools and reader leases preserve one execution's
+sequence. No SQL pagination clauses or silent reruns are allowed. Process/store
+loss or expiry returns explicit unavailability. SQL output caps remain 1,000 rows
+or 1 MiB with truncation. See OpenAPI for implemented error codes.
+
+SQL reference inspection runs in a bounded separate subprocess (ADR-0054).
+Authentication precedes inspection and role authorization precedes analytical
+inputs. Preparation resolves exact PostgreSQL descriptors, downloads permitted
+files into a verified pinned disk cache and stages only approved inputs. DuckDB
+views project public columns over exact unified resource files. Workers receive
+no operational database or cloud credentials and no unrestricted cache mount.
+No API-process parser/engine fallback or direct S3 query fallback is selected.
 
 ### Refresh and publication
-- **Accepted product flow:** Admin starts a background refresh; successful completion automatically publishes the updated data. Admin can check the outcome. Current data remains available during the run and after failure; existing queries finish on their original snapshot. No candidate review, approval step or separate publish endpoint is in scope. See [ADR-0003](../../adr/0003-admin-refresh-publication.md). Backend integrity checks do not introduce an Admin validation workflow. Detailed mechanisms below remain proposals. (FR3–FR4, FR11)
-- Proposed `POST /api/refresh`: Admin-only request with no date fields; resolve the configured inclusive interval at admission (ADR-0051), and return `202` with run ID and status location. Proposed `GET /api/refresh/{run_id}` is Admin-only and returns state, effective interval/actual coverage, counts, validation outcome and published generation or safe failure reason. See the [data API contract](../data-api/http-contract.md) for the current draft. (FR11, FR15)
-- Recommend one application-owned background ingestion task at a time with one refresh coordinator. Enforce ownership across any internal API processes and deployment replacement; no broker or service split is selected by implication. Same idempotency key and identical parameters return the existing run; changed parameters conflict. A different concurrent refresh returns busy/conflict. Disconnect does not cancel a run. (FR11, FR16, TR6, TR8)
-- **Seeded-data precondition (ADR-0026):** normal refresh operation starts with valid, already published analytical seed data from real EIA records. Seed provisioning remains to design; this is separate from seeded login accounts and does not claim a seed has been loaded.
-- Use states `accepted`, `running`, `succeeded`, `retained`, `failed`, `interrupted`; the user selected `retained` for all-excluded/no-publication consistency with the connector. The data API proposes nonterminal `publication_unknown` for uncertain commits. Under [ADR-0052](../../adr/0052-interrupted-refresh-recovery.md), healthy workers survive API-only restarts, and unpublished interrupted runs require explicit Admin retry after publication reconciliation. Proposed retry uses a new key/run; no automatic source-read resumption or cancellation API initially. (FR11, TR6)
-- Fetch and validate all three routes into a new immutable generation. Proposed interval replacement preserves previous observations outside the requested interval. Within it, collapse identical duplicates and prefer newly retrieved valid values over older stored values (ADR-0024). Source-missing keys disappear only after completeness checks pass, with removed counts and previous evidence retained. Invalid-row exclusion is not evidence of source deletion; retain its identifiable older valid modeled row and original provenance under ADR-0026. Merge these retained rows with accepted new records before checking uniqueness and publication. (FR1–FR3, TR5–TR6)
-- Completeness checks account for all pages, stable requested ordering where supported, available totals and observed coverage. Record-level validation failures are excluded and counted under ADR-0023, not treated as automatic run failures. Distinguish explained exclusions from missing pages, unstable retrieval or unexplained coverage reduction. When every incoming row is excluded, retain the active dataset unchanged and show errors/reasons without publishing (ADR-0026). Unexpected zero-row source extraction remains a separate completeness case. National within-extraction conflicts use the last valid record in recorded source order (ADR-0034), with evidence/order retained for replay. This does not assert revision timing. Other-grain conflict rules remain open under ADR-0024. If repeated canonical retrieval comparisons are needed, scope and bound them; matching passes still do not prove upstream simultaneity. Do not ship interval replacement until actual API behavior supports the extraction contract. (FR1–FR3, FR13–FR14, TR5–TR6)
-- Upload the complete immutable raw/modeled generation and manifest, verify objects/checksums, then commit the active-generation reference and run success together in durable operational metadata. A PostgreSQL transaction is the proposed metadata commit mechanism; it does not make bucket writes transactional. New readers use the committed manifest, never incomplete prefix listings; prior queries keep their generation. Failed/incomplete uploads remain unpublished. Exclusive startup recovery reconciles interrupted runs, orphan local staging and unpublished objects before safe cleanup. (FR3–FR4, FR11, FR16, TR6, TR8)
-- Snapshot retention/recovery-policy work and automated published-generation deletion are deferred under ADR-0010. Keep published snapshots and findings inputs for now; do not build a retention subsystem. Active readers retain their generation; local cache eviction remains separately bounded and reference-aware under ADR-0008. A disk limit fails a new refresh rather than deleting required evidence. (FR3–FR4, FR8, FR13–FR14, TR6)
-- Proposed freshness contract: no automatic update SLA; expose successful retrieval time and actual coverage. The Admin HTTP action uses the configured bounded interval under ADR-0051. Initial live publication retains ADR-0037's fixed April 2–October 1, 2026 interval. This does not imply a rolling latest-date anchor or scheduling. (FR11, TR6)
 
-### Duplicate prevention and data integrity
+HTTP admission freezes the configured inclusive date range and resource settings
+(ADR-0051); callers supply no date overrides. An independent worker claims and
+renews database-time ownership, restores the pinned base, models/verifies all
+grains, persists/reads back exact files, then publishes descriptors/quality and
+active pointer atomically. Previous data remains available during work and on
+failure; existing analytical sequences keep their pinned generation.
 
-Status: **row-policy direction accepted in ADR-0023/0024; implementation pending**.
-ADR-0002 accepts schema contracts. Required fields follow API documentation;
-where unspecified, inspect consistently recurring and identifying attributes.
-Exact EIA fields/keys, nullable/empty-value handling, parsing and completeness
-still require investigation. Duplicate collapse, latest-valid-value replacement
-and invalid-row exclusion are accepted. ADR-0026 also accepts retaining existing
-data on all-excluded refreshes and older valid rows for invalid replacements.
-Interval replacement, publication and
-the detailed quality-report design remain proposals. Retention is deferred.
+Recovery reconciles committed publication after worker loss and fences stale
+owners. Healthy workers survive API-only restarts. Interrupted unpublished runs
+require explicit Admin retry, not automatic source work (ADR-0052). No review
+queue, second publish action or reset CLI exists. Explicit connector persistence
+retry is separate from publication authority. CLI defaults to S3 unless
+`--local-only`; S3 configuration is validated before source work (ADR-0041/0042).
 
-Raw evidence, modeled rows and retained generations intentionally repeat
-information. Uniqueness applies to the full logical dataset within one
-published generation, including all its files. Ordinary product queries read
-only its modeled files, not a union of raw data or historical generations.
+### Runtime lifecycle and deployment
 
-| Failure case | Accepted policy / proposed mechanism |
-| --- | --- |
-| Repeated rows across EIA pages/files | Accepted: collapse identical observations to one modeled row per verified key across the complete dataset; preserve raw evidence and duplicate counts. Prefer the most recent valid value for conflicting revisions. National within-retrieval conflicts select the last valid record in recorded source order (ADR-0034). Preserve order for reproducible replay; this is a selection rule, not proof of newer revision. Other-grain rules remain open. |
-| Repeated or overlapping refresh | Accepted: newer valid observations replace older stored values for the same key. Proposed: replace the verified interval in a new generation and preserve observations outside it; recheck uniqueness rather than append blindly. Keep findings inputs. Accepted in ADR-0026: retain the older valid row when its identifiable replacement is invalid, preserving provenance. Idempotency does not replace row validation. |
-| Empty/invalid values, keys or unexpected attributes | Accepted: validate against the declared source-record contract and exclude invalid rows from modeled output with raw evidence and visible accounting. Include empty records/values, invalid dates, nonnumeric numeric fields and additional attributes. Do not silently coerce failures to zero or extend the schema. If all incoming rows are excluded, keep the active dataset unchanged and report errors/reasons (ADR-0026). Exact nullability/parsing and unit rules remain open. |
-| Missing pages or partial extraction | Check pagination, available totals, coverage and retrieval stability across all three routes. Fail incomplete or unexplained reduced coverage; do not interpret a failed fetch as upstream deletion. These checks cannot prove that EIA served all routes at one instant. |
-| Damaged or mismatched files | Validate Parquet readability/schema/counts and explicit object checksums before publication. Record content hashes in the trusted manifest; verify staged inputs against it before loading. A checksum failure stops that read/publication; hashes do not establish whether source values are true. Direct remote reads need an equivalent integrity design if selected. |
-| Crash while uploading a generation | Write new object keys without overwriting published inputs. Upload and verify every required object and the manifest before atomically committing its active reference and run success in durable operational metadata. A failed candidate stays unpublished; the previous generation remains active. Recovery reconciles the durable commit before reporting an uncertain outcome. |
-| Concurrent refresh, readers or cleanup | Use one refresh owner across internal processes and deployment replacement. Pin each reader to one committed manifest, which enumerates exact files without duplicates. Keep published objects; local cache eviction preserves active file references. Never discover query inputs with a wildcard spanning generations. |
+Imports and factories start no services. Explicit startup owns analytical recovery,
+cleanup, parser/execution admission, private staged files and worker termination.
+Ownership is recorded before allocation; unresolved termination prevents capacity
+or pin release. Linux quota-disk checks and exact profile/image/evidence identity
+are implemented; actual containment/capacity claims require matching host evidence.
 
-Accepted quality report (ADR-0025; FR2a/AC2a): extend the existing Admin-only
-refresh outcome with per-route received/modeled counts, excluded rows and
-reasons, and identical duplicates collapsed. Make publication with exclusions
-explicit and keep run failures distinct from row exclusions. ADR-0026 adds an
-explicit no-publication outcome when all rows are excluded and separate counts
-and reasons for older valid rows retained after invalid replacements. Count excluded
-rows once even when several rules fail; reason counts may overlap. Exact
-response schema and storage remain open. Superseded-value counts, usable date
-coverage and bounded examples remain proposed additions. This adds neither an
-approval step nor a dashboard and does not expose detailed records to Viewers.
+ADR-0053 defines one threaded API owner, one analytical slot and independent
+refresh for local acceptance. ADR-0055 permits scoped local preview/SQL readiness
+with refresh idle. ADR-0056 records subsequent user-directed activation and the
+instruction to stop external validation. Keep unperformed checks as evidence
+gaps; do not invent a new activation blocker or claim full production acceptance.
+Final EC2 topology, provisioning, ingress/TLS, backup/recovery policy and complete
+capacity/overlap measurements remain open. Multiple backend replicas, generic
+CRUD/service hierarchies, scheduling and cross-execution query caching are deferred.
 
-S3 provides atomic updates to a single object, not a transaction across all
-files in a dataset. The publication reference supplies the proposed application
-visibility boundary; a metadata transaction does not include S3 uploads.
-See [S3 consistency](https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html#ConsistencyModel)
-and [object integrity checks](https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html).
+## Verification strategy and open work
 
-For example, if generation G1 is active and uploading the generator files for
-G2 fails, all new queries still resolve G1. Only a fully validated G2 can
-become active. Queries already using G1 continue with G1 until completion.
-Unique keys and restricted write/delete access must preserve published object
-immutability; versioning, recovery and lifecycle-policy work is deferred under ADR-0010.
+Feature checkpoints record controlled source/model, role, continuation, persistence,
+publication/recovery and lifecycle tests. The runtime evidence map distinguishes
+portable/mock tests, actual host reports and open full acceptance. Static checks
+and liveness never establish production isolation. Dated evidence is not rewritten
+by this plan.
 
-Validly encoded but incorrect source values or transformation bugs require
-source review, independent calculations and reconciliation; checksums cannot
-detect them. Legitimate cross-grain mismatches remain findings. Verification
-must inject duplicate/conflicting keys across files, overlapping refreshes,
-invalid schemas, partial pages, checksum mismatches and crashes around the
-publication commit, as well as local cache reader/eviction races. (AC1–AC2, AC6, AC9–AC11)
-
-### Accepted initial query controls and remaining benchmark candidates
-| Concern | Accepted starting setting / remaining measurement |
-|---|---|
-| Host | Earlier 2 CPU / 8 GiB / Docker estimate is not a deployment requirement; choose development and deployment envelopes after Q2 |
-| SQL | ADR-0013 accepts one isolated analytical worker at a time, retryable busy responses and a 10-second execution deadline. CPU, enforced memory ceiling, lower DuckDB budget and separate preparation/overall deadline need measurement; previous 1 CPU / 1 GiB / 30-second values remain unselected candidates |
-| Results | ADR-0013 accepts 1,000 rows or 1 MiB serialized output, whichever is reached first; truncation reported |
-| Query storage | Separate bounded temporary-disk and cache quotas accepted in ADR-0013; sizes follow measurement |
-| Preview | ADR-0015 accepts 100 rows by default, initial configurable maximum 500, and a fixed 15-minute cursor lifetime |
-| Refresh | One run, 1 GiB worker budget, 2 GiB staging candidate; exact total deadline, page/retry/coverage ceiling and disk reserve set from source probe |
-| Other limits | Request SQL bytes/AST depth, parser deadline, access-token/application-session lifetime mapping, process count and scratch quota to fix before exposed query implementation |
-
-Prove combined backend/query/refresh memory and storage headroom on the agreed runtime. A refresh budget needs an enforceable process/container boundary or a proven bounded ingestion design; putting an unbounded background function in the API does not establish the budget. Numeric defaults may change through documented measurement, not silent failures or narrower SQL. (TR3, TR6–TR7)
-
-## Implementation phases
-
-The [data connector specification](../data-connector/spec.md) and
-[lower-level plan](../data-connector/plan.md) refine the retrieval, persistent
-modeling, and refresh/publication work below. They build on the completed
-three-grain offline verification. On 2026-10-02 the user deferred investigation
-of the facility advertised-total discrepancy so connector planning can proceed;
-the recorded limitation remains visible and does not establish completeness.
-This refinement does not complete cross-grain findings, authorization, isolated
-SQL execution, or deployment work.
-
-1. **Source evidence and query feasibility** — inspect actual metadata/records; obtain >=30 days across all grains, verified key/unit/metric candidates, a reconciliation probe and three candidate real findings. In parallel prove composed FR9 queries and hostile requests under pinned engine/parser/container configuration. Exit only with measured host/limit assumptions and explicit SQL surface; report missing evidence instead of inventing findings. This is investigation, not a full second engine implementation. (FR1–FR3, FR6, FR9–FR10, FR12–FR14, TR3, TR5, TR7)
-2. **Reproducible local data** — durable raw/model snapshots, validations, generation manifests, independent metric verification, fixed findings inputs and rerunnable reconciliation. Keep meaningful discrepancies; exclude invalid rows with accounting and fail incomplete extraction separately. (FR1–FR4, FR12–FR14, TR1, TR5–TR6)
-3. **Authenticated free exploration** — seeded login, shared role policy, authorized catalog/preview/metric, finite cursors and isolated broad SQL; demonstrate arbitrary supported analytical compositions rather than prescribed investigations. (FR5–FR10, FR12, FR15, TR2–TR3)
-4. **Controlled refresh and continuity** — implement the accepted interval/publication/run lifecycle, outcome polling, concurrent readers, interrupted-run handling and preserved findings inputs; published-snapshot cleanup is deferred. Verify source revisions and partial failures against the documented contract. (FR1–FR4, FR8, FR11, FR13–FR15, TR6)
-5. **Challenge rehearsal** — clean-host setup, offline browsing, full positive/negative role matrix, resource/crash tests, final three evidence-backed findings, schema/ER diagram, DECISIONS/FINDINGS/Engineering Notes and live explanation/debug rehearsal. Incremental commits and notes apply from phase 1. (FR1–FR15, TR4, TR7)
-6. **Shared deployment rehearsal** — run one backend replica with separate clients, persistent storage and protected API access; replace API/query containers with EIA unavailable and verify shared data/permissions/recovery plus absence of overlapping owners. Deployment design belongs before dependent implementation even though this final acceptance rehearsal follows it. (FR16, TR7–TR8, AC13)
-
-## Dependencies & integrations
-- EIA API key from environment and access to real metadata/records; no live EIA investigation has been performed during this planning run. (TR1, TR5)
-- Python/Flask for HTTP with an application factory, Blueprints and injected application services; PostgreSQL for operational records; Cognito for credentials and OAuth2 token issuance. HTTPX, PyArrow, Authlib, Gunicorn and pytest remain supporting-library candidates. Select HTTP validation/OpenAPI tooling and pin compatible versions following feasibility. No local password-hashing subsystem is required by the Cognito design. (FR1–FR15, TR1–TR4)
-- DuckDB is selected; SQLGlot remains a proposed validator whose compatibility with the pinned engine must be tested. Docker remains a proposed isolation runtime; the deployable execution boundary and launcher depend on backend hosting. (FR6, FR9–FR10, TR3, TR7)
-- Sources checked during planning: [Flask factories](https://flask.palletsprojects.com/en/stable/patterns/appfactories/), [Flask background-task limitations](https://flask.palletsprojects.com/en/stable/async-await/), [HTTPX](https://www.python-httpx.org/), [PyArrow Parquet](https://arrow.apache.org/docs/python/parquet.html), [SQLGlot scope](https://github.com/tobymao/sqlglot/blob/main/sqlglot/optimizer/scope.py), [DuckDB security](https://duckdb.org/docs/current/operations_manual/securing_duckdb/overview), [Docker limits](https://docs.docker.com/engine/containers/resource_constraints/). These establish component capabilities, not application correctness. The [architecture study](architecture-options.md) adds design and deployment references.
-
-## Risks & tradeoffs
-- Parser/engine mismatch — exact generated-statement validation, pinned dependencies, positive compositions and adversarial corpus; revisit engine if FR9/FR10 cannot both be met. (FR9–FR10)
-- Isolation complexity/startup cost — one local container per query is proposed to protect the mandatory role boundary; test performance and the real host before acceptance. Do not substitute an ordinary same-user subprocess and call it a sandbox. (FR6, TR3, TR7)
-- Source revisions and pagination drift — metadata/real-data gate, route retrieval windows, conservative failed publication, retained evidence; no invented consistency promise. (FR1–FR3, FR13–FR14, TR5–TR6)
-- Analytical mismatches versus malformed input — preserve legitimate missing-parent/mismatched-sum observations for findings; exclude invalid rows with visible accounting under ADR-0023 while incomplete page retrieval remains a run failure. Unexpected attributes can exclude many records after upstream schema drift; ADR-0026 preserves existing valid data in all-excluded and invalid-replacement cases. Retained observations may be older; preserve provenance and report this outcome. Zero-row extraction remains a separate completeness case. (FR2, FR13–FR14)
-- Evidence retention consumes disk — budget required, failed refresh under exhaustion, evidence never silently pruned. (FR3–FR4, FR14, TR6)
-- Background refresh adds run state — accepted by the council as a small local lifecycle to survive client disconnects; persisted state is not an automatic durable queue or automatic restart. (FR11)
-- Amazon S3, Parquet and DuckDB are selected; other stack and operational defaults remain recommendations. Empirical gates and Q1–Q4 are still open. The separate [health scaffold](../health-endpoint/spec.md) implements local setup, liveness, and structural checks; it provides no runtime proof for these product capabilities. (TR4–TR7)
-- One backend replica is confirmed and serves multiple clients. Its restart/replacement can interrupt API availability while durable data remains intact; exact interruption expectations remain open. Query admission, internal process ownership and worker launching still need concrete design. (FR16, TR7–TR8)
-
-### Alternatives considered
-- Rust/DataFusion: same parser/planner offers a real compatibility advantage, but does not remove complete reference/function validation or isolation. Retain as a revisit option if the recommended pair fails; no parallel full implementation. (FR9–FR10, TR7)
-- Synchronous request-owned refresh: simpler response but ambiguous disconnect/recovery behavior; recommend application-owned background execution with polling. (FR11, TR6)
-- In-process user SQL with parser/engine flags alone: insufficient execution isolation for the role and resource contract. (FR6, FR10, TR3)
-- Distributed queue, query-result cache and Delta have no established requirement. OAuth2 remains required, while OIDC is no longer required under ADR-0017; Cognito resolves authorization-server ownership and managed login (ADR-0018); exact client and token/session architecture remain open. Shared deployment with one replica is required; EC2 deployment is selected; process supervision remains open. Multiple replicas and horizontal autoscaling are deferred by user choice. (FR5, FR11, FR16, TR1–TR2, TR7–TR8)
-
-## Test strategy
-- **ADR-0032 operational database:** run migrations, constraints, rollback, competing refresh admission, publication commit/reconciliation, and logout checks against PostgreSQL. Verify bounded pool exhaustion, database reconnect after interruption, and application replacement without data re-ingestion. Database failure must not bypass permission checks or report an uncertain publication as successful. Use fakes for pure unit tests; do not substitute SQLite for PostgreSQL integration behavior. No managed database has been provisioned or tested yet.
-- **ADR-0008 cache:** compare cold/warm latency and transfer volume; test partial/hash-mismatched downloads, shared download ownership, cache hit authorization, file pinning versus eviction, quota exhaustion, refresh version transitions, backend replacement and S3 rehydration. Verify Viewer workers cannot access detailed cached files. Exact budgets follow measurement. (FR3–FR4, FR6, TR3, TR8)
-- **AC1–AC2:** Recorded-page fixtures plus actual extraction checks; documentation/data-backed required fields, invalid-row exclusion and accurate overlapping reason counts, unexpected attributes, identical duplicates across files, latest valid revisions across runs, and unchanged published data on incomplete fetch/upload. Starting with seeded analytical data, verify all-excluded refreshes preserve the active dataset and mixed refreshes retain older valid rows for invalid replacements while updating other valid observations. Check report counts/reasons and retained provenance (AC2b). Verify national last-valid-record-wins in recorded source order, including conflicts across files and replay independence from processing completion order (ADR-0034). Verify the same fallback for facility/date and facility/generator/date keys (ADR-0036). Include safe reruns, revised/removed rows and partial source failure. (FR1–FR3)
-- **AC3:** Disable upstream connectivity after ingestion; catalog/preview/metric/SQL still succeed from a pinned local generation. (FR4)
-- **AC4–AC5:** Seeded Cognito managed login and OAuth2 Authorization Code with PKCE, trusted local user binding, signing-key rotation and token-origin/recipient/purpose checks, invalid/expired/forged tokens, current-session logout, trusted local-user/role lookup and role-only policy (including nested-query and backing-file bypass attempts), direct endpoint access and Viewer denial across catalog/preview/SQL/metric/cursor/errors; prove positive Analyst/Admin access. (FR5–FR9, FR12, FR15)
-- **AC6:** Filter/order correctness, cursor tampering/wrong principal/filter mismatch, two pages around refresh, fixed nonrenewing expiry, new-reader acquisition racing local cache eviction; no duplicate/skipped results within a valid cursor and no deletion of a newly referenced generation. (FR6, FR8)
-- **AC7–AC8:** Known-result composed joins/CTEs/correlated subqueries/aggregates/windows; validate generated SQL; unused CTEs, shadowing, quoted/qualified references, dynamic/table/external functions, metadata, write/admin attempts, multiple statements, oversized/deep SQL and limits. Instrument ordering to prove denied inputs do not open data, launch workers or reach engine planning. Verify exact sandbox configuration and physical Viewer mounts, not just mocked denial branches. (FR6, FR9–FR10, TR3)
-- **AC7a:** Verify numbered first/middle/final pages, empty/out-of-range results, invalid page/size and size mismatches, direct page selection and repeat visits. Compare concatenated pages to the same execution, including duplicates and explicit SQL LIMIT/OFFSET. Check foreign query IDs, refresh, revoked access, expiry/lost state and truncation; instrument execution count to rule out reruns. Lose the in-memory mapping between pages and verify an unavailable response, never page 1; an explicit rerun gets a new ID. Verify expiration without further requests, orphan-file cleanup after store loss, active-reader cleanup races, and per-user/global memory/storage budgets under abandoned executions. (FR9a; ADR-0020, ADR-0021, ADR-0022)
-- **AC9:** Admin-only trigger/status, idempotent requests, conflicting keys/concurrency, disconnect, failures, crash points around publication, restart/interrupted states, active readers, disk exhaustion and orphan cleanup. (FR3–FR4, FR11, FR15)
-- **AC10:** Independently calculate metric from recorded national inputs, units and denominator; test ADR-0027 required-value/positive-capacity behavior, national-only lineage and ADR-0031 rounding. Verify both percentages are available without match/mismatch labels or discrepancy flags, and disagreement alone does not reject usable data or fail verification. (FR12)
-- **AC11:** Reproduce >=30-day reconciliation and three actual findings; repeat after refresh/local cache eviction using retained files/versions; distinguish observed mismatch from unverified cause. (FR13–FR14)
-- **AC12:** Fresh environment and supported local host rehearsal, combined refresh/query budgets, worker kill/reap, setup/auth/query/findings commands, required delivery docs and explanation/debug exercise. Documentation check is not a substitute for these runtime tests. (TR4, TR7)
-- **AC13:** Verify one active backend replica; ingest once, query the common generation from independent clients with different roles, replace API/query containers while EIA is unavailable, then repeat requests and verify persistent publication/accounts/evidence plus declared session/recovery behavior. Replacement must not overlap active owners; internal processes must agree on ownership and state. (FR4, FR6, FR16, TR7–TR8)
-
-## Assumptions
-- Realistic shared deployment with one backend replica and Amazon S3 + Parquet + DuckDB are user-confirmed. Seeded accounts remain sufficient, frontend remains deferred, and EC2 deployment configuration/deployed RDS connectivity/availability SLA remain open. (FR16, TR2, TR7–TR8)
-- PostgreSQL on RDS is accepted, while one refresh coordinator remains a recommendation. Operational state is independent of EC2 disk lifecycles. Deployed RDS connectivity, migrations and bounded per-process connection pools require design; no shared database connections may survive a process fork. Query isolation and platform-supported launching still need review. (Q2)
-- Admin-triggered background refresh with automatic publication on success is accepted in ADR-0003. Recent dates are selected in ADR-0009; interval replacement remains proposed; cursor/page defaults are accepted in ADR-0015 and initial query controls in ADR-0013. Other resource sizes require measurement. Retention/recovery-policy work is deferred in ADR-0010. (Q1–Q2)
-- National metric meaning/formula is accepted and its fields/units and three-date agreement are verified in ADR-0006. Remaining source contracts, metric edge cases and SQL function surface require investigation before dependent implementation. No real anomaly is claimed by this plan. (Q3–Q4)
-
-## Open decisions
-- **Q1 — partially resolved:** Admin-triggered background refresh automatically publishes on success, without review or approval (ADR-0003). Recent dates are selected (ADR-0009); exact interval anchoring, replacement and completeness require source validation. Retention/recovery-policy work is deferred (ADR-0010).
-- **Q2 — one replica, Python/Flask, PostgreSQL on RDS, AWS and S3 + Parquet + DuckDB resolved:** EC2 deployment is selected (ADR-0038) without blocking local development. Cognito setup and the RDS connection are user-confirmed complete; S3 development access is verified. Finalize EC2 configuration, deployed access to S3/RDS, local PostgreSQL test setup, deployment interruption behavior, protected transport, internal process/refresh ownership, isolated worker execution and measured capacities. ADR-0008 selects bounded local Parquet caching; measure cold/warm performance, disk quotas, download coordination and eviction. Query-result caching remains deferred. ADR-0028/0032 select the backend and operational database; EC2 supervision and supporting libraries remain open; retention/recovery-policy work is deferred.
-- **Q3 — partially resolved:** ADR-0006 verifies national metric fields/units and three-date formula agreement. ADR-0023/0024 accept documentation-first required fields with observed-data fallback, invalid-row exclusion, identical-duplicate collapse and latest-valid-value replacement. Remaining work: historical fields/keys/types/units and nullability guarantees beyond the bounded verification contracts, seed provisioning and retained-row merge mechanics (fallback policies accepted in ADR-0026), report format/storage (basic report accepted in ADR-0025), remaining measurement validation, historical/cross-grain checks, source completeness and three real anomaly candidates. ADR-0027 resolves national required values and positive capacity; ADR-0031 resolves percentage presentation without agreement classification; ADR-0034 resolves national within-retrieval conflicts with last-valid-record-wins in recorded source order; ADR-0036 extends the same fallback to facility and generator verification. ADR-0035 resolves national capacity-outage meaning to include partial reductions, using reported MW with explicit historical capacity-vintage limitations.
-- **Q4 — empirical/design:** broad DuckDB analytical support is selected in ADR-0012. Pin engine/validator versions, verify composed queries and pre-execution authorization, and document only demonstrated compatibility exclusions with suitable errors. Do not preemptively narrow recursive CTE/set-operation support.
-- Draft spec + plan are reviewable; unresolved readiness items must remain explicit in any subsequent task breakdown. The separate health scaffold has its own implementation and task list; the product use cases above remain unimplemented.
-
-- **Q5 — authentication and authorization:** ADR-0017 retains OAuth2 and removes required OIDC; ADR-0014 session behavior and ADR-0016 application-owned authorization remain accepted. ADR-0018 selects Cognito managed login and Authorization Code with PKCE. Finalize app-client/callback configuration, local development and seeded provisioning, session/token mapping and essential user fields. Each user has exactly one role (ADR-0044). ADR-0043 limits this implementation to seeded users and role-based access; registration, Admin user management and granular permission catalogs are excluded. Browsing defaults are accepted in ADR-0015; exact error contract remains proposed.
-
-### Facility/generator verification status (2026-10-02)
-
-The bounded [detail verification](../facility-generator-verification/verification.md)
-now implements required fields, per-entity keys, last-valid-source selection,
-exact per-observation ratios, coverage and reproducible reporting. Historical
-schema/keys, live pagination (including facility response-total semantics),
-refresh/storage, seed merge behavior and cross-grain findings remain pending.
+- Run documented Ruff, mypy, architecture and relevant behavioral checks for code
+  changes. Run PostgreSQL tests only against an explicit disposable local database.
+  The five review-added login cleanup cases remain unexecuted without that DSN.
+- Preserve live-user acceptance already recorded; detailed missing live cases and
+  original high-water/spill, S3 performance and API/refresh overlap evidence stay
+  open. No further service/browser validation is authorized by documentation.
+- Preserve challenge acceptance criteria and delivery obligations. A clean-checkout
+  rehearsal and complete integrated/production acceptance are separate from code
+  presence and historical test results.
+- Broader historical source contracts/completeness, general snapshot deletion and
+  infrastructure backup/recovery policy remain open. Current code and resource
+  defaults do not establish measured production budgets.

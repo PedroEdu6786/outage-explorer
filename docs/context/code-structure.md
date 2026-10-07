@@ -59,21 +59,22 @@ tests may substitute application ports with fakes. User-access Phase 1 now has
 PostgreSQL repositories, explicit Alembic migrations and controlled local seeding
 using Psycopg 3. Disposable PostgreSQL 18.6 tests verify storage/setup. October 5
 read-only checks verified Aurora PostgreSQL 17.9, the application schema and three
-seeded identity/role links; live login and pooled IAM signing remain pending.
-The [auth plan](../specs/user-access/plan.md) separates that dated evidence from
-the remaining phase 5 implementation and acceptance work. Integration and tooling
+seeded identity/role links. Runtime-only IAM signing and Cognito integration are
+implemented. The user subsequently accepted local authentication and web integration;
+the [verification record](../specs/user-access/verification.md) distinguishes that
+evidence from the remaining comprehensive live acceptance cases. Integration and tooling
 records remain proposed in ADR-0046/0047. See the
 [Phase 1 checkpoint](../specs/user-access/tasks/phase-1.md).
 Phase 2 adds injected login/access services, cryptographic material and bounded
 Cognito access-token/JWKS adapters. Atomic attempt consumption precedes provider
 exchange; sessions resolve current local roles and invalidate only their own digest.
 Controlled provider and real PostgreSQL tests prove fixed expiry and committed
-logout without connector access; live provider readiness remains pending. See the [Phase 2 checkpoint](../specs/user-access/tasks/phase-2.md).
+logout without connector access; subsequent local integration evidence is recorded separately. See the [Phase 2 checkpoint](../specs/user-access/tasks/phase-2.md).
 Phase 3 adds trusted authorization operation/grain enums and a pure role matrix.
 The access service returns a local principal and exact approved grain set only after
 fresh session/role checks. Downstream harnesses verify denial before data/execution
 on direct and later pages; actual SQL reference extraction, result ownership and
-catalog/SQL/refresh integration remain downstream responsibilities. See the
+catalog/SQL/refresh integration are implemented by the subsequent data API phases. See the
 [Phase 3 checkpoint](../specs/user-access/tasks/phase-3.md).
 Phase 4 registers opt-in thin auth routes with injected login/access services,
 HTTP schemas and host-only cookie/origin transport. Cryptographic CSRF checks stay
@@ -82,7 +83,7 @@ and Cognito resources with explicit shutdown; imports/factories start no request
 connections, migrations or threads. Health remains independent. The
 [HTTP contract](../specs/user-access/http-contract.md) and
 [Phase 4 checkpoint](../specs/user-access/tasks/phase-4.md) distinguish controlled
-verification from pending browser/live-provider readiness.
+verification from the separately recorded local browser/provider evidence and remaining live cases.
 
 
 Use one application organized by technical layer. Keep business policies
@@ -375,11 +376,9 @@ They describe the superseded layout; current resource persistence claims rely on
 the refresh-persistence controlled checkpoints, not those earlier measurements.
 
 ADR-0049 adds independently configured1–3 page fetch workers within a route.
-Bounded speculative windows preserve every sanitized response as an immutable
-transport JSON dependency, including unused lookahead; canonical raw/page
-Parquet keeps received-count offsets and one terminal. Exact graph export,
-recovery and bounded-window replay verify those dependencies and their canonical
-raw values. CLI/Make fetch/S3 overrides win JSON, with endpoint default1 unchanged.
+Bounded speculative windows account for unused lookahead and retain source order.
+Raw/page inputs are transient under ADR-0060; current generations persist only
+the three unified resource files, not the earlier transport/evidence graph. CLI/Make fetch/S3 overrides win JSON, with endpoint default1 unchanged.
 Shared source bounds count all fetched rows/pages, including unused lookahead;
 logical admission includes endpoint*page buffers. Modeling stays coordinated.
 
@@ -388,8 +387,8 @@ Data API Phase 1 adds shared v1 public projections in `domain/datasets.py`,
 parser reference inspection behind an application port, and bounded canonical
 encoding/type adapters in infrastructure. Portable OpenAPI and synthetic fixtures
 are in `docs/specs/data-api/`; real DuckDB compatibility runs only in a controlled
-test subprocess. Product catalog/preview/SQL/refresh routes and the isolated Linux
-launcher remain pending. See the [Phase 1 evidence](../specs/data-api/runtime-evidence.md)
+test subprocess. Subsequent phases implement the product HTTP routes and isolated
+Linux launcher; controlled checks do not imply complete runtime acceptance. See the [Phase 1 evidence](../specs/data-api/runtime-evidence.md)
 and [client handoff](../specs/data-api/client-handoff.md).
 
 User-access Phase 5 now adds shared explicit DSN/local/password/IAM settings,
@@ -400,8 +399,9 @@ do not replace fresh authorization in application use cases. Controlled acceptan
 uses disposable PostgreSQL, provider transports and persistent Chromium profiles;
 CI provisions its database/browser dependencies without cloud credentials.
 See the [operator runbook](../specs/user-access/setup.md) and
-[verification record](../specs/user-access/verification.md). Real managed-login
-and browser validation remain pending, so Phase 5's live checkpoint stays open.
+[verification record](../specs/user-access/verification.md), including the subsequent
+user acceptance of local authentication/web integration. Comprehensive live cases
+remain open evidence; they do not imply missing Phase 5 implementation.
 
 Data API Phase 3 adds admitted-run execution and quality mapping in
 `application/services/refresh_execution.py` and `application/refresh_outcomes.py`.
@@ -411,26 +411,26 @@ work, renews database-time leases independently, and closes its resources.
 `application/services/refresh_recovery.py` reuses serialized PostgreSQL history
 reconciliation; interrupted unpublished work requires explicit Admin retry.
 The worker restores and replays the pinned base, verifies all-grain identity,
-persists/replays the full durable graph before publication, and reports retained
+persists and verifies all three exact resource files before publication, and reports retained
 all-excluded input without moving the pointer. Exact-AST startup checks constrain
 the new wrapper. Inner layers permit only the pure `json.dumps` status encoder
 and the `contextlib.AbstractContextManager` type contract, with negative fixtures
 rejecting file decoding and execution helpers. Controlled process restart,
 PostgreSQL/Parquet/S3 and commit-loss evidence is recorded in the
-[Phase 3 checkpoint](../specs/data-api/tasks/phase-3.md); product HTTP and actual
-preview/SQL continuations remain downstream work.
+[Phase 3 checkpoint](../specs/data-api/tasks/phase-3.md); later phases implement
+product HTTP and preview/SQL continuations.
 
 
 Data API Phase 4 adds application catalog/preview services, published-input and
-isolated-execution ports, a modeled-only verified projection cache, and bounded
-snapshot cursor metadata. Workers receive exact public-column Parquet projections;
-raw/provenance dependencies never enter the analytical input grant. Preview
+isolated-execution ports, a verified resource cache, and bounded snapshot cursor
+metadata. Workers receive exact staged unified resource files; analytical views
+explicitly project public columns and SQL inspection rejects private references.
+Separate raw/page inputs never enter the analytical input grant. Preview
 metadata holds generation pins until fixed expiry and supervised cleanup; active
 reads and unproven reaping prevent premature pin release. Controlled worker
 fixtures exercise real DuckDB in a separate process, without asserting OS
-isolation. The product launcher remains fail-closed until the reviewed T1.7
-runtime is supplied. HTTP integration and explicit runtime lifecycle composition
-remain Phase 6; see the [Phase 4 checkpoint](../specs/data-api/tasks/phase-4.md).
+isolation. Product execution fails closed without configured reviewed runtime
+resources. Phase 6 implements HTTP integration and explicit lifecycle composition; see the [Phase 4 checkpoint](../specs/data-api/tasks/phase-4.md).
 
 
 Data API Phase 5 adds `application/services/queries.py`, explicit reference-free
@@ -442,8 +442,9 @@ pins release after confirmed reaping; query metadata never enters PostgreSQL.
 Bootstrap constructs inert lifecycle resources for explicit start/close. This
 store rejects incompatible multiple-process ownership without selecting the
 final WSGI topology. Controlled integration evidence is in the
-[Phase 5 checkpoint](../specs/data-api/tasks/phase-5.md); product execution stays
-fail-closed pending T1.7 Linux launcher evidence and HTTP remains Phase 6.
+[Phase 5 checkpoint](../specs/data-api/tasks/phase-5.md). The Linux launcher and
+Phase 6 HTTP integration are implemented; ADR-0055/0056 separately record scoped
+local readiness and user-directed activation, with full runtime checkpoints open.
 
 
 ### Data HTTP integration (Phase 6)
@@ -460,7 +461,7 @@ optional supervisor-supplied `DataHttpResources`. Analytical ports fail closed
 when no reviewed resources are supplied. Process lifecycle extensions are explicit:
 the factory never invokes start, and API close does not stop refresh supervision.
 Migration 0003 records actual start/finish times; historical unknown values remain
-null. Verified modeled partitions supply reported refresh coverage.
+null. Verified unified resource summaries supply reported refresh coverage.
 See the [Phase 6 checkpoint](../specs/data-api/tasks/phase-6.md) and
 [evidence map](../specs/data-api/runtime-evidence.md).
 
@@ -471,8 +472,8 @@ leases preserve active readers and unresolved execution. The exact-AST
 `entrypoints/http/analytical_startup.py` exception only passes the dedicated
 bootstrap callable to its argument parser. Imports, HTTP factories and help
 perform no runtime startup. One local owner, explicit lifecycle and ephemeral
-restart loss are adapter constraints; real quota storage/readiness and deployment
-remain open. No refresh ownership is added to analytical HTTP shutdown.
+restart loss are adapter constraints. Native Linux quota storage is implemented;
+host provisioning, full measured runtime readiness and deployment remain separate. No refresh ownership is added to analytical HTTP shutdown.
 
 The analytical corrective storage pass implements native Linux `quota-disk` in
 `infrastructure/worker_runtime/quota.py`: a separately provisioned finite ext4
@@ -481,8 +482,9 @@ one retained filesystem lock. Bootstrap probes these prerequisites only at
 explicit start. The ownership ledger persists spill paths and preparing/creating/
 removed phases; cleanup retains ownership until confirmed worker removal and
 complete reclamation. Docker Desktop is unsupported by this backend. Controlled
-verification is complete; Linux host provisioning, real runtime enforcement and
-reviewed readiness remain open. See the
+verification covers these mechanisms. ADR-0055/0056 record scoped local readiness
+and activation; full high-water/spill, S3 performance and API/refresh overlap
+checkpoints, final EC2 host provisioning and deployment remain open. See the
 [storage checklist](../../infrastructure/analytical-worker/README.md).
 
 The committed `worker.json` record is authoritative during analytical restart.

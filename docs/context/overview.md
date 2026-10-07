@@ -22,7 +22,7 @@ they actually want to ask.
 
 ## What we're building
 
-Current repository scope, confirmed by the user on 2026-10-01:
+Current backend scope and implementation status:
 
 The user clarified deployment scope: build realistic application development
 and deployment, with ingested Parquet owned by our backend infrastructure and
@@ -36,18 +36,20 @@ bounded local disk cache of modeled Parquet for DuckDB scans.
 Python/Flask, PostgreSQL on Amazon RDS, and EC2 deployment are accepted.
 [ADR-0038](../adr/0038-ec2-deployment-local-development.md) replaces ECS and
 keeps development local without an EC2 prerequisite. ADR-0032 replaces SQLite.
-The user confirmed Cognito setup and the RDS connection complete; application
-integration and EC2 deployment configuration remain open. Seeded
-challenge accounts remain sufficient; this clarification does not request
-registration, a frontend, or an automatic refresh schedule.
+Cognito/RDS application integration is implemented, and subsequent local
+authentication/web integration was accepted by the user; see the
+[verification record](../specs/user-access/verification.md). EC2 deployment
+configuration and full runtime acceptance remain open. Seeded challenge accounts
+remain sufficient; registration and automatic refresh scheduling are excluded.
 
 - **Data connector:** extract the three daily EIA nuclear outage routes
   (national, facility, generator) into local Parquet with pagination,
   validation, logging, and safe reruns.
   ADR-0023/0024 accept documentation-first required fields with collected-data
   fallback, invalid-row exclusion with visible accounting, identical-duplicate
-  collapse and latest-valid-value replacement. Exact field/key contracts and
-  report format/storage remain pending. ADR-0025 accepts a visible quality
+  collapse and latest-valid-value replacement. Bounded field/key contracts are
+  implemented; PostgreSQL stores refresh quality and publication metadata.
+  ADR-0060 limits durable modeled output to three unified resource Parquet files. ADR-0025 accepts a visible quality
   summary in the Admin refresh outcome with counts and exclusion reasons.
   ADR-0026 keeps existing data when every incoming row is excluded and retains
   older valid rows when their replacements are invalid. ADR-0037 defines initial
@@ -58,28 +60,28 @@ registration, a frontend, or an automatic refresh schedule.
   capacity offline share; reconcile at least 30 days across the three grains
   and document at least three real anomalies with reproducible evidence.
 - **Backend:** provide authentication, an authorized dataset catalog,
-  date/facility-filtered previews with backend pagination, read-only SQL,
+  date-filtered previews with backend pagination, read-only SQL,
   and Admin-only refresh with an outcome.
 
 The technical challenge remains the requirements source for these three parts.
 On October 4, the user requested a handoff for a separate UI repository using
 React, Next.js, TypeScript, Tailwind, atomic components and an existing Figma
 design ([ADR-0039](../adr/0039-separate-ui-client-atomic-design.md)). The
-[Astra context pack](ui-client/README.md) captures expected behavior and pending
-integration contracts. UI implementation stays outside this backend repository
-and remains pending, so this scope does not represent the complete submission.
+[Astra context pack](ui-client/README.md) captures expected behavior and
+integration contracts. UI implementation exists in the separate
+`outage-explorer-web` repository. Its presence does not establish full integrated
+acceptance or completion of the challenge submission.
 Outage-type classification and event reconstruction are unverified ideas,
 not current requirements.
 
 ## Epic outcomes
 
-"In scope" identifies planned work, not completed implementation. E7 now has
-a separate-repository handoff; its implementation remains pending.
-
-The initial [health scaffold](../specs/health-endpoint/spec.md) is implemented:
-an unauthenticated liveness endpoint, layered composition, local Python setup,
-and automated import/behavior checks with CI configuration. Data, authentication,
-refresh, and analytical execution capabilities in the table remain planned.
+The health scaffold, connector, analytical model, authentication, data API,
+refresh and isolated analytical adapters are implemented with controlled tests.
+Cross-grain findings are recorded in [challenge evidence](../challenge/README.md).
+The table describes scope, not a declaration that every acceptance criterion is
+closed. Local activation under ADR-0056 does not close full runtime/deployment
+checkpoints.
 
 | Epic | Outcome | Current scope |
 |------|---------|---------------|
@@ -89,7 +91,7 @@ refresh, and analytical execution capabilities in the table remain planned.
 | E4 — Discovery and preview | Show permitted schemas and support filtered, backend-paginated previews | In scope |
 | E5 — Read-only SQL | Support broad DuckDB analytical SQL with table authorization, result limits and documented compatibility exceptions | In scope |
 | E6 — Controlled refresh | Let Admins refresh data and receive a clear outcome | In scope |
-| E7 — Minimal web experience | Login, browse datasets, filter records, and run SQL through a web UI | Separate repository; context prepared, implementation pending |
+| E7 — Minimal web experience | Login, browse datasets, filter records, and run SQL through a web UI | Implemented in separate repository; full integrated acceptance separate |
 | E8 — Reproducible delivery | Runnable setup, tests, required documentation, incremental commits, and live-session readiness | In scope from the beginning |
 
 ## Requirements and decision status
@@ -144,8 +146,8 @@ EIA-reported nuclear capacity out of service, including full outages and
 partial output reductions ([ADR-0035](../adr/0035-national-outage-capacity-meaning.md)).
 It describes daily reported status; it does not establish reactor shutdown
 counts, full-day average output, lost energy, outage duration or cause.
-The proposed prepared dataset is `fleet_offline_share_daily`, available
-under the existing national-data role policy.
+The public `national` dataset includes the calculated and source percentages
+under the existing national-data role policy; no separate metric dataset is required.
 
 [ADR-0006](../adr/0006-daily-fleet-offline-share.md) records the accepted
 meaning and calculation, verified fields and three actual sample dates.
@@ -167,16 +169,16 @@ excluded under ADR-0027. This fallback does not assert source revision timing.
 
 ### Decisions requiring real-data investigation
 
-- Natural keys, required fields, types, and relationships for each grain.
+- Broader historical validation beyond the implemented bounded grain contracts.
 - Remaining value validation rules and historical metric checks. National
   partial-output meaning is accepted in ADR-0035; exact historical capacity-data
   vintage remains an evidence limitation, and reported national capacity is used.
-- Missing parent facilities, mismatched sums, actual anomalies, and evidence
-  supporting explanations for discrepancies.
+- Generalizing the recorded parent/sum discrepancies and three real findings
+  beyond their identified evidence intervals.
 - Source revisions and available periods that inform refresh semantics.
 
 Broad DuckDB analytical feature support is selected in ADR-0012; compatibility
-and reference discovery need verification. EC2 deployment configuration, deployed RDS connectivity
+and reference discovery have controlled tests, with full runtime evidence separate. EC2 deployment configuration, deployed RDS connectivity
 and exact memory/disk budgets remain open. ADR-0013 accepts initial query
 controls: one analytical worker, retryable busy responses, 10-second execution
 timeout and 1,000-row / 1-MiB output caps with explicit truncation.
@@ -189,9 +191,12 @@ adds `page` (1-based) and `page_size`, with subsequent pages selected by
 in a bounded, expiring in-memory store. Store loss or expiration requires an
 explicit rerun with a new ID; it never silently restarts pagination at page 1.
 Abandoned state and any orphaned result files must be reclaimed. The store
-implementation, result placement, TTL and page-size defaults/maximum remain
-open; the existing total cap remains the baseline pending explicit revision. Recent coverage is selected in ADR-0009;
-exact dates require source inspection. Retention/recovery policy is deferred
+uses process-owned metadata and private result spools. Pages default to 100 rows
+with a maximum of 500; ADR-0059 fixes preview/result lifetime at 60 seconds.
+The existing total result cap remains unchanged. Recent coverage is selected in ADR-0009;
+the initial load interval is April 2–October 1, 2026 under ADR-0037, and HTTP
+refresh freezes configured dates at admission under ADR-0051. Broader source
+completeness remains an evidence question. Retention/recovery policy is deferred
 under ADR-0010.
 Admin-triggered background refresh with automatic publication is accepted in
 [ADR-0003](../adr/0003-admin-refresh-publication.md). Document
@@ -207,7 +212,7 @@ do not infer a choice from the epic list.
   access-control promise applies to every supported query path.
 - Frontend implementation, including the challenge's core E7 web experience,
   belongs to the separate client repository under ADR-0039. E7 is required by
-  the full challenge; its handoff is prepared and implementation remains pending.
+  the full challenge; implementation exists separately and full acceptance is distinct.
 
 ## Domain glossary
 
@@ -224,7 +229,7 @@ do not infer a choice from the epic list.
 
 ## Users
 
-- **Analyst:** access all analytical datasets, preview by date/facility,
+- **Analyst:** access all analytical datasets, preview by date, filter by facility in SQL,
   and run read-only SQL.
 - **Viewer:** national trends only; no facility or generator detail through
   any backend path.
@@ -250,13 +255,16 @@ do not infer a choice from the epic list.
 ADR-0017 retains OAuth2 and removes required OIDC. ADR-0043 narrows authorization to
 role-based access with seeded users; registration, Admin user management and
 separate read/write/delete permissions are excluded. ADR-0018 selects Cognito
-managed login and OAuth2 Authorization Code with PKCE; exact client setup,
-identity/session mapping, essential user fields remain open; each user has exactly one role (ADR-0044). Seeded personas retain local operational records. The accepted experience
+managed login and OAuth2 Authorization Code with PKCE. Client configuration,
+identity/session mapping and essential local user fields are implemented; each
+user has exactly one role (ADR-0044). Seeded personas retain local operational records. The accepted experience
 uses one-hour application sessions, re-login on expiry, no automatic renewal
 initially and current-session logout. ADR-0015 accepts preview pages of 100 rows
 by default (initial configurable maximum 500), snapshot-bound cursors and a
-fixed 15-minute browsing expiry. Cognito handles login and OAuth2 token issuance (ADR-0018); client/session integration needs a concrete design; no runtime
-implementation exists yet.
+fixed 60-second browsing expiry under ADR-0059, superseding the earlier
+15-minute value. Cognito handles login and OAuth2 token issuance (ADR-0018);
+local authentication/web integration acceptance and remaining live evidence are
+recorded in the [verification record](../specs/user-access/verification.md).
 
 ADR-0016 confirms application-owned authorization tables: identity comes from
 the selected sign-in mechanism, while seeded local users, roles and assignments are controlled
@@ -269,5 +277,6 @@ separate offline commands replay the fixed recorded baselines, use per-entity
 natural keys, apply the shared policies, and write deterministic reports. See
 [the contracts and findings](../specs/facility-generator-verification/verification.md).
 Facility's advertised total differs from received rows; observed-entity date
-coverage is explicit and does not prove upstream completeness. Runtime delivery
-and cross-grain reconciliation remain pending.
+coverage is explicit and does not prove upstream completeness. HTTP delivery is
+implemented and cross-grain reconciliation is recorded in
+[challenge evidence](../challenge/README.md); full runtime acceptance remains separate.

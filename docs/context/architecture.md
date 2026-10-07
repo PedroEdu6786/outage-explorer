@@ -1,376 +1,181 @@
 # Architecture
 
-Status: **layered Flask monolith accepted; health and offline national/facility/generator verification implemented**.
-The liveness endpoint and import-boundary checks exercise initial composition.
-Product use cases, runtime, storage, and execution mechanisms retain their
-explicit accepted/proposed status and are not proven by liveness.
+Status: **layered Python/Flask monolith implemented; deployment and full runtime
+acceptance remain separate**. This page describes current code and accepted
+boundaries. Dated task checkpoints and evidence records describe what was
+verified at that time; they are not interchangeable with production readiness.
 
-Accepted [ADR-0060](../adr/0060-persist-only-three-resource-files-per-generation.md)
-supersedes ADR-0042 complete evidence-graph persistence/replay and ADR-0057's
-six-file/audit-preservation clauses. The target is three unified resource files,
-with original provenance, numeric source strings, units and exact calculation
-evidence retained privately for baseline merges. Analytical views explicitly
-project the existing public columns. Supporting evidence remains bounded and
-transient; PostgreSQL stores quality summaries and exact publication descriptors.
-Implementation proceeds through [refresh-persistence tasks](../specs/refresh-persistence/tasks.md);
-existing legacy bases fail closed under the accepted cutover decision. Accepted
-[ADR-0061](../adr/0061-generation-prefixed-resource-object-keys.md) resolves S3
-object identity to the configured generation prefix and fixed three filenames;
-exact durable descriptors remain distinct from local checksum identities.
-[ADR-0062](../adr/0062-fail-closed-legacy-publication-layout.md) makes a
-manifest-format active base fail closed for resource readers and publication.
-The controlled implementation checkpoint does not authorize runtime rollout.
+## Product and application structure
 
-The completed refresh-persistence phases switch shared CLI/refresh/bootstrap to
-three-file generation and bounded persistence/recovery. PostgreSQL records exact
-file descriptors and transient quality in the fenced publication transaction;
-cache readers download a single approved resource and workers project public-only
-views. Candidate manifests and graph-writing producers are removed. Controlled
-end-to-end checks use disposable PostgreSQL, fake HTTP/S3 and separate DuckDB
-fixture processes. Deployment, live loading and host-capacity evidence remain
-separate and unperformed by this checkpoint.
+One backend replica serves shared EIA data to authorized clients. Amazon S3 owns
+modeled Parquet, PostgreSQL on Amazon RDS owns operational records, Cognito owns
+credentials, and DuckDB executes analytical reads. EC2 is the deployment target;
+local development does not require an EC2 instance. See ADR-0001, ADR-0018,
+ADR-0032 and [ADR-0038](../adr/0038-ec2-deployment-local-development.md).
 
-The product HTTP refresh action uses a configured inclusive interval under
-[ADR-0051](../adr/0051-configured-http-refresh-range.md), with no request date
-overrides. Admission records that interval for the complete all-grain background
-run; later configuration changes cannot change it. Initial-load policy and CLI
-date overrides remain unchanged. The [data API contract](../specs/data-api/http-contract.md)
-records implemented opt-in transport details. Phase 6 mounts seven HTTP
-operations using injected use cases; transport enablement does not enable the
-user-owned Linux runtime gate.
+[ADR-0030](../adr/0030-layered-flask-monolith.md) selects one layer-first product
+codebase and release:
 
-[ADR-0052](../adr/0052-interrupted-refresh-recovery.md) accepts continued work
-through API-only restarts and publication reconciliation after worker loss.
-Unpublished interrupted runs require explicit Admin retry; recovery mechanics
-and ownership enforcement are implemented with controlled PostgreSQL/process
-verification; live deployment remains separate.
+- `domain/`: pure modeling, retention, roles, publication and pagination policies.
+- `application/`: authorization, use cases, transaction orchestration and ports.
+- `infrastructure/`: EIA, Cognito, PostgreSQL, S3, Parquet, cache, SQL inspection,
+  worker execution and result storage adapters.
+- `entrypoints/`: thin HTTP, CLI and independently supervised worker entry points.
+- `bootstrap.py`: concrete dependency construction and injection.
 
-User-access Phases 1–4 implement PostgreSQL users/roles, fixed sessions and
-single-use browser-bound login attempts, explicit migrations, controlled seeding,
-Cognito code exchange/access-token verification and current-session logout.
-Controlled provider and disposable PostgreSQL checks verify identity binding,
-current role lookup, immutable one-hour expiry, replay denial and committed
-invalidation. Pure role policy and an application authorization seam now cover Viewer national-only,
-Analyst/Admin all-grain and Admin-only refresh initiation/outcome/diagnostics.
-Downstream spies verify fresh authorization before direct and later-page work;
-Opt-in HTTP login/callback/session/logout composition now has host-only fixed-expiry
-cookies, application-owned CSRF, exact origin/CORS checks and sanitized errors.
-Configured construction is inert; process resources have explicit cleanup and
-health remains dependency-independent. Analytical/refresh use cases and opt-in HTTP delivery are implemented with
-controlled evidence. Configured-provider readiness and real browser reopening
-remain separate acceptance work.
-Read-only checks on October 5 verified the RDS schema and three seeded users
-with their role and Cognito identity links; live login remains unverified.
-The [updated auth plan](../specs/user-access/plan.md) records dated setup evidence
-and the pending IAM, confidential-client and HTTP-helper work. See the
-[Phase 2](../specs/user-access/tasks/phase-2.md) and
-[Phase 3](../specs/user-access/tasks/phase-3.md) and
-[Phase 4 checkpoints](../specs/user-access/tasks/phase-4.md), plus the
-[HTTP contract](../specs/user-access/http-contract.md); ADR-0046/0047 remain
-proposed integration/tooling records.
+The [structure guide](code-structure.md) and [AGENTS.md](../../AGENTS.md) define
+allowed dependencies. Flask factories register constructed services and perform
+no ingestion, migrations, database queries or worker startup. Separately
+supervised refresh and analytical workers remain part of this monolith.
+The independent-services example in the [architecture study](../specs/outage-explorer-backend/architecture-options.md)
+is an alternative, not the selected design.
 
-Connector and product refresh use bounded transient source validation, exact
-provenance-preserving merge and three unified resource Parquet files. Shared
-CLI/bootstrap/worker composition uses `CreateResourceCandidate`,
-`PersistResourceArtifacts`, `RecoverResourceArtifacts`,
-`PostgresqlResourcePublicationStore` and `VerifiedResourceCache`. No candidate
-manifest, durable supporting graph or per-request public projection is produced.
-Local reports/receipts carry explicit retry/recovery identity; application
-publication remains an independently fenced PostgreSQL transaction.
+The separate `outage-explorer-web` repository contains the Next.js/TypeScript UI,
+session integration and live adapters. It is outside this repository's release.
+The [UI handoff](ui-client/README.md) records its contract. Code presence and
+user acceptance do not substitute for every outstanding integrated test.
 
-The [connector flow diagrams](../specs/data-connector/diagrams.md) distinguish
-the planned publication workflow from the implemented local components and
-show their calling sequence.
+## Source, model and durable data
 
-[ADR-0037](../adr/0037-connector-initial-load-and-retention.md) selects an initial
-live load for April 2–October 1, 2026 inclusive through the refresh validation
-pipeline. First publication requires usable output for all three grains. Later
-refreshes retain absent keys and wholly excluded routes while other valid updates
-proceed; an entirely excluded refresh leaves the active generation unchanged.
+EIA's national, facility and generator routes remain independent grains. Their
+keys are respectively date, date/facility, and date/facility/generator. Contracts
+and public columns live in `domain/datasets.py`, `domain/observations.py` and
+`infrastructure/parquet/schemas.py`. The [verification contracts](../specs/facility-generator-verification/verification.md)
+document bounded source evidence; they do not prove every historical schema.
 
-The offline national, facility and generator contributor commands replay their
-versioned September 2026 evidence through domain policies and an application service, with local evidence
-and report adapters wired at startup. They verify per-grain processing and
-arithmetic without live retrieval, product endpoints or database changes. See
-the [national findings](../specs/national-data-verification/verification.md) and
-[facility/generator findings](../specs/facility-generator-verification/verification.md).
+The shared connector/refresh pipeline constructs exactly three unified resource
+Parquet files per generation under [ADR-0060](../adr/0060-persist-only-three-resource-files-per-generation.md).
+Physical files preserve private provenance, original numeric strings, units,
+natural identity and exact calculation evidence. Raw pages, dispositions and
+ledgers are bounded transient inputs. No durable supporting graph, S3 manifest,
+daily modeled partitions or separate public-file copy is produced.
 
-## Accepted application structure
+Physical keys follow [ADR-0061](../adr/0061-generation-prefixed-resource-object-keys.md):
+`<configured-prefix>generations/<generation-id>/{national,facilities,generators}.parquet`.
+Local immutable files use checksum identity instead. S3 conditional writes and
+full readback establish an exact durable receipt. The receipt is not publication:
+PostgreSQL stores exact descriptors and quality with the active-generation update.
+Legacy manifest-format publications fail closed under
+[ADR-0062](../adr/0062-fail-closed-legacy-publication-layout.md); code never silently
+converts them or clears publication history.
 
-[ADR-0030](../adr/0030-layered-flask-monolith.md) selects a layer-first monolith:
-`domain`, `application`, `infrastructure`, and `entrypoints`, wired by `bootstrap`.
-Follow the [code structure guide](code-structure.md) and root
-[AGENTS.md](../../AGENTS.md) for responsibilities, allowed imports, agent rules,
-and automated import-boundary checks. This replaces the feature-first structure
-proposed in ADR-0029.
+Pure policies collapse identical duplicates and choose the last valid source
+record for within-retrieval conflicts. Refresh preserves older valid rows after
+invalid replacements, absent keys and wholly excluded routes while allowing other
+valid updates. All-excluded refreshes retain the active generation without
+publication. Initial loading requires usable output in all three grains; the
+accepted initial interval is April 2–October 1, 2026 inclusive
+([ADR-0037](../adr/0037-connector-initial-load-and-retention.md)). Complete route
+counts share one domain eligibility policy; streaming never reconstructs a
+whole-history partition just to evaluate eligibility.
 
-Domain policies remain plain Python. Application services own authorization
-and orchestration through small interfaces; infrastructure implements them.
-Flask routes and job/CLI entry points invoke application use cases. Keep one
-application and release with separately bounded execution workers.
+The national public dataset includes source and calculated outage percentages.
+Calculation preserves precision; presentation uses two decimals and halfway-up
+rounding. The metric is daily reported capacity out of service, including partial
+reductions, not duration, lost energy or cause. See the
+[national contract](../specs/national-data-verification/contract.md) and
+[challenge findings](../challenge/README.md), including reproducible reconciliation
+and three documented anomalies. Offline contributor commands replay recorded
+inputs without live retrieval or publication.
 
-The [architecture study](../specs/outage-explorer-backend/architecture-options.md)
-compares alternatives and describes query/refresh flows, state ownership, and
-an independent-services example. The latter is not selected for implementation.
-Flask replaces FastAPI under [ADR-0028](../adr/0028-python-flask-backend.md).
-One WSGI application process with threads and separately supervised refresh
-remains a runtime proposal. Capacity, EC2 deployment storage, session mapping, and the
-isolated query launcher still require decisions and feasibility evidence.
+## Authentication and authorization
 
-## System context (C4 level 1)
+`LoginService` and the Cognito adapter implement Authorization Code with PKCE,
+bounded HTTPX exchanges and PyJWT access-token/JWKS verification. Authlib is not
+a dependency. PostgreSQL contains seeded users, one role per user, application
+sessions and browser-bound single-use login attempts. Provider roles and scopes
+do not determine application permissions. Registration and Admin user management
+are excluded (ADR-0043/0044).
 
-```
-[EIA Open Data API v2] ──▶ [Connector] ──▶ [Backend-owned persistent data]
-                                                     ▲
-                                                     │
-[Authenticated API client] ──▶ [Backend API] ──────────┘
-                                   │
-                                   └── Admin refresh ──▶ [Connector]
-```
+Sessions default to a fixed one-hour lease without automatic renewal. Logout
+invalidates only the current application session. Expired login attempts are
+reclaimed before admission capacity checks under the same transaction lock;
+explicit maintenance remains available. Cookie, Origin/CORS and sanitized error handling live at the HTTP boundary;
+cryptographic CSRF validation uses the injected application/security seam. Application use cases independently
+resolve current sessions and roles before analytical data access, including on
+continuation requests. Viewer is national-only; Analyst/Admin can read all grains;
+only Admin can initiate or inspect refresh.
 
-The deployed backend serves its own persistently stored EIA data to all
-authorized clients. “Local” is relative to the application, not the Admin's
-computer. The connector fetches upstream
-data for the model. This repository currently covers these three parts.
-On October 4, the user selected a separate React/Next.js, TypeScript and
-Tailwind client repository with atomic components and an existing Figma design
-([ADR-0039](../adr/0039-separate-ui-client-atomic-design.md)). The
-[UI handoff](ui-client/README.md) records the context; client implementation
-and concrete API/session integration remain pending.
+IAM signing per physical PostgreSQL connection, confidential Cognito client
+support and typed HTTP guards are implemented. The user accepted the web auth
+integration; the [verification record](../specs/user-access/verification.md#subsequent-local-authentication-and-web-integration--2026-10-05)
+distinguishes this and specific Viewer evidence from still-open comprehensive
+live-persona/browser cases. Do not repeat the superseded claim that no login or
+application integration exists. Controlled tests do not prove all live behavior.
 
-The user explicitly corrected the earlier laptop-only deployment assumption.
-Development must reproduce a realistic shared backend deployment. Data and
-operational state must survive application/query container replacement.
-The user selected one active backend replica, serving all authorized users.
-Multiple replicas and horizontal autoscaling are deferred. The user accepted
-Amazon S3 for durable raw/modeled Parquet and DuckDB for analytical SQL;
-see [ADR-0001](../adr/0001-s3-parquet-duckdb.md). Backend analytical disk is
-disposable. A bounded local Parquet file cache is selected in
-[ADR-0008](../adr/0008-local-parquet-file-cache.md);
-Batch-based Parquet scans with bounded memory, temporary disk, concurrency
-and results are accepted in [ADR-0007](../adr/0007-bounded-parquet-query-execution.md).
-Full-dataset in-memory import is not required. Workers scan only authorized
-cached files without network or S3 credentials; exact isolation runtime and
-cache/resource budgets remain open. Python/Flask and PostgreSQL on Amazon RDS
-are accepted in ADR-0028 and ADR-0032. EC2 deployment is selected in
-[ADR-0038](../adr/0038-ec2-deployment-local-development.md), replacing ECS.
-Development runs locally without an EC2 instance. The user confirmed Cognito
-setup and the RDS connection completed; application integration and EC2
-deployment configuration remain open. Refresh coordination, SQL isolation runtime
-and availability target remain undecided.
-Query worker/process counts are separate from API replicas. ADR-0013 accepts
-one analytical query at a time initially, retryable busy responses, a 10-second
-execution timeout and 1,000-row / 1-MiB results with explicit truncation.
-Memory/disk sizes and the separate preparation deadline require measurement.
+## HTTP, analytical preparation and execution
 
-The user requires seeded database accounts; provisioning is not yet verified.
-Accepted analytical SQL includes joins, CTEs, subqueries, aggregations, and
-window functions.
-OAuth2 and role-based authorization remain required; ADR-0043 excludes granular
-permissions, registration and Admin user management for current implementation; ADR-0017 removes required
-OIDC. ADR-0018 selects Cognito User Pools with managed login and OAuth2
-Authorization Code with PKCE. Setup is user-confirmed complete; token/session mapping and
-essential user fields remain open; each user has exactly one role (ADR-0044). ADR-0012 targets broad DuckDB analytical features, with evidence-led exclusions.
-Engine version, reference authorization and execution boundaries need verification.
+Opt-in data HTTP mounts seven operations: catalog, dataset preview, SQL submission
+and retained paging, and refresh admission/latest/by-ID. Auth routes handle login,
+callback, session and logout. See the implemented [HTTP contract](../specs/data-api/http-contract.md)
+and [OpenAPI](../specs/data-api/openapi.json). Public dataset/SQL names are
+`national`, `facilities` and `generators`; preview filters are date-only.
 
-ADR-0020 supersedes ADR-0019: paginate the result of one SQL execution without
-adding ORDER BY, LIMIT or OFFSET. Preserve explicit clauses and the execution’s
-result sequence across pages, including joins and aggregates. ADR-0021 adds
-`page` (1-based) and `page_size`, with subsequent page selection by opaque
-`query_id`. Retained state binds to caller, execution, snapshot and fixed page
-size; reauthorize each page. ADR-0022 selects bounded, expiring in-memory
-query-ID metadata, separate from durable application records. Store loss or
-expiry requires an explicit rerun with a new ID; never silently return page 1.
-A bounded result spool remains proposed; cleanup must reclaim abandoned state
-and any orphaned files. Store implementation, result format, TTL and budgets
-remain open. Existing total output limits remain the baseline pending explicit
-revision. This behavior is specified, not implemented.
+SQL inspection runs in a separate bounded subprocess under ADR-0054. Authentication
+precedes inspection; complete reference authorization precedes analytical inputs.
+The trusted cache downloads only approved exact resource files, streams misses
+to temporary disk with byte/checksum checks, verifies schema/coverage and pins
+entries against eviction. Workers receive exact staged files; DuckDB views
+explicitly project public columns. Physical private columns are not queryable
+through those views. There is no API-process DuckDB fallback or per-request
+public-file reconstruction.
 
-The council's draft spec and design discussion are under
-`docs/specs/outage-explorer-backend/`; only explicitly accepted decisions
-(including current, nonsuperseded decisions through ADR-0038) are settled.
-ADR-0030 replaces the proposed structure in ADR-0029; remaining implementation
-mechanisms keep their documented proposal status.
+The implemented launcher/supervisor enforces configured lifecycle, admission,
+transport and resource controls. Worker grants exclude operational PostgreSQL,
+cloud credentials, network and unrelated cache paths. Ownership intent precedes
+staging allocation; cleanup retains ownership until worker termination and
+reclamation are confirmed. Linux quota storage and reviewed profile/image/evidence
+checks are startup prerequisites. These mechanisms and controlled tests are not
+blanket proof of production isolation or measured capacity.
 
-EIA observations are modeled as analytical datasets with versioned schema
-contracts, as accepted in [ADR-0002](../adr/0002-analytical-dataset-contracts.md).
-The contracts define row meaning, columns, types, units, nullability, verified
-keys and source mappings. Raw and validated modeled Parquet live in S3;
-DuckDB exposes authorized modeled data under stable SQL names. Bounded September 2026 verification contracts are implemented for all three
-grains; historical schemas remain unverified. Operational entities have separate persistence.
-The [integrity design](../specs/outage-explorer-backend/plan.md#duplicate-prevention-and-data-integrity)
-records accepted invalid-row exclusion, identical-duplicate collapse and
-latest-valid-value replacement (ADR-0023/0024). Required fields follow API
-documentation, falling back to consistently recurring and identifying source
-attributes. For national same-date conflicts within one retrieval, the last
-valid record in recorded source order wins under
-[ADR-0034](../adr/0034-last-national-record-wins.md); preserve source evidence
-and its order for replay. ADR-0036 extends this fallback to facility/date and
-facility/generator/date keys in the detail verification contracts. Historical
-contracts and product quality-report storage remain open.
-ADR-0026 assumes initial analytical data is seeded: all-excluded refreshes keep
-the active data unchanged; invalid replacements retain older valid rows with
-original provenance, and the quality report explains both fallback outcomes. ADR-0025 accepts
-a visible Admin refresh quality summary with row counts and exclusion reasons. Safe-publication mechanisms
-remain proposed; S3 and DuckDB do not supply these application guarantees.
+SQL executes once into bounded private result storage. Numbered pages preserve
+that execution's order, multiplicity and explicit clauses; no pagination SQL is
+injected and no continuation silently reruns it. Metadata is process-owned and
+in memory, never PostgreSQL. Preview and SQL sequences expire without renewal
+at 60 seconds under [ADR-0059](../adr/0059-sixty-second-preview-result-lifetime-and-capacity.md).
+Pages default to 100 and allow up to 500 rows; SQL output is capped at 1,000 rows
+or 1 MiB with explicit truncation. Active readers and unresolved reaping prevent
+premature release. Expiry/store loss requires an explicit new sequence.
 
-Designs must preserve the three [product promises](overview.md): browsing
-and querying use local data after ingestion, findings are reproducible from
-actual EIA records, and no product path exposes facility or generator details
-to Viewers. Authorization must precede data access; read-only SQL syntax alone
-does not establish that a query is safe.
+## Refresh admission, execution and publication
 
-The accepted ready-made fleet metric uses same-day national `outage / capacity`
-(multiply by 100 for percent). Both fields are verified in MW; EIA's
-`percentOutage` is shown alongside the calculated percentage from the same
-stored observation, without agreement labels or discrepancy flags. Preserve
-calculation precision and round to two decimals for presentation, with halfway
-values rounded up ([ADR-0031](../adr/0031-show-national-percentages-without-discrepancy-flags.md)).
-ADR-0027 requires usable national values and positive capacity. See
-[ADR-0006](../adr/0006-daily-fleet-offline-share.md) for the accepted formula;
-ADR-0035 defines the measure as the daily share of EIA-reported nuclear capacity
-out of service, including full outages and partial output reductions. Use the
-reported national MW values without reconstructing the historical capacity
-basis. Exact capacity-data vintage remains an evidence limitation. The bounded
-[national contract v1](../specs/national-data-verification/contract.md) implements
-the accepted validation rules; broader historical checks remain open. This is not a full-day
-average, lost-energy, outage-duration or cause measure.
-The Admin starts a background refresh and checks its outcome. Successful
-completion automatically makes the updated data active; current data stays
-available while it runs or if it fails. There is no separate review or publish
-action. See [ADR-0003](../adr/0003-admin-refresh-publication.md).
-Scheduling and an Admin UI remain deferred; job execution details remain open.
+Admin HTTP admission records the configured inclusive date range and frozen
+settings; callers cannot override dates (ADR-0051). A separately supervised worker
+claims runs with database-time leases, restores the pinned base, builds/verifies
+the candidate, persists all three files, verifies exact durable identity, then
+publishes descriptors and quality atomically through PostgreSQL. The previous
+valid generation remains available on failure. API shutdown does not own refresh.
 
-## Required building blocks and open choices
+Publication and recovery are fenced against stale owners. A healthy worker
+survives API-only restarts; lost-worker recovery reconciles committed publication.
+Unpublished interrupted runs require explicit Admin retry, not automatic source
+reruns (ADR-0052). There is no reset CLI, review queue or second publish action.
+The [refresh-persistence checkpoint](../specs/refresh-persistence/tasks.md) and
+[refresh recovery code](../../src/outage_explorer/application/services/refresh_recovery.py)
+describe current implementation; infrastructure recovery/backup policy is distinct.
 
-| Concern | Status | Notes |
-|---------|--------|-------|
-| Data source | decided (de facto) | EIA Open Data API v2 |
-| EIA datasets | required by brief | Daily `us-nuclear-outages`, `facility-nuclear-outages`, and `generator-nuclear-outages` |
-| Backend | **Layered Python/Flask auth/data HTTP implemented** | Python >=3.12, Flask 3.1; pinned dependencies; opt-in data delivery with controlled verification, real analytical runtime still gated |
-| Analytical model | **schema contracts confirmed** | See ADR-0002; source fields, keys and relationships await EIA investigation |
-| Frontend | **separate repository selected; implementation pending** | React/Next.js, TypeScript, Tailwind, Figma and atomic components; see ADR-0039 and the UI handoff |
-| Analytical storage | **Amazon S3 + Parquet confirmed** | Development bucket access verified; deployed-role verification pending; retention/recovery policy deferred; see ADR-0001 |
-| Query engine | **DuckDB with local Parquet cache confirmed** | ADR-0007/0008; broad analytical SQL selected in ADR-0012; budgets and isolation need verification |
-| Operational storage | **PostgreSQL on Amazon RDS confirmed** | ADR-0032; connection completed per user; application integration and deployed connectivity remain open; recovery-policy work deferred |
-| Deployment | **one replica on EC2 confirmed** | ADR-0038; no EC2 instance needed for local development; deployment configuration and query runtime remain open |
+## Runtime scope and remaining evidence
 
-## Key data-flow questions to resolve first
+ADR-0053 accepts one threaded API serving process, one analytical slot and
+independent refresh for local analytical acceptance. Final EC2 process topology,
+ingress/TLS, supervision, storage provisioning and capacity remain open.
+[ADR-0055](../adr/0055-scoped-local-analytical-readiness.md) separates narrow local
+readiness with refresh idle from full high-water/spill, S3 performance and overlap
+acceptance. [ADR-0056](../adr/0056-user-directed-local-api-activation.md) records the
+user's later local activation direction and instruction to stop further external
+validation. Earlier unperformed checks remain evidence gaps, not a new request
+to block or repeat activation.
 
-1. What do actual metadata and rows establish about natural keys, units,
-   missing values, and relationships across the three daily routes?
-2. Beyond ADR-0027's accepted missing-value and positive-capacity rules, what
-   are the detailed capacity semantics and remaining validation rules, and what
-   explains cross-grain differences?
-3. What does "kept current" mean, and how should refresh handle failures
-   and source revisions?
-4. How do we authorize broad DuckDB analytical SQL, checking every referenced
-   dataset before execution and documenting demonstrated limitations?
+Imports/factories remain inert. Without supplied reviewed runtime resources,
+analytical forwarding ports fail closed; catalog and refresh have independent
+prerequisites. Startup and shutdown are explicit and process-owned. No documentation
+edit grants deployment, service startup, publication reset or cloud access.
 
-## Constraints
-
-- Must remain grounded in EIA data — no hand-curated datasets.
-- TODO: team size, timeline, and infra budget constraints.
-
-## Related
-
-- Decisions: [ADR-0001 — S3, Parquet and DuckDB](../adr/0001-s3-parquet-duckdb.md).
-  [ADR-0002 — Analytical dataset contracts](../adr/0002-analytical-dataset-contracts.md).
-  [ADR-0003 — Admin refresh publication](../adr/0003-admin-refresh-publication.md).
-  [ADR-0028 — Python/Flask](../adr/0028-python-flask-backend.md).
-  [ADR-0032 — PostgreSQL on RDS](../adr/0032-postgresql-on-rds.md).
-  [ADR-0038 — EC2 deployment and local development](../adr/0038-ec2-deployment-local-development.md).
-  [ADR-0006 — Daily fleet offline share](../adr/0006-daily-fleet-offline-share.md).
-  [ADR-0007 — Bounded queries](../adr/0007-bounded-parquet-query-execution.md).
-  [ADR-0008 — Local Parquet cache](../adr/0008-local-parquet-file-cache.md).
-  Add further numbered ADRs as the remaining choices are resolved.
-- `AGENTS.md` at repo root tells AI agents how to work in this codebase.
-
-Authentication experience is accepted in ADR-0014: one-hour application sessions,
-re-login on expiry, no automatic renewal initially and current-session logout.
-ADR-0015 accepts preview pages of 100 rows by default (initial maximum 500),
-with snapshot-bound cursors expiring 15 minutes after the first page.
-
-ADR-0016 makes our PostgreSQL authorization tables authoritative for roles,
-seeded users and role assignments under ADR-0043. The selected sign-in mechanism supplies verified identity; external
-groups/roles do not independently confer product data access. ADR-0017 removes
-the earlier OIDC-specific identity assumptions.
-
-Cognito runs as a managed AWS service outside the EC2 application host. It owns login credentials
-and token issuance; the Flask identity adapter validates access tokens, binds issuer/subject to
-local users and applies PostgreSQL authorization tables. Configure seeded Cognito
-accounts with public registration disabled. Application logout enforcement
-and concrete OAuth client/session integration remain design work (ADR-0018).
-
-Current refresh persistence follows ADR-0060/0061/0062: exactly three exact
-resource addresses per generation, complete conditional-write readback, frozen
-1–3 S3 worker admission (default3), separate candidate/persistence deadlines and
-joined cleanup. Historical connector graph/live measurements remain recorded in
-[resource evidence](../specs/data-connector/resource-evidence.md); they are not
-measurements of this new layout. Legacy active publications fail closed without
-conversion or implicit reset. Runtime/deployment evidence remains separate.
-
-
-ADR-0049 adds independently configured1–3 page fetch workers within a route.
-Bounded speculative windows preserve every sanitized response as an immutable
-transport JSON dependency, including unused lookahead; canonical raw/page
-Parquet keeps received-count offsets and one terminal. Exact graph export,
-recovery and bounded-window replay verify those dependencies and their canonical
-raw values. CLI/Make fetch/S3 overrides win JSON, with endpoint default1 unchanged.
-Shared source bounds count all fetched rows/pages, including unused lookahead;
-logical admission includes endpoint*page buffers. Modeling stays coordinated.
-
-
-Data API Phase 1 adds shared v1 public projections in `domain/datasets.py`,
-parser reference inspection behind an application port, and bounded canonical
-encoding/type adapters in infrastructure. Portable OpenAPI and synthetic fixtures
-are in `docs/specs/data-api/`; real DuckDB compatibility runs only in a controlled
-test subprocess. Product catalog/preview/SQL/refresh routes and the isolated Linux
-launcher remain pending. See the [Phase 1 evidence](../specs/data-api/runtime-evidence.md)
-and [client handoff](../specs/data-api/client-handoff.md).
-
-User-access Phase 5 implements fresh per-physical-connection IAM signing with
-bounded credential lookup in runtime-only disposable signing subprocesses;
-construction remains inert. HTTP and explicit setup share typed database modes.
-Optional confidential Cognito client authentication retains public PKCE behavior
-and fixed application leases without provider renewal. Typed HTTP guards pass
-credentials/current identity and parsed inputs explicitly; protected application
-use cases still independently check session validity and current roles. Controlled
-PostgreSQL/provider/persistent-browser acceptance is available independently of
-connector, analytical data and the separate UI. The required real-provider login,
-logout and browser gate remains open; see [verification](../specs/user-access/verification.md).
-
-
-## Data API HTTP integration
-
-For local analytical acceptance, [ADR-0053](../adr/0053-local-single-owner-analytical-acceptance.md)
-accepts one API serving process with threads, one analytical slot and independently
-supervised refresh. Final EC2 topology remains open. The user authorized
-representative measurements and chose to review budgets after measurements;
-readiness review and separate startup/enablement direction remain prerequisites.
-
-[ADR-0054](../adr/0054-bounded-subprocess-sql-inspection.md) accepts separate
-bounded subprocess parsing/reference inspection before SQL endpoint enablement.
-The bounded subprocess inspector and native owner-loss/resource checks are
-implemented. Initial parser caps are user-accepted; full matching report/profile
-review remains pending. Authentication precedes inspection, and complete
-application-role authorization precedes analytical input access.
-
-[ADR-0055](../adr/0055-scoped-local-analytical-readiness.md) permits separately
-reviewed local preview/SQL acceptance with refresh idle before complete capacity
-measurements. Original full-evidence checkpoints remain open. Local-scope evidence
-is explicitly identified and rejected by generic readiness; containment/report,
-actual Linux serving-host/auth checks and separate activation remain prerequisites.
-
-Phase 6 registers strict catalog, preview, query submission/paging and durable
-refresh admission/latest/by-ID routes when `OUTAGE_DATA_HTTP_ENABLED=true`.
-Application use cases enforce current roles and retained ownership; shared
-transport adds exact Origin/CSRF, credentialed CORS, no-store and safe errors.
-The factory starts no refresh, cleanup thread, migration, SDK or database query.
-
-Bootstrap can accept reviewed `DataHttpResources` with explicit start/close hooks,
-resource bounds and evidence reference. With none, analytical ports fail closed;
-catalog and durable refresh remain independent. API shutdown never closes the
-independent refresh worker. Controlled overlap/restart/retention tests establish
-application behavior, not OS isolation or measured production capacity. T1.7
-validation belongs to the user and was skipped by instruction.
+The [runtime evidence map](../specs/data-api/runtime-evidence.md),
+[analytical-worker runbook](../../infrastructure/analytical-worker/README.md) and
+[user-access verification](../specs/user-access/verification.md) retain their
+scoped and dated limitations. The five login-admission cleanup PostgreSQL cases
+added during review have not run without an explicit disposable test DSN. General
+snapshot deletion/backup recovery, broader historical source completeness and
+production capacity remain open. This documentation update performs no runtime,
+external-service or new database validation.
