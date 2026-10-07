@@ -18,6 +18,7 @@ from outage_explorer.application.errors import (
     AnalyticalTimeoutError,
     RuntimeUnavailableError,
 )
+from outage_explorer.application.ports.analytical_inputs import ApprovedFile
 from outage_explorer.application.ports.execution import (
     ExecutionBounds,
     PreviewRead,
@@ -29,6 +30,7 @@ from outage_explorer.infrastructure.worker_runtime.configuration import RuntimeP
 from outage_explorer.infrastructure.worker_runtime.decoding import WorkerTransport
 from outage_explorer.infrastructure.worker_runtime.inputs import (
     StagedInputs,
+    plan_staging_directory,
     stage_inputs,
 )
 from outage_explorer.infrastructure.worker_runtime.ownership import OwnershipLedger
@@ -345,12 +347,11 @@ class DockerRuntime:
         )
         # Preparation shares the caller's overall deadline; launcher reserves the
         # slot before downloads. Worker execution starts only after staging.
-        self._staging = stage_inputs(
-            self.profile, files, min(deadline, monotonic() + bounds.preparation_seconds)
+        self.prepare_inputs(
+            files, min(deadline, monotonic() + bounds.preparation_seconds)
         )
         if self.cancel.is_set():
             raise RuntimeUnavailableError("Analytical execution cancelled")
-        self.prepare_temporary()
         arguments = self._create_arguments()
         self.ledger.creating()
         self._create_attempted = True
@@ -376,21 +377,25 @@ class DockerRuntime:
             response.stdout, request=request, exit_code=response.code
         )
 
-    def prepare_temporary(self) -> None:
-        """Persist spill/staging intent before creating worker-accessible state."""
-        assert self._staging is not None
+    def prepare_inputs(self, files: tuple[ApprovedFile, ...], deadline: float) -> None:
+        """Record ownership before creating staging or per-execution spill files."""
+        if self._staging is not None or self._intended:
+            raise RuntimeUnavailableError("Analytical runtime state unavailable")
+        directory = plan_staging_directory(self.profile)
         if self.profile.temporary_backend == "quota-disk":
             self.validate_temporary_backend()
             self._spill = DiskSpill(self.profile, self.ledger.owner)
             self._spill.open()
         self.ledger.intend(
-            str(self._staging.directory),
+            str(directory),
             spill=str(self._spill.directory) if self._spill is not None else None,
             preparing=True,
         )
         self._intended = True
+        self._staging = StagedInputs(directory, ())
         if self._spill is not None:
             self._spill.allocate()
+        self._staging = stage_inputs(self.profile, files, deadline, directory=directory)
 
     def preview(
         self, request: PreviewRead, bounds: ExecutionBounds, deadline: float

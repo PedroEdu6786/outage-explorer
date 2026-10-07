@@ -7,6 +7,7 @@ from dataclasses import replace
 from pathlib import Path
 from threading import Event
 from time import monotonic
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pyarrow as pa
@@ -17,6 +18,7 @@ from outage_explorer.application.errors import (
     AnalyticalBusyError,
     AnalyticalResourceError,
     AnalyticalTimeoutError,
+    DataUnavailableError,
     RuntimeUnavailableError,
 )
 from outage_explorer.application.ports.analytical_inputs import ApprovedFile
@@ -366,6 +368,73 @@ def test_partial_ledger_restart_preserves_normal_worker_reconciliation(runtime, 
         assert recovered.read()["owner"] == "d" * 32
     finally:
         recovered.close()
+
+
+def test_intent_failure_creates_no_staging_or_worker(runtime, monkeypatch):
+    adapter, control, ledger = runtime
+    monkeypatch.setattr(ledger, "intend", Mock(side_effect=OSError("intent failed")))
+    with pytest.raises(RuntimeUnavailableError):
+        adapter.query(
+            QueryRead("SELECT 42", ()),
+            adapter.profile.execution_bounds,
+            monotonic() + 5,
+        )
+    adapter.terminate_and_reap()
+    assert not list(Path(adapter.profile.staging_root).iterdir())
+    assert control.calls == []
+    assert ledger.read() is None
+
+
+@pytest.mark.parametrize("kind", ["directory", "symlink"])
+def test_planned_path_collision_preserves_existing_files(runtime, monkeypatch, kind):
+    adapter, control, ledger = runtime
+    from outage_explorer.infrastructure.worker_runtime import inputs
+
+    monkeypatch.setattr(inputs, "uuid4", lambda: SimpleNamespace(hex="a" * 32))
+    existing = Path(adapter.profile.staging_root) / ("execution-" + "a" * 32)
+    target = existing.with_name("unrelated")
+    target.mkdir(mode=0o700)
+    canary = target / "preserve"
+    canary.write_bytes(b"unrelated")
+    if kind == "directory":
+        existing.mkdir(mode=0o700)
+    else:
+        existing.symlink_to(target, target_is_directory=True)
+    with pytest.raises(DataUnavailableError, match="path already exists"):
+        adapter.prepare_inputs((), monotonic() + 5)
+    adapter.terminate_and_reap()
+    assert existing.exists()
+    assert canary.read_bytes() == b"unrelated"
+    assert ledger.read() is None
+    assert control.calls == []
+
+
+def test_failed_copy_cleanup_retains_record_until_reclamation(
+    runtime,
+    approved,  # noqa: F811
+    monkeypatch,
+):
+    adapter, control, ledger = runtime
+    from outage_explorer.infrastructure.worker_runtime import inputs
+
+    corrupted = replace(approved, sha256="0" * 64)
+    with monkeypatch.context() as fault:
+        fault.setattr(
+            inputs.shutil, "rmtree", Mock(side_effect=OSError("cleanup failed"))
+        )
+        with pytest.raises(OSError, match="cleanup failed"):
+            adapter.prepare_inputs((corrupted,), monotonic() + 5)
+        record = ledger.read()
+        assert record["phase"] == "preparing"
+        assert Path(record["staging"]).exists()
+        with pytest.raises(RuntimeUnavailableError):
+            adapter.terminate_and_reap()
+        assert ledger.read() == record
+    adapter.terminate_and_reap()
+    assert ledger.read() is None
+    assert not Path(record["staging"]).exists()
+    assert Path(approved.path).exists()
+    assert control.calls == []
 
 
 def test_only_exact_authorized_digest_files_bound_readonly(runtime, approved):  # noqa: F811

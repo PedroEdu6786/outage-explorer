@@ -483,3 +483,10 @@ After acquiring the exclusive owner lock, the ledger discards an abandoned
 private regular `worker.partial` file; incomplete writes never authorize a worker
 transition. A committed record still requires normal worker reconciliation before
 new admission, and invalid temporary file types or permissions fail closed.
+
+Input preparation plans a fresh staging path and commits its `preparing` intent,
+including the exact spill path when configured, before creating either directory
+or copying input bytes. Recovery accepts a missing staging directory in that
+phase and reclaims only recorded paths. Copying retains the existing size,
+checksum, source-identity, row-count, deadline and sealing checks. Ordinary cleanup
+also handles a planned directory that was never created or was already reclaimed.

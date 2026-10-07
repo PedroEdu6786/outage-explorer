@@ -258,14 +258,30 @@ def test_recovery_reaps_container_before_spill_reclamation(adapter):
 
 def test_preparing_crash_recovers_without_container_lookup(adapter):
     runtime, control, ledger = adapter
-    from outage_explorer.infrastructure.worker_runtime.inputs import stage_inputs
-
-    runtime._staging = stage_inputs(runtime.profile, (), monotonic() + 5)
-    runtime.prepare_temporary()
+    runtime.prepare_inputs((), monotonic() + 5)
     assert ledger.read()["phase"] == "preparing"
     runtime._spill.release()
     DockerRuntime(runtime.profile, control, ledger).recover_owned()
     assert ledger.read() is None and not control.calls
+
+
+def test_spill_allocation_before_staging_is_recoverable(adapter, monkeypatch):
+    runtime, control, ledger = adapter
+    monkeypatch.setattr(
+        "outage_explorer.infrastructure.worker_runtime.docker.stage_inputs",
+        Mock(side_effect=RuntimeUnavailableError("interrupted before staging")),
+    )
+    with pytest.raises(RuntimeUnavailableError, match="interrupted before staging"):
+        runtime.prepare_inputs((), monotonic() + 5)
+    record = ledger.read()
+    assert record["phase"] == "preparing"
+    assert not Path(record["staging"]).exists()
+    assert Path(record["spill"]).exists()
+    runtime._spill.release()  # Emulate owner loss, leaving exact recorded spill.
+    DockerRuntime(runtime.profile, control, ledger).recover_owned()
+    assert ledger.read() is None
+    assert not Path(record["spill"]).exists()
+    assert control.calls == []
 
 
 def test_ledger_clear_failure_keeps_pool_lock_until_retry(adapter, monkeypatch):

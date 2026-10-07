@@ -44,7 +44,6 @@ from outage_explorer.infrastructure.worker_runtime.docker import (
     BoundedDockerControl,
     DockerRuntime,
 )
-from outage_explorer.infrastructure.worker_runtime.inputs import stage_inputs
 from outage_explorer.infrastructure.worker_runtime.ownership import OwnershipLedger
 from tests.runtime_stats import ContainerStats, StatsUnavailable
 
@@ -245,8 +244,7 @@ class RuntimeHarness:
         if len(script.encode()) > 16384 or len(data) > self.profile.request_bytes:
             raise ValueError("Bounded synthetic probe required")
         deadline = monotonic() + (seconds or self.profile.worker.execution_seconds)
-        self.runtime._staging = stage_inputs(self.profile, files, deadline)
-        self.runtime.prepare_temporary()
+        self.runtime.prepare_inputs(files, deadline)
         arguments = self.runtime._create_arguments()
         arguments = (
             *arguments[:-1],

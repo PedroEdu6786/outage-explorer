@@ -5,9 +5,9 @@ import os
 import re
 import shutil
 import stat
-import tempfile
 from pathlib import Path
 from time import monotonic
+from uuid import uuid4
 
 import pyarrow.parquet as pq  # type: ignore[import-untyped]
 
@@ -28,7 +28,14 @@ class StagedInputs:
         if not self._closed:
             # A sealed directory is not writable by its owner. Restore private
             # write access only after the caller has confirmed worker death.
-            os.chmod(self.directory, 0o700)
+            if self.directory.is_symlink():
+                raise DataUnavailableError("Invalid analytical staging directory")
+            try:
+                os.chmod(self.directory, 0o700)
+            except FileNotFoundError:
+                # Preparing intent can be committed before directory creation.
+                self._closed = True
+                return
             shutil.rmtree(self.directory)
             self._closed = True
 
@@ -53,8 +60,33 @@ def _open_regular(path: Path) -> int:
         os.close(parent)
 
 
+def _staging_root(profile: RuntimeProfile) -> Path:
+    root = Path(profile.staging_root)
+    if (
+        root.is_symlink()
+        or not root.is_dir()
+        or root.stat().st_uid != os.getuid()
+        or stat.S_IMODE(root.stat().st_mode) != 0o700
+    ):
+        raise DataUnavailableError("Private analytical staging unavailable")
+    return root
+
+
+def plan_staging_directory(profile: RuntimeProfile) -> Path:
+    """Choose a fresh private path without creating unrecorded filesystem state."""
+    root = _staging_root(profile)
+    directory = root / ("execution-" + uuid4().hex)
+    if directory.exists() or directory.is_symlink():
+        raise DataUnavailableError("Analytical staging path already exists")
+    return directory
+
+
 def stage_inputs(
-    profile: RuntimeProfile, files: tuple[ApprovedFile, ...], deadline: float
+    profile: RuntimeProfile,
+    files: tuple[ApprovedFile, ...],
+    deadline: float,
+    *,
+    directory: Path,
 ) -> StagedInputs:
     unique: dict[str, ApprovedFile] = {}
     for item in files:
@@ -74,16 +106,14 @@ def stage_inputs(
         f.byte_count for f in unique.values()
     ) > min(profile.input_bytes, profile.staging_bytes):
         raise AnalyticalResourceError("Analytical input limit exceeded")
-    root = Path(profile.staging_root)
-    # Root creation/ownership belongs to explicit startup, never this builder.
+    root = _staging_root(profile)
     if (
-        root.is_symlink()
-        or not root.is_dir()
-        or root.stat().st_uid != os.getuid()
-        or stat.S_IMODE(root.stat().st_mode) != 0o700
+        directory.parent != root
+        or re.fullmatch(r"execution-[0-9a-f]{32}", directory.name) is None
     ):
-        raise DataUnavailableError("Private analytical staging unavailable")
-    directory = Path(tempfile.mkdtemp(prefix="execution-", dir=root))
+        raise DataUnavailableError("Invalid analytical staging path")
+    # The runtime records preparing intent before this exclusive creation.
+    directory.mkdir(mode=0o700)
     result = StagedInputs(directory, ())
     staged = []
 

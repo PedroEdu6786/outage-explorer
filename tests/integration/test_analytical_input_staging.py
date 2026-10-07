@@ -17,7 +17,11 @@ from outage_explorer.application.errors import (
 )
 from outage_explorer.application.ports.analytical_inputs import ApprovedFile
 from outage_explorer.infrastructure.worker_runtime.configuration import RuntimeProfile
-from outage_explorer.infrastructure.worker_runtime.inputs import stage_inputs
+from outage_explorer.infrastructure.worker_runtime.inputs import (
+    StagedInputs,
+    plan_staging_directory,
+    stage_inputs,
+)
 
 
 @pytest.fixture
@@ -47,7 +51,9 @@ def approved(tmp_path):
 def test_private_copy_sealed_exact_entries_uid_readability_and_mutable_source(
     profile, approved
 ):
-    staged = stage_inputs(profile, (approved,), monotonic() + 5)
+    staged = stage_inputs(
+        profile, (approved,), monotonic() + 5, directory=plan_staging_directory(profile)
+    )
     path = Path(staged.files[0].path)
     assert path.name == approved.sha256 + ".parquet"
     assert path.read_bytes() == Path(approved.path).read_bytes()
@@ -62,6 +68,31 @@ def test_private_copy_sealed_exact_entries_uid_readability_and_mutable_source(
     staged.close()
     assert not staged.directory.exists()
     staged.close()
+
+
+def test_planned_directory_can_be_cleaned_before_creation(profile):
+    directory = plan_staging_directory(profile)
+    assert not directory.exists()
+    planned = StagedInputs(directory, ())
+    planned.close()
+    planned.close()
+    assert not directory.exists()
+
+
+@pytest.mark.parametrize("dangling", [False, True])
+def test_cleanup_refuses_symlink_in_place_of_planned_directory(
+    profile, tmp_path, dangling
+):
+    directory = plan_staging_directory(profile)
+    target = tmp_path / "unrelated"
+    if not dangling:
+        target.mkdir(mode=0o555)
+    directory.symlink_to(target, target_is_directory=True)
+    with pytest.raises(DataUnavailableError, match="Invalid analytical staging"):
+        StagedInputs(directory, ()).close()
+    assert directory.is_symlink()
+    if not dangling:
+        assert target.stat().st_mode & 0o777 == 0o555
 
 
 @pytest.mark.parametrize(
@@ -106,7 +137,12 @@ def test_corrupt_racy_or_nonregular_inputs_leave_no_staging(
 
         context = nullcontext()
     with context, pytest.raises(DataUnavailableError):
-        stage_inputs(profile, (approved,), monotonic() + 5)
+        stage_inputs(
+            profile,
+            (approved,),
+            monotonic() + 5,
+            directory=plan_staging_directory(profile),
+        )
     assert list(Path(profile.staging_root).iterdir()) == []
 
 
@@ -124,6 +160,9 @@ def test_independent_preparation_limits(profile, approved, bound):
         error = DataUnavailableError
     with pytest.raises(error):
         stage_inputs(
-            profile, files, monotonic() - 1 if bound == "deadline" else monotonic() + 5
+            profile,
+            files,
+            monotonic() - 1 if bound == "deadline" else monotonic() + 5,
+            directory=plan_staging_directory(profile),
         )
     assert not list(Path(profile.staging_root).iterdir())

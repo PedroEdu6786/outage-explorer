@@ -34,7 +34,6 @@ from tests.runtime_validation import (
     opted_in,
     read_representative_inputs,
     record_gate,
-    stage_inputs,
 )
 
 
@@ -407,8 +406,7 @@ def test_failed_reap_preserves_slot_pins_and_recovers(harness, synthetic_file):
 def test_restart_reconciles_owned_container(harness):
     # Create real stopped container, persist intent, then lose in-memory owner.
     runtime = harness.runtime
-    runtime._staging = stage_inputs(harness.profile, (), monotonic() + 5)
-    runtime.prepare_temporary()
+    runtime.prepare_inputs((), monotonic() + 5)
     arguments = runtime._create_arguments()
     harness.ledger.creating()
     runtime._create_attempted = True
