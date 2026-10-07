@@ -1,4 +1,4 @@
-"""Explicit fixed-v1 image startup; parent must match its validated limits."""
+"""Explicit paired-protocol image startup; parent must match its validated limits."""
 
 import sys
 

@@ -3,14 +3,16 @@
 Track contract corrections and frontend assumption differences in the
 [integration decision tracker](integration-decisions.md).
 
-**Planned compatibility change — not available at runtime:** single-facility
-preview filtering is specified in the [proposed backend contract](../preview-facility-filter/contract.md).
-Once the complete worker path ships, `facilities` and `generators` catalog
-`supported_filters` will add `facility` after `start_date` and `end_date`;
-`national` will retain the two dates. Strict decoders expecting exactly the
-two-date array may reject the expanded catalog. Active HTTP, OpenAPI and fixtures
-remain date-only during the initial implementation phases. Backend delivery has
+**Catalog compatibility change:** backend source implements single-facility
+preview filtering under the [feature contract](../preview-facility-filter/contract.md).
+`facilities` and `generators` catalog `supported_filters` add `facility` after
+`start_date` and `end_date`; `national` retains the two dates. Strict decoders
+expecting exactly the two-date array may reject the expanded catalog. Initial
+requests send `facility`; continuations send only `cursor`. Backend delivery has
 no web implementation or web-test dependency; this notice changes no client code.
+Using the changed backend requires paired worker protocol version 2 and a matching
+rebuilt/reviewed image and runtime identity. This work does not activate a service;
+see the [phase checkpoint](../preview-facility-filter/tasks.md) for evidence limits.
 
 The web client can implement fixture adapters using [openapi.json](openapi.json)
 and [fixtures.json](fixtures.json). Copy both files into the client repository;

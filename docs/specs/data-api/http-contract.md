@@ -15,22 +15,24 @@ isolation, process ownership and measured resource/retention quotas remain open
 in [runtime-evidence.md](runtime-evidence.md). The formal
 [specification](spec.md) continues to govern behavior.
 
-## Planned facility-filter extension
+## Facility-filter extension
 
-The user subsequently requested single-facility preview filtering for facility
-and generator datasets. The [feature spec](../preview-facility-filter/spec.md)
-and [implementation plan](../preview-facility-filter/plan.md) describe that planned
-extension. It is not implemented yet; the current date-only contract below
-remains accurate until the backend/worker change ships. The feature plan is
-backend-only; web implementation and verification belong to their own project.
+Single-facility preview filtering is implemented in backend source for facility
+and generator datasets. See the [feature contract](../preview-facility-filter/contract.md)
+and [phase checkpoints](../preview-facility-filter/tasks.md) for behavior and
+verification limits. Paired worker protocol version 2 is required; an existing
+version-1 image/profile must be rebuilt and reviewed before activation. This
+change performs no deployment or activation. Web implementation and verification
+belong to their own project.
 
 ## Agreed behavior and selected routes
 
 User decisions: SQL comes from the frontend editor; SQL page selection belongs
 on `/api/query` as a query parameter, without `/api/query/page`; refresh covers
 all three datasets and runs in the background. Displaying tables is data
-browsing, not account seeding. Initial table browsing has date-range filters
-only; facility and generator identifier filters are excluded initially.
+browsing, not account seeding. Browsing accepts date ranges and one optional
+exact facility ID on facility/generator datasets; national remains date-only.
+Generator-specific identifier filters are excluded.
 Refresh uses the configured start through today's UTC date, frozen at admission,
 without caller-supplied dates or a fixed 183-day ceiling. Other resource bounds
 and the explicit initial-load interval remain enforced
@@ -109,10 +111,14 @@ isolated DuckDB processing sequence.
 | Parameter | Meaning | Selected behavior |
 | --- | --- | --- |
 | `start_date`, `end_date` | Inclusive date bounds | Optional; an omitted side is unbounded within stored coverage |
+| `facility` | Exact opaque facility ID | Optional on `facilities`/`generators`; 1–256 UTF-8 bytes; unsupported for `national` |
 | `page_size` | Rows per page | Accepted default 100, initial configurable maximum 500 |
 
-The initial filter set is date range only, as selected by the user. Reject
-facility/generator filter parameters rather than ignoring them. Selected continuation:
+Date bounds and facility selection intersect before pagination. Preserve facility
+identity without trimming, numeric coercion or normalization. Valid unmatched IDs
+return an empty preview; empty, malformed, oversized, duplicate or unsupported
+filters return `400 invalid_request`. Generator-specific filters remain unsupported.
+Selected continuation:
 `GET /api/datasets/{dataset}/preview?cursor=<opaque-value>`, without repeating
 filters or page size. Cursor binds user, dataset, generation, normalized filters,
 fixed page size, and next position. User-selected initial browsing covers all

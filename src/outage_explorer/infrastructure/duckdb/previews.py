@@ -30,6 +30,9 @@ def execute_preview(request: PreviewRead, bounds: ExecutionBounds) -> PreviewRow
             if value is not None:
                 predicates.append(f"period {operator} ?")
                 values.append(value)
+        if request.facility is not None:
+            predicates.append('"facility" = ?')
+            values.append(request.facility)
         if request.after is not None:
             if len(request.after) != 1 + len(identities):
                 raise AnalyticalResourceError("Invalid preview key")

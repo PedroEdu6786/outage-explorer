@@ -37,7 +37,7 @@ def transport():
         "/api/datasets/national/preview?page_size=0",
         "/api/datasets/national/preview?page_size=501",
         "/api/datasets/national/preview?page_size=1&page_size=2",
-        "/api/datasets/national/preview?facility=1",
+        "/api/datasets/facilities/preview?facility=1&facility=1",
         "/api/datasets/national/preview?start_date=20260901",
         "/api/datasets/national/preview?start_date=2026-02-30",
         "/api/datasets/national/preview?start_date=2026-09-02&end_date=2026-09-01",

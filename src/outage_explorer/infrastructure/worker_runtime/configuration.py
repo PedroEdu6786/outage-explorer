@@ -14,6 +14,8 @@ from outage_explorer.infrastructure.query_results.encoding import (
     canonical_json,
 )
 
+WORKER_PROTOCOL_VERSION = 2
+
 
 @dataclass(frozen=True)
 class WorkerImageLimits:
@@ -51,7 +53,7 @@ class RuntimeProfile:
     preview_lifetime_seconds: int = LIFETIME_SECONDS
     result_lifetime_seconds: int = LIFETIME_SECONDS
     engine_version: str = "1.5.6"
-    protocol_version: int = 1
+    protocol_version: int = WORKER_PROTOCOL_VERSION
     worker: WorkerImageLimits = field(default_factory=WorkerImageLimits)
     container_memory_bytes: int = 536_870_912
     swap_bytes: int = 536_870_912
@@ -174,7 +176,7 @@ class RuntimeProfile:
             or type(self.result_lifetime_seconds) is not int
             or self.result_lifetime_seconds != LIFETIME_SECONDS
             or type(self.protocol_version) is not int
-            or self.protocol_version != 1
+            or self.protocol_version != WORKER_PROTOCOL_VERSION
             or self.engine_version != "1.5.6"
             or type(self.uid) is not int
             or self.uid != 65534

@@ -1,5 +1,5 @@
 # Tasks: Preview a dataset by date and facility
-> Status: phases 1–2 complete; phases 3–4 pending · Slug: preview-facility-filter · Plan: ./plan.md · Spec: ./spec.md
+> Status: phases 1–3 complete; phase 4 pending · Slug: preview-facility-filter · Plan: ./plan.md · Spec: ./spec.md
 
 ## Overview
 
@@ -63,11 +63,60 @@ feature, including the worker/HTTP portions of AC3/AC4.
 
 ## Phase 3: Isolated worker filtering (plan phase 3)
 
-- [ ] **T3.1** Extend paired request encoding and parent decoding in `src/outage_explorer/infrastructure/worker_runtime/decoding.py`, execution forwarding in `src/outage_explorer/infrastructure/worker_runtime/launcher.py`, strict worker decoding in `src/outage_explorer/infrastructure/worker_runtime/protocol.py`, and reviewed protocol identity in `src/outage_explorer/infrastructure/worker_runtime/configuration.py`. Carry an explicit nullable facility; independently validate it and supported grain, check returned facility equality, advance the paired version consistently for requests/responses/errors and reject old/mismatched versions without fallback. (FR1, FR2, TR1–TR3)
-- [ ] **T3.2** Add parameter-bound equality on the trusted public facility column in `src/outage_explorer/infrastructure/duckdb/previews.py`; combine dates and facility before keyset pagination. Preserve descending period/binary identifier order, streaming/bounds and the normal empty result for unknown valid IDs. (FR1–FR3, TR1, TR2)
-- [ ] **T3.3** Extend `tests/unit/test_worker_protocol.py`, `tests/unit/test_worker_response_decoding.py`, `tests/unit/test_analytical_runtime_configuration.py`, `tests/unit/test_docker_runtime.py`, `tests/integration/test_query_worker_transport.py`, `tests/integration/test_catalog_preview.py` and `tests/fixtures/data_api/preview_worker.py` for both grains, quotes as data, leading zeros, malformed/raw worker input, forged response identities and fail-closed paired-version mismatches. Update existing query/worker version fixtures consistently without weakening assertions. (FR1–FR3, TR1–TR3)
-- [ ] **T3.4** Expose the now-complete filter in `src/outage_explorer/entrypoints/http/data_schemas.py` and `src/outage_explorer/entrypoints/http/routes/datasets.py`; retain duplicate rejection and cursor-only continuation. Update `src/outage_explorer/application/services/catalog.py`, both `docs/specs/data-api/openapi.json` and `src/outage_explorer/entrypoints/http/openapi.json`, and `docs/specs/data-api/fixtures.json` together to advertise facility only for facilities/generators. Add matching request/catalog regressions in `tests/integration/test_data_api_http.py`, `tests/unit/test_data_api_contract.py` and `tests/integration/test_api_documentation.py`. (FR2–FR5, TR1, TR3)
-- [ ] **T3.C** Checkpoint: run the affected worker, preview, HTTP, contract and architecture suites plus Ruff/mypy. Prove real portable worker equality for AC1–AC2, ordered filtered pages for AC3, correct catalog/OpenAPI agreement and protocol rejection for AC5. Report any PostgreSQL-fixture cases not run with an explicit disposable DSN; do not build or activate a live image or claim actual-host isolation acceptance. (AC1–AC6)
+- [x] **T3.1** Extend paired request encoding and parent decoding in `src/outage_explorer/infrastructure/worker_runtime/decoding.py`, execution forwarding in `src/outage_explorer/infrastructure/worker_runtime/launcher.py`, strict worker decoding in `src/outage_explorer/infrastructure/worker_runtime/protocol.py`, and reviewed protocol identity in `src/outage_explorer/infrastructure/worker_runtime/configuration.py`. Carry an explicit nullable facility; independently validate it and supported grain, check returned facility equality, advance the paired version consistently for requests/responses/errors and reject old/mismatched versions without fallback. (FR1, FR2, TR1–TR3)
+- [x] **T3.2** Add parameter-bound equality on the trusted public facility column in `src/outage_explorer/infrastructure/duckdb/previews.py`; combine dates and facility before keyset pagination. Preserve descending period/binary identifier order, streaming/bounds and the normal empty result for unknown valid IDs. (FR1–FR3, TR1, TR2)
+- [x] **T3.3** Extend `tests/unit/test_worker_protocol.py`, `tests/unit/test_worker_response_decoding.py`, `tests/unit/test_analytical_runtime_configuration.py`, `tests/unit/test_docker_runtime.py`, `tests/integration/test_query_worker_transport.py`, `tests/integration/test_catalog_preview.py` and `tests/fixtures/data_api/preview_worker.py` for both grains, quotes as data, leading zeros, malformed/raw worker input, forged response identities and fail-closed paired-version mismatches. Update existing query/worker version fixtures consistently without weakening assertions. (FR1–FR3, TR1–TR3)
+- [x] **T3.4** Expose the now-complete filter in `src/outage_explorer/entrypoints/http/data_schemas.py` and `src/outage_explorer/entrypoints/http/routes/datasets.py`; retain duplicate rejection and cursor-only continuation. Update `src/outage_explorer/application/services/catalog.py`, both `docs/specs/data-api/openapi.json` and `src/outage_explorer/entrypoints/http/openapi.json`, and `docs/specs/data-api/fixtures.json` together to advertise facility only for facilities/generators. Add matching request/catalog regressions in `tests/integration/test_data_api_http.py`, `tests/unit/test_data_api_contract.py` and `tests/integration/test_api_documentation.py`. (FR2–FR5, TR1, TR3)
+- [x] **T3.C** Checkpoint: run the affected worker, preview, HTTP, contract and architecture suites plus Ruff/mypy. Prove real portable worker equality for AC1–AC2, ordered filtered pages for AC3, correct catalog/OpenAPI agreement and protocol rejection for AC5. Report any PostgreSQL-fixture cases not run with an explicit disposable DSN; do not build or activate a live image or claim actual-host isolation acceptance. (AC1–AC6)
+
+### Phase 3 checkpoint evidence — 2026-10-07
+
+T3.1–T3.4 and T3.C completed. The paired analytical request, success and error
+protocol is now version **2**, with an explicit nullable facility field. Parent
+encoding and worker decoding independently enforce exact bounded identity and
+supported grain; parent decoding rejects rows from another facility. Version 1,
+boolean and mismatched versions fail closed. Tabular encoding and the separate
+SQL-inspection protocol remain version 1. The launcher already forwards the whole
+`PreviewRead`; the existing pickle-based controlled preview fixture and application
+selection/lifecycle tests already preserve its facility field and need no change.
+Runtime profiles require protocol 2; existing pinned images/review identities need
+rebuilding/review before use. No image was built or activated here.
+
+Actual portable unified-Parquet/DuckDB subprocess cases verify AC1 worker behavior
+for both grains: facility-only and inclusive-date intersection, leading-zero
+identity, quotes as data, unmatched IDs, unchanged unfiltered/date-only results,
+multiple ordered keyset pages and deterministic revisits. These tests prove the
+worker predicate, not OS sandbox isolation. Separate portable HTTP cases use the
+real `AccessService` and preview/store/lifecycle with observable injected execution
+ports, proving facility/date/page forwarding, cursor continuation/revisit, validation
+and current authorization before preparation/execution. Invalid raw UTF-8 is
+rejected before Werkzeug can preserve it as a literal percent-escaped identifier;
+a legitimately escaped literal percent identifier remains valid. The architecture
+exception permits only `urllib.parse.unquote_to_bytes`; negative fixtures continue
+to reject network and broad urllib imports. National filtering, duplicate input,
+malformed identifiers, cursor/filter mixtures and forged worker identities are
+rejected. Catalog, active fixtures and paired OpenAPI advertise facility only on
+the two supported grains (AC2/AC5); application lifecycle evidence from Phase 2
+and real ordered worker pages cover this phase's AC3 portions.
+
+Checkpoint commands: `.venv/bin/python -m ruff check .`,
+`.venv/bin/python -m ruff format --check .` (**447 files**),
+`.venv/bin/python -m mypy src` (**148 source files**) all passed.
+The clean full portable run used a temporary collection plugin to deselect tests
+requiring the `database` fixture:
+`PYTHONPATH=/private/tmp:src .venv/bin/python -m pytest -q -rs -p outage_preview_nodb -m 'not live_provider'`.
+Result: **2,283 passed, 41 skipped, 194 deselected, 17 subtests passed**.
+All 194 deselections were PostgreSQL fixture cases, including the existing
+17 preview and 7 HTTP cases. Skips were 20 explicitly opt-in Docker/runtime
+acceptance cases, 18 Linux `prlimit` cases, one Linux path-descriptor case and two
+additional explicit-disposable-PostgreSQL cases. No disposable test DSN was supplied.
+An initial broad run exposed one obsolete mocked transport assertion treating
+facility as an unknown field; its transport-level rejection now tests repeated
+facility parameters, while actual application tests prove national rejection.
+The clean full run includes that correction, architecture, worker, HTTP and
+contract suites. No services, live resources, PostgreSQL, native Linux host checks,
+web work, deployment or publication ran. Full feature AC1–AC6 checkboxes stay open
+until Phase 4 consolidates cross-layer coverage, documentation and evidence.
 
 ## Phase 4: Backend verification and documentation (plan phase 4)
 

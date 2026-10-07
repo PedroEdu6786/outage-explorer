@@ -19,6 +19,9 @@ from outage_explorer.infrastructure.query_results.preview_encoding import (
 from outage_explorer.infrastructure.sql_validation.inspection import DuckdbSqlInspector
 from tests.integration import test_query_results as retained
 from tests.integration.test_catalog_preview import ENCODING
+from tests.integration.test_catalog_preview import (
+    portable_selection as portable_selection,
+)
 from tests.unit.test_data_api_contract import validator
 
 # Test injection uses controlled subprocesses; it never establishes OS isolation.
@@ -385,3 +388,184 @@ def test_supervised_http_start_paging_restart_and_current_role(
         )
     finally:
         restarted.close()
+
+
+@pytest.fixture
+def portable_preview_http(portable_selection):
+    """Actual HTTP/application authorization and lifecycle with observed ports."""
+    state = portable_selection
+    access = state.service._access
+    app = create_app(
+        HealthService(state.clock),
+        login_service=Mock(),
+        access_service=access,
+        auth_transport=AuthTransport(ORIGIN, frozenset({ORIGIN}), True),
+        data_services=DataServices(
+            CatalogService(access, state.publications),
+            state.service,
+            Mock(),
+            Mock(),
+            PreviewEncoding(ENCODING),
+        ),
+    )
+    client = app.test_client()
+    client.set_cookie("outage_session", state.token)
+    return client, state
+
+
+@pytest.mark.parametrize("dataset", ["facilities", "generators"])
+@pytest.mark.parametrize("facility", ["001", "A' OR 1=1 --", "é", "%FF"])
+def test_portable_http_facility_filter_and_cursor_forwarding(
+    portable_preview_http, dataset, facility
+):
+    client, state = portable_preview_http
+    first = client.get(
+        f"/api/datasets/{dataset}/preview",
+        query_string={
+            "facility": facility,
+            "start_date": "2026-09-01",
+            "end_date": "2026-09-02",
+            "page_size": "1",
+        },
+    )
+    assert first.status_code == 200
+    validator("Preview").validate(first.json)
+    assert state.requests[-1].facility == facility
+    assert state.requests[-1].start.isoformat() == "2026-09-01"
+    assert state.requests[-1].end.isoformat() == "2026-09-02"
+    assert state.requests[-1].size == 1
+    second = client.get(
+        f"/api/datasets/{dataset}/preview",
+        query_string={"cursor": first.json["next_cursor"]},
+    )
+    assert second.status_code == 200
+    assert state.requests[-1].facility == facility
+    revisit = client.get(
+        f"/api/datasets/{dataset}/preview",
+        query_string={"cursor": first.json["page_cursor"]},
+    )
+    assert revisit.json == first.json
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "facility=",
+        "facility=%20001",
+        "facility=001%20",
+        "facility=%00",
+        "facility=%C2%85",
+        "facility=%FF",
+        "facility=%ED%A0%80",
+        "facility=001&facility=001",
+        "facility=001&cursor=anything",
+        "facility=" + "x" * 257,
+    ],
+)
+def test_portable_http_rejects_invalid_facility_before_resources(
+    portable_preview_http, query
+):
+    client, state = portable_preview_http
+    response = client.get("/api/datasets/facilities/preview?" + query)
+    assert response.status_code == 400
+    assert response.json["error"]["code"] == "invalid_request"
+    assert state.requests == []
+    state.inputs.prepare.assert_not_called()
+
+
+@pytest.mark.parametrize("facility", ["", "001"])
+def test_portable_http_national_rejects_facility(portable_preview_http, facility):
+    client, state = portable_preview_http
+    response = client.get(
+        "/api/datasets/national/preview", query_string={"facility": facility}
+    )
+    assert response.status_code == 400
+    assert response.json["error"]["code"] == "invalid_request"
+    assert state.requests == []
+    state.inputs.prepare.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "denial",
+    ["viewer", "missing", "revoked", "expired", "changed_role", "foreign_cursor"],
+)
+def test_portable_http_facility_authorization_precedes_resources(
+    portable_preview_http, denial
+):
+    from dataclasses import replace
+
+    client, state = portable_preview_http
+    cursor = None
+    if denial in {"changed_role", "foreign_cursor"}:
+        first = client.get("/api/datasets/facilities/preview?facility=001&page_size=1")
+        assert first.status_code == 200
+        cursor = first.json["next_cursor"]
+    current = state.sessions.resolve_session.return_value
+    if denial in {"viewer", "changed_role"}:
+        state.sessions.resolve_session.return_value = replace(
+            current, user=replace(current.user, role=Role.VIEWER)
+        )
+    elif denial == "missing":
+        client.delete_cookie("outage_session")
+    elif denial == "revoked":
+        state.sessions.resolve_session.return_value = None
+    elif denial == "expired":
+        state.clock.value = current.expires_at
+    else:
+        state.sessions.resolve_session.return_value = replace(
+            current, user=replace(current.user, id="another-analyst")
+        )
+    state.requests.clear()
+    state.inputs.prepare.reset_mock()
+    response = client.get(
+        "/api/datasets/facilities/preview",
+        query_string={"cursor": cursor} if cursor else {"facility": "001"},
+    )
+    assert response.status_code == (
+        401
+        if denial in {"missing", "revoked", "expired"}
+        else 404
+        if denial in {"viewer", "changed_role"}
+        else 410
+    )
+    assert state.requests == []
+    state.inputs.prepare.assert_not_called()
+
+
+def test_portable_http_catalog_filters_match_grains(portable_preview_http):
+    from dataclasses import replace
+    from datetime import date
+
+    from outage_explorer.domain.access import AnalyticalGrain
+    from outage_explorer.domain.publication import DatasetSummary
+
+    client, state = portable_preview_http
+    current = state.publications.active_generation.return_value
+    state.publications.active_generation.return_value = replace(
+        current,
+        datasets=tuple(
+            DatasetSummary(
+                grain,
+                "v1",
+                1,
+                date(2026, 9, 1),
+                date(2026, 9, 2),
+                f"prefix/generations/old/{dataset}.parquet",
+                "a" * 64,
+                100,
+            )
+            for grain, dataset in zip(
+                AnalyticalGrain, ["national", "facilities", "generators"], strict=True
+            )
+        ),
+    )
+    response = client.get("/api/datasets")
+    assert response.status_code == 200
+    validator("Catalog").validate(response.json)
+    assert {d["id"]: d["supported_filters"] for d in response.json["datasets"]} == {
+        "national": ["start_date", "end_date"],
+        "facilities": ["start_date", "end_date", "facility"],
+        "generators": ["start_date", "end_date", "facility"],
+    }
+    assert state.requests == []
+    state.inputs.prepare.assert_not_called()

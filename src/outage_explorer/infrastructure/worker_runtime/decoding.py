@@ -22,6 +22,7 @@ from outage_explorer.application.ports.execution import (
 from outage_explorer.application.ports.query_results import QueryOutput
 from outage_explorer.application.ports.sql_inspection import SqlRejected
 from outage_explorer.domain.datasets import PUBLIC_DATASETS, Column, ValueType
+from outage_explorer.domain.preview_filters import validate_facility_identifier
 from outage_explorer.domain.preview_keys import follows_preview_key
 from outage_explorer.infrastructure.query_results.encoding import (
     canonical_json,
@@ -29,7 +30,10 @@ from outage_explorer.infrastructure.query_results.encoding import (
     encode_cell,
     type_descriptor,
 )
-from outage_explorer.infrastructure.worker_runtime.configuration import RuntimeProfile
+from outage_explorer.infrastructure.worker_runtime.configuration import (
+    WORKER_PROTOCOL_VERSION,
+    RuntimeProfile,
+)
 
 
 class _Invalid(ValueError):
@@ -108,14 +112,15 @@ class WorkerTransport:
             payload: dict[str, object]
             if isinstance(request, PreviewRead):
                 if (
-                    # Protocol v1 cannot carry facility selection. Fail closed
-                    # until the paired worker protocol implements it.
-                    request.facility is not None
-                    or request.dataset not in PUBLIC_DATASETS
+                    request.dataset not in PUBLIC_DATASETS
                     or type(request.size) is not int
                     or not 1 <= request.size <= 500
                 ):
                     raise _Invalid()
+                if request.facility is not None:
+                    validate_facility_identifier(request.facility)
+                    if request.dataset.id == "national":
+                        raise _Invalid()
                 if any(
                     v is not None and type(v) is not date
                     for v in (request.start, request.end)
@@ -130,7 +135,7 @@ class WorkerTransport:
                 if request.after is not None:
                     self._key(request.after, request)
                 payload = {
-                    "version": 1,
+                    "version": WORKER_PROTOCOL_VERSION,
                     "operation": "preview",
                     "dataset": request.dataset.id,
                     "files": files(request.files),
@@ -142,6 +147,7 @@ class WorkerTransport:
                     else request.end.isoformat(),
                     "after": request.after,
                     "page_size": request.size,
+                    "facility": request.facility,
                 }
             else:
                 if (
@@ -159,7 +165,7 @@ class WorkerTransport:
                     seen.add(dataset.id)
                     relations.append({"dataset": dataset.id, "files": files(approved)})
                 payload = {
-                    "version": 1,
+                    "version": WORKER_PROTOCOL_VERSION,
                     "operation": "query",
                     "sql": request.sql,
                     "relations": relations,
@@ -434,7 +440,7 @@ class WorkerTransport:
         if (
             not isinstance(value, dict)
             or type(value.get("version")) is not int
-            or value["version"] != 1
+            or value["version"] != WORKER_PROTOCOL_VERSION
             or type(exit_code) is not int
         ):
             raise _Invalid()
@@ -488,6 +494,8 @@ class WorkerTransport:
                 if key != expected or (
                     previous is not None and not follows_preview_key(key, previous)
                 ):
+                    raise _Invalid()
+                if request.facility is not None and key[1] != request.facility:
                     raise _Invalid()
                 day = date.fromisoformat(key[0])
                 if (
