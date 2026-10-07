@@ -18,7 +18,9 @@
     "field_bytes": 20000,
     "elapsed_seconds": 60,
     "timeout_seconds": 3,
-    "backoff_seconds": 1
+    "backoff_seconds": 1,
+    "backoff_base_seconds": 1,
+    "request_interval_milliseconds": 1000
   },
   "artifact": {
     "batch_rows": 100,

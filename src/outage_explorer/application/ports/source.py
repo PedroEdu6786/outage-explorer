@@ -43,6 +43,8 @@ class SourceBounds:
     elapsed_seconds: int
     timeout_seconds: int
     backoff_seconds: int
+    backoff_base_seconds: int = 10
+    request_interval_milliseconds: int = 1_000
 
     def __post_init__(self) -> None:
         if any(type(value) is not int or value <= 0 for value in vars(self).values()):

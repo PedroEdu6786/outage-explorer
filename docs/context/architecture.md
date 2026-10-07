@@ -130,7 +130,9 @@ See the [endpoint diagrams](diagrams/endpoints.md),
 2. The independent worker claims the run using a database-time lease and restores
    its pinned baseline. The API never fetches EIA data in the request lifecycle.
 3. The worker retrieves bounded EIA inputs, applies pure validation/merge rules
-   and constructs all three resource files. Invalid replacements, absent keys
+   and constructs all three resource files. All source workers in a run share
+   request pacing and throttle cooldowns; retry waits remain cancellable and
+   count against the retrieval deadline. Invalid replacements, absent keys
    and wholly excluded routes retain prior valid data; initial loading needs
    usable data in every grain.
 4. Persist and fully read back every exact S3 resource. A durable receipt alone

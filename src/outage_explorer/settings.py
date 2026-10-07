@@ -31,7 +31,9 @@ class SourceSettings:
     field_bytes: int = 20_000
     elapsed_seconds: int = 1_800
     timeout_seconds: int = 30
-    backoff_seconds: int = 30
+    backoff_seconds: int = 120
+    backoff_base_seconds: int = 10
+    request_interval_milliseconds: int = 1_000
 
 
 @dataclass(frozen=True)

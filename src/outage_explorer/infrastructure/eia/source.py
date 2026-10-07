@@ -35,6 +35,10 @@ from outage_explorer.domain.refresh import Origin
 from outage_explorer.infrastructure.connector_workers import BoundedConnectorWorkers
 from outage_explorer.infrastructure.eia.budget import SourceRunBudget
 from outage_explorer.infrastructure.eia.quality import reconcile
+from outage_explorer.infrastructure.eia.rate_limit import (
+    SourceRateLimiter,
+    wait_for_retry,
+)
 from outage_explorer.infrastructure.eia.sanitization import Sanitizer, parse_json
 from outage_explorer.infrastructure.eia.transport import source_response
 
@@ -105,6 +109,11 @@ class EiaSource:
             page_workers, None if budget is None else budget.cancelled
         )
         self.budget = budget
+        self._rate_limiter = (
+            budget.rate_limiter
+            if budget is not None
+            else SourceRateLimiter(bounds.request_interval_milliseconds, monotonic)
+        )
         self.request = request
         self.bounds = bounds
         self._transport = transport
@@ -201,9 +210,14 @@ class EiaSource:
         self._remaining()
         return bytes(result)
 
-    def _delay(self, attempt: int, retry_after: str | None) -> None:
+    def _delay(
+        self, attempt: int, retry_after: str | None, *, throttled: bool = False
+    ) -> None:
         # Cap the exponent before expanding it; attempts itself is caller-bound.
-        delay = min(self.bounds.backoff_seconds, 2 ** min(attempt - 1, 20))
+        delay = min(
+            self.bounds.backoff_seconds,
+            self.bounds.backoff_base_seconds * 2 ** min(attempt - 1, 20),
+        )
         delay *= 0.5 + min(1.0, max(0.0, self._jitter())) / 2
         if retry_after is not None:
             self._sanitize.text(retry_after)  # field budget, never retain header
@@ -222,15 +236,23 @@ class EiaSource:
             delay = max(delay, requested)
         if delay >= self._remaining():
             raise SourceLimitError("Retry delay exceeds retrieval deadline")
-        self._sleep(delay)
-        self._remaining()
+        if throttled or retry_after is not None:
+            self._rate_limiter.defer(delay)
+        _LOG.info(
+            "eia_backoff run=%s route=%s delay_seconds=%.3f shared=%s",
+            self.request.run_id,
+            self.request.route,
+            delay,
+            throttled or retry_after is not None,
+        )
+        wait_for_retry(delay, self._clock, self._remaining, self._sleep)
 
     def _get(
         self, path: str, parameters: dict[str, str]
     ) -> tuple[dict[str, object], int, tuple[str, ...], tuple[str, ...]]:
         failures: list[str] = []
         for attempt in range(1, self.bounds.attempts + 1):
-            self._remaining()
+            self._rate_limiter.acquire(self._remaining, self._sleep)
             if self.budget is not None:
                 self.budget.charge("requests", 1)
             with self._lock:
@@ -296,7 +318,7 @@ class EiaSource:
                 attempt,
                 failures[-1],
             )
-            self._delay(attempt, retry_after)
+            self._delay(attempt, retry_after, throttled=failures[-1] == "http_429")
         raise AssertionError("Positive attempt bound required")
 
     def _validate_echo(

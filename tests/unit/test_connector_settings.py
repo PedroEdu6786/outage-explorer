@@ -370,3 +370,34 @@ def test_resource_worker_invalid_override_rejected(invalid):
         resource_worker_settings({}, s3=invalid)
     with pytest.raises(ValueError):
         resource_worker_settings({"workers": {"s3_workers": invalid}})
+
+
+def test_eia_backoff_and_pacing_defaults_and_json_overrides(config_path):
+    defaults = settings().source
+    assert (defaults.attempts, defaults.timeout_seconds) == (5, 30)
+    assert (defaults.backoff_base_seconds, defaults.backoff_seconds) == (10, 120)
+    assert defaults.request_interval_milliseconds == 1000
+    config_path.write_text(
+        json.dumps(
+            {
+                "source": {
+                    "backoff_base_seconds": 20,
+                    "backoff_seconds": 180,
+                    "request_interval_milliseconds": 2000,
+                }
+            }
+        )
+    )
+    value = settings(config_path).source
+    assert (value.backoff_base_seconds, value.backoff_seconds) == (20, 180)
+    assert value.request_interval_milliseconds == 2000
+
+
+@pytest.mark.parametrize(
+    "field", ["backoff_base_seconds", "request_interval_milliseconds"]
+)
+@pytest.mark.parametrize("value", [0, -1, True, 1.5, "1000", None])
+def test_eia_pacing_and_backoff_require_positive_integers(config_path, field, value):
+    config_path.write_text(json.dumps({"source": {field: value}}))
+    with pytest.raises(ValueError, match="Invalid connector configuration"):
+        settings(config_path)

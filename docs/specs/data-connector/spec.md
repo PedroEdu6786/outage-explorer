@@ -152,3 +152,9 @@ validate raw evidence and reconstruct bounded day indexes once per bundle, then
 retain exact value/origin/quality/ledger checks without per-day whole-source
 rescans. Emit secret-free grain and periodic day progress. Local immutable derived
 staging writes share configured limits; durable graph references remain exact.
+
+## EIA throttling follow-up — October 7, 2026
+
+The [request pacing specification](../eia-request-pacing/spec.md) adds shared
+per-run admission, increased configurable retry backoff and coordinated throttle
+cooldowns under the existing source deadlines and aggregate bounds (TR5/TR11).

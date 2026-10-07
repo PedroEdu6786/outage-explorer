@@ -52,6 +52,8 @@ BOUNDS = SourceBounds(
     elapsed_seconds=60,
     timeout_seconds=3,
     backoff_seconds=4,
+    backoff_base_seconds=1,
+    request_interval_milliseconds=1,
 )
 ARTIFACT_BOUNDS = ArtifactBounds(
     100, 100, 1_000_000, 2_000_000, 30_000_000, 500, 100_000, 25
@@ -65,6 +67,7 @@ class Clock:
     def __init__(self):
         self.value = 0.0
         self.sleeps = []
+        self.admissions = []
 
     def __call__(self):
         return self.value
@@ -134,6 +137,7 @@ def source(responses, grain="national", bounds=BOUNDS, clock=None):
 
     def handle(wire):
         calls.append(wire)
+        clock.admissions.append(clock.value)
         result = next(pending)
         if isinstance(result, Exception):
             raise result
@@ -272,7 +276,7 @@ def test_only_permitted_failures_retry_same_offset_without_duplicate_positions(f
     assert pages[0].attempt == 2
     assert pages[0].origin.source_position == 0
     assert calls[1].url == calls[2].url
-    assert len(clock.sleeps) == 1 and 0 < clock.sleeps[0] <= BOUNDS.backoff_seconds
+    assert clock.admissions[2] - clock.admissions[1] == pytest.approx(0.5)
     assert len(pages[0].metadata["attempt_failures"]) == 1
     assert SECRET not in repr(pages)
 
@@ -553,7 +557,7 @@ def test_attempt_limit_counts_failed_response_bytes_and_sanitizes_failure(caplog
     with pytest.raises(SourceLimitError, match="attempts") as captured:
         list(adapter.pages())
     assert len(calls) == 4
-    assert len(clock.sleeps) == 2
+    assert clock.admissions == pytest.approx([0, 0.001, 0.501, 1.501])
     assert SECRET not in "".join(traceback.format_exception(captured.value))
     assert SECRET not in caplog.text
     adapter, _, _ = source(
@@ -581,7 +585,7 @@ def test_retry_after_is_honored_within_bounds(retry_after):
         [response(status=429, headers={"retry-after": retry_after}), *standard()]
     )
     list(adapter.pages())
-    assert clock.sleeps == [2]
+    assert clock.admissions[1] - clock.admissions[0] == pytest.approx(2)
 
 
 def test_default_retries_recover_after_four_read_timeouts_at_same_offset():
@@ -599,7 +603,7 @@ def test_default_retries_recover_after_four_read_timeouts_at_same_offset():
     assert pages[0].attempt == 5
     assert adapter.quality.received == 1
     assert all(wire.url == calls[1].url for wire in calls[1:6])
-    assert clock.sleeps == [0.5, 1.0, 2.0, 4.0]
+    assert clock.admissions == pytest.approx([0, 1, 6, 16, 36, 76, 77])
     assert calls[1].extensions["timeout"] == {
         phase: 30 for phase in ("connect", "read", "write", "pool")
     }
@@ -614,7 +618,7 @@ def test_default_retry_after_accepts_ten_seconds_and_exhausts_five_attempts():
     with pytest.raises(SourceLimitError, match="attempts"):
         list(adapter.pages())
     assert len(calls) == 5
-    assert clock.sleeps == [10.0] * 4
+    assert clock.admissions == pytest.approx([0, 10, 20, 40, 80])
 
 
 def test_request_timeout_is_clamped_to_remaining_retrieval_deadline():
@@ -910,11 +914,10 @@ def test_timeout_is_bounded_by_remaining_retrieval_deadline():
     adapter, calls, _ = source(standard(), clock=clock)
     clock.value = 58
     list(adapter.pages())
-    assert all(
-        call.extensions["timeout"]
-        == {key: 2 for key in ("connect", "read", "write", "pool")}
-        for call in calls
-    )
+    for call, admitted_at in zip(calls, clock.admissions, strict=True):
+        assert call.extensions["timeout"] == pytest.approx(
+            {key: 60 - admitted_at for key in ("connect", "read", "write", "pool")}
+        )
 
 
 def test_metadata_fetch_is_cached_and_receives_attempt_diagnostics():
@@ -1071,3 +1074,142 @@ def test_redacted_identifier_cannot_fabricate_coverage_or_sort_regression():
     assert "_source_redacted_paths" in pages[0].values[1]
     assert adapter.quality.received == 2
     assert adapter.quality.observed_entities == (("abc",),)
+
+
+@pytest.mark.parametrize(
+    "jitter,expected", [(0, [5, 10, 20, 40]), (1, [10, 20, 40, 80])]
+)
+def test_default_exponential_retry_waits(jitter, expected):
+    adapter, calls, clock = source(
+        [response(status=503) for _ in range(5)],
+        bounds=SourceBounds(**asdict(SourceSettings())),
+    )
+    adapter._jitter = lambda: jitter
+    with pytest.raises(SourceLimitError, match="attempts"):
+        adapter.fetch_metadata()
+    assert len(calls) == 5
+    assert [
+        b - a for a, b in zip(clock.admissions, clock.admissions[1:], strict=False)
+    ] == pytest.approx(expected)
+
+
+@pytest.mark.parametrize("header", ["120", "Sat, 03 Oct 2026 00:02:00 GMT"])
+def test_default_retry_after_accepts_two_minutes(header):
+    adapter, _, clock = source(
+        [response(status=429, headers={"retry-after": header}), response(metadata())],
+        bounds=SourceBounds(**asdict(SourceSettings())),
+    )
+    adapter.fetch_metadata()
+    assert clock.admissions == pytest.approx([0, 120])
+
+
+@pytest.mark.parametrize("header", ["121", "invalid", "-1"])
+def test_invalid_or_excessive_retry_after_never_retries(header):
+    adapter, calls, _ = source(
+        [response(status=429, headers={"retry-after": header})],
+        bounds=SourceBounds(**asdict(SourceSettings())),
+    )
+    with pytest.raises(SourceError):
+        adapter.fetch_metadata()
+    assert len(calls) == 1
+
+
+def test_backoff_cap_applies_after_exponential_growth():
+    bounds = replace(SourceBounds(**asdict(SourceSettings())), attempts=7)
+    adapter, _, clock = source([response(status=503) for _ in range(7)], bounds=bounds)
+    adapter._jitter = lambda: 1
+    with pytest.raises(SourceLimitError, match="attempts"):
+        adapter.fetch_metadata()
+    assert clock.admissions == pytest.approx([0, 10, 30, 70, 150, 270, 390])
+
+
+@pytest.mark.parametrize(
+    "status,headers,cooldown",
+    [(429, {}, 5), (429, {"retry-after": "30"}, 30), (503, {"retry-after": "30"}, 30)],
+)
+def test_shared_budget_paces_routes_and_retries_and_defers_other_routes(
+    status, headers, cooldown
+):
+    from threading import Event
+
+    from outage_explorer.infrastructure.eia.budget import SourceRunBudget
+    from outage_explorer.infrastructure.eia.rate_limit import SourceRateLimiter
+
+    bounds = SourceBounds(**asdict(SourceSettings()))
+    clock = Clock()
+    budget = SourceRunBudget(bounds, Event())
+    budget.rate_limiter = SourceRateLimiter(bounds.request_interval_milliseconds, clock)
+    calls = []
+    adapters = []
+    for grain in ("national", "facility", "generator"):
+
+        def handle(wire, grain=grain):
+            calls.append((grain, clock()))
+            if len(calls) == 1:
+                return response(status=status, headers=headers)
+            return response(metadata(grain))
+
+        adapters.append(
+            EiaSource(
+                request(grain),
+                bounds,
+                httpx.MockTransport(handle),
+                SECRET,
+                budget=budget,
+                monotonic=clock,
+                sleep=clock.sleep,
+                now=lambda: NOW,
+                jitter=lambda: 0,
+            )
+        )
+
+    # While the first route backs off, another route tries to fetch metadata.
+    def fetch_sibling(delay):
+        clock.sleep(delay)
+        if len(calls) == 1:
+            adapters[1].fetch_metadata()
+
+    adapters[0]._sleep = fetch_sibling
+    adapters[0].fetch_metadata()
+    adapters[2].fetch_metadata()
+    assert [grain for grain, _ in calls] == [
+        "national",
+        "facility",
+        "national",
+        "generator",
+    ]
+    assert [when for _, when in calls] == pytest.approx(
+        [0, cooldown, cooldown + 1, cooldown + 2]
+    )
+    assert budget.counts["requests"] == 4
+
+
+def test_cancellation_during_long_backoff_prevents_retry():
+    from threading import Event
+
+    from outage_explorer.infrastructure.eia.budget import SourceRunBudget
+
+    adapter, calls, clock = source(
+        [response(status=429, headers={"retry-after": "120"})],
+        bounds=SourceBounds(**asdict(SourceSettings())),
+    )
+    cancelled = Event()
+    adapter.budget = SourceRunBudget(adapter.bounds, cancelled)
+
+    def cancel(delay):
+        clock.sleep(delay)
+        cancelled.set()
+
+    adapter._sleep = cancel
+    with pytest.raises(SourceLimitError, match="cancelled"):
+        adapter.fetch_metadata()
+    assert len(calls) == 1
+    assert clock() <= 0.1
+
+
+def test_pacing_deadline_prevents_a_second_wire_request():
+    bounds = replace(SourceBounds(**asdict(SourceSettings())), elapsed_seconds=1)
+    adapter, calls, _ = source(standard(), bounds=bounds)
+    with pytest.raises(SourceLimitError, match="deadline"):
+        list(adapter.pages())
+    assert len(calls) == 1

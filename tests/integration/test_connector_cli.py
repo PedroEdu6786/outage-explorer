@@ -41,6 +41,8 @@ SOURCE = SourceBounds(
     60,
     3,
     1,
+    backoff_base_seconds=1,
+    request_interval_milliseconds=1,
 )
 ARTIFACT = ArtifactBounds(100, 100, 1000000, 2000000, 100000000, 10000, 100000, 25)
 MODEL = RefreshBounds(10000, 10000, 10000, 30, 10000, 100, 100, 100000, 30, 100000)

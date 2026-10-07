@@ -39,14 +39,47 @@ production capacity. Page/endpoint workers default to one; S3 workers default
 to three. Concurrent pages are consumed in canonical source order.
 
 EIA requests default to a 30-second timeout per network phase and five total
-attempts per request (including the first). Retry delays use exponential backoff
-with jitter: 0.5–1, 1–2, 2–4 and 4–8 seconds before the four retries. The
-30-second backoff cap also permits valid `Retry-After` values up to 30 seconds.
-The remaining retrieval deadline can shorten timeouts or prevent further retries;
-the default overall retrieval allowance remains 1,800 seconds. Other resource
-limits still apply. These defaults also apply to the independent HTTP refresh
-worker after restart. Connector JSON `source` overrides can tune `attempts`,
-`timeout_seconds` and `backoff_seconds` independently.
+attempts per request (including the first). Retry delays use a 10-second base
+with exponential backoff and jitter: 5–10, 10–20, 20–40 and 40–80 seconds
+before the four retries. The backoff cap is 120 seconds, including accepted
+`Retry-After` seconds or HTTP dates; larger server delays fail the run rather
+than retrying early. A `429`, or a retryable response carrying `Retry-After`,
+pauses new requests across all source workers in the run. Other transient
+failures back off the affected request. Logs include the chosen delay and
+whether the cooldown is shared, without retaining response headers.
+
+All metadata, page and retry attempts share a limiter that spaces admissions
+at least 1,000 milliseconds apart (about 3,600/hour). Idle time does not accumulate
+burst credit. Endpoint/page concurrency can overlap in-flight requests but does
+not multiply this allowance. Both pacing and retries check cancellation at most
+every 100 milliseconds while sleeping and count against the retrieval deadline.
+The default overall retrieval allowance remains 1,800 seconds; its remaining
+time can shorten network timeouts or prevent further requests. Other resource
+limits still apply.
+
+The [EIA FAQ](https://www.eia.gov/opendata/faqs.php), checked October 7, 2026,
+advises staying below roughly 9,000 requests/hour and bursts below 5/second under
+ideal conditions. Actual throttling also considers API-key use, IP traffic and
+series demand, with tighter restrictions possible on complex routes. Exact
+firewall rules are not public; temporary bans can last seconds or minutes.
+Our defaults provide headroom, not a guarantee against throttling. The limiter
+is shared within one run, not across independent processes or other consumers
+using the same key/IP.
+
+These defaults apply to the independent HTTP refresh worker after restart.
+Connector JSON `source` overrides can tune `attempts`, `timeout_seconds`,
+`backoff_base_seconds`, `backoff_seconds`, and `request_interval_milliseconds`
+independently; all must be positive integers. For example:
+
+```json
+{
+  "source": {
+    "backoff_base_seconds": 10,
+    "backoff_seconds": 120,
+    "request_interval_milliseconds": 1000
+  }
+}
+```
 
 ## Safe reruns, persistence and recovery
 

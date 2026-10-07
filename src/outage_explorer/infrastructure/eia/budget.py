@@ -4,6 +4,7 @@ import time
 from threading import Event, Lock
 
 from outage_explorer.application.ports.source import SourceBounds, SourceLimitError
+from outage_explorer.infrastructure.eia.rate_limit import SourceRateLimiter
 
 
 class SourceRunBudget:
@@ -12,6 +13,7 @@ class SourceRunBudget:
         self.deadline = time.monotonic() + bounds.elapsed_seconds
         self.lock = Lock()
         self.counts: dict[str, int] = {}
+        self.rate_limiter = SourceRateLimiter(bounds.request_interval_milliseconds)
 
     def remaining(self) -> float:
         remaining = self.deadline - time.monotonic()
