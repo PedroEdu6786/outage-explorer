@@ -64,7 +64,8 @@ class DuckdbSqlInspector:
                     ),
                 ):
                     raise SqlRejected()
-                if isinstance(node, exp.Func):
+                # SQLGlot also classifies boolean operators as function nodes.
+                if isinstance(node, exp.Func) and not isinstance(node, (exp.And, exp.Or)):
                     name = (
                         node.name.upper()
                         if isinstance(node, exp.Anonymous)
