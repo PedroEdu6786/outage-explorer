@@ -1,5 +1,5 @@
 # Plan: Three-file refresh persistence optimization
-> Status: phase 1 locally implemented and verified; phases 2–4 and G3/G4 pending · Slug: refresh-persistence · Spec: ./spec.md
+> Status: phases 1–2 implemented and verified; G4 resolved; phases 3–4 and G3 pending · Slug: refresh-persistence · Spec: ./spec.md
 
 ## Approach
 Replace the 1,442-object graph persistence with a clean 3-file Parquet architecture.
@@ -17,9 +17,10 @@ files as baseline input for absence retention and replacement merges. (FR1–FR8
   and ledgers; compute quality metrics in-memory. (FR1, FR2, FR7, TR1, TR2)
 - `infrastructure/parquet/partitions.py`: Update `prior_days` and merge logic to read
   baseline rows directly from the prior generation's single resource Parquet file. (FR6, TR2)
-- `application/services/connector_artifacts.py`: Persist only the three resource files,
+- `application/services/resource_artifacts.py`: Persist only the three resource files,
   using bounded concurrency (1–3 workers); verify each file via readback checksum;
-  eliminate graph dependency discovery and manifest upload. (FR3, FR4, FR8, TR3)
+  eliminate graph dependency discovery and manifest upload. Existing
+  `connector_artifacts.py` consumers switch in Phase 4. (FR3, FR4, FR8, TR3)
 - `infrastructure/postgresql/publication.py`: Store the three exact file references
   (S3 key, SHA-256, byte count, row count) atomically on publication; eliminate S3
   manifest dependency. (FR5, TR1)
@@ -52,7 +53,17 @@ files as baseline input for absence retention and replacement merges. (FR1–FR8
   walk; dispositions and ledgers are evaluated in-memory without Parquet serialization.
 
 ### 3-file S3 persistence & readback (FR3, FR4, FR8, TR3)
-- `PersistConnectorArtifacts.execute()` accepts the 3 resource file references.
+- Accepted [ADR-0061](../../adr/0061-generation-prefixed-resource-object-keys.md)
+  maps physical keys to `<configured-prefix>generations/<generation-id>/` plus
+  `national.parquet`, `facilities.parquet` and `generators.parquet`. Generation IDs
+  are safe single path segments; local SHA-256 identity remains separate.
+  Durable receipts carry exact physical descriptors and admitted candidate identity;
+  explicit recovery verifies supplied bytes, schema and rows without HEAD/list discovery.
+- `PersistResourceArtifacts.execute()` accepts the verified local `CandidateResult`
+  and refresh bounds; it verifies exact local files before transferring them.
+  `RecoverResourceArtifacts.execute()` restores a supplied `DurableResourceReceipt`
+  through exact descriptor validation and returns a verified `ResourceBaseline`.
+  These explicitly injected services prepare shared consumers for the Phase 4 switch.
 - S3 transfer uploads the 3 files using bounded concurrency (1–3 worker threads).
   Each upload uses single `PutObject` with `ChecksumSHA256` and `IfNoneMatch="*"`.
 - Immediate readback verifies `ContentLength` and SHA-256 digest of each uploaded file.
@@ -89,7 +100,9 @@ AC1/AC2/AC3/AC5 obligations, not S3/publication/runtime acceptance or benchmarks
      single Parquet file.
    - Unit tests verify candidate creation, row counts, and quality metrics. (FR1, FR2, FR6, FR7)
 2. **Phase 2: 3-file S3 persistence & readback verification**
-   - Update `PersistConnectorArtifacts` to upload and verify only the 3 resource files.
+   - Add `PersistResourceArtifacts`/`RecoverResourceArtifacts` to upload, verify and
+     restore only the 3 resource files through explicit injection; shared composed
+     consumers switch in Phase 4.
    - Support bounded concurrency (1–3 workers, default 3) with thread joining and cancellation.
    - Verify that upload error or checksum mismatch cleanly fails without corrupting state. (FR3, FR4, FR8, TR3)
 3. **Phase 3: PostgreSQL publication & local cache integration**

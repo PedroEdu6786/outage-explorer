@@ -13,16 +13,22 @@ evidence retained privately for baseline merges. Analytical views explicitly
 project the existing public columns. Supporting evidence remains bounded and
 transient; PostgreSQL stores quality summaries and exact publication descriptors.
 Implementation proceeds through [refresh-persistence tasks](../specs/refresh-persistence/tasks.md);
-physical S3 object identity and current-generation cutover remain explicit gates.
+current-generation cutover remains an explicit gate. Accepted
+[ADR-0061](../adr/0061-generation-prefixed-resource-object-keys.md) resolves S3
+object identity to the configured generation prefix and fixed three filenames;
+exact durable descriptors remain distinct from local checksum identities.
 The graph implementation descriptions below record the pre-migration behavior;
 ADR acceptance alone does not establish implementation or runtime rollout.
 
 The local Phase 1 implementation now provides an explicitly injected three-file
 collector/builder/coordinator with exact private-field round trips, sorted prior
 resource scans and transient semantic verification. The existing composed
-CLI/refresh/bootstrap paths remain scheduled for the phase-4 switch; S3 readback,
+CLI/refresh/bootstrap paths remain scheduled for the phase-4 switch. Phase 2 adds
+an explicitly injected three-file S3 adapter and persistence/recovery services:
+conditional generation-prefixed writes, full readback and exact recovery share
+bounded counters and joined cleanup. Controlled SDK tests establish this path;
 PostgreSQL descriptors/quality publication and production analytical cache
-integration are later-phase acceptance, not established by the local tests.
+integration remain Phase 3 acceptance.
 
 The product HTTP refresh action uses a configured inclusive interval under
 [ADR-0051](../adr/0051-configured-http-refresh-range.md), with no request date

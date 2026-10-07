@@ -109,7 +109,14 @@ def test_exactly_three_files_no_supporting_serialization_and_fresh_verification(
     fresh = LocalParquetStore(store.root, ARTIFACT_BOUNDS)
     ParquetResourceBuilder(fresh).verify_resources(candidate, BOUNDS)
     assert (
-        DurableResourceReceipt("candidate", candidate.resources).resources
+        DurableResourceReceipt(
+            "candidate",
+            candidate.resources,
+            candidate.interval,
+            candidate.contract_id,
+            candidate.transformation_id,
+            candidate.base_generation_id,
+        ).resources
         == candidate.resources
     )
 

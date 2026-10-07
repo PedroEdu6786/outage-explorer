@@ -1,5 +1,5 @@
 # Spec: Three-file refresh persistence optimization
-> Status: phase 1 locally implemented and verified; phases 2–4 and G3/G4 pending · Slug: refresh-persistence
+> Status: phases 1–2 implemented and verified; G4 resolved; phases 3–4 and G3 pending · Slug: refresh-persistence
 
 ## Problem
 Admins wait too long for refresh persistence. The current implementation persists
@@ -100,6 +100,8 @@ queries, Admin quality summaries, and exact durable integrity.
 ## Open Clarifications
 Scope and direction are confirmed: three-file-only generation persistence, transient
 verification, PostgreSQL metadata storage. ADR-0060 and the private-field codec were
-explicitly approved October 6, 2026 (task gates G1/G2). Physical S3 object identity
-(G4) and history-preserving current-generation cutover/rollback (G3) remain required
-before their corresponding tasks and runtime use; see the task manifest.
+explicitly approved October 6, 2026 (task gates G1/G2). The user resolved physical
+S3 object identity (G4) by selecting generation-prefixed resource keys in
+[ADR-0061](../../adr/0061-generation-prefixed-resource-object-keys.md).
+History-preserving current-generation cutover/rollback (G3) remains required
+before its corresponding tasks and runtime use; see the task manifest.

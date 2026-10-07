@@ -329,3 +329,45 @@ def test_invalid_page_worker_count_rejected_before_storage(config_path, count):
     config_path.write_text(json.dumps({"workers": {"page_workers": count}}))
     with pytest.raises(ValueError):
         settings(config_path)
+
+
+def test_resource_s3_default_three_preserves_shared_defaults_and_aggregate_limits():
+    from outage_explorer.settings import (
+        ResourceWorkerSettings,
+        WorkerSettings,
+        resource_worker_settings,
+    )
+
+    current = WorkerSettings()
+    resource = resource_worker_settings({})
+    assert isinstance(resource, ResourceWorkerSettings) and resource.s3_workers == 3
+    assert current.s3_workers == 1
+    assert (resource.memory_bytes, resource.temporary_bytes) == (
+        current.memory_bytes,
+        current.temporary_bytes,
+    )
+    assert resource.endpoint_workers == resource.page_workers == 1
+
+
+@pytest.mark.parametrize("workers", [1, 2, 3])
+def test_resource_worker_flags_override_json_without_replacing_other_defaults(workers):
+    from outage_explorer.settings import resource_worker_settings
+
+    result = resource_worker_settings(
+        {"workers": {"s3_workers": 1, "page_workers": 2}}, s3=workers
+    )
+    assert result.s3_workers == workers and result.page_workers == 2
+    assert (
+        resource_worker_settings({"workers": {"s3_workers": workers}}).s3_workers
+        == workers
+    )
+
+
+@pytest.mark.parametrize("invalid", [0, 4, True, 1.0, "2"])
+def test_resource_worker_invalid_override_rejected(invalid):
+    from outage_explorer.settings import resource_worker_settings
+
+    with pytest.raises(ValueError):
+        resource_worker_settings({}, s3=invalid)
+    with pytest.raises(ValueError):
+        resource_worker_settings({"workers": {"s3_workers": invalid}})

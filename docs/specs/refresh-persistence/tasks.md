@@ -1,10 +1,10 @@
 # Tasks: Three-file refresh persistence optimization
-> Status: phase 1 complete; phases 2–4 pending · Slug: refresh-persistence · Plan: ./plan.md · Spec: ./spec.md
+> Status: phases 1–2 complete; phases 3–4 and G3 pending · Slug: refresh-persistence · Plan: ./plan.md · Spec: ./spec.md
 
 ## Overview
 - 25 implementation/test tasks + 4 checkpoints = 29 tasks across 4 plan phases; 6 tasks parallelizable [P].
 - [Phase 1](tasks/phase-1.md): local candidate contracts, unified files and transient quality — complete; T1.1–T1.8 and T1.C passed, with shared composition switch deferred to phase 4.
-- [Phase 2](tasks/phase-2.md): bounded three-file persistence/readback — depends on T1.C.
+- [Phase 2](tasks/phase-2.md): bounded three-file persistence/readback — complete; T2.1–T2.6 and T2.C passed with controlled S3 tests and the full non-live suite.
 - [Phase 3](tasks/phase-3.md): PostgreSQL publication and direct analytical cache — depends on T2.C.
 - [Phase 4](tasks/phase-4.md): refresh/CLI composition and controlled end-to-end verification — depends on T3.C.
 - All paths are repository-relative; only the explicitly marked migration path is new. Recheck concurrent changes and migration head before implementation; preserve unrelated work, historical ADRs, fixtures and append-only devlog.
@@ -14,7 +14,7 @@
 - **G1 — resolved October 6, 2026:** User explicitly accepted ADR-0060 and authorized required repository-guidance synchronization. ADR-0042 complete-graph replay and ADR-0057 six-file/audit-preservation clauses are superseded. Runtime activation is not authorized.
 - **G2 — resolved October 6, 2026:** User approved retaining the existing modeled physical codec's provenance, original numeric strings, units, natural identity and exact calculation evidence privately inside the three unified resource files. Preserve `ModeledRow.observation.original` and `Origin` without synthesis or precision loss; analytical views expose only existing public columns under `national`, `facilities`, `generators` (grain identifiers are singular). No old-format conversion is introduced.
 - **G3 — current-generation cutover, before T3.2 and runtime use:** the plan assumes a fresh initial load but specifies no authorized transition for an existing active six-file/manifest generation. Obtain a history-preserving schema rollout/cutover and rollback decision, including how existing published rows are read and how an incompatible active base fails closed. Do not backfill invented descriptors, reset `refresh_coordination.active_generation_id`, delete history/old S3 objects, add a reset CLI, or initiate a live load. ADR-0058 records a one-time direction, not standing permission.
-- **G4 — object identity, before T2.2:** existing `S3ArtifactStore` maps logical digest keys to configured `objects/` keys; AC1/plan refer to a generation prefix. Confirm exact physical key mapping for three immutable files per generation, PostgreSQL descriptors and explicit recovery. Do not select a new layout silently or rely on bucket listing/HEAD to reconstruct descriptors.
+- **G4 — resolved October 6, 2026:** User selected `<configured-prefix>generations/<generation-id>/{national,facilities,generators}.parquet`, recorded in [ADR-0061](../../adr/0061-generation-prefixed-resource-object-keys.md). Local checksum identity stays distinct from physical S3 keys; exact durable descriptors and explicit recovery use the validated generation mapping. Conditional writes and complete readback remain required; no bucket listing/HEAD reconstructs descriptors.
 - These are concrete missing plan decisions, not a replacement design. If their resolution changes the plan, stop for an updated approved plan rather than implementing a guessed contract.
 
 ## Cross-phase contracts

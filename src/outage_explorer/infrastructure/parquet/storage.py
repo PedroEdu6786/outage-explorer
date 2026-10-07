@@ -134,8 +134,18 @@ class LocalParquetStore:
             self._objects.add(reference.object.key)
             self._bytes += reference.object.byte_count
 
-    def _path(self, reference: StoredObject) -> Path:
-        self.check()
+    def discard_owned(self, reference: StoredObject) -> None:
+        """Remove an explicitly tracked recovery-owned file after workers join."""
+        path = self._path(reference, check=False)
+        with self._lock:
+            path.unlink(missing_ok=True)
+            if reference.key in self._objects:
+                self._objects.remove(reference.key)
+                self._bytes -= reference.byte_count
+
+    def _path(self, reference: StoredObject, *, check: bool = True) -> Path:
+        if check:
+            self.check()
         if (
             not re.fullmatch(r"[0-9a-f]{64}", reference.key)
             or reference.sha256 != reference.key
@@ -151,7 +161,11 @@ class LocalParquetStore:
             raise ArtifactError("Object must not be a symbolic link")
         return path
 
-    def put_immutable(self, chunks: Iterable[bytes]) -> StoredObject:
+    def put_immutable(
+        self, chunks: Iterable[bytes], *, expected: StoredObject | None = None
+    ) -> StoredObject:
+        if expected is not None:
+            self._path(expected)
         data = _LimitedBuffer(self.bounds.file_bytes)
         for chunk in chunks:
             self.check()
@@ -163,6 +177,8 @@ class LocalParquetStore:
             raise ArtifactError("Empty object")
         digest = hashlib.sha256(payload).hexdigest()
         reference = StoredObject(digest, digest, len(payload))
+        if expected is not None and reference != expected:
+            raise ArtifactError("Object differs from expected exact identity")
         path = self._path(reference)
         with self._lock:
             if digest not in self._objects:

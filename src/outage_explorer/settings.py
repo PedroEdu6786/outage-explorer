@@ -76,6 +76,13 @@ class WorkerSettings:
 
 
 @dataclass(frozen=True)
+class ResourceWorkerSettings(WorkerSettings):
+    """Three-resource consumer defaults; shared composition switches in phase 4."""
+
+    s3_workers: int = 3
+
+
+@dataclass(frozen=True)
 class ConnectorSettings:
     start: date
     end: date
@@ -509,12 +516,30 @@ def auth_settings(environment: Mapping[str, str]) -> AuthSettings | None:
 def worker_settings(
     document: dict[str, object], fetch: int | None, s3: int | None
 ) -> WorkerSettings:
-    values = _budgets(document.get("workers", {}), asdict(WorkerSettings()))
+    return WorkerSettings(**_worker_values(document, fetch, s3, WorkerSettings()))
+
+
+def resource_worker_settings(
+    document: dict[str, object], fetch: int | None = None, s3: int | None = None
+) -> ResourceWorkerSettings:
+    """Resolve JSON settings first and explicit flags last for new consumers."""
+    return ResourceWorkerSettings(
+        **_worker_values(document, fetch, s3, ResourceWorkerSettings())
+    )
+
+
+def _worker_values(
+    document: dict[str, object],
+    fetch: int | None,
+    s3: int | None,
+    defaults: WorkerSettings,
+) -> dict[str, int]:
+    values = _budgets(document.get("workers", {}), asdict(defaults))
     if fetch is not None:
         values["page_workers"] = fetch
     if s3 is not None:
         values["s3_workers"] = s3
-    return WorkerSettings(**values)
+    return values
 
 
 @dataclass(frozen=True)

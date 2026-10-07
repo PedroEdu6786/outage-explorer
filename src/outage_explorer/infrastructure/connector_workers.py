@@ -53,14 +53,19 @@ class BoundedConnectorWorkers:
             while True:
                 self.check()
                 while len(pending) < self.workers:
+                    self.check()
                     item = next(iterator, None)
                     if item is None:
                         break
                     index, task = item
+                    self.check()
                     pending[pool.submit(task)] = index
                 if not pending:
                     break
-                done, _ = wait(pending, return_when=FIRST_COMPLETED)
+                # Poll cancellation/deadline even if no operation finishes. SDK
+                # and task-owned streams must cooperate; shutdown still joins
+                # every admitted worker rather than claiming hard termination.
+                done, _ = wait(pending, timeout=0.05, return_when=FIRST_COMPLETED)
                 # Inspect every completed result before admitting replacements.
                 for future in done:
                     results[pending.pop(future)] = future.result()

@@ -79,6 +79,12 @@ class S3ArtifactStore:
             or reference.sha256 != reference.key
         ):
             raise ArtifactError("Invalid exact artifact identity")
+        self._register(reference)
+        return self.prefix + "objects/" + reference.key
+
+    def _register(self, reference: StoredObject) -> None:
+        """Shared exact descriptor/aggregate admission for both storage layouts."""
+        self._deadline()
         if type(reference.byte_count) is not int or not (
             0 < reference.byte_count <= min(self.bounds.file_bytes, 5_000_000_000)
         ):
@@ -95,7 +101,6 @@ class S3ArtifactStore:
                 ):
                     raise ArtifactLimitError("Artifact graph bound exceeded")
                 self.objects[reference.key] = reference
-        return self.prefix + "objects/" + reference.key
 
     def _charge(self, size: int) -> None:
         with self.lock:

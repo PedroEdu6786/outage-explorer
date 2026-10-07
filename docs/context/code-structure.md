@@ -10,8 +10,10 @@ private provenance/source strings and exact arithmetic in the unified physical
 codec. Analytical views project only existing public columns. PostgreSQL publication
 owns exact file descriptors; S3 verifies every file by bounded full readback.
 Supporting graph writes and duplicate public files are being retired through
-[phase checkpoints](../specs/refresh-persistence/tasks.md), with cutover/key mapping
-still gated. Graph-related implementation descriptions below are pre-migration
+[phase checkpoints](../specs/refresh-persistence/tasks.md), with cutover still gated.
+[ADR-0061](../adr/0061-generation-prefixed-resource-object-keys.md) selects exact
+generation-prefixed physical keys, distinct from local checksum identities.
+Graph-related implementation descriptions below are pre-migration
 context, not requirements to preserve that superseded architecture.
 
 Phase 1 now supplies `CreateResourceCandidate`, `ParquetResourceBuilder` and
@@ -27,6 +29,17 @@ The health scaffold and offline national/facility/generator verification are imp
 data HTTP delivery is implemented with explicit enablement and controlled
 verification; actual analytical runtime readiness remains separate. This guide governs application code and refactors;
 [AGENTS.md](../../AGENTS.md) makes its rules discoverable to agents.
+
+Phase 2 adds explicitly injected `PersistResourceArtifacts`,
+`RecoverResourceArtifacts` and `S3ResourceStore`. Exact physical descriptors carry
+the generation-prefixed keys, while local files retain checksum identity. Durable
+receipts copy admitted interval, versions and baseline identity. Conditional writes
+and full streamed readback share locked transfer bounds; recovery reserves missing
+file bytes, verifies schema/rows, joins workers and cleans only recovery-owned files
+on failure. `ResourceWorkerSettings` defaults new S3 consumers to three workers;
+shared CLI/refresh/bootstrap settings switch in Phase 4. Controlled tests live in
+`tests/integration/test_resource_artifacts.py`; publication and analytical cache
+integration remain Phase 3 obligations.
 
 Under [ADR-0051](../adr/0051-configured-http-refresh-range.md), HTTP refresh
 admission resolves a configured inclusive interval and records it for background

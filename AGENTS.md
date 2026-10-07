@@ -54,7 +54,10 @@ project only the existing public columns. Raw/pages/dispositions/ledgers remain
 bounded transient candidate inputs; quality and exact publication descriptors
 belong in PostgreSQL. No durable supporting artifacts or S3 manifest are required.
 The implementation proceeds through the refresh-persistence phase checkpoints;
-existing-generation cutover and physical S3 key mapping remain explicit gates.
+existing-generation cutover remains an explicit gate. Physical S3 keys follow
+[ADR-0061](docs/adr/0061-generation-prefixed-resource-object-keys.md):
+`<configured-prefix>generations/<generation-id>/{national,facilities,generators}.parquet`,
+with local checksum identity distinct from exact durable descriptors.
 Do not write or read daily modeled partitions, or add old-layout compatibility
 code. Readers never rebuild inputs per request; workers scan views over exact
 staged files, without whole-input table imports. No reset CLI exists:

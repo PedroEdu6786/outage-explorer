@@ -35,7 +35,9 @@ is wrong, propose a change here rather than silently deviating.
   exact calculation evidence; analytical views expose only existing public columns.
   Supporting evidence is bounded transient data. PostgreSQL owns quality summaries
   and exact publication descriptors. Implement through the phase checkpoints;
-  current-generation cutover and physical S3 keys require their named task gates.
+  current-generation cutover requires its named task gate. Accepted
+  [ADR-0061](../adr/0061-generation-prefixed-resource-object-keys.md) fixes the
+  three physical S3 keys under the generation prefix, distinct from local checksums.
 - Never commit secrets; supply credentials through the environment. Connector
   resource limits use typed defaults with optional `--config PATH` JSON overrides,
   not `OUTAGE_CONNECTOR_*` variables ([ADR-0041](../adr/0041-connector-defaults-and-json-configuration.md)).

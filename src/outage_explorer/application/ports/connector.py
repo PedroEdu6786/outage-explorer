@@ -2,7 +2,7 @@
 
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Any, Protocol
 
 from outage_explorer.application.dto import ConnectorReport, ResourceReport
 from outage_explorer.application.ports.artifacts import (
@@ -13,6 +13,7 @@ from outage_explorer.application.ports.artifacts import (
 )
 from outage_explorer.application.ports.candidates import (
     CandidateManifest,
+    CandidateResult,
     EvidenceBundle,
     ResourceBaseline,
     SanitizedPage,
@@ -20,7 +21,7 @@ from outage_explorer.application.ports.candidates import (
     validate_resources,
 )
 from outage_explorer.application.ports.source import SourcePages, SourceRequest
-from outage_explorer.domain.refresh import RefreshBounds
+from outage_explorer.domain.refresh import Interval, RefreshBounds
 
 
 class ConnectorEvents(Protocol):
@@ -67,10 +68,32 @@ class DurableResourceReceipt:
 
     generation_id: str
     resources: tuple[ArtifactRef, ...]
+    interval: Interval
+    contract_id: str
+    transformation_id: str
+    base_generation_id: str | None
+    schema_version: str = "1"
 
     def __post_init__(self) -> None:
         validate_resources(self.resources)
-        if not self.generation_id:
+        if (
+            not isinstance(self.generation_id, str)
+            or not self.generation_id
+            or not isinstance(self.contract_id, str)
+            or not self.contract_id
+            or not isinstance(self.transformation_id, str)
+            or not self.transformation_id
+            or not isinstance(self.interval, Interval)
+            or (
+                self.base_generation_id is not None
+                and (
+                    not isinstance(self.base_generation_id, str)
+                    or not self.base_generation_id
+                )
+            )
+            or self.schema_version != "1"
+            or self.base_generation_id == self.generation_id
+        ):
             raise ArtifactError("Missing durable generation identity")
 
 
@@ -97,3 +120,36 @@ class ConnectorGraph(Protocol):
     def verify_remote(
         self, reference: StoredObject, source: ExactArtifactStore, bounds: RefreshBounds
     ) -> None: ...
+
+
+class RecoveryStaging(Protocol):
+    def __enter__(self) -> None: ...
+    def __exit__(
+        self, exc_type: Any, exc_value: Any, traceback: Any
+    ) -> bool | None: ...
+
+
+class ResourceTransfers(Protocol):
+    def recovery_staging(self, size: int) -> RecoveryStaging: ...
+
+    def addresses(
+        self, generation_id: str, resources: tuple[ArtifactRef, ...]
+    ) -> tuple[ArtifactRef, ...]: ...
+    def validate_receipt(self, receipt: DurableResourceReceipt) -> None: ...
+    def put_verified(
+        self, reference: ArtifactRef, chunks: Iterable[bytes]
+    ) -> ArtifactRef: ...
+    def read(self, reference: StoredObject) -> Iterator[bytes]: ...
+
+
+class ResourceFiles(Protocol):
+    def verify_candidate(
+        self, candidate: CandidateResult, bounds: RefreshBounds
+    ) -> None: ...
+    def read(self, reference: StoredObject) -> Iterator[bytes]: ...
+    def restore_resources(
+        self,
+        receipt: DurableResourceReceipt,
+        source: ResourceTransfers,
+        bounds: RefreshBounds,
+    ) -> ResourceBaseline: ...
