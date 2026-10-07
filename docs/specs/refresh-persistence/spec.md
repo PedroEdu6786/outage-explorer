@@ -103,7 +103,10 @@ verification, PostgreSQL metadata storage. ADR-0060 and the private-field codec 
 explicitly approved October 6, 2026 (task gates G1/G2). The user resolved physical
 S3 object identity (G4) by selecting generation-prefixed resource keys in
 [ADR-0061](../../adr/0061-generation-prefixed-resource-object-keys.md).
-G3 is resolved by ADR-0062: historical rows/pointer remain immutable, legacy active
-bases fail closed, and moving past one needs separate explicit user direction.
+G3 was resolved by ADR-0062. Subsequent user direction in
+[ADR-0064](../../adr/0064-remove-obsolete-manifest-publication-columns.md) removes
+obsolete manifest columns and the old publication adapter. Historical rows and
+pointers remain intact; bases without exact descriptors fail closed, and moving
+past one needs separate explicit user direction.
 The phase-4 checkpoint uses controlled HTTP/S3, disposable PostgreSQL and fixture
 DuckDB workers; live rollout and measured runtime evidence remain separate.

@@ -13,8 +13,9 @@ Supporting graph writes and duplicate public files have been removed through
 [phase checkpoints](../specs/refresh-persistence/tasks.md). Existing legacy bases fail closed.
 [ADR-0061](../adr/0061-generation-prefixed-resource-object-keys.md) selects exact
 generation-prefixed physical keys, distinct from local checksum identities;
-[ADR-0062](../adr/0062-fail-closed-legacy-publication-layout.md) fixes fail-closed
-behavior for an existing manifest-format publication.
+[ADR-0064](../adr/0064-remove-obsolete-manifest-publication-columns.md) removes
+obsolete manifest columns and the old publication adapter. Existing rows without
+exact resource descriptors still fail closed; no conversion is implemented.
 
 Phase 1 now supplies `CreateResourceCandidate`, `ParquetResourceBuilder` and
 `LocalConnectorEvidence.collect_resources` for explicit local composition.

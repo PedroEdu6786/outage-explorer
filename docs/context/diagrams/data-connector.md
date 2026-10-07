@@ -45,7 +45,8 @@ requires reconciliation, not a blind retry or pointer change.
 The diagram shows the current composed source, not a newly executed live run.
 Initial publication needs usable data in every grain. Later merges preserve
 absent/invalid prior rows under [ADR-0037](../../adr/0037-connector-initial-load-and-retention.md).
-An active legacy manifest layout fails closed under
-[ADR-0062](../../adr/0062-fail-closed-legacy-publication-layout.md).
+An active base without exact resource descriptors fails closed under
+[ADR-0064](../../adr/0064-remove-obsolete-manifest-publication-columns.md), which
+removes the obsolete manifest columns and publication adapter.
 
 [All module diagrams](../module-diagrams.md) · [Decisions](../../../DECISIONS.md)

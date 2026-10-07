@@ -33,7 +33,6 @@ from outage_explorer.domain.publication import (
     INITIAL_END,
     INITIAL_START,
     DatasetSummary,
-    PublishedGeneration,
     RefreshConfiguration,
     RefreshStage,
     ResourcePublishedGeneration,
@@ -44,7 +43,6 @@ from outage_explorer.infrastructure.postgresql.access import PostgresqlAccessSto
 from outage_explorer.infrastructure.postgresql.migrations import run_migrations
 from outage_explorer.infrastructure.postgresql.pool import BoundedPostgresqlPool
 from outage_explorer.infrastructure.postgresql.publication import (
-    PostgresqlPublicationStore,
     PostgresqlResourcePublicationStore,
 )
 from outage_explorer.infrastructure.security import RandomSecurityMaterial
@@ -142,7 +140,7 @@ def system(database):
         )
         tokens[role] = token
         users[role] = user
-    store = PostgresqlPublicationStore(pool)
+    store = PostgresqlResourcePublicationStore(pool)
     access = AccessService(access_store, security, Clock())
     service = RefreshService(access, store, lambda: CONFIG, security)
     try:
@@ -152,19 +150,7 @@ def system(database):
 
 
 def candidate(run, base=None):
-    return PublishedGeneration(
-        str(uuid4()),
-        run.id,
-        base,
-        "manifest/verified.json",
-        "a" * 64,
-        "v1",
-        datetime.now(UTC),
-        tuple(
-            DatasetSummary(grain, "v1", 10, INITIAL_START, INITIAL_END)
-            for grain in AnalyticalGrain
-        ),
-    )
+    return resource_candidate(run, base)
 
 
 def expire(database):
@@ -314,7 +300,7 @@ def test_commit_loss_uses_fresh_serialized_history(system, mode):
     store, service, tokens, users, pool = system
     run = service.admit(tokens[Role.ADMIN], "f" * 16, {})
     owner = store.claim("worker", 60)
-    faulty = PostgresqlPublicationStore(FaultPool(pool, mode))
+    faulty = PostgresqlResourcePublicationStore(FaultPool(pool, mode))
     if mode == "unavailable":
         with pytest.raises(AccessStoreError):
             faulty.publish(owner, candidate(run))
@@ -392,7 +378,7 @@ def test_accepted_restart_and_revoked_admin_before_lookup(
 ):
     store, service, tokens, users, pool = system
     run = service.admit(tokens[Role.ADMIN], "q" * 16, {})
-    restarted = PostgresqlPublicationStore(pool)
+    restarted = PostgresqlResourcePublicationStore(pool)
     assert restarted.recover(run.id).status is RunStatus.ACCEPTED
     assert restarted.claim("new-process", 60).run_id == run.id
     with psycopg.connect(database) as connection:
@@ -465,13 +451,13 @@ def test_resource_publication_is_atomic_exact_and_manifest_free(resources, datab
     ]
     with psycopg.connect(database) as connection:
         manifest = connection.execute(
-            "SELECT manifest_key, manifest_digest, jsonb_array_length(datasets) FROM published_generations WHERE id = %s",
+            "SELECT jsonb_array_length(datasets) FROM published_generations WHERE id = %s",
             (generation.id,),
         ).fetchone()
         pointer = connection.execute(
             "SELECT active_generation_id::text, active_run_id FROM refresh_coordination"
         ).fetchone()
-    assert manifest == (None, None, 3)
+    assert manifest == (3,)
     assert pointer == (generation.id, None)
     # Subsequent publications retain immutable prior history and the base chain.
     second = service.admit(tokens[Role.ADMIN], "r2" * 8, {})
@@ -574,14 +560,13 @@ def _datasets(generation):
     ]
 
 
-def _insert(database, run_id, generation, datasets, manifest=(None, None)):
+def _insert(database, run_id, generation, datasets):
     with psycopg.connect(database) as connection:
         connection.execute(
-            "INSERT INTO published_generations(id, run_id, manifest_key, manifest_digest, verification_version, verified_at, datasets) VALUES (%s,%s,%s,%s,'v1',now(),%s)",
+            "INSERT INTO published_generations(id, run_id, verification_version, verified_at, datasets) VALUES (%s,%s,'v1',now(),%s)",
             (
                 generation.id,
                 run_id,
-                *manifest,
                 psycopg.types.json.Jsonb(datasets),
             ),
         )
@@ -652,15 +637,11 @@ def test_database_rejects_malformed_resource_descriptors(resources, database, na
     assert store.active_generation() is None
 
 
-def test_database_rejects_mixed_manifest_and_descriptor_layouts(resources, database):
+def test_database_rejects_summaries_without_exact_descriptors(resources, database):
     store, service, tokens, pool = resources
     run = service.admit(tokens[Role.ADMIN], "m1" * 8, {})
     generation = resource_candidate(run)
-    for manifest in (("manifest.json", None), (None, "a" * 64)):
-        with pytest.raises(psycopg.errors.CheckViolation):
-            _insert(database, run.id, generation, _datasets(generation), manifest)
-    # A manifest-format row may still carry unrelated legacy dataset summaries.
-    legacy = [
+    summaries = [
         {
             k: v
             for k, v in item.items()
@@ -669,69 +650,12 @@ def test_database_rejects_mixed_manifest_and_descriptor_layouts(resources, datab
         for item in _datasets(generation)
     ]
     with pytest.raises(psycopg.errors.CheckViolation):
-        _insert(database, run.id, generation, legacy)
-    _insert(database, run.id, generation, legacy, ("manifest.json", "a" * 64))
+        _insert(database, run.id, generation, summaries)
+    assert store.active_generation() is None
 
 
-def test_g3_existing_manifest_generation_is_preserved_and_fails_closed(
-    system, database
-):
-    legacy_store, service, tokens, users, pool = system
-    resource_store = PostgresqlResourcePublicationStore(pool)
-    run = service.admit(tokens[Role.ADMIN], "g31" * 6, {})
-    legacy = candidate(run)
-    legacy_store.publish(legacy_store.claim("worker", 60), legacy)
-
-    def snapshot():
-        with psycopg.connect(database) as connection:
-            return (
-                connection.execute(
-                    "SELECT * FROM published_generations ORDER BY id"
-                ).fetchall(),
-                connection.execute(
-                    "SELECT active_generation_id::text FROM refresh_coordination"
-                ).fetchone(),
-            )
-
-    before = snapshot()
-    # No conversion, reader fallback or admission over the incompatible base.
-    with pytest.raises(UnsupportedPublicationLayoutError):
-        resource_store.active_generation()
-    with pytest.raises(UnsupportedPublicationLayoutError):
-        resource_store.generation_for_run(run.id)
-    with pytest.raises(UnsupportedPublicationLayoutError):
-        resource_store.admit(users[Role.ADMIN].id, "z" * 64, "refresh:v1:{}", CONFIG)
-    assert resource_store.latest().id == run.id
-    # A run already admitted on that base cannot publish a resource generation.
-    next_run = service.admit(tokens[Role.ADMIN], "g32" * 6, {})
-    owner = resource_store.claim("worker", 60)
-    with pytest.raises(UnsupportedPublicationLayoutError):
-        resource_store.publish(owner, resource_candidate(next_run, legacy.id))
-    resource_store.finish(owner, RunStatus.FAILED, failure="prior_integrity")
-    assert snapshot() == before
-    # The manifest reader remains functional for the unchanged old history.
-    assert legacy_store.active_generation() == legacy
-
-
-def test_manifest_store_rejects_resource_rows_and_bases(resources, system):
-    resource_store, service, tokens, pool = resources
-    legacy_store = system[0]
-    run = service.admit(tokens[Role.ADMIN], "g41" * 6, {})
-    generation = resource_candidate(run)
-    resource_store.publish(resource_store.claim("worker", 60), generation)
-    with pytest.raises(UnsupportedPublicationLayoutError):
-        legacy_store.active_generation()
-    with pytest.raises(UnsupportedPublicationLayoutError):
-        legacy_store.generation_for_run(run.id)
-    next_run = service.admit(tokens[Role.ADMIN], "g42" * 6, {})
-    owner = legacy_store.claim("worker", 60)
-    with pytest.raises(UnsupportedPublicationLayoutError):
-        legacy_store.publish(owner, candidate(next_run, generation.id))
-    assert resource_store.active_generation() == generation
-
-
-def _old_history(dsn):
-    """Create manifest-format history exactly as revision 0003 stores it."""
+def _old_history(dsn, *, resource=False):
+    """Create publication history as stored before column removal."""
     pool = BoundedPostgresqlPool(dsn)
     try:
         PostgresqlAccessStore(pool).seed(
@@ -754,6 +678,13 @@ def _old_history(dsn):
         }
         for grain in AnalyticalGrain
     ]
+    if resource:
+        for item in datasets:
+            item.update(
+                object_key=f"connector/generations/{generation_id}/{FILES[AnalyticalGrain(item['grain'])]}.parquet",
+                sha256="a" * 64,
+                byte_count=1000,
+            )
     with psycopg.connect(dsn) as connection:
         requester = connection.execute("SELECT id FROM users LIMIT 1").fetchone()[0]
         connection.execute(
@@ -761,8 +692,14 @@ def _old_history(dsn):
             (run_id, requester, "a" * 64),
         )
         connection.execute(
-            "INSERT INTO published_generations(id, run_id, manifest_key, manifest_digest, verification_version, verified_at, datasets) VALUES (%s,%s,'m',%s,'v1',now(),%s)",
-            (generation_id, run_id, "b" * 64, psycopg.types.json.Jsonb(datasets)),
+            "INSERT INTO published_generations(id, run_id, manifest_key, manifest_digest, verification_version, verified_at, datasets) VALUES (%s,%s,%s,%s,'v1',now(),%s)",
+            (
+                generation_id,
+                run_id,
+                None if resource else "m",
+                None if resource else "b" * 64,
+                psycopg.types.json.Jsonb(datasets),
+            ),
         )
         connection.execute(
             "UPDATE refresh_runs SET status='succeeded', publication='published', generation_id=%s, stage='finished' WHERE id=%s",
@@ -780,14 +717,14 @@ def _state(dsn):
         return [
             connection.execute(query).fetchall()
             for query in (
-                "SELECT * FROM published_generations ORDER BY id",
+                "SELECT id, run_id, base_generation_id, verification_version, verified_at, datasets FROM published_generations ORDER BY id",
                 "SELECT * FROM refresh_runs ORDER BY id",
                 "SELECT * FROM refresh_coordination",
             )
         ]
 
 
-def test_migration_preserves_old_history_pointer_and_guards(empty_database):
+def test_remove_columns_preserves_history_pointer_and_guards(empty_database):
     migrate(empty_database, "upgrade", "0003_refresh_timestamps")
     run_id, generation_id = _old_history(empty_database)
     before = _state(empty_database)
@@ -805,35 +742,63 @@ def test_migration_preserves_old_history_pointer_and_guards(empty_database):
         assert connection.execute(
             "SELECT count(*) FROM pg_trigger WHERE tgname IN ('publication_history','refresh_snapshot')"
         ).fetchone() == (2,)
-    store = PostgresqlResourcePublicationStore(BoundedPostgresqlPool(empty_database))
-    with pytest.raises(UnsupportedPublicationLayoutError):
-        store.active_generation()
-    assert _state(empty_database) == before
+    pool = BoundedPostgresqlPool(empty_database)
+    try:
+        store = PostgresqlResourcePublicationStore(pool)
+        with pytest.raises(UnsupportedPublicationLayoutError):
+            store.active_generation()
+        with pytest.raises(UnsupportedPublicationLayoutError):
+            store.generation_for_run(run_id)
+        with psycopg.connect(empty_database) as connection:
+            requester = str(
+                connection.execute("SELECT id FROM users LIMIT 1").fetchone()[0]
+            )
+        with pytest.raises(UnsupportedPublicationLayoutError):
+            store.admit(requester, "z" * 64, "refresh:v1:{}", CONFIG)
+        assert _state(empty_database) == before
+    finally:
+        pool.close()
+    _assert_no_manifest_columns(empty_database)
 
 
-def test_downgrade_refuses_to_orphan_resource_history_but_restores_old_only(
-    resources, database
-):
-    from sqlalchemy.exc import DBAPIError
+def _assert_no_manifest_columns(dsn):
+    with psycopg.connect(dsn) as connection:
+        assert (
+            connection.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'published_generations' AND column_name IN ('manifest_key', 'manifest_digest')"
+            ).fetchall()
+            == []
+        )
 
+
+def test_remove_columns_preserves_resource_publication(empty_database):
+    migrate(empty_database, "upgrade", "0004_refresh_resource_files")
+    run_id, identity = _old_history(empty_database, resource=True)
+    before = _state(empty_database)
+    pool = BoundedPostgresqlPool(empty_database)
+    try:
+        store = PostgresqlResourcePublicationStore(pool)
+        generation = store.active_generation()
+        assert generation.id == identity
+        migrate(empty_database, "upgrade", "head")
+        assert _state(empty_database) == before
+        _assert_no_manifest_columns(empty_database)
+        assert store.active_generation() == generation
+        assert store.generation_for_run(run_id) == generation
+    finally:
+        pool.close()
+
+
+def test_removed_manifest_values_cannot_be_recreated_by_downgrade(resources, database):
     store, service, tokens, pool = resources
     run = service.admit(tokens[Role.ADMIN], "dg1" * 6, {})
     store.publish(store.claim("worker", 60), resource_candidate(run))
     before = _state(database)
-    with pytest.raises(DBAPIError, match="Cannot downgrade"):
-        migrate(database, "downgrade", "0003_refresh_timestamps")
+    with pytest.raises(RuntimeError, match="Cannot downgrade"):
+        migrate(database, "downgrade", "0004_refresh_resource_files")
     assert _state(database) == before
+    _assert_no_manifest_columns(database)
     with psycopg.connect(database) as connection:
         assert connection.execute(
             "SELECT version_num FROM alembic_version"
-        ).fetchone() == ("0004_refresh_resource_files",)
-
-
-def test_downgrade_with_only_old_rows_restores_manifest_requirements(empty_database):
-    migrate(empty_database, "upgrade", "head")
-    migrate(empty_database, "downgrade", "0003_refresh_timestamps")
-    with psycopg.connect(empty_database) as connection:
-        assert connection.execute(
-            "SELECT is_nullable FROM information_schema.columns WHERE table_name = 'published_generations' AND column_name = 'manifest_key'"
-        ).fetchone() == ("NO",)
-    migrate(empty_database, "upgrade", "head")
+        ).fetchone() == ("0005_remove_manifest_columns",)

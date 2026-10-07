@@ -242,8 +242,10 @@ entire inputs into DuckDB tables adds whole-input materialization.
 **Why and consequences.** Reduce object/transfer overhead while retaining faithful
 baseline merges and public schemas. Supporting candidate evidence is bounded and
 transient; selected recorded findings remain separate reproducible evidence.
-Estimated operation savings are not measured performance guarantees. A manifest-format
-active generation fails closed for resource readers; no automatic conversion,
+Estimated operation savings are not measured performance guarantees. Obsolete
+manifest publication columns and the previous adapter are removed by migration
+0005 under ADR-0064. An active generation without exact resource descriptors
+fails closed for resource readers; no automatic conversion,
 history rewrite or pointer reset is authorized. Shared composition and managed
 rollout remain subject to their implementation checkpoints.
 
@@ -251,7 +253,8 @@ rollout remain subject to their implementation checkpoints.
 [ADR-0032](docs/adr/0032-postgresql-on-rds.md),
 [ADR-0060](docs/adr/0060-persist-only-three-resource-files-per-generation.md),
 [ADR-0061](docs/adr/0061-generation-prefixed-resource-object-keys.md),
-[ADR-0062](docs/adr/0062-fail-closed-legacy-publication-layout.md).
+[ADR-0062](docs/adr/0062-fail-closed-legacy-publication-layout.md),
+[ADR-0064](docs/adr/0064-remove-obsolete-manifest-publication-columns.md).
 The [October 6 journal](docs/devlog/2026-10-06.md) records the three-file direction,
 phase checkpoints and explicit fail-closed selection for the old active layout.
 

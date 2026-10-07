@@ -138,11 +138,9 @@ These relationships are enforced by PostgreSQL foreign keys. `PK`, `FK`, and
 optional column; every other column is `NOT NULL`. Composite unique constraints
 are listed after the diagram rather than marking their members individually.
 
-`published_generations` is the current publication table. New publications store
-three exact resource descriptors in `datasets`; both manifest columns are NULL.
-The diagram includes those retained columns because they still exist in the
-schema to identify historical manifest-format rows, which current readers reject
-under [ADR-0062](../adr/0062-fail-closed-legacy-publication-layout.md).
+`published_generations` stores three exact resource descriptors in `datasets`.
+Migration 0005 removes the previous implementation's manifest columns under
+[ADR-0064](../adr/0064-remove-obsolete-manifest-publication-columns.md).
 
 ```mermaid
 erDiagram
@@ -197,8 +195,6 @@ erDiagram
         uuid id PK
         uuid run_id FK, UK
         uuid base_generation_id FK "nullable"
-        text manifest_key "nullable; NULL for current publications"
-        text manifest_digest "nullable; NULL for current publications"
         text verification_version "v1"
         timestamptz verified_at
         jsonb datasets "three exact resource descriptors for current publications"
@@ -269,13 +265,13 @@ observations. All fields below are required for this layout.
 | `sha256` | string | Lowercase 64-character hex content digest |
 | `byte_count` | number | Positive integer size |
 
-The database validates this descriptor array for resource-format rows under
-migration 0004. `manifest_key` and `manifest_digest` are both null in that layout.
-Historical manifest-format rows retain both values and their original dataset
-summaries; they are not backfilled. Resource readers fail closed on an active
-legacy layout under [ADR-0062](../adr/0062-fail-closed-legacy-publication-layout.md).
-The presence of legacy columns is not a requirement for new S3 manifests or
-permission to reset the active pointer. Quality summaries belong to
+The database validates this descriptor array for new publications under migration
+0005. The previous manifest columns have been removed. Historical rows keep their
+original dataset summaries and references; rows without exact resource descriptors
+remain unreadable under
+[ADR-0064](../adr/0064-remove-obsolete-manifest-publication-columns.md).
+The descriptor check is `NOT VALID` to preserve existing rows while enforcing
+valid descriptors on every new or updated row. Quality summaries belong to
 `refresh_runs.quality_json`; uploading resource files alone does not publish them.
 
 ## Duplicate, invalid and refresh behavior

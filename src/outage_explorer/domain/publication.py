@@ -85,7 +85,7 @@ class DatasetSummary:
     sha256: str | None = None
     byte_count: int | None = None
 
-    def validate(self, *, resource: bool = False) -> None:
+    def validate(self) -> None:
         if (
             not isinstance(self.grain, AnalyticalGrain)
             or type(self.rows) is not int
@@ -96,9 +96,6 @@ class DatasetSummary:
             or self.schema_version != "v1"
         ):
             raise ValueError("Invalid dataset summary")
-        descriptor = (self.object_key, self.sha256, self.byte_count)
-        if not resource and all(value is None for value in descriptor):
-            return
         if (
             not isinstance(self.object_key, str)
             or not self.object_key
@@ -116,42 +113,6 @@ class DatasetSummary:
             or self.byte_count <= 0
         ):
             raise ValueError("Invalid exact dataset resource descriptor")
-
-
-@dataclass(frozen=True)
-class PublishedGeneration:
-    id: str
-    run_id: str
-    base_generation_id: str | None
-    manifest_key: str
-    manifest_digest: str
-    verification_version: str
-    verified_at: datetime
-    datasets: tuple[DatasetSummary, ...]
-
-    def validate(self) -> None:
-        for item in self.datasets:
-            item.validate()
-            if any(
-                value is not None
-                for value in (item.object_key, item.sha256, item.byte_count)
-            ):
-                raise ValueError("Legacy publication cannot carry resource descriptors")
-        if (
-            {item.grain for item in self.datasets} != set(AnalyticalGrain)
-            or len(self.datasets) != 3
-            or any(
-                item.rows <= 0 or item.start > item.end or item.schema_version != "v1"
-                for item in self.datasets
-            )
-            or self.verification_version != "v1"
-            or len(self.manifest_digest) != 64
-            or any(char not in "0123456789abcdef" for char in self.manifest_digest)
-            or not self.manifest_key
-            or len(self.manifest_key) > 2048
-            or self.verified_at.tzinfo is None
-        ):
-            raise ValueError("Invalid verified generation")
 
 
 @dataclass(frozen=True)
@@ -193,7 +154,7 @@ class ResourcePublishedGeneration:
         ):
             raise ValueError("Invalid verified resource generation")
         for item in self.datasets:
-            item.validate(resource=True)
+            item.validate()
         filenames = {
             AnalyticalGrain.NATIONAL: "national",
             AnalyticalGrain.FACILITY: "facilities",

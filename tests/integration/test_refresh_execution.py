@@ -26,8 +26,8 @@ def system(database):
         PostgresqlResourcePublicationStore,
     )
 
-    for legacy_system in coordination.system.__wrapped__(database):
-        _, service, tokens, users, pool = legacy_system
+    for publication_system in coordination.system.__wrapped__(database):
+        _, service, tokens, users, pool = publication_system
         store = PostgresqlResourcePublicationStore(pool)
         refresh = RefreshService(
             service._access, store, lambda: coordination.CONFIG, service._security
@@ -450,14 +450,13 @@ def test_frozen_transfer_workers_exact_descriptors_and_joined_staging_cleanup(
     assert not any(thread.name.startswith("connector_") for thread in threads())
     with psycopg.connect(database) as connection:
         record = connection.execute(
-            "SELECT manifest_key, manifest_digest, datasets FROM published_generations WHERE id=%s",
+            "SELECT datasets FROM published_generations WHERE id=%s",
             (result.id,),
         ).fetchone()
         quality = connection.execute(
             "SELECT quality_json FROM refresh_runs WHERE id=%s", (result.id,)
         ).fetchone()[0]
-    assert record[:2] == (None, None)
-    assert {dataset["object_key"] for dataset in record[2]} == expected
+    assert {dataset["object_key"] for dataset in record[0]} == expected
     assert quality == json.loads(result.quality_json)
     for summary in quality["datasets"]:
         assert (

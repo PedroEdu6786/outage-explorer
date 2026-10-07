@@ -38,9 +38,9 @@ is wrong, propose a change here rather than silently deviating.
   current-generation cutover requires its named task gate. Accepted
   [ADR-0061](../adr/0061-generation-prefixed-resource-object-keys.md) fixes the
   three physical S3 keys under the generation prefix, distinct from local checksums.
-  [ADR-0062](../adr/0062-fail-closed-legacy-publication-layout.md) rejects, never
-  converts, a manifest-format active base; do not reset or backfill it without
-  explicit user direction.
+  [ADR-0064](../adr/0064-remove-obsolete-manifest-publication-columns.md) removes
+  obsolete manifest columns and rejects an active base without exact resource
+  descriptors; do not reset or backfill it without explicit user direction.
 - Never commit secrets; supply credentials through the environment. Connector
   resource limits use typed defaults with optional `--config PATH` JSON overrides,
   not `OUTAGE_CONNECTOR_*` variables ([ADR-0041](../adr/0041-connector-defaults-and-json-configuration.md)).

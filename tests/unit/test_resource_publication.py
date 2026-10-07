@@ -8,7 +8,6 @@ import pytest
 from outage_explorer.domain.access import AnalyticalGrain
 from outage_explorer.domain.publication import (
     DatasetSummary,
-    PublishedGeneration,
     ResourcePublishedGeneration,
 )
 
@@ -115,48 +114,16 @@ def test_one_distinct_descriptor_per_grain_required(generation):
         ).validate()
 
 
-def test_legacy_contract_remains_separate_and_resource_requires_descriptors(generation):
+def test_publication_requires_exact_descriptors(generation):
     summaries = tuple(
         replace(item, object_key=None, sha256=None, byte_count=None)
         for item in generation.datasets
     )
-    legacy = PublishedGeneration(
-        "legacy",
-        "run",
-        None,
-        "manifest",
-        "a" * 64,
-        "v1",
-        generation.verified_at,
-        summaries,
-    )
-    legacy.validate()
     with pytest.raises(ValueError):
         replace(generation, datasets=summaries).validate()
 
 
-def test_partial_descriptor_rejected_even_on_staged_legacy_contract(generation):
-    partial = DatasetSummary(
-        AnalyticalGrain.NATIONAL,
-        "v1",
-        1,
-        date(2026, 1, 1),
-        date(2026, 1, 1),
-        object_key="some/file",
-    )
+def test_partial_descriptor_rejected(generation):
+    partial = replace(generation.datasets[0], sha256=None)
     with pytest.raises(ValueError):
         partial.validate()
-
-
-def test_legacy_manifest_and_resource_descriptors_cannot_mix(generation):
-    with pytest.raises(ValueError):
-        PublishedGeneration(
-            "legacy",
-            "run",
-            None,
-            "manifest",
-            "a" * 64,
-            "v1",
-            generation.verified_at,
-            generation.datasets,
-        ).validate()

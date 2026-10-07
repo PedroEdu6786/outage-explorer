@@ -55,9 +55,10 @@ Physical keys follow [ADR-0061](../adr/0061-generation-prefixed-resource-object-
 Local immutable files use checksum identity instead. S3 conditional writes and
 full readback establish an exact durable receipt. The receipt is not publication:
 PostgreSQL stores exact descriptors and quality with the active-generation update.
-Legacy manifest-format publications fail closed under
-[ADR-0062](../adr/0062-fail-closed-legacy-publication-layout.md); code never silently
-converts them or clears publication history.
+Migration 0005 removes obsolete manifest columns and the old publication adapter
+under [ADR-0064](../adr/0064-remove-obsolete-manifest-publication-columns.md).
+Historical rows without exact resource descriptors fail closed; code never
+silently converts them or clears publication history.
 
 Pure policies collapse identical duplicates and choose the last valid source
 record for within-retrieval conflicts. Refresh preserves older valid rows after
