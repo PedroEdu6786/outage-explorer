@@ -1,0 +1,251 @@
+{
+  "scope": {
+    "start": "2007-01-01",
+    "end": "2025-12-31",
+    "observations": 6940
+  },
+  "monthly": [
+    {
+      "month": "Jan",
+      "observations": 589,
+      "mean_outage_gw": "3.95"
+    },
+    {
+      "month": "Feb",
+      "observations": 537,
+      "mean_outage_gw": "7.13"
+    },
+    {
+      "month": "Mar",
+      "observations": 589,
+      "mean_outage_gw": "14.55"
+    },
+    {
+      "month": "Apr",
+      "observations": 570,
+      "mean_outage_gw": "20.14"
+    },
+    {
+      "month": "May",
+      "observations": 589,
+      "mean_outage_gw": "14.22"
+    },
+    {
+      "month": "Jun",
+      "observations": 570,
+      "mean_outage_gw": "5.75"
+    },
+    {
+      "month": "Jul",
+      "observations": 589,
+      "mean_outage_gw": "3.21"
+    },
+    {
+      "month": "Aug",
+      "observations": 589,
+      "mean_outage_gw": "3.16"
+    },
+    {
+      "month": "Sep",
+      "observations": 570,
+      "mean_outage_gw": "7.68"
+    },
+    {
+      "month": "Oct",
+      "observations": 589,
+      "mean_outage_gw": "18.45"
+    },
+    {
+      "month": "Nov",
+      "observations": 570,
+      "mean_outage_gw": "13.94"
+    },
+    {
+      "month": "Dec",
+      "observations": 589,
+      "mean_outage_gw": "5.56"
+    }
+  ],
+  "annual_peaks": [
+    {
+      "period": "2007-04-10",
+      "outage_mw": "26209.114"
+    },
+    {
+      "period": "2008-04-12",
+      "outage_mw": "25664.942"
+    },
+    {
+      "period": "2009-11-08",
+      "outage_mw": "28307.74"
+    },
+    {
+      "period": "2010-04-05",
+      "outage_mw": "24987.949"
+    },
+    {
+      "period": "2011-05-02",
+      "outage_mw": "32640.445"
+    },
+    {
+      "period": "2012-10-30",
+      "outage_mw": "32719.784"
+    },
+    {
+      "period": "2013-04-18",
+      "outage_mw": "26391.765"
+    },
+    {
+      "period": "2014-04-16",
+      "outage_mw": "24963.999"
+    },
+    {
+      "period": "2015-11-08",
+      "outage_mw": "24447.127"
+    },
+    {
+      "period": "2016-10-09",
+      "outage_mw": "22838.67"
+    },
+    {
+      "period": "2017-04-29",
+      "outage_mw": "25213.046"
+    },
+    {
+      "period": "2018-10-28",
+      "outage_mw": "23771.343"
+    },
+    {
+      "period": "2019-10-19",
+      "outage_mw": "20984.09"
+    },
+    {
+      "period": "2020-10-19",
+      "outage_mw": "22269.15"
+    },
+    {
+      "period": "2021-10-26",
+      "outage_mw": "23465.431"
+    },
+    {
+      "period": "2022-04-11",
+      "outage_mw": "23158.43"
+    },
+    {
+      "period": "2023-10-25",
+      "outage_mw": "21352.019"
+    },
+    {
+      "period": "2024-10-28",
+      "outage_mw": "22139.766"
+    },
+    {
+      "period": "2025-10-23",
+      "outage_mw": "22764.39"
+    }
+  ],
+  "event_windows": {
+    "2011_tornado_outbreak": {
+      "observations": [
+        {
+          "period": "2011-04-27",
+          "capacity": "101162.8",
+          "outage": "28474.584",
+          "percentOutage": "28.15",
+          "capacity-units": "megawatts",
+          "outage-units": "megawatts",
+          "percentOutage-units": "percent"
+        },
+        {
+          "period": "2011-04-28",
+          "capacity": "101162.8",
+          "outage": "31093.354",
+          "percentOutage": "30.74",
+          "capacity-units": "megawatts",
+          "outage-units": "megawatts",
+          "percentOutage-units": "percent"
+        }
+      ],
+      "national_change_mw": "2618.770",
+      "interpretation": "National change; not an estimate of capacity lost because of this event"
+    },
+    "2012_hurricane_sandy": {
+      "observations": [
+        {
+          "period": "2012-10-29",
+          "capacity": "104153",
+          "outage": "27842.61",
+          "percentOutage": "26.73",
+          "capacity-units": "megawatts",
+          "outage-units": "megawatts",
+          "percentOutage-units": "percent"
+        },
+        {
+          "period": "2012-10-30",
+          "capacity": "104153",
+          "outage": "32719.784",
+          "percentOutage": "31.42",
+          "capacity-units": "megawatts",
+          "outage-units": "megawatts",
+          "percentOutage-units": "percent"
+        }
+      ],
+      "national_change_mw": "4877.174",
+      "interpretation": "National change; not an estimate of capacity lost because of this event"
+    },
+    "2018_hurricane_florence": {
+      "observations": [
+        {
+          "period": "2018-09-13",
+          "capacity": "99277.9",
+          "outage": "5943.128",
+          "percentOutage": "5.99",
+          "capacity-units": "megawatts",
+          "outage-units": "megawatts",
+          "percentOutage-units": "percent"
+        },
+        {
+          "period": "2018-09-17",
+          "capacity": "99277.9",
+          "outage": "14242.048",
+          "percentOutage": "14.35",
+          "capacity-units": "megawatts",
+          "outage-units": "megawatts",
+          "percentOutage-units": "percent"
+        }
+      ],
+      "national_change_mw": "8298.920",
+      "interpretation": "National change; not an estimate of capacity lost because of this event"
+    },
+    "2024_hurricane_helene": {
+      "observations": [
+        {
+          "period": "2024-09-26",
+          "capacity": "96819.9",
+          "outage": "10645.504",
+          "percentOutage": "11",
+          "capacity-units": "megawatts",
+          "outage-units": "megawatts",
+          "percentOutage-units": "percent"
+        },
+        {
+          "period": "2024-09-28",
+          "capacity": "96819.9",
+          "outage": "15074.768",
+          "percentOutage": "15.57",
+          "capacity-units": "megawatts",
+          "outage-units": "megawatts",
+          "percentOutage-units": "percent"
+        }
+      ],
+      "national_change_mw": "4429.264",
+      "interpretation": "National change; not an estimate of capacity lost because of this event"
+    }
+  },
+  "limitations": [
+    "Saved national observations; not the current published generation or an independent physical measurement.",
+    "Daily status includes partial reductions; not full-day averages, lost MWh or household blackouts.",
+    "Temporal association does not attribute the entire national change to an event.",
+    "No facility/generator reconciliation or quantitative cause decomposition is performed."
+  ]
+}

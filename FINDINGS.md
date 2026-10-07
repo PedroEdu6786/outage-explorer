@@ -19,6 +19,22 @@ Its [offline replay](docs/challenge/evidence/reconciliation_extensions.py)
 recomputes the saved source evidence; synthetic method tests remain separate
 from the three real anomalies.
 
+## Seasonal behavior and operating-event context
+
+[Point 004 — Seasonal outages and documented event associations](docs/challenge/004-seasonal-outages-and-events.md)
+analyzes 6,940 national daily observations over 2007–2025. Average offline
+capacity peaks in April (20.14 GW) and October (18.45 GW), consistent with
+documented refueling schedules. Concrete national changes coincide with the
+2011 tornado outbreak and hurricanes Sandy, Florence and Helene; official
+sources corroborate nuclear impacts without attributing each entire national
+change to the event. Heat limits and pandemic delays add supporting context.
+
+The [offline replay](docs/challenge/evidence/seasonal_outages.py) and
+[saved report](docs/challenge/evidence/seasonal-outages/report.json) reproduce
+the numbers from archived national pages. This is expected seasonality and
+event-associated operating behavior, not an established data defect or a new
+cross-grain reconciliation result. The three-anomaly count remains unchanged.
+
 ## Anomalies
 
 | Finding | Result | Status |

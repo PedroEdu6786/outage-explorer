@@ -1,0 +1,16 @@
+{
+  "kind": "sanitized-recorded-national-pages",
+  "archive_sha256": "f951e7ff7e24c1b7102a85de83b7e6a1a982780ccdd12f8143f650a93101a0e7",
+  "sources": {
+    "data/investigations/national-history-2007-2024/20261007T052259Z/national/page-000.json": "2753de01c86119b1815dd6c2bb049f5ee12fa1a01ed99b344bd81732cc8e83bc",
+    "data/investigations/national-history-2007-2024/20261007T052259Z/national/page-001.json": "3e29e988aadddabf9fec90f2d84a6121a0c3153037ee922bbde5cfa4b8eacfa6",
+    "data/investigations/national-history-2007-2024/20261007T052259Z/national/page-002.json": "edcd6bf40facf0ceadac20d8ebdba35c969437ebe9c0dd49b4fd44fb5776de3e",
+    "data/investigations/eia-2024-10-04_2026-10-03/20261004T191934Z/national/page-000.json": "666530a7808e9dcfdb1d3f24dffb6c94d91688729f703d8dce37a6d3a7972096",
+    "data/investigations/eia-2024-10-04_2026-10-03/20261004T191934Z/national/page-001.json": "24c15fd1e5dc1d362fb7d7caa95b60c290fd449a325f16843c20dbf10a0bbf0e"
+  },
+  "notes": [
+    "Source page hashes checked against original local retrieval manifests before packaging.",
+    "Exact sanitized page text, request parameters and retrieval timestamps preserved.",
+    "External event narratives are cited in point 004; this archive replays national values only."
+  ]
+}
