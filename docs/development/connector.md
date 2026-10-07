@@ -69,9 +69,13 @@ or durable receipt is not a published application generation.
 
 | Condition | Behavior |
 | --- | --- |
-| Invalid configuration or missing S3 target | Exit 2 before source work |
-| Bad EIA credentials, exhausted network retries or failed page | Fail the run; no publication |
+| Missing EIA key, invalid configuration or missing S3 target | Exit 2 before source work |
+| EIA rejects credentials (`401`/`403`) | Fail without retrying the rejected request; no publication |
+| Transient network failures, `429` or `5xx` | Retry with bounded backoff and `Retry-After` handling; fail when attempts, requests or retrieval deadline are exhausted |
+| Malformed responses or failed pages | Fail instead of accepting partial retrieval |
 | Invalid source rows | Exclude with visible reasons; preserve prior valid replacements where applicable |
+| No usable initial output in any grain | Fail initial loading; do not confirm a candidate |
+| All incoming rows excluded on a rerun | Retain the prior candidate and report `retained_all_excluded`; exit 0 |
 | Facility advertised-total discrepancy | Preserve diagnostic; do not use it alone to determine pagination completeness |
 | S3 failure or conflicting object | Nonzero exit; preserve local candidate for explicit persistence retry; no local-only fallback |
 | Interrupted execution | No publication; cooperative interruption exits 130 |

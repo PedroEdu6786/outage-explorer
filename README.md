@@ -100,6 +100,22 @@ Admin refresh runs in the background over a configured date interval. Publicatio
 requires complete verification of all three resource files; failed refreshes
 preserve the previous published data. Browsing stored data does not call EIA.
 
+### Connector failure behavior
+
+| Failure | Deliberate behavior |
+| --- | --- |
+| Missing API key or invalid configuration | Reject before source work; CLI exits 2. |
+| EIA rejects credentials (`401`/`403`) | Fail without retrying the rejected request; no completed candidate or publication. |
+| Transient network errors, `429` or `5xx` | Retry with bounded backoff and `Retry-After` handling, within attempt/request/deadline limits; fail when exhausted. |
+| Invalid observation values | Exclude rows with quality counts and reasons; retain prior valid rows for invalid replacements. Initial loading requires usable output in every grain; an all-excluded rerun retains the prior candidate. |
+| Malformed responses or failed pages | Fail the run instead of accepting partial retrieval. |
+| S3 persistence or verification failure | Report failure and preserve the local candidate for explicit retry; no automatic local-only fallback. |
+
+Runtime failures exit 1. Failures do not replace published data; the connector
+CLI itself never publishes. Logs omit credentials and raw upstream exceptions.
+See [connector operations](docs/development/connector.md#failure-behavior) for
+reporting, interruption and recovery details.
+
 The daily fleet metric is `100 × national outage MW / national capacity MW`.
 It includes full outages and partial output reductions; it does not establish
 outage cause or lost energy. See the [model and ER diagrams](docs/context/data-model.md).
