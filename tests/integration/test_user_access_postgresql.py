@@ -272,6 +272,115 @@ def test_attempt_consumption_is_atomic_under_concurrency(store):
     assert results.count(None) == 3
 
 
+@pytest.mark.parametrize("elapsed", [timedelta(0), timedelta(microseconds=1)])
+def test_admission_reclaims_expired_attempt_at_boundary_without_manual_cleanup(
+    database, elapsed
+):
+    pool = BoundedPostgresqlPool(database)
+    try:
+        store = PostgresqlAccessStore(pool, attempt_limit=1)
+        expired = attempt()
+        store.create_attempt(expired, NOW)
+        with pytest.raises(LoginAttemptLimitError):
+            store.create_attempt(
+                attempt("c"), expired.expires_at - timedelta(microseconds=1)
+            )
+        now = expired.expires_at + elapsed
+        fresh = attempt("c", now)
+        store.create_attempt(fresh, now)
+        assert store.cleanup(now) == (0, 0)
+        assert store.consume_attempt(expired.state_digest, "b" * 64, now) is None
+        assert store.consume_attempt(fresh.state_digest, "x" * 64, now) is None
+        assert store.consume_attempt(fresh.state_digest, "b" * 64, now) == fresh
+        assert store.consume_attempt(fresh.state_digest, "b" * 64, now) is None
+    finally:
+        pool.close()
+
+
+def test_admission_preserves_active_attempts_and_session_expiry(database):
+    pool = BoundedPostgresqlPool(database)
+    try:
+        store = PostgresqlAccessStore(pool, attempt_limit=2)
+        SeedUsers(store).execute(PERSONAS)
+        user = store.find_user(
+            PERSONAS[0].identity_issuer, PERSONAS[0].identity_subject
+        )
+        assert user is not None
+        session_expiry = NOW + timedelta(hours=1)
+        store.create_session("f" * 64, user.id, NOW, session_expiry)
+        expired = attempt()
+        active = attempt("c", NOW + timedelta(minutes=5))
+        store.create_attempt(expired, NOW)
+        store.create_attempt(active, active.created_at)
+        fresh = attempt("d", expired.expires_at)
+        store.create_attempt(fresh, fresh.created_at)
+        with pytest.raises(LoginAttemptLimitError):
+            store.create_attempt(attempt("e", fresh.created_at), fresh.created_at)
+        assert (
+            store.consume_attempt(active.state_digest, "b" * 64, fresh.created_at)
+            == active
+        )
+        assert (
+            store.consume_attempt(fresh.state_digest, "b" * 64, fresh.created_at)
+            == fresh
+        )
+        session = store.resolve_session("f" * 64, fresh.created_at)
+        assert session is not None and session.expires_at == session_expiry
+    finally:
+        pool.close()
+
+
+def test_expired_reclamation_and_insert_rollback_together(database):
+    pool = BoundedPostgresqlPool(database)
+    try:
+        store = PostgresqlAccessStore(pool, attempt_limit=2)
+        expired = attempt()
+        active = attempt("c", NOW + timedelta(minutes=5))
+        store.create_attempt(expired, NOW)
+        store.create_attempt(active, active.created_at)
+        now = expired.expires_at
+        with pytest.raises(AccessStoreError):
+            store.create_attempt(active, now)  # duplicate state fails after cleanup
+        with pool.connection() as connection:
+            row = connection.execute(
+                "SELECT count(*) AS total FROM login_attempts"
+            ).fetchone()
+            assert row is not None and row["total"] == 2
+        fresh = attempt("d", now)
+        store.create_attempt(fresh, now)
+        assert store.consume_attempt(active.state_digest, "b" * 64, now) == active
+        assert store.consume_attempt(fresh.state_digest, "b" * 64, now) == fresh
+    finally:
+        pool.close()
+
+
+def test_concurrent_admissions_after_expiry_still_obey_capacity(database):
+    pool = BoundedPostgresqlPool(database)
+    try:
+        store = PostgresqlAccessStore(pool, attempt_limit=1)
+        expired = attempt()
+        store.create_attempt(expired, NOW)
+
+        def create(state):
+            try:
+                store.create_attempt(
+                    attempt(state, expired.expires_at), expired.expires_at
+                )
+                return True
+            except LoginAttemptLimitError:
+                return False
+
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            assert sum(executor.map(create, "cdef")) == 1
+        assert store.cleanup(expired.expires_at) == (0, 0)
+        assert (
+            store.consume_attempt(expired.state_digest, "b" * 64, expired.expires_at)
+            is None
+        )
+    finally:
+        pool.close()
+
+
 def test_admission_is_serialized_under_concurrency(database):
     pool = BoundedPostgresqlPool(database)
     try:

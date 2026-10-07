@@ -121,6 +121,11 @@ and run these commands; they make database changes:
 
 Migrations serialize with a PostgreSQL advisory transaction lock and rollback DDL
 and revision state together. Manifest validation precedes database/signing work.
+Login-attempt admission automatically deletes attempts with `expires_at <= now`
+before checking capacity, under the same advisory lock and transaction as the
+insert. Active attempts retain their original expiry and single-use browser
+binding. The explicit `cleanup` command remains available for expired attempts
+and sessions during idle periods; login admission does not clean or renew sessions.
 A trusted reviewed JSON array contains only `identity_issuer`, `identity_subject`,
 `email`, and one `role` (`viewer`, `analyst`, `admin`) per record. Example synthetic
 record: `{"identity_issuer":"https://trusted.test/pool","identity_subject":"viewer-subject","email":"viewer@example.test","role":"viewer"}`.

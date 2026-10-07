@@ -147,15 +147,19 @@ class PostgresqlAccessStore:
 
     def create_attempt(self, attempt: LoginAttempt, now: datetime) -> None:
         _aware(now, attempt.created_at, attempt.expires_at)
+        if attempt.expires_at <= now or attempt.created_at > now:
+            raise AccessConfigurationError("Invalid login attempt interval")
         with self._pool.connection() as connection:
             connection.execute("SELECT pg_advisory_xact_lock(%s)", (_ADMISSION_LOCK,))
+            # Reclaim expired capacity in the same transaction as admission.
+            connection.execute(
+                "DELETE FROM login_attempts WHERE expires_at<=%s", (now,)
+            )
             count = connection.execute(
                 "SELECT count(*) AS total FROM login_attempts"
             ).fetchone()
             if count is not None and count["total"] >= self._attempt_limit:
                 raise LoginAttemptLimitError("Login attempt capacity reached")
-            if attempt.expires_at <= now or attempt.created_at > now:
-                raise AccessConfigurationError("Invalid login attempt interval")
             connection.execute(
                 "INSERT INTO login_attempts(state_digest,browser_binding_digest,pkce_verifier,callback_uri,return_path,created_at,expires_at) VALUES (%s,%s,%s,%s,%s,%s,%s)",
                 (
