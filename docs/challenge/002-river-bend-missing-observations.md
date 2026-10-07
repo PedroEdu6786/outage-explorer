@@ -113,14 +113,3 @@ network, database, S3, SQL-worker, refresh or publication operation.
 Verification: replay and byte-identical report comparison, Ruff lint/format and
 documentation links passed. Product code was unchanged; product tests and runtime
 checks were not run.
-
-## Third finding remains open
-
-A national scan covered **6,486 dates**, January 1, 2007–October 3, 2024, without
-missing dates or nonpositive capacity/out-of-range values. The four targeted
-all-grain samples above added no separate numeric or aggregation discrepancy.
-Checked partial-output plateaus agree with NRC; July 24, 2013 notes explain
-Fermi's feedpump issues and Prairie Island 2's generator vibration issue.
-Ordinary rounding, seasonal capacity changes and legitimate commissioning are
-not counted as defects. We have **two independent documented findings**, with
-one further anomaly still to establish.
