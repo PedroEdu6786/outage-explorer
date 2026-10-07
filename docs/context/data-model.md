@@ -138,6 +138,12 @@ These relationships are enforced by PostgreSQL foreign keys. `PK`, `FK`, and
 optional column; every other column is `NOT NULL`. Composite unique constraints
 are listed after the diagram rather than marking their members individually.
 
+`published_generations` is the current publication table. New publications store
+three exact resource descriptors in `datasets`; both manifest columns are NULL.
+The diagram includes those retained columns because they still exist in the
+schema to identify historical manifest-format rows, which current readers reject
+under [ADR-0062](../adr/0062-fail-closed-legacy-publication-layout.md).
+
 ```mermaid
 erDiagram
     roles {
@@ -191,11 +197,11 @@ erDiagram
         uuid id PK
         uuid run_id FK, UK
         uuid base_generation_id FK "nullable"
-        text manifest_key "nullable; legacy layout"
-        text manifest_digest "nullable; legacy layout"
+        text manifest_key "nullable; NULL for current publications"
+        text manifest_digest "nullable; NULL for current publications"
         text verification_version "v1"
         timestamptz verified_at
-        jsonb datasets "exactly three entries"
+        jsonb datasets "three exact resource descriptors for current publications"
     }
     refresh_coordination {
         boolean singleton PK "true; one row"
