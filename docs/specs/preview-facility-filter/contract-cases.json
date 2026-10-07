@@ -1,0 +1,226 @@
+{
+  "status": "proposed; runtime filtering not implemented",
+  "assumptions": "Authorized Analyst/Admin; synthetic matching observations except unmatched_identifier; valid owned cursor where supplied. These are planned examples, not HTTP evidence.",
+  "cases": [
+    {
+      "name": "facility_only",
+      "dataset": "facilities",
+      "query_parameters": [
+        [
+          "facility",
+          "00123"
+        ]
+      ],
+      "facility_identifier_valid": true,
+      "planned_outcome": "preview"
+    },
+    {
+      "name": "generator_combined_dates",
+      "dataset": "generators",
+      "query_parameters": [
+        [
+          "facility",
+          "A01"
+        ],
+        [
+          "start_date",
+          "2026-04-02"
+        ],
+        [
+          "end_date",
+          "2026-04-03"
+        ]
+      ],
+      "facility_identifier_valid": true,
+      "planned_outcome": "preview"
+    },
+    {
+      "name": "unmatched_identifier",
+      "dataset": "generators",
+      "query_parameters": [
+        [
+          "facility",
+          "unknown-id"
+        ]
+      ],
+      "facility_identifier_valid": true,
+      "planned_outcome": "empty_preview"
+    },
+    {
+      "name": "quotes_are_data",
+      "dataset": "facilities",
+      "query_parameters": [
+        [
+          "facility",
+          "x' OR 1=1 --"
+        ]
+      ],
+      "facility_identifier_valid": true,
+      "planned_outcome": "preview"
+    },
+    {
+      "name": "omitted_facility",
+      "dataset": "facilities",
+      "query_parameters": [
+        [
+          "start_date",
+          "2026-04-02"
+        ]
+      ],
+      "facility_identifier_valid": null,
+      "planned_outcome": "preview"
+    },
+    {
+      "name": "cursor_only",
+      "dataset": "generators",
+      "query_parameters": [
+        [
+          "cursor",
+          "owned-cursor"
+        ]
+      ],
+      "facility_identifier_valid": null,
+      "planned_outcome": "preview"
+    },
+    {
+      "name": "national_rejected",
+      "dataset": "national",
+      "query_parameters": [
+        [
+          "facility",
+          "00123"
+        ]
+      ],
+      "facility_identifier_valid": true,
+      "planned_outcome": "invalid_request"
+    },
+    {
+      "name": "duplicate_rejected",
+      "dataset": "facilities",
+      "query_parameters": [
+        [
+          "facility",
+          "00123"
+        ],
+        [
+          "facility",
+          "00123"
+        ]
+      ],
+      "facility_identifier_valid": true,
+      "planned_outcome": "invalid_request"
+    },
+    {
+      "name": "cursor_with_filter_rejected",
+      "dataset": "generators",
+      "query_parameters": [
+        [
+          "cursor",
+          "owned-cursor"
+        ],
+        [
+          "facility",
+          "00123"
+        ]
+      ],
+      "facility_identifier_valid": true,
+      "planned_outcome": "invalid_request"
+    },
+    {
+      "name": "empty_rejected",
+      "dataset": "facilities",
+      "query_parameters": [
+        [
+          "facility",
+          ""
+        ]
+      ],
+      "facility_identifier_valid": false,
+      "planned_outcome": "invalid_request"
+    },
+    {
+      "name": "whitespace_rejected",
+      "dataset": "generators",
+      "query_parameters": [
+        [
+          "facility",
+          " A01"
+        ]
+      ],
+      "facility_identifier_valid": false,
+      "planned_outcome": "invalid_request"
+    },
+    {
+      "name": "control_rejected",
+      "dataset": "facilities",
+      "query_parameters": [
+        [
+          "facility",
+          "A\u0085B"
+        ]
+      ],
+      "facility_identifier_valid": false,
+      "planned_outcome": "invalid_request"
+    },
+    {
+      "name": "surrogate_rejected",
+      "dataset": "generators",
+      "query_parameters": [
+        [
+          "facility",
+          "\ud800"
+        ]
+      ],
+      "facility_identifier_valid": false,
+      "planned_outcome": "invalid_request"
+    },
+    {
+      "name": "ascii_bound",
+      "dataset": "facilities",
+      "query_parameters": [
+        [
+          "facility",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        ]
+      ],
+      "facility_identifier_valid": true,
+      "planned_outcome": "preview"
+    },
+    {
+      "name": "ascii_over_bound",
+      "dataset": "facilities",
+      "query_parameters": [
+        [
+          "facility",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        ]
+      ],
+      "facility_identifier_valid": false,
+      "planned_outcome": "invalid_request"
+    },
+    {
+      "name": "multibyte_bound",
+      "dataset": "generators",
+      "query_parameters": [
+        [
+          "facility",
+          "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9"
+        ]
+      ],
+      "facility_identifier_valid": true,
+      "planned_outcome": "preview"
+    },
+    {
+      "name": "multibyte_over_bound",
+      "dataset": "generators",
+      "query_parameters": [
+        [
+          "facility",
+          "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9"
+        ]
+      ],
+      "facility_identifier_valid": false,
+      "planned_outcome": "invalid_request"
+    }
+  ]
+}
