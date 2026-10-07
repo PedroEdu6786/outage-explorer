@@ -33,3 +33,10 @@ runtime preparation/source installation/build, candidate creation, actual-host
 checks, report inspection, explicit named review, private API configuration and
 port forwarding. Require Apple Silicon macOS. Keep review and startup separate;
 no setup target may silently approve evidence or start the API/refresh worker.
+
+## Shorter host preparation
+
+Do not prescribe a checkout directory. Select the installed Homebrew Python 3.12
+without asking users to change PATH. `make setup` creates private local files,
+preserving an existing `.env`. Provide a named Make command for the RDS TLS CA
+bundle and explain that it verifies server identity, not AWS login.

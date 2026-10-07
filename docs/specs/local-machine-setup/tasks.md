@@ -22,3 +22,8 @@ Alternative guide routes and the native launcher option have been removed.
 - [x] Enforce Apple Silicon/macOS and dedicated Colima transport; retain failure
   stops, committed source export, private settings and separate startup/review.
 - [x] Verify orchestration with controlled tests and Make dry runs; shorten guide.
+
+- [x] Remove prescribed checkout folder and manual Python PATH export; select
+  installed Python in Make while preserving explicit overrides.
+- [x] Prepare ignored private settings during make setup without replacing .env.
+- [x] Add local-ca with safe replacement and document public RDS TLS trust purpose.

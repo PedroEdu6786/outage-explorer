@@ -6,6 +6,7 @@ import os
 import platform
 import shlex
 import subprocess
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -60,9 +61,32 @@ def execute(action, reviewer):
             ]
         )
         print(
-            "Follow brew's nvm shell initialization instructions. For Python, add to your shell config:\n"
-            'export PATH="$(brew --prefix python@3.12)/libexec/bin:$PATH"'
+            "Follow brew's nvm shell initialization instructions. Make selects installed Python automatically."
         )
+    elif action == "ca":
+        descriptor, temporary = tempfile.mkstemp(prefix="rds-ca-", dir=STATE)
+        os.close(descriptor)
+        try:
+            run(
+                [
+                    "curl",
+                    "--fail",
+                    "--location",
+                    "--proto",
+                    "=https",
+                    "--proto-redir",
+                    "=https",
+                    "https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem",
+                    "--output",
+                    temporary,
+                ]
+            )
+            if b"-----BEGIN CERTIFICATE-----" not in Path(temporary).read_bytes():
+                raise ValueError("RDS CA download did not contain certificates")
+            os.replace(temporary, STATE / "rds-ca.pem")
+        finally:
+            Path(temporary).unlink(missing_ok=True)
+        print(f"RDS TLS trust bundle: {STATE / 'rds-ca.pem'}")
     elif action == "runtime":
         # Refuse stale exports before creating or changing the guest.
         run(["git", "diff", "--exit-code", "--quiet", "HEAD", "--", *SOURCE])
@@ -147,6 +171,7 @@ def main(argv=None):
         "action",
         choices=[
             "dependencies",
+            "ca",
             "runtime",
             "candidate",
             "validate",
@@ -166,7 +191,7 @@ def main(argv=None):
         parser.error('Read make local-reports first, then supply REVIEWER="Your name"')
     try:
         execute(args.action, args.reviewer.strip())
-    except (OSError, subprocess.CalledProcessError):
+    except (OSError, ValueError, subprocess.CalledProcessError):
         parser.exit(
             1, "Setup step failed; resolve the reported step before continuing.\n"
         )

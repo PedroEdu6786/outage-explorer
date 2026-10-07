@@ -13,7 +13,8 @@ Stop on a failure and resolve it before continuing.
 | --- | --- |
 | `make local-help` | Prints the setup sequence. |
 | `make local-dependencies` | Installs development tools on macOS through Homebrew. |
-| `make setup` | Installs backend Python dependencies into the host `.venv`. |
+| `make setup` | Installs backend dependencies and prepares private local settings. |
+| `make local-ca` | Downloads public RDS CA certificates for database TLS verification. |
 | `make local-runtime` | Creates/prepares the Colima VM, installs committed source and builds the query-worker image. |
 | `make local-candidate` | Records the installed worker/parser and Linux runtime identities. |
 | `make local-validate` | Runs tests inside the VM and saves containment evidence. |
@@ -40,22 +41,40 @@ macOS. The command needs network access to download packages.
 CLI, AWS CLI and nvm. These tools are installed on your Mac. Colima supplies the
 Linux Docker daemon later; the host Docker package supplies the CLI.
 
-**After:** Follow the printed Python PATH and Homebrew nvm shell initialization
-instructions. Open a new terminal before continuing. This command does not
+**After:** Follow Homebrew’s nvm shell initialization instructions. Make selects
+the installed Python automatically; no Python PATH export is needed. This command does not
 install the web project's Node version, configure AWS login or create the VM.
 It delegates repeat installation behavior to Homebrew.
 
 ## `make setup`
 
-**Before:** Python 3.12+ must be on PATH.
+**Before:** Install host dependencies. Make prefers the available `python3.12`
+executable, otherwise `python3`; the selected interpreter must be 3.12+.
+An explicit `PYTHON=...` override remains available.
 
 **Does:** Creates the host `.venv` if missing, installs `requirements-dev.txt`,
 installs the backend as an editable package and checks dependency compatibility.
-Rerunning it updates the existing environment to the repository requirements.
+It also creates `.local-runtime` with mode 0700 and copies `.env.example` to a
+mode-0600 `.env` only if it is missing. Existing `.env` contents are preserved.
+Rerunning it updates dependencies and restores private local-file permissions.
 
 **After:** Host backend/operator commands can use `.venv/bin/python`.
 This installs dependencies on macOS; VM dependency installation is separate.
 It does not start the API or connect to application services.
+
+## `make local-ca`
+
+**Before:** Install host tools. No AWS login is required.
+
+**Does:** Downloads Amazon RDS’s public global CA bundle over HTTPS into
+`.local-runtime/rds-ca.pem`. It checks that the download contains a certificate
+before replacing the previous bundle; failed downloads preserve the old file.
+
+**After:** Prints the absolute path to use in the database CA setting. This lets
+`sslmode=verify-full` verify the RDS server’s certificate and hostname. It is
+public trust material, not a password, IAM token or AWS login. Skip this command
+if your environment owner already supplied the correct CA file. It starts no
+services. Rerunning it downloads the current bundle again.
 
 ## `make local-runtime`
 

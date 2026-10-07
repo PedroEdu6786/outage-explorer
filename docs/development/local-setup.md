@@ -34,14 +34,15 @@ must be restored after reboot as documented there.
 
 ### Application configuration
 
-From the backend checkout, install dependencies and create `.env` only if it
-does not already exist:
+From the backend checkout, install dependencies and prepare local settings:
 
 ```sh
 cd outage-explorer
 make setup
-test -f .env || cp .env.example .env
 ```
+
+`make setup` creates private `.local-runtime` and `.env` files, preserving an
+existing `.env`. Use `make local-ca` if you need the RDS certificate trust bundle.
 
 Populate `.env` with the intended environment's values. The
 [user-access setup runbook](../../docs/specs/user-access/setup.md) documents database

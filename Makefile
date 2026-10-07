@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-PYTHON ?= python3
+PYTHON ?= $(shell command -v python3.12 2>/dev/null || command -v python3)
 HOST ?= 127.0.0.1
 PORT ?= 8000
 VENV_PYTHON := .venv/bin/python
@@ -43,7 +43,7 @@ help:
 	  'Overrides: make run PORT=8080; make setup PYTHON=python3.14'
 
 # Manual local setup, always using the dedicated Colima outage-runtime guest.
-LOCAL_STEPS := dependencies runtime candidate validate reports configure forward
+LOCAL_STEPS := dependencies ca runtime candidate validate reports configure forward
 .PHONY: local-help local-review $(addprefix local-,$(LOCAL_STEPS))
 local-help:
 	@printf '%s\n' \
@@ -54,6 +54,7 @@ local-help:
 	  '5. make local-validate           Run actual-guest containment checks' \
 	  '6. make local-reports            Inspect the check reports' \
 	  '7. make local-review REVIEWER="Your name"  Explicitly accept local containment' \
+	  'Run make local-ca before configuration when you need the RDS trust bundle.' \
 	  '8. make local-configure          Install reviewed API settings from .env' \
 	  '9. make run-analytical           Start API (separate terminal)' \
 	  '10. make local-forward           Forward API port (separate terminal)' \
@@ -75,6 +76,7 @@ $(VENV_PYTHON):
 	$(PYTHON) -m venv .venv
 
 setup: $(VENV_PYTHON)
+	$(VENV_PYTHON) scripts/prepare_local_files.py
 	$(VENV_PYTHON) -m pip install -r requirements-dev.txt
 	$(VENV_PYTHON) -m pip install --no-deps --no-build-isolation -e .
 	$(VENV_PYTHON) -m pip check

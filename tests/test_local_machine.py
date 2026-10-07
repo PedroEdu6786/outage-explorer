@@ -102,3 +102,50 @@ def test_reviewer_is_quoted_as_one_remote_argument(calls):
     args = shlex.split(command)
     assert args[args.index("--reviewer") + 1] == name
     assert args[-1] == "--accept-local-containment"
+
+
+def test_setup_prepares_private_files_and_preserves_existing_settings(tmp_path):
+    spec = importlib.util.spec_from_file_location(
+        "prepare_local_files",
+        Path(__file__).parents[1] / "scripts/prepare_local_files.py",
+    )
+    prepare = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(prepare)
+    (tmp_path / ".env.example").write_text("EXAMPLE=value\n")
+    prepare.prepare(tmp_path)
+    assert (tmp_path / ".env").read_text() == "EXAMPLE=value\n"
+    assert (tmp_path / ".env").stat().st_mode & 0o777 == 0o600
+    assert (tmp_path / ".local-runtime").stat().st_mode & 0o777 == 0o700
+    (tmp_path / ".env").write_text("EXISTING=preserved\n")
+    prepare.prepare(tmp_path)
+    assert (tmp_path / ".env").read_text() == "EXISTING=preserved\n"
+
+
+def test_ca_download_replaces_bundle_only_after_success(calls, monkeypatch):
+    def download(arguments, **kwargs):
+        assert arguments[:3] == ["curl", "--fail", "--location"]
+        Path(arguments[-1]).write_bytes(b"-----BEGIN CERTIFICATE-----\ncontrolled")
+
+    monkeypatch.setattr(local, "run", download)
+    local.execute("ca", "")
+    assert (local.STATE / "rds-ca.pem").read_bytes().endswith(b"controlled")
+    assert (local.STATE / "rds-ca.pem").stat().st_mode & 0o777 == 0o600
+    assert list(local.STATE.glob("rds-ca-*")) == []
+
+
+@pytest.mark.parametrize("failure", ["download", "invalid"])
+def test_ca_download_failure_preserves_previous_bundle(calls, monkeypatch, failure):
+    local.STATE.mkdir()
+    previous = local.STATE / "rds-ca.pem"
+    previous.write_bytes(b"existing trusted bundle")
+
+    def download(arguments, **kwargs):
+        if failure == "download":
+            raise subprocess.CalledProcessError(1, arguments)
+        Path(arguments[-1]).write_bytes(b"not a certificate")
+
+    monkeypatch.setattr(local, "run", download)
+    with pytest.raises((subprocess.CalledProcessError, ValueError)):
+        local.execute("ca", "")
+    assert previous.read_bytes() == b"existing trusted bundle"
+    assert list(local.STATE.glob("rds-ca-*")) == []

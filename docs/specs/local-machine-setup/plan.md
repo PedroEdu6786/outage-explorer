@@ -15,3 +15,8 @@
 Make-driven follow-up: a standard-library host orchestrator sequences existing
 helpers and sends bounded controller commands through stdin. Expose each stage
 with Make; preserve fresh-resource guards and explicit report/review/run steps.
+
+Host simplification: Make discovers python3.12 (falling back to python3); a small
+standard-library setup helper creates private ignored files without replacing
+existing settings. local-ca uses HTTPS and a temporary file before replacing the
+public RDS trust bundle. Keep AWS login/resource configuration explicit.

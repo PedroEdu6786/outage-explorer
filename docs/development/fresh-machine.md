@@ -16,7 +16,7 @@ After cloning and installing Homebrew, run from the backend checkout:
 
 ```sh
 make local-dependencies
-# Open a new terminal after the printed Python/nvm shell setup instructions.
+# Follow Homebrew’s nvm shell setup instructions.
 make setup
 make local-runtime
 make local-candidate
@@ -75,11 +75,9 @@ needed for refresh, not for browsing existing published data.
 ## 3. Install the dependencies
 
 On Apple Silicon macOS, install [Homebrew](https://brew.sh/) if needed. Clone
-both repositories and enter the backend checkout:
+both repositories into a directory of your choice and enter the backend checkout:
 
 ```sh
-mkdir -p ~/Projects
-cd ~/Projects
 git clone https://github.com/PedroEdu6786/outage-explorer.git
 git clone https://github.com/PedroEdu6786/outage-explorer-web.git
 cd outage-explorer
@@ -89,10 +87,9 @@ Then install the host dependencies:
 
 ```sh
 make local-dependencies
-export PATH="$(brew --prefix python@3.12)/libexec/bin:$PATH"
 ```
 
-Keep that Python directory on your shell's PATH for future terminals. Colima
+Make selects the installed Python automatically; no PATH export is required. Colima
 provides the Linux VM and Docker daemon; the Docker package provides its host
 CLI. See [Colima's installation instructions](https://colima.run/docs/installation/).
 The guest's Python/system dependencies are installed by the repository helper
@@ -101,22 +98,21 @@ in step 6. Docker Desktop is not part of this setup.
 The target also installs AWS CLI and nvm. Follow Homebrew’s printed nvm shell
 initialization instructions, then open a new terminal. The web repository’s
 pinned Node version is installed in step 10.
-Verify `git --version`, `make --version`, `python3 --version`, `aws --version`,
-`colima version` and `docker --version`. Python must be 3.12 or later.
+Verify `git --version`, `make --version`, `aws --version`, `colima version` and
+`docker --version`. `make setup` selects and checks Python 3.12 or later.
 The daemon is created in step 6.
 
 ## 4. Install backend dependencies and configure AWS login
 
-Run on macOS:
+From the backend checkout:
 
 ```sh
-cd ~/Projects/outage-explorer
 make setup
-mkdir -p .local-runtime
-chmod 700 .local-runtime
-test -f .env || cp .env.example .env
-chmod 600 .env
 ```
+
+This installs Python dependencies, creates the private `.local-runtime` directory
+and copies `.env.example` to `.env` only when `.env` is missing. Existing settings
+are preserved. File permissions are set automatically.
 
 Use your organization's AWS login method for a named profile. For IAM Identity
 Center, [configure SSO](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sso.html)
@@ -134,11 +130,18 @@ do not run that command to print secrets. The identity check above is read-only.
 
 ## 5. Fill in backend settings
 
-Download the RDS CA bundle to this checkout:
+Prepare the RDS certificate trust bundle:
 
 ```sh
-curl --fail --location https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem --output .local-runtime/rds-ca.pem
+make local-ca
 ```
+
+This downloads Amazon RDS’s public CA certificates to `.local-runtime/rds-ca.pem`
+and prints its absolute path. The database connection uses them to verify that
+it is talking to the intended RDS server over TLS (`sslmode=verify-full`). The
+bundle is public and contains no credentials; it does not log you in to AWS.
+If your environment owner already supplied the correct CA bundle, use that file
+instead and skip this command. Put the printed path in the setting below.
 
 Edit `.env`, preserving secrets privately. For IAM mode, **remove the entire
 `OUTAGE_ACCESS_DATABASE_DSN=` line**, even if empty. Set these values with your
@@ -278,10 +281,10 @@ These check reachability and documentation, not login or analytical acceptance.
 
 ## 10. Configure and start the web client
 
-In another macOS terminal:
+From the backend checkout in another macOS terminal:
 
 ```sh
-cd ~/Projects/outage-explorer-web
+cd ../outage-explorer-web
 nvm install
 nvm use
 npm install --global npm@11.16.0
