@@ -42,7 +42,9 @@ See [project context](docs/context/overview.md) and
 [ADR-0039](docs/adr/0039-separate-ui-client-atomic-design.md).
 
 Use the [challenge discussion index](docs/challenge/README.md) to review criteria
-and individual evidence-based investigations. [FINDINGS.md](FINDINGS.md) tracks
+and individual evidence-based investigations. [DECISIONS.md](DECISIONS.md)
+consolidates the challenge decisions, alternatives and rationale from ADRs and
+devlogs. [FINDINGS.md](FINDINGS.md) tracks
 reconciliation and anomaly findings, starting with the facility row-count gap.
 
 The accepted [layered Flask monolith structure](docs/context/code-structure.md)
