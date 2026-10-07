@@ -108,7 +108,10 @@ class WorkerTransport:
             payload: dict[str, object]
             if isinstance(request, PreviewRead):
                 if (
-                    request.dataset not in PUBLIC_DATASETS
+                    # Protocol v1 cannot carry facility selection. Fail closed
+                    # until the paired worker protocol implements it.
+                    request.facility is not None
+                    or request.dataset not in PUBLIC_DATASETS
                     or type(request.size) is not int
                     or not 1 <= request.size <= 500
                 ):

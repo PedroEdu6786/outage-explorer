@@ -33,6 +33,7 @@ class PreviewRead:
     end: date | None
     after: tuple[str, ...] | None
     size: int
+    facility: str | None = None
 
 
 @dataclass(frozen=True)

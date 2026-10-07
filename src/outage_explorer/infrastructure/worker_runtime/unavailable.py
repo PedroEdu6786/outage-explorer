@@ -51,6 +51,8 @@ class UnavailableSequences:
         end: date | None,
         size: int,
         inputs: PinnedInputs,
+        *,
+        facility: str | None = None,
     ) -> PreviewSequence:
         raise RuntimeUnavailableError("Analytical resources unavailable")
 

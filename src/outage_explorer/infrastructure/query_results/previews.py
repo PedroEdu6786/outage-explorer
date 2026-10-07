@@ -62,6 +62,8 @@ class BoundedPreviewSequences:
         end: date | None,
         size: int,
         inputs: PinnedInputs,
+        *,
+        facility: str | None = None,
     ) -> PreviewSequence:
         with self._lock:
             self.cleanup()
@@ -73,6 +75,7 @@ class BoundedPreviewSequences:
                     ).encode()
                 )
                 + 256
+                + (0 if facility is None else len(facility.encode("utf-8")))
             )
             if (
                 len(self._states) >= self._bounds.global_count
@@ -91,6 +94,7 @@ class BoundedPreviewSequences:
                 size,
                 self._clock.now() + timedelta(seconds=LIFETIME_SECONDS),
                 inputs,
+                facility,
             )
             self._states[sequence.id] = _State(sequence, charge)
             self._bytes += charge

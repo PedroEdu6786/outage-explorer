@@ -1,5 +1,5 @@
 # Tasks: Preview a dataset by date and facility
-> Status: phase 1 complete; phases 2–4 pending · Slug: preview-facility-filter · Plan: ./plan.md · Spec: ./spec.md
+> Status: phases 1–2 complete; phases 3–4 pending · Slug: preview-facility-filter · Plan: ./plan.md · Spec: ./spec.md
 
 ## Overview
 
@@ -28,11 +28,38 @@ No PostgreSQL, Linux actual-host, web or live-resource checks ran.
 
 ## Phase 2: Application selection and cursor lifecycle (plan phase 2)
 
-- [ ] **T2.1** Extend `PreviewRead` in `src/outage_explorer/application/ports/execution.py` and `PreviewSequence`/creation in `src/outage_explorer/application/ports/preview_sequences.py` with optional immutable facility selection. Preserve omitted-filter callers and keep transport/engine details outside these ports. (FR1, FR3, TR1)
-- [ ] **T2.2** Extend `src/outage_explorer/infrastructure/query_results/previews.py` to retain the selection and include its UTF-8 bytes in bounded sequence metadata accounting; preserve expiry, capacity rollback, owner checks, reader leases, pin release and unresolved reaping. (FR3, TR2)
-- [ ] **T2.3** Extend `src/outage_explorer/application/services/preview.py` to authorize first, validate the filter with the domain rule, reject national filtering and cursor/filter mixtures, and pass initial or stored selection to `PreviewRead`. Keep the HTTP route date-only until Phase 3; do not use the old worker as evidence that filtered requests work. (FR1–FR4, TR1, TR2)
-- [ ] **T2.4** Extend `tests/integration/test_catalog_preview.py` with observable injected execution ports proving exact selection propagation, direct-use-case validation, authorization before preparation/execution, immutable continuation/revisit selection, snapshot pins, 60-second expiry and facility-byte capacity exhaustion. Update `tests/fixtures/data_api/preview_worker.py` only as needed for unchanged date-only test compatibility; real filtered execution is Phase 3. (FR1–FR4, TR2)
-- [ ] **T2.C** Checkpoint: run `tests/integration/test_catalog_preview.py`, `tests/architecture/`, Ruff and mypy. Verify AC3–AC4 application/store behavior with call observation, while recording that actual worker equality and filtered HTTP acceptance remain incomplete. Confirm active catalog/HTTP contracts remain date-only. (AC3, AC4, AC6)
+- [x] **T2.1** Extend `PreviewRead` in `src/outage_explorer/application/ports/execution.py` and `PreviewSequence`/creation in `src/outage_explorer/application/ports/preview_sequences.py` with optional immutable facility selection. Preserve omitted-filter callers and keep transport/engine details outside these ports. Update implementing adapters in `src/outage_explorer/infrastructure/worker_runtime/supervisor.py` and `src/outage_explorer/infrastructure/worker_runtime/unavailable.py` with the matching optional field and forwarding. (FR1, FR3, TR1)
+- [x] **T2.2** Extend `src/outage_explorer/infrastructure/query_results/previews.py` to retain the selection and include its UTF-8 bytes in bounded sequence metadata accounting; preserve expiry, capacity rollback, owner checks, reader leases, pin release and unresolved reaping. (FR3, TR2)
+- [x] **T2.3** Extend `src/outage_explorer/application/services/preview.py` to authorize first, validate the filter with the domain rule, reject national filtering and cursor/filter mixtures, and pass initial or stored selection to `PreviewRead`. Keep the HTTP route date-only until Phase 3; do not use the old worker as evidence that filtered requests work. (FR1–FR4, TR1, TR2)
+- [x] **T2.4** Extend `tests/integration/test_catalog_preview.py` with observable injected execution ports proving exact selection propagation, direct-use-case validation, authorization before preparation/execution, immutable continuation/revisit selection, snapshot pins, 60-second expiry and facility-byte capacity exhaustion. Update `tests/fixtures/data_api/preview_worker.py` only as needed for unchanged date-only test compatibility; real filtered execution is Phase 3. (FR1–FR4, TR2)
+- [x] **T2.C** Checkpoint: run `tests/integration/test_catalog_preview.py`, `tests/architecture/`, Ruff and mypy. Verify AC3–AC4 application/store behavior with call observation, while recording that actual worker equality and filtered HTTP acceptance remain incomplete. Confirm active catalog/HTTP contracts remain date-only. (AC3, AC4, AC6)
+
+### Phase 2 checkpoint evidence — 2026-10-07
+
+T2.1–T2.4 and T2.C completed. Preview requests and frozen sequences retain an
+optional exact facility selection; the service authorizes before validation or
+analytical access, applies the domain validator, and rejects national filters
+and cursor/filter mixtures. Sequence admission charges facility UTF-8 bytes.
+The supervised forwarding and unavailable adapters preserve the expanded port.
+
+Portable injected execution-port tests verify AC3/AC4 application/store behavior:
+selection/date/page-size propagation for both grains, stored continuation/revisit
+selection, old-generation pins across fake publication, fixed 60-second expiry,
+store loss, ownership and fresh role/session denials, capacity rollback and
+unreaped-worker pin retention. These tests observe application orchestration;
+they do not prove real worker facility equality or filtered HTTP acceptance.
+The existing real-Parquet/date-only controlled subprocess test also passed.
+
+**32 preview/lifecycle tests passed; 17 PostgreSQL-dependent cases were explicitly
+deselected because no disposable test DSN was supplied.** Architecture and worker
+response/transport suites passed **176 tests**. Ruff lint/format and strict mypy
+(**148 source files**) passed. The old version-1 production transport now rejects
+non-null facility selection instead of silently dropping it; a valid-file
+regression proves the same unfiltered request is accepted. This narrow safeguard
+is replaced by paired field transport in Phase 3. HTTP routes, catalog, paired
+OpenAPI and active fixtures remain date-only; no services, database, Linux
+actual-host or live-resource checks ran. AC1–AC6 remain incomplete for the full
+feature, including the worker/HTTP portions of AC3/AC4.
 
 ## Phase 3: Isolated worker filtering (plan phase 3)
 

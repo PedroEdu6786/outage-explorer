@@ -1,4 +1,4 @@
-"""Real PostgreSQL/Parquet and controlled S3/engine. No OS isolation claims."""
+"""PostgreSQL/Parquet flows and portable injected ports. No OS isolation claims."""
 
 import pickle
 import subprocess
@@ -566,3 +566,306 @@ def test_missing_runtime_denies_before_publication_or_preparation():
         service.page("test-token", "national")
     publications.active_generation.assert_not_called()
     cache.prepare.assert_not_called()
+
+
+@pytest.fixture
+def portable_selection():
+    """Real authorization/store/lifecycle; observed injected execution, no database.
+
+    The port returns synthetic rows to exercise pagination, not facility equality.
+    That query belongs to the real worker in phase 3.
+    """
+    from types import SimpleNamespace
+
+    from outage_explorer.application.services.access import AccessService
+    from outage_explorer.domain.access import SeededUser, Session
+
+    clock = Clock()
+    token = "a" * 43
+    user = SeededUser("analyst", "test-issuer", "test-subject", "a@test", Role.ANALYST)
+    sessions = Mock()
+    sessions.resolve_session.return_value = Session(
+        token, user, clock.now(), clock.now() + timedelta(hours=1)
+    )
+    security = Mock()
+    security.digest.side_effect = lambda value: value
+    access = AccessService(sessions, security, clock)
+    generation = ResourcePublishedGeneration("old", "run", None, "v1", clock.now(), ())
+    publications = Mock()
+    publications.active_generation.return_value = generation
+    inputs = Mock()
+    pins = []
+
+    def prepare(generation, dataset):
+        pin = Mock()
+        pin.files = ()
+        pins.append(pin)
+        return pin
+
+    inputs.prepare.side_effect = prepare
+    runtime = Mock()
+    requests = []
+
+    def preview(request, bounds, deadline):
+        from decimal import Decimal
+
+        requests.append(request)
+        day = date(2026, 9, 2) if request.after is None else date(2026, 9, 1)
+        values = {
+            "period": day,
+            "facility": request.facility or "001",
+            "facility_name": "Synthetic",
+            "generator": "G",
+        }
+        row = tuple(
+            values.get(column.name, Decimal("1")) for column in request.dataset.columns
+        )
+        key = tuple(
+            str(values[column.name])
+            for column in request.dataset.columns
+            if column.name in {"period", "facility", "generator"}
+        )
+        return PreviewRows((row,), (key,), request.after is None)
+
+    runtime.preview.side_effect = preview
+    launcher = VerifiedLauncher(EXECUTION, runtime, evidence="injected port only")
+    sequences = BoundedPreviewSequences(clock, METADATA, b"x" * 32)
+    service = PreviewService(
+        access,
+        publications,
+        inputs,
+        launcher,
+        sequences,
+        PreviewEncoding(ENCODING),
+        response_bytes=1024**2,
+    )
+    yield SimpleNamespace(
+        service=service,
+        token=token,
+        sessions=sessions,
+        clock=clock,
+        publications=publications,
+        inputs=inputs,
+        pins=pins,
+        runtime=runtime,
+        requests=requests,
+        launcher=launcher,
+        sequences=sequences,
+    )
+    runtime.terminate_and_reap.side_effect = None
+    launcher.recovery.reconcile()
+    sequences.close()
+
+
+@pytest.mark.parametrize("dataset", ["facilities", "generators"])
+@pytest.mark.parametrize("facility", ["001", "é", "A' OR 1=1 --"])
+def test_portable_facility_selection_continuation_revisit_and_snapshot(
+    portable_selection, dataset, facility
+):
+    state = portable_selection
+    start, end = date(2026, 9, 1), date(2026, 9, 2)
+    first = state.service.page(
+        state.token, dataset, facility=facility, start=start, end=end, size=1
+    )
+    state.publications.active_generation.return_value = replace(
+        state.publications.active_generation.return_value, id="new"
+    )
+    second = state.service.page(state.token, dataset, cursor=first["next_cursor"])
+    assert (
+        state.service.page(state.token, dataset, cursor=first["page_cursor"]) == first
+    )
+    assert first["generation_id"] == second["generation_id"] == "old"
+    assert [
+        (request.facility, request.start, request.end, request.size)
+        for request in state.requests
+    ] == [(facility, start, end, 1)] * 3
+    assert (
+        state.requests[1].after
+        == ("2026-09-02", facility, "G")[: 3 if dataset == "generators" else 2]
+    )
+    state.inputs.prepare.assert_called_once()
+    state.pins[0].close.assert_not_called()
+    fresh = state.service.page(state.token, dataset, facility="other")
+    assert fresh["generation_id"] == "new"
+    assert state.requests[-1].facility == "other"
+
+
+@pytest.mark.parametrize(
+    "facility", ["", " 001", "001 ", "\x00", "\x85", "\ud800", "é" * 129, 1, ["001"]]
+)
+def test_portable_facility_invalid_direct_calls_before_resources(
+    portable_selection, facility
+):
+    state = portable_selection
+    with pytest.raises(InvalidRequestError):
+        state.service.page(state.token, "facilities", facility=facility)
+    state.inputs.prepare.assert_not_called()
+    state.runtime.preview.assert_not_called()
+    state.publications.active_generation.assert_not_called()
+
+
+def test_portable_facility_national_and_cursor_mixtures(portable_selection):
+    state = portable_selection
+    with pytest.raises(InvalidRequestError):
+        state.service.page(state.token, "national", facility="001")
+    first = state.service.page(state.token, "facilities", facility="001")
+    calls = len(state.requests)
+    for facility in ("001", "", "different"):
+        with pytest.raises(InvalidRequestError):
+            state.service.page(
+                state.token,
+                "facilities",
+                cursor=first["page_cursor"],
+                facility=facility,
+            )
+    assert len(state.requests) == calls
+
+
+@pytest.mark.parametrize(
+    "denial", ["viewer", "absent", "expired", "revoked", "foreign", "role-change"]
+)
+def test_portable_facility_authorization_before_inputs_and_execution(
+    portable_selection, denial
+):
+    state = portable_selection
+    cursor = None
+    if denial in {"foreign", "role-change"}:
+        cursor = state.service.page(state.token, "facilities", facility="001")[
+            "page_cursor"
+        ]
+    state.inputs.prepare.reset_mock()
+    state.runtime.preview.reset_mock()
+    state.publications.active_generation.reset_mock()
+    session = state.sessions.resolve_session.return_value
+    if denial in {"viewer", "role-change"}:
+        state.sessions.resolve_session.return_value = replace(
+            session, user=replace(session.user, role=Role.VIEWER)
+        )
+        error = ForbiddenError
+    elif denial == "foreign":
+        state.sessions.resolve_session.return_value = replace(
+            session, user=replace(session.user, id="other")
+        )
+        error = PreviewUnavailableError
+    else:
+        if denial == "expired":
+            state.clock.value = session.expires_at
+        else:
+            state.sessions.resolve_session.return_value = None
+        error = UnauthenticatedError
+    with pytest.raises(error):
+        state.service.page(
+            "" if denial == "absent" else state.token,
+            "facilities",
+            cursor=cursor,
+            facility=None if cursor else "",
+        )
+    state.inputs.prepare.assert_not_called()
+    state.runtime.preview.assert_not_called()
+    state.publications.active_generation.assert_not_called()
+
+
+def test_portable_facility_fixed_expiry_and_pin_cleanup(portable_selection):
+    state = portable_selection
+    first = state.service.page(state.token, "generators", facility="001", size=1)
+    state.clock.value += timedelta(seconds=59)
+    assert (
+        state.service.page(state.token, "generators", cursor=first["page_cursor"])
+        == first
+    )
+    state.clock.value += timedelta(seconds=1)
+    state.sequences.cleanup()
+    state.pins[0].close.assert_called_once()
+    calls = len(state.requests)
+    with pytest.raises(PreviewUnavailableError):
+        state.service.page(state.token, "generators", cursor=first["page_cursor"])
+    assert len(state.requests) == calls
+
+
+def test_portable_facility_utf8_metadata_capacity_and_rollback(portable_selection):
+    state = portable_selection
+    dataset = PUBLIC_DATASETS[1]
+    generation = state.publications.active_generation.return_value
+    pin = Mock(files=())
+    # Observe the no-filter charge, then allow exactly two additional bytes.
+    probe = BoundedPreviewSequences(state.clock, METADATA, b"x" * 32)
+    unfiltered = probe.create("analyst", dataset, generation, None, None, 100, pin)
+    baseline = probe._bytes
+    probe.discard(unfiltered)
+    probe.release(unfiltered)
+    pin.close.reset_mock()
+    bounds = replace(METADATA, metadata_bytes=baseline + 2)
+    state.service._sequences = BoundedPreviewSequences(state.clock, bounds, b"x" * 32)
+    with pytest.raises(PreviewCapacityError):
+        state.service.page(state.token, "facilities", facility="éé")
+    state.pins[0].close.assert_called_once()
+    state.runtime.preview.assert_not_called()
+    # Failed admission consumed no capacity. A two-byte selection fits exactly.
+    store = state.service._sequences
+    sequence = store.create(
+        "analyst", dataset, generation, None, None, 100, pin, facility="é"
+    )
+    assert sequence.facility == "é"
+    from dataclasses import FrozenInstanceError
+
+    with pytest.raises(FrozenInstanceError):
+        sequence.facility = "other"
+    store.discard(sequence)
+    store.release(sequence)
+    pin.close.assert_called_once()
+
+
+def test_portable_facility_unreaped_worker_retains_pin_until_reconciliation(
+    portable_selection,
+):
+    state = portable_selection
+    state.runtime.terminate_and_reap.side_effect = OSError("controlled failed reap")
+    with pytest.raises(OSError):
+        state.service.page(state.token, "facilities", facility="001")
+    state.clock.value += timedelta(seconds=60)
+    state.sequences.cleanup()
+    state.pins[0].close.assert_not_called()
+    with pytest.raises(AnalyticalBusyError):
+        state.launcher.reserve()
+    state.runtime.terminate_and_reap.side_effect = None
+    state.launcher.recovery.reconcile()
+    state.pins[0].close.assert_called_once()
+
+
+def test_portable_facility_lost_store_rejects_cursor_before_execution(
+    portable_selection,
+):
+    state = portable_selection
+    first = state.service.page(state.token, "facilities", facility="001")
+    state.sequences.close()
+    state.pins[0].close.assert_called_once()
+    state.service._sequences = BoundedPreviewSequences(state.clock, METADATA, b"x" * 32)
+    calls = len(state.requests)
+    with pytest.raises(PreviewUnavailableError):
+        state.service.page(state.token, "facilities", cursor=first["page_cursor"])
+    assert len(state.requests) == calls
+    assert state.inputs.prepare.call_count == 1
+
+
+def test_portable_facility_forward_sequences_preserves_selection(portable_selection):
+    from outage_explorer.infrastructure.worker_runtime.supervisor import (
+        ForwardSequences,
+    )
+
+    state = portable_selection
+    supervisor = Mock()
+    supervisor.ready.return_value.sequences = state.sequences
+    sequences = ForwardSequences(supervisor)
+    generation = state.publications.active_generation.return_value
+    pin = Mock(files=())
+    sequence = sequences.create(
+        "analyst", PUBLIC_DATASETS[1], generation, None, None, 100, pin, facility="001"
+    )
+    assert sequence.facility == "001"
+    cursor = sequences.cursor(sequence, None)
+    assert (
+        sequences.acquire(cursor, "analyst", PUBLIC_DATASETS[1]).sequence.facility
+        == "001"
+    )
+    state.sequences.release(sequence)
+    state.sequences.release(sequence)

@@ -199,9 +199,11 @@ class ForwardSequences:
         end: date | None,
         size: int,
         inputs: PinnedInputs,
+        *,
+        facility: str | None = None,
     ) -> PreviewSequence:
         return self._supervisor.ready().sequences.create(
-            user_id, dataset, generation, start, end, size, inputs
+            user_id, dataset, generation, start, end, size, inputs, facility=facility
         )
 
     def cursor(self, sequence: PreviewSequence, after: tuple[str, ...] | None) -> str:

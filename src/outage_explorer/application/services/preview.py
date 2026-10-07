@@ -20,6 +20,10 @@ from outage_explorer.application.ports.tabular_encoding import TabularEncoding
 from outage_explorer.application.services.access import AccessService
 from outage_explorer.domain.access import AccessOperation, AnalyticalGrain
 from outage_explorer.domain.datasets import PUBLIC_DATASETS
+from outage_explorer.domain.preview_filters import (
+    InvalidFacilityIdentifier,
+    validate_facility_identifier,
+)
 
 
 @dataclass
@@ -65,6 +69,7 @@ class PreviewService:
         end: date | None = None,
         size: int | None = None,
         cursor: str | None = None,
+        facility: str | None = None,
     ) -> dict[str, object]:
         # Invalid/unknown IDs still resolve identity before returning an error.
         self._access.resolve(token)
@@ -79,7 +84,7 @@ class PreviewService:
             grains=frozenset({AnalyticalGrain(dataset.grain)}),
         )
         if cursor is not None and any(
-            value is not None for value in (start, end, size)
+            value is not None for value in (start, end, size, facility)
         ):
             raise InvalidRequestError("Continuation accepts only its cursor")
         if cursor is None and (
@@ -91,6 +96,13 @@ class PreviewService:
             and (type(size) is not int or not 1 <= size <= 500)
         ):
             raise InvalidRequestError("Invalid preview parameters")
+        if facility is not None:
+            if dataset.grain == "national":
+                raise InvalidRequestError("National preview does not support facility")
+            try:
+                facility = validate_facility_identifier(facility)
+            except InvalidFacilityIdentifier as error:
+                raise InvalidRequestError(str(error)) from None
         sequence: PreviewSequence | None = None
         reservation = None
         initial = cursor is None
@@ -119,6 +131,7 @@ class PreviewService:
                         end,
                         100 if size is None else size,
                         inputs,
+                        facility=facility,
                     )
                 except BaseException:
                     inputs.close()
@@ -131,6 +144,7 @@ class PreviewService:
                     sequence.end,
                     after,
                     sequence.size,
+                    sequence.facility,
                 )
             )
             if (

@@ -385,3 +385,23 @@ def test_request_rejects_invalid_descriptors_without_paths(transport):
                 ((request.dataset, request.files), (request.dataset, request.files)),
             )
         )
+
+
+def test_v1_transport_rejects_facility_selection_until_paired_worker_support(transport):
+    """The old wire must never silently discard a new internal selection."""
+    from dataclasses import replace
+
+    request = PreviewRead(
+        PUBLIC_DATASETS[1],
+        (ApprovedFile("/not-sent", "a" * 64, 1, 1),),
+        None,
+        None,
+        None,
+        100,
+        facility="001",
+    )
+    assert b'"operation":"preview"' in transport.request(
+        replace(request, facility=None)
+    )
+    with pytest.raises(RuntimeUnavailableError):
+        transport.request(request)

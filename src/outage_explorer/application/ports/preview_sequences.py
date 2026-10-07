@@ -20,6 +20,7 @@ class PreviewSequence:
     size: int
     expires_at: datetime
     inputs: PinnedInputs
+    facility: str | None = None
 
 
 @dataclass(frozen=True)
@@ -38,6 +39,8 @@ class PreviewSequences(Protocol):
         end: date | None,
         size: int,
         inputs: PinnedInputs,
+        *,
+        facility: str | None = None,
     ) -> PreviewSequence: ...
     def cursor(
         self, sequence: PreviewSequence, after: tuple[str, ...] | None
