@@ -513,3 +513,9 @@ view setup, I/O and unexpected engine failures retain unavailable responses;
 engine diagnostic text never crosses the worker protocol. Connections close on
 each path, and application cleanup still proves worker termination before
 releasing execution capacity or retaining a successful result.
+
+Local machine installation and startup are documented in
+[the fresh-machine walkthrough](../development/fresh-machine.md).
+Operator-only `scripts/local_analytical.py`, `local_api_entrypoint.py` and
+`review_local_runtime.py` configure/supervise the trusted Linux controller and
+record explicit local containment review; product layers do not import them.

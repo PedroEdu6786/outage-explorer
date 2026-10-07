@@ -11,55 +11,24 @@ authentication, authorization, stored observations, SQL execution and refresh.
 
 - Python 3.12+ for the backend; Node 24.18.0 and npm 11.16.0 for the web client.
 - AWS CLI with a working local login for the profiles configured below.
-- Docker CLI and a Linux Docker daemon. The existing local launcher uses Colima's
-  dedicated `outage-runtime` guest; installing the Docker CLI alone is insufficient.
-  The supplied VM creation helper targets Apple Silicon macOS with Colima's VZ
-  backend. Other hosts need their own runtime setup; these helpers do not establish
-  a portable Docker Desktop or native Linux application startup path.
+- Docker CLI and a Linux Docker daemon, with the API/controller on that Linux
+  host. Use native Ubuntu, an Ubuntu VM, or the dedicated Apple Silicon Colima
+  route in the [fresh-machine walkthrough](fresh-machine.md).
 - Configured PostgreSQL/RDS, Cognito and S3 resources, three seeded persona
   bindings, and a published three-resource generation for browsing stored data.
-- For preview and SQL, the already provisioned and reviewed `outage-runtime`
-  Colima Linux environment, analytical image, private runtime configuration and
-  local port forwarding. `make run-analytical` uses this environment; it does
-  not create it. A fresh machine needs this operator setup before full application
-  startup; installing Python dependencies alone is insufficient. See the
-  [analytical runtime contract](../../infrastructure/analytical-worker/README.md) and
-  [local startup evidence](../../docs/specs/data-api/runtime-evidence.md).
+- For preview and SQL, matching actual-host analytical/parser configuration and
+  containment review. The walkthrough generates these from this machine's tests;
+  another machine's reviewed files are insufficient.
 
 ### Manual fresh-machine setup
 
-**Partial setup is available.** The repository contains manual helpers to create
-the dedicated Colima VM, prepare the Linux filesystem and Python environment,
-build the Docker worker image, and generate a candidate runtime profile:
-
-1. Install Git, Python, Node/npm, AWS CLI, Docker CLI and Colima on the host.
-   Clone this backend and the linked web repository into sibling directories.
-2. Follow the [dedicated Colima setup sequence](../../infrastructure/analytical-worker/README.md#recorded-dedicated-colima-validation-october-5-2026).
-   Its `start-colima.sh`, `prepare-guest.sh` and `build-guest.sh` helpers create the
-   Docker runtime, private spill storage, guest dependencies and worker image.
-   Fresh-provisioning helpers refuse existing resources; use their documented
-   recovery instructions for an existing guest.
-3. Follow the runtime-profile and containment instructions in that runbook.
-   New host/image/profile identities need matching review evidence; copying another
-   machine's reviewed configuration does not establish readiness on this one.
-4. Configure the database, Cognito, S3, seeded users and published data using the
-   linked operator guides, then complete the application configuration below.
-
-The remaining manual operator step is **full API guest setup**: install the exact
-backend revision, create the private runtime configuration and API entry point
-at `/run/outage-api/start.py`, provide its directories/permissions and configure
-local port forwarding. The existing launcher also assumes a configured guest
-Python at `/opt/outage-runtime-validation/.venv/bin/python` and Docker socket
-supplementary group `991`; verify the actual guest group before configuring it.
-These steps are not yet supplied as a complete versioned bootstrap procedure.
-`/run` is transient, so its application files also need restoration after a guest
-reboot. `make run-analytical` renews credentials and starts the configured service;
-it does not fill in this missing setup.
-
-Thus we can manually provision the **worker environment including Docker** from
-the runbook, but cannot yet claim a complete fresh-machine application setup
-using only the delivered instructions. No installation or provisioning runs when
-reading this guide.
+Follow the [numbered fresh-machine walkthrough](fresh-machine.md) from dependency
+installation through browser sign-in and recovery. It includes Docker setup,
+pinned source installation, native Linux and Colima commands, actual-host
+containment checks, a checked-in API entry point and private configuration
+installation. `make run-analytical` starts the configured service and renews
+credentials; preparation and review are explicit earlier steps. `/run` files
+must be restored after reboot as documented there.
 
 ### Application configuration
 
@@ -104,9 +73,9 @@ obsolete settings to remove. Changing the start requires an API restart.
 Register the exact callback above and the sign-out URL
 `http://localhost:3000/sign-in` in the Cognito app client. Configure
 `COGNITO_ISSUER`, `COGNITO_DOMAIN`, `COGNITO_APP_CLIENT_ID` and explicit
-`COGNITO_OAUTH_SCOPES` for that same client. The Colima API uses its own private
+`COGNITO_OAUTH_SCOPES` for that same client. The Linux API uses its own private
 runtime configuration: changes to backend `.env` are not automatically installed
-there. The launcher reads local AWS profile selection from `.env` and renews
+there; stop the API and rerun the walkthrough’s configuration step. The launcher reads local AWS profile selection from `.env` and renews
 credentials for the configured service.
 
 In the sibling web checkout, install the pinned dependencies and create
@@ -131,7 +100,7 @@ The client secret and AWS/database credentials stay on the backend.
 Run the backend in one terminal and the web client in another:
 
 ```sh
-# Terminal 1: backend checkout, existing configured Colima environment
+# Terminal 1: configured backend; add NATIVE=1 on native Ubuntu
 make run-analytical
 
 # Terminal 2: web checkout

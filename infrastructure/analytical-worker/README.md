@@ -292,7 +292,10 @@ and the host Docker context remains `desktop-linux`. No Mac directory mounts,
 SSH-agent forwarding, SSH-config edits or automatic context activation were used.
 
 Reusable, reviewable helpers live in [native-linux-validation](native-linux-validation/).
-They deliberately target only this dedicated VM and fresh guest directories:
+The Colima creation helper targets Apple Silicon; the Linux preparation/build
+helpers also support a dedicated native Ubuntu host. For a complete application
+installation, follow the [fresh-machine walkthrough](../../docs/development/fresh-machine.md).
+This historical sequence describes fresh guest directories:
 Before exporting HEAD, commit the reviewed implementation, including the O_PATH
 traversal correction: `git archive` omits uncommitted changes. The diff check below
 refuses a stale committed source export; do not remove it to bypass pending edits.
@@ -300,8 +303,8 @@ refuses a stale committed source export; do not remove it to bypass pending edit
 ```sh
 sh infrastructure/analytical-worker/native-linux-validation/start-colima.sh
 colima ssh --profile outage-runtime -- sh -s < infrastructure/analytical-worker/native-linux-validation/prepare-guest.sh
-git diff --quiet HEAD -- src tests infrastructure/analytical-worker pyproject.toml README.md
-git archive --format=tar --output=/private/tmp/outage-runtime-source.tar HEAD src tests infrastructure/analytical-worker pyproject.toml README.md
+git diff --quiet HEAD -- src tests scripts infrastructure/analytical-worker pyproject.toml requirements-dev.txt README.md
+git archive --format=tar --output=/private/tmp/outage-runtime-source.tar HEAD src tests scripts infrastructure/analytical-worker pyproject.toml requirements-dev.txt README.md
 colima ssh --profile outage-runtime -- sudo tar -xf - -C /opt/outage-runtime-validation < /private/tmp/outage-runtime-source.tar
 colima ssh --profile outage-runtime -- sh -s < infrastructure/analytical-worker/native-linux-validation/build-guest.sh
 ```

@@ -1,6 +1,6 @@
 #!/bin/sh
 set -eu
-# Run only inside the new outage-runtime Linux VM, never on the Mac host.
+# Run only on the dedicated Linux daemon host (native or VM), never on macOS.
 test "$(uname -s)" = Linux
 test ! -e /var/lib/outage-analytical/spill.img
 test ! -e /opt/outage-runtime-validation

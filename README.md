@@ -11,16 +11,18 @@ and inspect the daily share of fleet capacity offline.
 
 ## Run locally
 
-**Start with the [setup guide](docs/development/local-setup.md).** It covers
-installation, environment settings and seeded-user access for this Flask backend
-and the separate [web client](https://github.com/PedroEdu6786/outage-explorer-web).
-Full startup requires Docker, the configured Colima runtime, RDS, Cognito, S3
-and published data; see the [manual fresh-machine setup status](docs/development/local-setup.md#manual-fresh-machine-setup).
+**New machine? Follow the [step-by-step walkthrough](docs/development/fresh-machine.md).**
+It covers Docker, Linux/VM setup, AWS settings, containment review and startup
+for this Flask backend and the separate
+[web client](https://github.com/PedroEdu6786/outage-explorer-web).
+Use native Ubuntu (including an Ubuntu VM) or the Apple Silicon Colima route.
+Full application startup needs configured RDS, Cognito, S3 and published data.
+The [application setup reference](docs/development/local-setup.md) summarizes settings.
 
 Once configured, run these in separate terminals:
 
 ```sh
-# Backend checkout
+# Backend checkout: Colima (on native Ubuntu add NATIVE=1)
 make run-analytical
 
 # Web checkout

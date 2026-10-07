@@ -25,6 +25,7 @@ help:
 	  'make setup   Install the pinned dependencies in .venv' \
 	  'make run     Start Flask without preview/SQL execution resources' \
 	  'make run-analytical   Serve the configured Colima API with AWS credential renewal' \
+	  'make run-analytical NATIVE=1   Serve a configured native Linux API' \
 	  'make stop-analytical  Stop the configured Colima API' \
 	  'make run-worker   Run the independent refresh worker using .env' \
 	  'make health  Call GET /health on the running API' \
@@ -58,14 +59,14 @@ run: check-env
 
 # Uses the explicitly provisioned/reviewed local service. Never falls back to Flask.
 run-analytical: check-env
-	$(VENV_PYTHON) scripts/local_analytical.py
+	$(VENV_PYTHON) scripts/local_analytical.py $(if $(filter 1,$(NATIVE)),--native)
 
 # Independent refresh process; it only claims runs an Admin has admitted.
 run-worker: check-env
 	$(VENV_PYTHON) scripts/run_worker.py
 
 stop-analytical:
-	colima ssh --profile outage-runtime -- sudo systemctl stop outage-api-local
+	$(if $(filter 1,$(NATIVE)),,colima ssh --profile outage-runtime -- )sudo systemctl stop outage-api-local
 
 health:
 	curl --fail --silent --show-error --include http://$(HOST):$(PORT)/health

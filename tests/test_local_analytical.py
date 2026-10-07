@@ -106,6 +106,8 @@ def test_service_is_restarted_or_recreated_after_a_stop(monkeypatch, state, expe
 
     def fake(arguments, **kwargs):
         calls.append(arguments[len(local.SSH) :])
+        if "stat" in arguments:
+            return b"997"
         return state.encode() if "show" in arguments else b""
 
     monkeypatch.setattr(local, "run", fake)
@@ -117,7 +119,208 @@ def test_service_is_restarted_or_recreated_after_a_stop(monkeypatch, state, expe
         assert command[:3] == ["sudo", "systemd-run", "--unit=outage-api-local"]
         assert command[-2:] == [local.PYTHON, "/run/outage-api/start.py"]
         assert "--property=User=65534" in command
-        assert "--property=SupplementaryGroups=991" in command
+        assert "--property=SupplementaryGroups=997" in command
+
+
+@pytest.mark.parametrize("group", [b"0", b"bad", b"997;false", b"-1"])
+def test_invalid_socket_group_never_starts_service(monkeypatch, group):
+    calls = []
+
+    def fake(arguments, **kwargs):
+        calls.append(arguments)
+        return group if "stat" in arguments else b"not-found"
+
+    monkeypatch.setattr(local, "run", fake)
+    with pytest.raises(ValueError, match="socket group"):
+        local.start_service()
+    assert not any("systemd-run" in args for args in calls)
+
+
+def reviewed_configs(tmp_path, *, reviewed=True):
+    from dataclasses import asdict
+    from datetime import date
+
+    from outage_explorer.infrastructure.sql_validation.configuration import (
+        InspectionProfile,
+        InspectionReview,
+    )
+    from outage_explorer.infrastructure.sql_validation.subprocess_inspection import (
+        InspectionBounds,
+    )
+    from outage_explorer.infrastructure.worker_runtime.configuration import (
+        RuntimeEvidence,
+        RuntimeProfile,
+    )
+
+    profile = RuntimeProfile(
+        "sha256:" + "a" * 64,
+        "unix:///run/docker.sock",
+        "linux/arm64",
+        "controlled",
+        "controlled",
+        temporary_backend="quota-disk",
+    )
+    evidence = RuntimeEvidence(
+        profile.identity,
+        *("b" * 64 for _ in range(5)),
+        "Controlled test only",
+        date(2026, 10, 7),
+        "local-preview-sql",
+    )
+    parser = InspectionProfile(
+        InspectionBounds(4, 1, 268435456, 1, 1024, 65536, 10000, 64),
+        local.PYTHON,
+        "/usr/bin/prlimit",
+        "/usr/bin/setpriv",
+        "/var/lib/outage-runtime-validation/parser-ownership",
+        *("c" * 64 for _ in range(3)),
+    )
+    review = InspectionReview(
+        parser.identity, "d" * 64, "e" * 64, "Controlled test only", date(2026, 10, 7)
+    )
+    paths = (tmp_path / "runtime.json", tmp_path / "parser.json")
+    for path, model, record in zip(
+        paths, (profile, parser), (evidence, review), strict=True
+    ):
+        path.write_text(
+            json.dumps(
+                {
+                    "profile": asdict(model),
+                    "evidence": asdict(record) if reviewed else None,
+                },
+                default=str,
+            )
+        )
+    return paths
+
+
+@pytest.mark.parametrize("mode", ["iam", "password"])
+def test_configure_installs_complete_private_api_without_starting(
+    tmp_path, monkeypatch, mode
+):
+    from psycopg.conninfo import conninfo_to_dict
+
+    ca = tmp_path / "CA with spaces.pem"
+    ca.write_text("controlled public CA")
+    env = {
+        "COGNITO_APP_CLIENT_SECRET": "controlled-config-secret",
+        "AWS_PROFILE": "local",
+        "OUTAGE_ACCESS_DATABASE_MODE": mode,
+        "EIA_API_KEY": "not-for-api",
+        "UNRELATED_SECRET": "never-transfer",
+        "PYTHONPATH": "/untrusted",
+        "AWS_SECRET_ACCESS_KEY": "not-for-configuration",
+    }
+    if mode == "iam":
+        env["OUTAGE_ACCESS_DATABASE_SSLROOTCERT"] = str(ca)
+    else:
+        from psycopg.conninfo import make_conninfo
+
+        env["OUTAGE_ACCESS_DATABASE_DSN"] = make_conninfo(
+            host="db.test", password="controlled-db-secret", sslrootcert=str(ca)
+        )
+    calls = []
+    monkeypatch.setattr(
+        local, "run", lambda args, **kwargs: calls.append((args, kwargs))
+    )
+    local.configure(env, *reviewed_configs(tmp_path))
+    args, kwargs = calls[0]
+    assert "controlled-config-secret" not in str(args)
+    assert "systemd-run" not in str(args) and "is-active" in args[-1]
+    with tarfile.open(fileobj=io.BytesIO(kwargs["data"])) as archive:
+        assert all(
+            item.uid == item.gid == 65534 and item.mode == 0o600 for item in archive
+        )
+        assert set(archive.getnames()) == {
+            "start.py",
+            "runtime.json",
+            "parser.json",
+            "environment.json",
+            "rds-ca.pem",
+        }
+        values = json.load(archive.extractfile("environment.json"))
+        assert values["COGNITO_APP_CLIENT_SECRET"] == "controlled-config-secret"
+        assert (
+            not {
+                "EIA_API_KEY",
+                "UNRELATED_SECRET",
+                "PYTHONPATH",
+                "AWS_SECRET_ACCESS_KEY",
+            }
+            & values.keys()
+        )
+        if mode == "iam":
+            assert (
+                values["OUTAGE_ACCESS_DATABASE_SSLROOTCERT"]
+                == "/run/outage-api/rds-ca.pem"
+            )
+        else:
+            assert "OUTAGE_ACCESS_DATABASE_SSLROOTCERT" not in values
+        if mode == "password":
+            dsn = conninfo_to_dict(values["OUTAGE_ACCESS_DATABASE_DSN"])
+            assert dsn["sslrootcert"] == "/run/outage-api/rds-ca.pem"
+            assert dsn["password"] == "controlled-db-secret"
+
+
+def test_configure_rejects_unreviewed_candidate_before_transfer(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        local, "run", lambda *a, **kw: pytest.fail("unexpected host operation")
+    )
+    with pytest.raises(ValueError, match="reviewed"):
+        local.configure({}, *reviewed_configs(tmp_path, reviewed=False))
+
+
+def test_native_configuration_does_not_start_or_export_credentials(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(local.sys, "platform", "linux")
+    monkeypatch.setattr(local, "ROOT", tmp_path)
+    monkeypatch.setattr(local, "SSH", ["unused"])
+    calls = []
+    monkeypatch.setattr(local, "configure", lambda *args: calls.append(args))
+    monkeypatch.setattr(
+        local,
+        "export_credentials",
+        lambda *a: pytest.fail("unexpected credential export"),
+    )
+    assert (
+        local.main(
+            [
+                "--native",
+                "--configure",
+                "--config",
+                "runtime.json",
+                "--inspection-config",
+                "parser.json",
+            ]
+        )
+        == 0
+    )
+    assert local.SSH == [] and len(calls) == 1
+
+
+def test_checked_in_entrypoint_executes_only_configured_environment(
+    tmp_path, monkeypatch
+):
+    spec = importlib.util.spec_from_file_location(
+        "local_api_entrypoint",
+        Path(__file__).parents[1] / "scripts/local_api_entrypoint.py",
+    )
+    entry = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(entry)
+    (tmp_path / "environment.json").write_text(
+        json.dumps({"PATH": "/usr/bin:/bin", "COGNITO_APP_CLIENT_SECRET": "controlled"})
+    )
+    monkeypatch.setattr(entry, "RUNTIME", tmp_path)
+    monkeypatch.setenv("UNRELATED_SECRET", "never-inherit")
+    calls = []
+    monkeypatch.setattr(entry.os, "execve", lambda *args: calls.append(args))
+    entry.main()
+    executable, args, environment = calls[0]
+    assert executable == local.PYTHON
+    assert "outage_explorer.entrypoints.http.analytical_startup" in args
+    assert "--inspection-config" in args and args[-1] == "8000"
+    assert "UNRELATED_SECRET" not in environment
 
 
 def test_worker_launcher_loads_env_and_defaults_private_staging(tmp_path, monkeypatch):
@@ -139,3 +342,19 @@ def test_worker_launcher_loads_env_and_defaults_private_staging(tmp_path, monkey
     assert env["OUTAGE_REFRESH_STAGING"].endswith("data/refresh-local")
     monkeypatch.setenv("OUTAGE_REFRESH_STAGING", "/custom")
     assert worker.environment()["OUTAGE_REFRESH_STAGING"] == "/custom"
+
+
+def test_password_mode_only_exports_storage_profile():
+    assert local.credential_profiles(
+        {"AWS_PROFILE": "storage", "OUTAGE_ACCESS_DATABASE_MODE": "password"}
+    ) == ["storage"]
+
+
+def test_iam_mode_exports_both_required_profiles():
+    assert local.credential_profiles(
+        {
+            "AWS_PROFILE": "storage",
+            "OUTAGE_ACCESS_DATABASE_MODE": "iam",
+            "OUTAGE_ACCESS_DATABASE_PROFILE": "database",
+        }
+    ) == ["database", "storage"]
