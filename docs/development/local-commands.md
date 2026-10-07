@@ -29,6 +29,7 @@ Stop on a failure and resolve it before continuing.
 | `make run-analytical` | Starts the complete API in the VM and renews AWS credentials. |
 | `make local-forward` | Makes the VM's API reachable at `http://localhost:8000` on macOS. |
 | `make stop-analytical` | Stops the API in the VM. |
+| `make run-worker` | Independently processes admitted Admin refreshes when refresh processing is intended. |
 
 ## `make local-help`
 
@@ -229,3 +230,22 @@ API or VM. This command does not start the web client.
 **Does:** Stops the `outage-api-local` service inside Colima. It leaves the VM,
 Docker daemon, web server, SSH tunnel and independent refresh worker running.
 Stop the web server and forwarding with Ctrl+C in their terminals.
+
+## `make run-worker`
+
+**Before:** Follow the [refresh worker configuration](connector.md#product-refresh-worker):
+backend `.env` must supply the database, EIA and S3 settings. Start this only when
+refresh processing is intended; the reviewed local preview/SQL workflow keeps
+refresh idle and simultaneous workload capacity acceptance remains deferred.
+
+**Does:** Starts the independent refresh process on macOS using backend `.env`
+plus exported overrides. Creates private per-run staging under
+`data/refresh-local` unless `OUTAGE_REFRESH_STAGING` is set. It polls the operational
+database for admitted Admin refresh runs and processes them independently of
+API requests. It does not itself admit a new refresh.
+
+**After:** Keep it running in a separate terminal. Ctrl+C stops it; an API restart
+or `make stop-analytical` does not stop a healthy refresh worker. Without it,
+admitted refresh runs are not processed. It is not needed for browsing an
+existing published generation or executing SQL: the API launches isolated
+analytical workers automatically.

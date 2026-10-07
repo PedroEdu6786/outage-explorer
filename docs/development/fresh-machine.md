@@ -322,9 +322,19 @@ published dataset or run an allowed query as Analyst. A missing generation needs
 owner-directed publication, not a database reset. API documentation is at
 `http://localhost:8000/api/docs`.
 
-Refresh remains idle throughout this walkthrough. To process an explicitly
-requested refresh, configure and supervise `make run-worker` independently using
-[the refresh worker instructions](connector.md#product-refresh-worker).
+The API launches analytical query workers automatically. The independently
+supervised refresh worker is different and stays idle throughout this walkthrough.
+For intentionally processing Admin refreshes, first follow
+[the refresh worker instructions](connector.md#product-refresh-worker), then
+start it from the backend checkout in a separate fourth terminal:
+
+```sh
+make run-worker
+```
+
+This worker polls for admitted refreshes; the API never launches it. Existing
+published data can be browsed without it. Simultaneous refresh/query capacity
+acceptance remains deferred.
 
 ## 11. Stop, restart and troubleshoot
 

@@ -32,6 +32,30 @@ API documentation is at `http://localhost:8000/api/docs`.
 `make run` starts only the separate macOS Flask health/docs scaffold without
 analytical execution resources. Use `make run-analytical` for preview and SQL.
 
+## Refresh worker, when needed
+
+Analytical query workers are launched automatically by the API. The **refresh
+worker** is a different process: it fetches EIA data, builds/stores candidate
+resources and publishes a verified generation for an admitted Admin refresh.
+The API and web startup commands do not start it.
+
+When intentionally processing refreshes, configure its dependencies using the
+[refresh worker instructions](connector.md#product-refresh-worker), then run
+this from the backend checkout in a fourth terminal:
+
+```sh
+make run-worker
+```
+
+It loads backend `.env`, including database, EIA and S3 settings, and polls for
+admitted runs. Without a running refresh worker, admitted refreshes are not
+processed; browsing an existing generation and SQL do not require this process.
+Ctrl+C stops this worker. API-only restarts leave it running.
+
+Keep refresh idle for the reviewed local preview/SQL workflow. Running refresh
+and analytical workloads together has separate capacity evidence requirements
+that remain deferred.
+
 ## Where configuration lives
 
 | File | Purpose | Where to find the values |

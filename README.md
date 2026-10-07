@@ -23,7 +23,8 @@ The required environment is Apple Silicon macOS with the dedicated Colima
 `outage-runtime` VM and configured RDS, Cognito, S3 and published data. The
 [web client](https://github.com/PedroEdu6786/outage-explorer-web) is a sibling checkout.
 
-For an existing installation, keep these running in separate terminals:
+For an existing installation, these commands support browsing published data
+and running preview/SQL. Keep them running in separate terminals:
 
 ```sh
 # Backend checkout, terminal 1
@@ -35,6 +36,20 @@ make local-forward
 # Web checkout, terminal 3
 npm run dev
 ```
+
+The API launches isolated analytical query workers automatically; they have no
+separate startup command. **To process Admin refreshes**, additionally run the
+independent refresh worker from the backend checkout in a fourth terminal:
+
+```sh
+make run-worker
+```
+
+Configure its database, EIA and S3 settings using the
+[refresh worker instructions](docs/development/connector.md#product-refresh-worker)
+before starting it. It polls for admitted runs; the API does not launch it.
+Keep it stopped for the reviewed local preview/SQL workflow, which uses refresh
+idle; simultaneous refresh/query capacity acceptance remains deferred.
 
 Open **http://localhost:3000** and sign in with a seeded account. Use `localhost`
 for both applications. Obtain test-user credentials privately from the owner.
