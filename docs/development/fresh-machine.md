@@ -7,6 +7,9 @@ Follow the numbered steps in order. Commands are manual: reading this document
 installs nothing. Replace example resource identifiers with values from your
 environment owner. Keep credentials out of Git and terminal output.
 
+See the [Make command reference](local-commands.md) for each command’s
+prerequisites, actions, outputs, repeat behavior and running processes.
+
 ## Make command checklist
 
 After cloning and installing Homebrew, run from the backend checkout:

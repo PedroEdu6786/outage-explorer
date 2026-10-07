@@ -58,7 +58,8 @@ local-help:
 	  '9. make run-analytical           Start API (separate terminal)' \
 	  '10. make local-forward           Forward API port (separate terminal)' \
 	  'Then npm run dev in the sibling web checkout; see docs/development/fresh-machine.md.' \
-	  'Runtime is fresh-install only. Configure AWS login and .env before configuration.'
+	  'Runtime is fresh-install only. Configure AWS login and .env before configuration.' \
+	  'Command details: docs/development/local-commands.md'
 
 $(addprefix local-,$(LOCAL_STEPS)):
 	$(PYTHON) scripts/local_machine.py $(patsubst local-%,%,$@)

@@ -22,7 +22,8 @@ authentication, authorization, stored observations, SQL execution and refresh.
 
 ### Manual fresh-machine setup
 
-Run `make local-help` for the Make command sequence. Follow the
+Run `make local-help` for the Make command sequence. The
+[command reference](local-commands.md) explains what each command does. Follow the
 [numbered fresh-machine walkthrough](fresh-machine.md) from dependency
 installation through browser sign-in and recovery. It includes Docker setup,
 pinned source installation, dedicated Colima commands, actual-host
