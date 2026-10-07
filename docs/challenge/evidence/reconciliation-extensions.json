@@ -1,0 +1,4623 @@
+{
+  "scope": "Exploratory calculations over the recorded September 2026 baseline",
+  "sources": {
+    "national": {
+      "snapshot": "data/verification/national-2026-09/national.json",
+      "sha256": "b140ed2d61813f500089704506a52518914cc3bce7c1859f90ab04c50ad54e9c",
+      "retrieved_at_utc": "2026-10-02T01:57:00.264611+00:00",
+      "api_version": "2.1.14"
+    },
+    "facility": {
+      "snapshot": "data/verification/facility-2026-09/facility.json",
+      "sha256": "a0bae3e25ff11c0ed4e7721ecb0c79b4f4c798f95aa1e4111460157eec5376e9",
+      "retrieved_at_utc": "2026-10-02T01:57:01.302085+00:00",
+      "api_version": "2.1.14"
+    },
+    "generator": {
+      "snapshot": "data/verification/generator-2026-09/generator.json",
+      "sha256": "9f58a9cb19f19a585181f14c6d570d73b8de25310eefbfbdf041b1affeb23d93",
+      "retrieved_at_utc": "2026-10-02T01:57:02.624328+00:00",
+      "api_version": "2.1.14"
+    }
+  },
+  "daily_metric_and_identity_checks": [
+    {
+      "period": "2026-09-01",
+      "national_capacity_offline_percent": "2.780404730563764783011764947",
+      "source_reported_percent": "2.78",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "2.780404730563764783011764947",
+          "unweighted_mean_percent": "3.292100049823274202942062493",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "2.780404730563764783011764947",
+          "unweighted_mean_percent": "2.905263157894736842105263158",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 84,
+        "partial": 10,
+        "full": 1
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "11.57894736842105263157894737",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-02",
+      "national_capacity_offline_percent": "1.980010346187532331836038537",
+      "source_reported_percent": "1.98",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "1.980010346187532331836038537",
+          "unweighted_mean_percent": "2.939279006134056681830524291",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "1.980010346187532331836038537",
+          "unweighted_mean_percent": "2.20",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 84,
+        "partial": 10,
+        "full": 1
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "11.57894736842105263157894737",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-03",
+      "national_capacity_offline_percent": "1.544079368575248026797650084",
+      "source_reported_percent": "1.54",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "1.544079368575248026797650084",
+          "unweighted_mean_percent": "2.734328559702039548717626053",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "1.544079368575248026797650084",
+          "unweighted_mean_percent": "1.821052631578947368421052632",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 85,
+        "partial": 9,
+        "full": 1
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "10.52631578947368421052631579",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-04",
+      "national_capacity_offline_percent": "2.436862134490194170281856782",
+      "source_reported_percent": "2.44",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "2.436862134490194170281856782",
+          "unweighted_mean_percent": "3.589420467479274132419603115",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "2.436862134490194170281856782",
+          "unweighted_mean_percent": "2.852631578947368421052631579",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 84,
+        "partial": 9,
+        "full": 2
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "11.57894736842105263157894737",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-05",
+      "national_capacity_offline_percent": "4.342587878570587120533084752",
+      "source_reported_percent": "4.34",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "4.342587878570587120533084752",
+          "unweighted_mean_percent": "5.052361800273250123457351313",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "4.342587878570587120533084752",
+          "unweighted_mean_percent": "4.526315789473684210526315789",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 81,
+        "partial": 11,
+        "full": 3
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "14.73684210526315789473684211",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-06",
+      "national_capacity_offline_percent": "4.767905306774704083670950261",
+      "source_reported_percent": "4.77",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "4.767905306774704083670950261",
+          "unweighted_mean_percent": "5.376770280546053251411949165",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "4.767905306774704083670950261",
+          "unweighted_mean_percent": "5.073684210526315789473684211",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 84,
+        "partial": 7,
+        "full": 4
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "11.57894736842105263157894737",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-07",
+      "national_capacity_offline_percent": "4.422265815069580672092439600",
+      "source_reported_percent": "4.42",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "4.422265815069580672092439600",
+          "unweighted_mean_percent": "5.225839136671362954786768898",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "4.422265815069580672092439600",
+          "unweighted_mean_percent": "4.789473684210526315789473684",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 84,
+        "partial": 7,
+        "full": 4
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "11.57894736842105263157894737",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-08",
+      "national_capacity_offline_percent": "5.391130961222284253819638293",
+      "source_reported_percent": "5.39",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "5.391130961222284253819638293",
+          "unweighted_mean_percent": "7.100122439247655808156518595",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "5.391130961222284253819638293",
+          "unweighted_mean_percent": "5.894736842105263157894736842",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 83,
+        "partial": 7,
+        "full": 5
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "12.63157894736842105263157895",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-09",
+      "national_capacity_offline_percent": "5.624273590075854968987046778",
+      "source_reported_percent": "5.62",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "5.624273590075854968987046778",
+          "unweighted_mean_percent": "7.378436898368280847968206605",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "5.624273590075854968987046778",
+          "unweighted_mean_percent": "6.094736842105263157894736842",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 80,
+        "partial": 10,
+        "full": 5
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "15.78947368421052631578947368",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-10",
+      "national_capacity_offline_percent": "5.046319164519747389124210591",
+      "source_reported_percent": "5.05",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "5.046319164519747389124210591",
+          "unweighted_mean_percent": "6.804706162110031949555132629",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "5.046319164519747389124210591",
+          "unweighted_mean_percent": "5.473684210526315789473684211",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 82,
+        "partial": 9,
+        "full": 4
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "13.68421052631578947368421053",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-11",
+      "national_capacity_offline_percent": "5.312026674725083358515885495",
+      "source_reported_percent": "5.31",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "5.312026674725083358515885495",
+          "unweighted_mean_percent": "6.615392706739899377476157489",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "5.312026674725083358515885495",
+          "unweighted_mean_percent": "5.557894736842105263157894737",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 83,
+        "partial": 8,
+        "full": 4
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "12.63157894736842105263157895",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-12",
+      "national_capacity_offline_percent": "7.511156980347365563585517386",
+      "source_reported_percent": "7.51",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "7.511156980347365563585517386",
+          "unweighted_mean_percent": "8.686722611967355062408187889",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "7.511156980347365563585517386",
+          "unweighted_mean_percent": "7.60",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 79,
+        "partial": 11,
+        "full": 5
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "16.84210526315789473684210526",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-13",
+      "national_capacity_offline_percent": "9.281666248380207026188146957",
+      "source_reported_percent": "9.28",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "9.281666248380207026188146957",
+          "unweighted_mean_percent": "9.780052926591945781058090687",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "9.281666248380207026188146957",
+          "unweighted_mean_percent": "9.305263157894736842105263158",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 75,
+        "partial": 14,
+        "full": 6
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "21.05263157894736842105263158",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-14",
+      "national_capacity_offline_percent": "8.301795217193110053728468918",
+      "source_reported_percent": "8.3",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "8.301795217193110053728468918",
+          "unweighted_mean_percent": "9.888617136164283642062458362",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "8.301795217193110053728468918",
+          "unweighted_mean_percent": "8.568421052631578947368421053",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 78,
+        "partial": 10,
+        "full": 7
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "17.89473684210526315789473684",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-15",
+      "national_capacity_offline_percent": "7.757219026741309458566592058",
+      "source_reported_percent": "7.76",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "7.757219026741309458566592058",
+          "unweighted_mean_percent": "9.224422949297282228718289944",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "7.757219026741309458566592058",
+          "unweighted_mean_percent": "8.00",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 79,
+        "partial": 9,
+        "full": 7
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "16.84210526315789473684210526",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-16",
+      "national_capacity_offline_percent": "8.167694285524044642262639507",
+      "source_reported_percent": "8.17",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "8.167694285524044642262639507",
+          "unweighted_mean_percent": "9.267192066758628537961674385",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "8.167694285524044642262639507",
+          "unweighted_mean_percent": "8.389473684210526315789473684",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 80,
+        "partial": 8,
+        "full": 7
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "15.78947368421052631578947368",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-17",
+      "national_capacity_offline_percent": "8.345993925456231017050721928",
+      "source_reported_percent": "8.35",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "8.345993925456231017050721928",
+          "unweighted_mean_percent": "9.347195468796041422427879095",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "8.345993925456231017050721928",
+          "unweighted_mean_percent": "8.547368421052631578947368421",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 79,
+        "partial": 9,
+        "full": 7
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "16.84210526315789473684210526",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-18",
+      "national_capacity_offline_percent": "7.954522871732883974165262419",
+      "source_reported_percent": "7.95",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "7.954522871732883974165262419",
+          "unweighted_mean_percent": "9.225897380682407013671616218",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "7.954522871732883974165262419",
+          "unweighted_mean_percent": "8.20",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 81,
+        "partial": 7,
+        "full": 7
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "14.73684210526315789473684211",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-19",
+      "national_capacity_offline_percent": "9.886260570269564282092388382",
+      "source_reported_percent": "9.89",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "9.886260570269564282092388382",
+          "unweighted_mean_percent": "10.93649599777628048654306481",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "9.886260570269564282092388382",
+          "unweighted_mean_percent": "10.15789473684210526315789474",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 76,
+        "partial": 12,
+        "full": 7
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "20",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-20",
+      "national_capacity_offline_percent": "8.441456456379551426186098207",
+      "source_reported_percent": "8.44",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "8.441456456379551426186098207",
+          "unweighted_mean_percent": "8.783938479104635368134254011",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "8.441456456379551426186098207",
+          "unweighted_mean_percent": "8.526315789473684210526315789",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 81,
+        "partial": 7,
+        "full": 7
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "14.73684210526315789473684211",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-21",
+      "national_capacity_offline_percent": "7.908586823464333823326043198",
+      "source_reported_percent": "7.91",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "7.908586823464333823326043198",
+          "unweighted_mean_percent": "8.320194436420430379718290618",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "7.908586823464333823326043198",
+          "unweighted_mean_percent": "8.042105263157894736842105263",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 82,
+        "partial": 6,
+        "full": 7
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "13.68421052631578947368421053",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-22",
+      "national_capacity_offline_percent": "7.934437951045118597015995616",
+      "source_reported_percent": "7.93",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "7.934437951045118597015995616",
+          "unweighted_mean_percent": "8.22883181431519265790000178",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "7.934437951045118597015995616",
+          "unweighted_mean_percent": "8.073684210526315789473684211",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 81,
+        "partial": 7,
+        "full": 7
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "14.73684210526315789473684211",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-23",
+      "national_capacity_offline_percent": "7.884374695888670924652096640",
+      "source_reported_percent": "7.88",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "7.884374695888670924652096640",
+          "unweighted_mean_percent": "8.136603364418057489983510484",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "7.884374695888670924652096640",
+          "unweighted_mean_percent": "8.010526315789473684210526316",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 82,
+        "partial": 6,
+        "full": 7
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "13.68421052631578947368421053",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-24",
+      "national_capacity_offline_percent": "7.857899723930936637284176992",
+      "source_reported_percent": "7.86",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "7.857899723930936637284176992",
+          "unweighted_mean_percent": "8.173699109170623064656507851",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "7.857899723930936637284176992",
+          "unweighted_mean_percent": "7.968421052631578947368421053",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 81,
+        "partial": 7,
+        "full": 7
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "14.73684210526315789473684211",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-25",
+      "national_capacity_offline_percent": "7.729346807279208772747527415",
+      "source_reported_percent": "7.73",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "7.729346807279208772747527415",
+          "unweighted_mean_percent": "8.028888898012934412323844984",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "7.729346807279208772747527415",
+          "unweighted_mean_percent": "7.863157894736842105263157895",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 82,
+        "partial": 6,
+        "full": 7
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "13.68421052631578947368421053",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-26",
+      "national_capacity_offline_percent": "9.388532121839162880747384002",
+      "source_reported_percent": "9.39",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "9.388532121839162880747384002",
+          "unweighted_mean_percent": "10.41974839552376896995999637",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "9.388532121839162880747384002",
+          "unweighted_mean_percent": "9.242105263157894736842105263",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 81,
+        "partial": 6,
+        "full": 8
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "14.73684210526315789473684211",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-27",
+      "national_capacity_offline_percent": "9.541025706690705333408454167",
+      "source_reported_percent": "9.54",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "9.541025706690705333408454167",
+          "unweighted_mean_percent": "10.55568985407367804275584687",
+          "weighted_minus_national_percentage_points": "0E-27"
+        },
+        "generator": {
+          "capacity_weighted_percent": "9.541025706690705333408454167",
+          "unweighted_mean_percent": "9.473684210526315789473684211",
+          "weighted_minus_national_percentage_points": "0E-27"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 78,
+        "partial": 9,
+        "full": 8
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "17.89473684210526315789473684",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-28",
+      "national_capacity_offline_percent": "10.63811596949411240466910126",
+      "source_reported_percent": "10.64",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "10.63811596949411240466910126",
+          "unweighted_mean_percent": "12.19225515827870785019404899",
+          "weighted_minus_national_percentage_points": "0E-26"
+        },
+        "generator": {
+          "capacity_weighted_percent": "10.63811596949411240466910126",
+          "unweighted_mean_percent": "10.73684210526315789473684211",
+          "weighted_minus_national_percentage_points": "0E-26"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 79,
+        "partial": 6,
+        "full": 10
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "16.84210526315789473684210526",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-29",
+      "national_capacity_offline_percent": "11.84749104952340952976065478",
+      "source_reported_percent": "11.85",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "11.84749104952340952976065478",
+          "unweighted_mean_percent": "13.01956883559238516387136267",
+          "weighted_minus_national_percentage_points": "0E-26"
+        },
+        "generator": {
+          "capacity_weighted_percent": "11.84749104952340952976065478",
+          "unweighted_mean_percent": "11.72631578947368421052631579",
+          "weighted_minus_national_percentage_points": "0E-26"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 80,
+        "partial": 4,
+        "full": 11
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "15.78947368421052631578947368",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    },
+    {
+      "period": "2026-09-30",
+      "national_capacity_offline_percent": "11.88537141276678566489620520",
+      "source_reported_percent": "11.89",
+      "grain_metrics": {
+        "facility": {
+          "capacity_weighted_percent": "11.88537141276678566489620520",
+          "unweighted_mean_percent": "13.07399023795826048191671879",
+          "weighted_minus_national_percentage_points": "0E-26"
+        },
+        "generator": {
+          "capacity_weighted_percent": "11.88537141276678566489620520",
+          "unweighted_mean_percent": "11.76842105263157894736842105",
+          "weighted_minus_national_percentage_points": "0E-26"
+        }
+      },
+      "generator_observation_categories": {
+        "zero": 79,
+        "partial": 5,
+        "full": 11
+      },
+      "generator_count": 95,
+      "nonzero_outage_observation_percent": "16.84210526315789473684210526",
+      "generator_id_occurrences": {
+        "1": 47,
+        "2": 37,
+        "3": 9,
+        "4": 2
+      }
+    }
+  ],
+  "daily_change_attribution": [
+    {
+      "before": "2026-09-01",
+      "after": "2026-09-02",
+      "national_delta_outage_mw": "-781.349",
+      "facility_delta_outage_mw": "-781.349",
+      "generator_delta_outage_mw": "-781.349",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "23.854",
+      "matched_unit_decreases_mw": "-805.203",
+      "matched_unit_net_delta_mw": "-781.349",
+      "opposing_change_mw": "23.854",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "46",
+          "generator": "1",
+          "facility_name": "Browns Ferry",
+          "before_outage_mw": "24.548",
+          "after_outage_mw": "36.822",
+          "delta_outage_mw": "12.274"
+        },
+        {
+          "facility": "46",
+          "generator": "2",
+          "facility_name": "Browns Ferry",
+          "before_outage_mw": "724.62",
+          "after_outage_mw": "253.617",
+          "delta_outage_mw": "-471.003"
+        },
+        {
+          "facility": "6038",
+          "generator": "1",
+          "facility_name": "McGuire",
+          "before_outage_mw": "69.48",
+          "after_outage_mw": "81.06",
+          "delta_outage_mw": "11.58"
+        },
+        {
+          "facility": "649",
+          "generator": "4",
+          "facility_name": "Vogtle",
+          "before_outage_mw": "512.44",
+          "after_outage_mw": "178.24",
+          "delta_outage_mw": "-334.20"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "46",
+          "reported_delta_outage_mw": "-458.729",
+          "matched_unit_delta_outage_mw": "-458.729",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6038",
+          "reported_delta_outage_mw": "11.58",
+          "matched_unit_delta_outage_mw": "11.58",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "649",
+          "reported_delta_outage_mw": "-334.2",
+          "matched_unit_delta_outage_mw": "-334.20",
+          "gap_mw": "0.00"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "46": "-458.729",
+        "6038": "11.58",
+        "649": "-334.20"
+      }
+    },
+    {
+      "before": "2026-09-02",
+      "after": "2026-09-03",
+      "national_delta_outage_mw": "-425.558",
+      "facility_delta_outage_mw": "-425.558",
+      "generator_delta_outage_mw": "-425.558",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "55.647",
+      "matched_unit_decreases_mw": "-481.205",
+      "matched_unit_net_delta_mw": "-425.558",
+      "opposing_change_mw": "55.647",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "3166",
+          "generator": "2",
+          "facility_name": "Peach Bottom",
+          "before_outage_mw": "0",
+          "after_outage_mw": "12.647",
+          "delta_outage_mw": "12.647"
+        },
+        {
+          "facility": "46",
+          "generator": "1",
+          "facility_name": "Browns Ferry",
+          "before_outage_mw": "36.822",
+          "after_outage_mw": "12.274",
+          "delta_outage_mw": "-24.548"
+        },
+        {
+          "facility": "46",
+          "generator": "2",
+          "facility_name": "Browns Ferry",
+          "before_outage_mw": "253.617",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-253.617"
+        },
+        {
+          "facility": "6020",
+          "generator": "1",
+          "facility_name": "Perry",
+          "before_outage_mw": "124",
+          "after_outage_mw": "99.2",
+          "delta_outage_mw": "-24.8"
+        },
+        {
+          "facility": "6110",
+          "generator": "1",
+          "facility_name": "James A Fitzpatrick",
+          "before_outage_mw": "118.16",
+          "after_outage_mw": "126.6",
+          "delta_outage_mw": "8.44"
+        },
+        {
+          "facility": "649",
+          "generator": "2",
+          "facility_name": "Vogtle",
+          "before_outage_mw": "149.76",
+          "after_outage_mw": "184.32",
+          "delta_outage_mw": "34.56"
+        },
+        {
+          "facility": "649",
+          "generator": "4",
+          "facility_name": "Vogtle",
+          "before_outage_mw": "178.24",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-178.24"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "3166",
+          "reported_delta_outage_mw": "12.647",
+          "matched_unit_delta_outage_mw": "12.647",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "46",
+          "reported_delta_outage_mw": "-278.165",
+          "matched_unit_delta_outage_mw": "-278.165",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6020",
+          "reported_delta_outage_mw": "-24.8",
+          "matched_unit_delta_outage_mw": "-24.8",
+          "gap_mw": "0.0"
+        },
+        {
+          "facility": "6110",
+          "reported_delta_outage_mw": "8.44",
+          "matched_unit_delta_outage_mw": "8.44",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "649",
+          "reported_delta_outage_mw": "-143.68",
+          "matched_unit_delta_outage_mw": "-143.68",
+          "gap_mw": "0.00"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "3166": "12.647",
+        "46": "-278.165",
+        "6020": "-24.8",
+        "6110": "8.44",
+        "649": "-143.68"
+      }
+    },
+    {
+      "before": "2026-09-03",
+      "after": "2026-09-04",
+      "national_delta_outage_mw": "871.539",
+      "facility_delta_outage_mw": "871.539",
+      "generator_delta_outage_mw": "871.539",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "933.539",
+      "matched_unit_decreases_mw": "-62.0",
+      "matched_unit_net_delta_mw": "871.539",
+      "opposing_change_mw": "62.0",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "46",
+          "generator": "1",
+          "facility_name": "Browns Ferry",
+          "before_outage_mw": "12.274",
+          "after_outage_mw": "24.548",
+          "delta_outage_mw": "12.274"
+        },
+        {
+          "facility": "6020",
+          "generator": "1",
+          "facility_name": "Perry",
+          "before_outage_mw": "99.2",
+          "after_outage_mw": "37.2",
+          "delta_outage_mw": "-62.0"
+        },
+        {
+          "facility": "6038",
+          "generator": "1",
+          "facility_name": "McGuire",
+          "before_outage_mw": "81.06",
+          "after_outage_mw": "92.64",
+          "delta_outage_mw": "11.58"
+        },
+        {
+          "facility": "8036",
+          "generator": "1",
+          "facility_name": "Cooper",
+          "before_outage_mw": "76.85",
+          "after_outage_mw": "84.535",
+          "delta_outage_mw": "7.685"
+        },
+        {
+          "facility": "869",
+          "generator": "2",
+          "facility_name": "Dresden Generating Station",
+          "before_outage_mw": "0",
+          "after_outage_mw": "902",
+          "delta_outage_mw": "902"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "46",
+          "reported_delta_outage_mw": "12.274",
+          "matched_unit_delta_outage_mw": "12.274",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6020",
+          "reported_delta_outage_mw": "-62.0",
+          "matched_unit_delta_outage_mw": "-62.0",
+          "gap_mw": "0.0"
+        },
+        {
+          "facility": "6038",
+          "reported_delta_outage_mw": "11.58",
+          "matched_unit_delta_outage_mw": "11.58",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "8036",
+          "reported_delta_outage_mw": "7.685",
+          "matched_unit_delta_outage_mw": "7.685",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "869",
+          "reported_delta_outage_mw": "902",
+          "matched_unit_delta_outage_mw": "902",
+          "gap_mw": "0"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "46": "12.274",
+        "6020": "-62.0",
+        "6038": "11.58",
+        "8036": "7.685",
+        "869": "902"
+      }
+    },
+    {
+      "before": "2026-09-04",
+      "after": "2026-09-05",
+      "national_delta_outage_mw": "1860.379",
+      "facility_delta_outage_mw": "1860.379",
+      "generator_delta_outage_mw": "1860.379",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "1880.464",
+      "matched_unit_decreases_mw": "-20.085",
+      "matched_unit_net_delta_mw": "1860.379",
+      "opposing_change_mw": "20.085",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "2589",
+          "generator": "2",
+          "facility_name": "Nine Mile Point Nuclear Station",
+          "before_outage_mw": "0",
+          "after_outage_mw": "154.008",
+          "delta_outage_mw": "154.008"
+        },
+        {
+          "facility": "3166",
+          "generator": "2",
+          "facility_name": "Peach Bottom",
+          "before_outage_mw": "12.647",
+          "after_outage_mw": "25.294",
+          "delta_outage_mw": "12.647"
+        },
+        {
+          "facility": "3166",
+          "generator": "3",
+          "facility_name": "Peach Bottom",
+          "before_outage_mw": "0",
+          "after_outage_mw": "475.339",
+          "delta_outage_mw": "475.339"
+        },
+        {
+          "facility": "6020",
+          "generator": "1",
+          "facility_name": "Perry",
+          "before_outage_mw": "37.2",
+          "after_outage_mw": "24.8",
+          "delta_outage_mw": "-12.4"
+        },
+        {
+          "facility": "6038",
+          "generator": "1",
+          "facility_name": "McGuire",
+          "before_outage_mw": "92.64",
+          "after_outage_mw": "1158",
+          "delta_outage_mw": "1065.36"
+        },
+        {
+          "facility": "6168",
+          "generator": "2",
+          "facility_name": "North Anna",
+          "before_outage_mw": "113.28",
+          "after_outage_mw": "122.72",
+          "delta_outage_mw": "9.44"
+        },
+        {
+          "facility": "649",
+          "generator": "2",
+          "facility_name": "Vogtle",
+          "before_outage_mw": "184.32",
+          "after_outage_mw": "195.84",
+          "delta_outage_mw": "11.52"
+        },
+        {
+          "facility": "8036",
+          "generator": "1",
+          "facility_name": "Cooper",
+          "before_outage_mw": "84.535",
+          "after_outage_mw": "76.85",
+          "delta_outage_mw": "-7.685"
+        },
+        {
+          "facility": "869",
+          "generator": "3",
+          "facility_name": "Dresden Generating Station",
+          "before_outage_mw": "0",
+          "after_outage_mw": "152.15",
+          "delta_outage_mw": "152.15"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "2589",
+          "reported_delta_outage_mw": "154.008",
+          "matched_unit_delta_outage_mw": "154.008",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "3166",
+          "reported_delta_outage_mw": "487.986",
+          "matched_unit_delta_outage_mw": "487.986",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6020",
+          "reported_delta_outage_mw": "-12.4",
+          "matched_unit_delta_outage_mw": "-12.4",
+          "gap_mw": "0.0"
+        },
+        {
+          "facility": "6038",
+          "reported_delta_outage_mw": "1065.36",
+          "matched_unit_delta_outage_mw": "1065.36",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6168",
+          "reported_delta_outage_mw": "9.44",
+          "matched_unit_delta_outage_mw": "9.44",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "649",
+          "reported_delta_outage_mw": "11.52",
+          "matched_unit_delta_outage_mw": "11.52",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "8036",
+          "reported_delta_outage_mw": "-7.685",
+          "matched_unit_delta_outage_mw": "-7.685",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "869",
+          "reported_delta_outage_mw": "152.15",
+          "matched_unit_delta_outage_mw": "152.15",
+          "gap_mw": "0.00"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "2589": "154.008",
+        "3166": "487.986",
+        "6020": "-12.4",
+        "6038": "1065.36",
+        "6168": "9.44",
+        "649": "11.52",
+        "8036": "-7.685",
+        "869": "152.15"
+      }
+    },
+    {
+      "before": "2026-09-05",
+      "after": "2026-09-06",
+      "national_delta_outage_mw": "415.197",
+      "facility_delta_outage_mw": "415.197",
+      "generator_delta_outage_mw": "415.197",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "1221.494",
+      "matched_unit_decreases_mw": "-806.297",
+      "matched_unit_net_delta_mw": "415.197",
+      "opposing_change_mw": "806.297",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "2589",
+          "generator": "2",
+          "facility_name": "Nine Mile Point Nuclear Station",
+          "before_outage_mw": "154.008",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-154.008"
+        },
+        {
+          "facility": "3166",
+          "generator": "3",
+          "facility_name": "Peach Bottom",
+          "before_outage_mw": "475.339",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-475.339"
+        },
+        {
+          "facility": "46",
+          "generator": "1",
+          "facility_name": "Browns Ferry",
+          "before_outage_mw": "24.548",
+          "after_outage_mw": "36.822",
+          "delta_outage_mw": "12.274"
+        },
+        {
+          "facility": "46",
+          "generator": "3",
+          "facility_name": "Browns Ferry",
+          "before_outage_mw": "0",
+          "after_outage_mw": "367.98",
+          "delta_outage_mw": "367.98"
+        },
+        {
+          "facility": "6020",
+          "generator": "1",
+          "facility_name": "Perry",
+          "before_outage_mw": "24.8",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-24.8"
+        },
+        {
+          "facility": "6110",
+          "generator": "1",
+          "facility_name": "James A Fitzpatrick",
+          "before_outage_mw": "126.6",
+          "after_outage_mw": "135.04",
+          "delta_outage_mw": "8.44"
+        },
+        {
+          "facility": "6168",
+          "generator": "2",
+          "facility_name": "North Anna",
+          "before_outage_mw": "122.72",
+          "after_outage_mw": "944",
+          "delta_outage_mw": "821.28"
+        },
+        {
+          "facility": "649",
+          "generator": "2",
+          "facility_name": "Vogtle",
+          "before_outage_mw": "195.84",
+          "after_outage_mw": "207.36",
+          "delta_outage_mw": "11.52"
+        },
+        {
+          "facility": "869",
+          "generator": "3",
+          "facility_name": "Dresden Generating Station",
+          "before_outage_mw": "152.15",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-152.15"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "2589",
+          "reported_delta_outage_mw": "-154.008",
+          "matched_unit_delta_outage_mw": "-154.008",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "3166",
+          "reported_delta_outage_mw": "-475.339",
+          "matched_unit_delta_outage_mw": "-475.339",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "46",
+          "reported_delta_outage_mw": "380.254",
+          "matched_unit_delta_outage_mw": "380.254",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6020",
+          "reported_delta_outage_mw": "-24.8",
+          "matched_unit_delta_outage_mw": "-24.8",
+          "gap_mw": "0.0"
+        },
+        {
+          "facility": "6110",
+          "reported_delta_outage_mw": "8.44",
+          "matched_unit_delta_outage_mw": "8.44",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6168",
+          "reported_delta_outage_mw": "821.28",
+          "matched_unit_delta_outage_mw": "821.28",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "649",
+          "reported_delta_outage_mw": "11.52",
+          "matched_unit_delta_outage_mw": "11.52",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "869",
+          "reported_delta_outage_mw": "-152.15",
+          "matched_unit_delta_outage_mw": "-152.15",
+          "gap_mw": "0.00"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "2589": "-154.008",
+        "3166": "-475.339",
+        "46": "380.254",
+        "6020": "-24.8",
+        "6110": "8.44",
+        "6168": "821.28",
+        "649": "11.52",
+        "869": "-152.15"
+      }
+    },
+    {
+      "before": "2026-09-06",
+      "after": "2026-09-07",
+      "national_delta_outage_mw": "-337.415",
+      "facility_delta_outage_mw": "-337.415",
+      "generator_delta_outage_mw": "-337.415",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "30.565",
+      "matched_unit_decreases_mw": "-367.98",
+      "matched_unit_net_delta_mw": "-337.415",
+      "opposing_change_mw": "30.565",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "46",
+          "generator": "3",
+          "facility_name": "Browns Ferry",
+          "before_outage_mw": "367.98",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-367.98"
+        },
+        {
+          "facility": "6023",
+          "generator": "2",
+          "facility_name": "Byron Generating Station",
+          "before_outage_mw": "0",
+          "after_outage_mw": "11.36",
+          "delta_outage_mw": "11.36"
+        },
+        {
+          "facility": "649",
+          "generator": "2",
+          "facility_name": "Vogtle",
+          "before_outage_mw": "207.36",
+          "after_outage_mw": "218.88",
+          "delta_outage_mw": "11.52"
+        },
+        {
+          "facility": "8036",
+          "generator": "1",
+          "facility_name": "Cooper",
+          "before_outage_mw": "76.85",
+          "after_outage_mw": "84.535",
+          "delta_outage_mw": "7.685"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "46",
+          "reported_delta_outage_mw": "-367.980",
+          "matched_unit_delta_outage_mw": "-367.98",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6023",
+          "reported_delta_outage_mw": "11.36",
+          "matched_unit_delta_outage_mw": "11.36",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "649",
+          "reported_delta_outage_mw": "11.52",
+          "matched_unit_delta_outage_mw": "11.52",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "8036",
+          "reported_delta_outage_mw": "7.685",
+          "matched_unit_delta_outage_mw": "7.685",
+          "gap_mw": "0.000"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "46": "-367.98",
+        "6023": "11.36",
+        "649": "11.52",
+        "8036": "7.685"
+      }
+    },
+    {
+      "before": "2026-09-07",
+      "after": "2026-09-08",
+      "national_delta_outage_mw": "945.811",
+      "facility_delta_outage_mw": "945.811",
+      "generator_delta_outage_mw": "945.811",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "945.811",
+      "matched_unit_decreases_mw": "0",
+      "matched_unit_net_delta_mw": "945.811",
+      "opposing_change_mw": "0",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "3166",
+          "generator": "2",
+          "facility_name": "Peach Bottom",
+          "before_outage_mw": "25.294",
+          "after_outage_mw": "37.941",
+          "delta_outage_mw": "12.647"
+        },
+        {
+          "facility": "46",
+          "generator": "1",
+          "facility_name": "Browns Ferry",
+          "before_outage_mw": "36.822",
+          "after_outage_mw": "49.096",
+          "delta_outage_mw": "12.274"
+        },
+        {
+          "facility": "6149",
+          "generator": "1",
+          "facility_name": "Davis Besse",
+          "before_outage_mw": "0",
+          "after_outage_mw": "894",
+          "delta_outage_mw": "894"
+        },
+        {
+          "facility": "649",
+          "generator": "2",
+          "facility_name": "Vogtle",
+          "before_outage_mw": "218.88",
+          "after_outage_mw": "230.4",
+          "delta_outage_mw": "11.52"
+        },
+        {
+          "facility": "8036",
+          "generator": "1",
+          "facility_name": "Cooper",
+          "before_outage_mw": "84.535",
+          "after_outage_mw": "99.905",
+          "delta_outage_mw": "15.370"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "3166",
+          "reported_delta_outage_mw": "12.647",
+          "matched_unit_delta_outage_mw": "12.647",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "46",
+          "reported_delta_outage_mw": "12.274",
+          "matched_unit_delta_outage_mw": "12.274",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6149",
+          "reported_delta_outage_mw": "894",
+          "matched_unit_delta_outage_mw": "894",
+          "gap_mw": "0"
+        },
+        {
+          "facility": "649",
+          "reported_delta_outage_mw": "11.52",
+          "matched_unit_delta_outage_mw": "11.52",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "8036",
+          "reported_delta_outage_mw": "15.370",
+          "matched_unit_delta_outage_mw": "15.370",
+          "gap_mw": "0.000"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "3166": "12.647",
+        "46": "12.274",
+        "6149": "894",
+        "649": "11.52",
+        "8036": "15.370"
+      }
+    },
+    {
+      "before": "2026-09-08",
+      "after": "2026-09-09",
+      "national_delta_outage_mw": "227.595",
+      "facility_delta_outage_mw": "227.595",
+      "generator_delta_outage_mw": "227.595",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "227.595",
+      "matched_unit_decreases_mw": "0",
+      "matched_unit_net_delta_mw": "227.595",
+      "opposing_change_mw": "0",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "1729",
+          "generator": "2",
+          "facility_name": "Fermi",
+          "before_outage_mw": "0",
+          "after_outage_mw": "57.05",
+          "delta_outage_mw": "57.05"
+        },
+        {
+          "facility": "3166",
+          "generator": "2",
+          "facility_name": "Peach Bottom",
+          "before_outage_mw": "37.941",
+          "after_outage_mw": "101.176",
+          "delta_outage_mw": "63.235"
+        },
+        {
+          "facility": "6008",
+          "generator": "1",
+          "facility_name": "Palo Verde",
+          "before_outage_mw": "0",
+          "after_outage_mw": "13.11",
+          "delta_outage_mw": "13.11"
+        },
+        {
+          "facility": "6020",
+          "generator": "1",
+          "facility_name": "Perry",
+          "before_outage_mw": "0",
+          "after_outage_mw": "74.4",
+          "delta_outage_mw": "74.4"
+        },
+        {
+          "facility": "6023",
+          "generator": "2",
+          "facility_name": "Byron Generating Station",
+          "before_outage_mw": "11.36",
+          "after_outage_mw": "22.72",
+          "delta_outage_mw": "11.36"
+        },
+        {
+          "facility": "6110",
+          "generator": "1",
+          "facility_name": "James A Fitzpatrick",
+          "before_outage_mw": "135.04",
+          "after_outage_mw": "143.48",
+          "delta_outage_mw": "8.44"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "1729",
+          "reported_delta_outage_mw": "57.05",
+          "matched_unit_delta_outage_mw": "57.05",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "3166",
+          "reported_delta_outage_mw": "63.235",
+          "matched_unit_delta_outage_mw": "63.235",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6008",
+          "reported_delta_outage_mw": "13.11",
+          "matched_unit_delta_outage_mw": "13.11",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6020",
+          "reported_delta_outage_mw": "74.4",
+          "matched_unit_delta_outage_mw": "74.4",
+          "gap_mw": "0.0"
+        },
+        {
+          "facility": "6023",
+          "reported_delta_outage_mw": "11.36",
+          "matched_unit_delta_outage_mw": "11.36",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6110",
+          "reported_delta_outage_mw": "8.44",
+          "matched_unit_delta_outage_mw": "8.44",
+          "gap_mw": "0.00"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "1729": "57.05",
+        "3166": "63.235",
+        "6008": "13.11",
+        "6020": "74.4",
+        "6023": "11.36",
+        "6110": "8.44"
+      }
+    },
+    {
+      "before": "2026-09-09",
+      "after": "2026-09-10",
+      "national_delta_outage_mw": "-564.202",
+      "facility_delta_outage_mw": "-564.202",
+      "generator_delta_outage_mw": "-564.202",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "35.314",
+      "matched_unit_decreases_mw": "-599.516",
+      "matched_unit_net_delta_mw": "-564.202",
+      "opposing_change_mw": "35.314",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "1729",
+          "generator": "2",
+          "facility_name": "Fermi",
+          "before_outage_mw": "57.05",
+          "after_outage_mw": "22.82",
+          "delta_outage_mw": "-34.23"
+        },
+        {
+          "facility": "3166",
+          "generator": "2",
+          "facility_name": "Peach Bottom",
+          "before_outage_mw": "101.176",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-101.176"
+        },
+        {
+          "facility": "46",
+          "generator": "1",
+          "facility_name": "Browns Ferry",
+          "before_outage_mw": "49.096",
+          "after_outage_mw": "61.37",
+          "delta_outage_mw": "12.274"
+        },
+        {
+          "facility": "6008",
+          "generator": "1",
+          "facility_name": "Palo Verde",
+          "before_outage_mw": "13.11",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-13.11"
+        },
+        {
+          "facility": "649",
+          "generator": "2",
+          "facility_name": "Vogtle",
+          "before_outage_mw": "230.4",
+          "after_outage_mw": "253.44",
+          "delta_outage_mw": "23.04"
+        },
+        {
+          "facility": "869",
+          "generator": "2",
+          "facility_name": "Dresden Generating Station",
+          "before_outage_mw": "902",
+          "after_outage_mw": "451",
+          "delta_outage_mw": "-451"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "1729",
+          "reported_delta_outage_mw": "-34.23",
+          "matched_unit_delta_outage_mw": "-34.23",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "3166",
+          "reported_delta_outage_mw": "-101.176",
+          "matched_unit_delta_outage_mw": "-101.176",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "46",
+          "reported_delta_outage_mw": "12.274",
+          "matched_unit_delta_outage_mw": "12.274",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6008",
+          "reported_delta_outage_mw": "-13.11",
+          "matched_unit_delta_outage_mw": "-13.11",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "649",
+          "reported_delta_outage_mw": "23.04",
+          "matched_unit_delta_outage_mw": "23.04",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "869",
+          "reported_delta_outage_mw": "-451",
+          "matched_unit_delta_outage_mw": "-451",
+          "gap_mw": "0"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "1729": "-34.23",
+        "3166": "-101.176",
+        "46": "12.274",
+        "6008": "-13.11",
+        "649": "23.04",
+        "869": "-451"
+      }
+    },
+    {
+      "before": "2026-09-10",
+      "after": "2026-09-11",
+      "national_delta_outage_mw": "259.385",
+      "facility_delta_outage_mw": "259.385",
+      "generator_delta_outage_mw": "259.385",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "807.605",
+      "matched_unit_decreases_mw": "-548.22",
+      "matched_unit_net_delta_mw": "259.385",
+      "opposing_change_mw": "548.22",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "1729",
+          "generator": "2",
+          "facility_name": "Fermi",
+          "before_outage_mw": "22.82",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-22.82"
+        },
+        {
+          "facility": "46",
+          "generator": "3",
+          "facility_name": "Browns Ferry",
+          "before_outage_mw": "0",
+          "after_outage_mw": "735.96",
+          "delta_outage_mw": "735.96"
+        },
+        {
+          "facility": "6008",
+          "generator": "1",
+          "facility_name": "Palo Verde",
+          "before_outage_mw": "0",
+          "after_outage_mw": "52.44",
+          "delta_outage_mw": "52.44"
+        },
+        {
+          "facility": "6020",
+          "generator": "1",
+          "facility_name": "Perry",
+          "before_outage_mw": "74.4",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-74.4"
+        },
+        {
+          "facility": "649",
+          "generator": "2",
+          "facility_name": "Vogtle",
+          "before_outage_mw": "253.44",
+          "after_outage_mw": "264.96",
+          "delta_outage_mw": "11.52"
+        },
+        {
+          "facility": "8036",
+          "generator": "1",
+          "facility_name": "Cooper",
+          "before_outage_mw": "99.905",
+          "after_outage_mw": "107.59",
+          "delta_outage_mw": "7.685"
+        },
+        {
+          "facility": "869",
+          "generator": "2",
+          "facility_name": "Dresden Generating Station",
+          "before_outage_mw": "451",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-451"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "1729",
+          "reported_delta_outage_mw": "-22.82",
+          "matched_unit_delta_outage_mw": "-22.82",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "46",
+          "reported_delta_outage_mw": "735.96",
+          "matched_unit_delta_outage_mw": "735.96",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6008",
+          "reported_delta_outage_mw": "52.44",
+          "matched_unit_delta_outage_mw": "52.44",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6020",
+          "reported_delta_outage_mw": "-74.4",
+          "matched_unit_delta_outage_mw": "-74.4",
+          "gap_mw": "0.0"
+        },
+        {
+          "facility": "649",
+          "reported_delta_outage_mw": "11.52",
+          "matched_unit_delta_outage_mw": "11.52",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "8036",
+          "reported_delta_outage_mw": "7.685",
+          "matched_unit_delta_outage_mw": "7.685",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "869",
+          "reported_delta_outage_mw": "-451",
+          "matched_unit_delta_outage_mw": "-451",
+          "gap_mw": "0"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "1729": "-22.82",
+        "46": "735.96",
+        "6008": "52.44",
+        "6020": "-74.4",
+        "649": "11.52",
+        "8036": "7.685",
+        "869": "-451"
+      }
+    },
+    {
+      "before": "2026-09-11",
+      "after": "2026-09-12",
+      "national_delta_outage_mw": "2146.802",
+      "facility_delta_outage_mw": "2146.802",
+      "generator_delta_outage_mw": "2146.802",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "2922.092",
+      "matched_unit_decreases_mw": "-775.29",
+      "matched_unit_net_delta_mw": "2146.802",
+      "opposing_change_mw": "775.29",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "1729",
+          "generator": "2",
+          "facility_name": "Fermi",
+          "before_outage_mw": "0",
+          "after_outage_mw": "330.89",
+          "delta_outage_mw": "330.89"
+        },
+        {
+          "facility": "204",
+          "generator": "1",
+          "facility_name": "Clinton Power Station",
+          "before_outage_mw": "0",
+          "after_outage_mw": "162.435",
+          "delta_outage_mw": "162.435"
+        },
+        {
+          "facility": "46",
+          "generator": "1",
+          "facility_name": "Browns Ferry",
+          "before_outage_mw": "61.37",
+          "after_outage_mw": "1227.4",
+          "delta_outage_mw": "1166.03"
+        },
+        {
+          "facility": "46",
+          "generator": "3",
+          "facility_name": "Browns Ferry",
+          "before_outage_mw": "735.96",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-735.96"
+        },
+        {
+          "facility": "6008",
+          "generator": "1",
+          "facility_name": "Palo Verde",
+          "before_outage_mw": "52.44",
+          "after_outage_mw": "13.11",
+          "delta_outage_mw": "-39.33"
+        },
+        {
+          "facility": "6014",
+          "generator": "2",
+          "facility_name": "Brunswick",
+          "before_outage_mw": "0",
+          "after_outage_mw": "279.6",
+          "delta_outage_mw": "279.6"
+        },
+        {
+          "facility": "6023",
+          "generator": "2",
+          "facility_name": "Byron Generating Station",
+          "before_outage_mw": "22.72",
+          "after_outage_mw": "34.08",
+          "delta_outage_mw": "11.36"
+        },
+        {
+          "facility": "6099",
+          "generator": "2",
+          "facility_name": "Diablo Canyon",
+          "before_outage_mw": "0",
+          "after_outage_mw": "536.64",
+          "delta_outage_mw": "536.64"
+        },
+        {
+          "facility": "6105",
+          "generator": "2",
+          "facility_name": "Limerick",
+          "before_outage_mw": "0",
+          "after_outage_mw": "415.177",
+          "delta_outage_mw": "415.177"
+        },
+        {
+          "facility": "6110",
+          "generator": "1",
+          "facility_name": "James A Fitzpatrick",
+          "before_outage_mw": "143.48",
+          "after_outage_mw": "151.92",
+          "delta_outage_mw": "8.44"
+        },
+        {
+          "facility": "649",
+          "generator": "2",
+          "facility_name": "Vogtle",
+          "before_outage_mw": "264.96",
+          "after_outage_mw": "276.48",
+          "delta_outage_mw": "11.52"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "1729",
+          "reported_delta_outage_mw": "330.89",
+          "matched_unit_delta_outage_mw": "330.89",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "204",
+          "reported_delta_outage_mw": "162.435",
+          "matched_unit_delta_outage_mw": "162.435",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "46",
+          "reported_delta_outage_mw": "430.07",
+          "matched_unit_delta_outage_mw": "430.07",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6008",
+          "reported_delta_outage_mw": "-39.33",
+          "matched_unit_delta_outage_mw": "-39.33",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6014",
+          "reported_delta_outage_mw": "279.6",
+          "matched_unit_delta_outage_mw": "279.6",
+          "gap_mw": "0.0"
+        },
+        {
+          "facility": "6023",
+          "reported_delta_outage_mw": "11.36",
+          "matched_unit_delta_outage_mw": "11.36",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6099",
+          "reported_delta_outage_mw": "536.64",
+          "matched_unit_delta_outage_mw": "536.64",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6105",
+          "reported_delta_outage_mw": "415.177",
+          "matched_unit_delta_outage_mw": "415.177",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6110",
+          "reported_delta_outage_mw": "8.44",
+          "matched_unit_delta_outage_mw": "8.44",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "649",
+          "reported_delta_outage_mw": "11.52",
+          "matched_unit_delta_outage_mw": "11.52",
+          "gap_mw": "0.00"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "1729": "330.89",
+        "204": "162.435",
+        "46": "430.07",
+        "6008": "-39.33",
+        "6014": "279.6",
+        "6023": "11.36",
+        "6099": "536.64",
+        "6105": "415.177",
+        "6110": "8.44",
+        "649": "11.52"
+      }
+    },
+    {
+      "before": "2026-09-12",
+      "after": "2026-09-13",
+      "national_delta_outage_mw": "1728.380",
+      "facility_delta_outage_mw": "1728.380",
+      "generator_delta_outage_mw": "1728.380",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "2316.050",
+      "matched_unit_decreases_mw": "-587.67",
+      "matched_unit_net_delta_mw": "1728.380",
+      "opposing_change_mw": "587.67",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "1729",
+          "generator": "2",
+          "facility_name": "Fermi",
+          "before_outage_mw": "330.89",
+          "after_outage_mw": "22.82",
+          "delta_outage_mw": "-308.07"
+        },
+        {
+          "facility": "204",
+          "generator": "1",
+          "facility_name": "Clinton Power Station",
+          "before_outage_mw": "162.435",
+          "after_outage_mw": "270.725",
+          "delta_outage_mw": "108.290"
+        },
+        {
+          "facility": "2589",
+          "generator": "2",
+          "facility_name": "Nine Mile Point Nuclear Station",
+          "before_outage_mw": "0",
+          "after_outage_mw": "231.012",
+          "delta_outage_mw": "231.012"
+        },
+        {
+          "facility": "6014",
+          "generator": "2",
+          "facility_name": "Brunswick",
+          "before_outage_mw": "279.6",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-279.6"
+        },
+        {
+          "facility": "6020",
+          "generator": "1",
+          "facility_name": "Perry",
+          "before_outage_mw": "0",
+          "after_outage_mw": "49.6",
+          "delta_outage_mw": "49.6"
+        },
+        {
+          "facility": "6026",
+          "generator": "2",
+          "facility_name": "LaSalle Generating Station",
+          "before_outage_mw": "0",
+          "after_outage_mw": "249.458",
+          "delta_outage_mw": "249.458"
+        },
+        {
+          "facility": "6051",
+          "generator": "2",
+          "facility_name": "Edwin I Hatch",
+          "before_outage_mw": "0",
+          "after_outage_mw": "247.24",
+          "delta_outage_mw": "247.24"
+        },
+        {
+          "facility": "6099",
+          "generator": "2",
+          "facility_name": "Diablo Canyon",
+          "before_outage_mw": "536.64",
+          "after_outage_mw": "547.82",
+          "delta_outage_mw": "11.18"
+        },
+        {
+          "facility": "649",
+          "generator": "2",
+          "facility_name": "Vogtle",
+          "before_outage_mw": "276.48",
+          "after_outage_mw": "1152",
+          "delta_outage_mw": "875.52"
+        },
+        {
+          "facility": "8036",
+          "generator": "1",
+          "facility_name": "Cooper",
+          "before_outage_mw": "107.59",
+          "after_outage_mw": "122.96",
+          "delta_outage_mw": "15.37"
+        },
+        {
+          "facility": "880",
+          "generator": "2",
+          "facility_name": "Quad Cities Generating Station",
+          "before_outage_mw": "0",
+          "after_outage_mw": "528.38",
+          "delta_outage_mw": "528.38"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "1729",
+          "reported_delta_outage_mw": "-308.07",
+          "matched_unit_delta_outage_mw": "-308.07",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "204",
+          "reported_delta_outage_mw": "108.290",
+          "matched_unit_delta_outage_mw": "108.290",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "2589",
+          "reported_delta_outage_mw": "231.012",
+          "matched_unit_delta_outage_mw": "231.012",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6014",
+          "reported_delta_outage_mw": "-279.6",
+          "matched_unit_delta_outage_mw": "-279.6",
+          "gap_mw": "0.0"
+        },
+        {
+          "facility": "6020",
+          "reported_delta_outage_mw": "49.6",
+          "matched_unit_delta_outage_mw": "49.6",
+          "gap_mw": "0.0"
+        },
+        {
+          "facility": "6026",
+          "reported_delta_outage_mw": "249.458",
+          "matched_unit_delta_outage_mw": "249.458",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6051",
+          "reported_delta_outage_mw": "247.24",
+          "matched_unit_delta_outage_mw": "247.24",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6099",
+          "reported_delta_outage_mw": "11.18",
+          "matched_unit_delta_outage_mw": "11.18",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "649",
+          "reported_delta_outage_mw": "875.52",
+          "matched_unit_delta_outage_mw": "875.52",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "8036",
+          "reported_delta_outage_mw": "15.37",
+          "matched_unit_delta_outage_mw": "15.37",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "880",
+          "reported_delta_outage_mw": "528.38",
+          "matched_unit_delta_outage_mw": "528.38",
+          "gap_mw": "0.00"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "1729": "-308.07",
+        "204": "108.290",
+        "2589": "231.012",
+        "6014": "-279.6",
+        "6020": "49.6",
+        "6026": "249.458",
+        "6051": "247.24",
+        "6099": "11.18",
+        "649": "875.52",
+        "8036": "15.37",
+        "880": "528.38"
+      }
+    },
+    {
+      "before": "2026-09-13",
+      "after": "2026-09-14",
+      "national_delta_outage_mw": "-956.555",
+      "facility_delta_outage_mw": "-956.555",
+      "generator_delta_outage_mw": "-956.555",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "860.516",
+      "matched_unit_decreases_mw": "-1817.071",
+      "matched_unit_net_delta_mw": "-956.555",
+      "opposing_change_mw": "860.516",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "1729",
+          "generator": "2",
+          "facility_name": "Fermi",
+          "before_outage_mw": "22.82",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-22.82"
+        },
+        {
+          "facility": "204",
+          "generator": "1",
+          "facility_name": "Clinton Power Station",
+          "before_outage_mw": "270.725",
+          "after_outage_mw": "368.186",
+          "delta_outage_mw": "97.461"
+        },
+        {
+          "facility": "2589",
+          "generator": "2",
+          "facility_name": "Nine Mile Point Nuclear Station",
+          "before_outage_mw": "231.012",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-231.012"
+        },
+        {
+          "facility": "3166",
+          "generator": "2",
+          "facility_name": "Peach Bottom",
+          "before_outage_mw": "0",
+          "after_outage_mw": "12.647",
+          "delta_outage_mw": "12.647"
+        },
+        {
+          "facility": "6008",
+          "generator": "1",
+          "facility_name": "Palo Verde",
+          "before_outage_mw": "13.11",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-13.11"
+        },
+        {
+          "facility": "6020",
+          "generator": "1",
+          "facility_name": "Perry",
+          "before_outage_mw": "49.6",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-49.6"
+        },
+        {
+          "facility": "6023",
+          "generator": "2",
+          "facility_name": "Byron Generating Station",
+          "before_outage_mw": "34.08",
+          "after_outage_mw": "45.44",
+          "delta_outage_mw": "11.36"
+        },
+        {
+          "facility": "6026",
+          "generator": "2",
+          "facility_name": "LaSalle Generating Station",
+          "before_outage_mw": "249.458",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-249.458"
+        },
+        {
+          "facility": "6051",
+          "generator": "2",
+          "facility_name": "Edwin I Hatch",
+          "before_outage_mw": "247.24",
+          "after_outage_mw": "132.45",
+          "delta_outage_mw": "-114.79"
+        },
+        {
+          "facility": "6099",
+          "generator": "2",
+          "facility_name": "Diablo Canyon",
+          "before_outage_mw": "547.82",
+          "after_outage_mw": "78.26",
+          "delta_outage_mw": "-469.56"
+        },
+        {
+          "facility": "6105",
+          "generator": "2",
+          "facility_name": "Limerick",
+          "before_outage_mw": "415.177",
+          "after_outage_mw": "11.221",
+          "delta_outage_mw": "-403.956"
+        },
+        {
+          "facility": "6110",
+          "generator": "1",
+          "facility_name": "James A Fitzpatrick",
+          "before_outage_mw": "151.92",
+          "after_outage_mw": "844",
+          "delta_outage_mw": "692.08"
+        },
+        {
+          "facility": "6118",
+          "generator": "1",
+          "facility_name": "PSEG Hope Creek Generating Station",
+          "before_outage_mw": "0",
+          "after_outage_mw": "46.968",
+          "delta_outage_mw": "46.968"
+        },
+        {
+          "facility": "8036",
+          "generator": "1",
+          "facility_name": "Cooper",
+          "before_outage_mw": "122.96",
+          "after_outage_mw": "115.275",
+          "delta_outage_mw": "-7.685"
+        },
+        {
+          "facility": "880",
+          "generator": "2",
+          "facility_name": "Quad Cities Generating Station",
+          "before_outage_mw": "528.38",
+          "after_outage_mw": "273.3",
+          "delta_outage_mw": "-255.08"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "1729",
+          "reported_delta_outage_mw": "-22.82",
+          "matched_unit_delta_outage_mw": "-22.82",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "204",
+          "reported_delta_outage_mw": "97.461",
+          "matched_unit_delta_outage_mw": "97.461",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "2589",
+          "reported_delta_outage_mw": "-231.012",
+          "matched_unit_delta_outage_mw": "-231.012",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "3166",
+          "reported_delta_outage_mw": "12.647",
+          "matched_unit_delta_outage_mw": "12.647",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6008",
+          "reported_delta_outage_mw": "-13.11",
+          "matched_unit_delta_outage_mw": "-13.11",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6020",
+          "reported_delta_outage_mw": "-49.6",
+          "matched_unit_delta_outage_mw": "-49.6",
+          "gap_mw": "0.0"
+        },
+        {
+          "facility": "6023",
+          "reported_delta_outage_mw": "11.36",
+          "matched_unit_delta_outage_mw": "11.36",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6026",
+          "reported_delta_outage_mw": "-249.458",
+          "matched_unit_delta_outage_mw": "-249.458",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6051",
+          "reported_delta_outage_mw": "-114.79",
+          "matched_unit_delta_outage_mw": "-114.79",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6099",
+          "reported_delta_outage_mw": "-469.56",
+          "matched_unit_delta_outage_mw": "-469.56",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6105",
+          "reported_delta_outage_mw": "-403.956",
+          "matched_unit_delta_outage_mw": "-403.956",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6110",
+          "reported_delta_outage_mw": "692.08",
+          "matched_unit_delta_outage_mw": "692.08",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6118",
+          "reported_delta_outage_mw": "46.968",
+          "matched_unit_delta_outage_mw": "46.968",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "8036",
+          "reported_delta_outage_mw": "-7.685",
+          "matched_unit_delta_outage_mw": "-7.685",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "880",
+          "reported_delta_outage_mw": "-255.08",
+          "matched_unit_delta_outage_mw": "-255.08",
+          "gap_mw": "0.00"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "1729": "-22.82",
+        "204": "97.461",
+        "2589": "-231.012",
+        "3166": "12.647",
+        "6008": "-13.11",
+        "6020": "-49.6",
+        "6023": "11.36",
+        "6026": "-249.458",
+        "6051": "-114.79",
+        "6099": "-469.56",
+        "6105": "-403.956",
+        "6110": "692.08",
+        "6118": "46.968",
+        "8036": "-7.685",
+        "880": "-255.08"
+      }
+    },
+    {
+      "before": "2026-09-14",
+      "after": "2026-09-15",
+      "national_delta_outage_mw": "-531.618",
+      "facility_delta_outage_mw": "-531.618",
+      "generator_delta_outage_mw": "-531.618",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "90.32",
+      "matched_unit_decreases_mw": "-621.938",
+      "matched_unit_net_delta_mw": "-531.618",
+      "opposing_change_mw": "90.32",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "204",
+          "generator": "1",
+          "facility_name": "Clinton Power Station",
+          "before_outage_mw": "368.186",
+          "after_outage_mw": "184.093",
+          "delta_outage_mw": "-184.093"
+        },
+        {
+          "facility": "6023",
+          "generator": "2",
+          "facility_name": "Byron Generating Station",
+          "before_outage_mw": "45.44",
+          "after_outage_mw": "56.8",
+          "delta_outage_mw": "11.36"
+        },
+        {
+          "facility": "6045",
+          "generator": "2",
+          "facility_name": "St Lucie",
+          "before_outage_mw": "0",
+          "after_outage_mw": "78.96",
+          "delta_outage_mw": "78.96"
+        },
+        {
+          "facility": "6051",
+          "generator": "2",
+          "facility_name": "Edwin I Hatch",
+          "before_outage_mw": "132.45",
+          "after_outage_mw": "35.32",
+          "delta_outage_mw": "-97.13"
+        },
+        {
+          "facility": "6099",
+          "generator": "2",
+          "facility_name": "Diablo Canyon",
+          "before_outage_mw": "78.26",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-78.26"
+        },
+        {
+          "facility": "6105",
+          "generator": "2",
+          "facility_name": "Limerick",
+          "before_outage_mw": "11.221",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-11.221"
+        },
+        {
+          "facility": "6118",
+          "generator": "1",
+          "facility_name": "PSEG Hope Creek Generating Station",
+          "before_outage_mw": "46.968",
+          "after_outage_mw": "23.484",
+          "delta_outage_mw": "-23.484"
+        },
+        {
+          "facility": "880",
+          "generator": "2",
+          "facility_name": "Quad Cities Generating Station",
+          "before_outage_mw": "273.3",
+          "after_outage_mw": "45.55",
+          "delta_outage_mw": "-227.75"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "204",
+          "reported_delta_outage_mw": "-184.093",
+          "matched_unit_delta_outage_mw": "-184.093",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6023",
+          "reported_delta_outage_mw": "11.36",
+          "matched_unit_delta_outage_mw": "11.36",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6045",
+          "reported_delta_outage_mw": "78.96",
+          "matched_unit_delta_outage_mw": "78.96",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6051",
+          "reported_delta_outage_mw": "-97.13",
+          "matched_unit_delta_outage_mw": "-97.13",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6099",
+          "reported_delta_outage_mw": "-78.26",
+          "matched_unit_delta_outage_mw": "-78.26",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6105",
+          "reported_delta_outage_mw": "-11.221",
+          "matched_unit_delta_outage_mw": "-11.221",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6118",
+          "reported_delta_outage_mw": "-23.484",
+          "matched_unit_delta_outage_mw": "-23.484",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "880",
+          "reported_delta_outage_mw": "-227.75",
+          "matched_unit_delta_outage_mw": "-227.75",
+          "gap_mw": "0.00"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "204": "-184.093",
+        "6023": "11.36",
+        "6045": "78.96",
+        "6051": "-97.13",
+        "6099": "-78.26",
+        "6105": "-11.221",
+        "6118": "-23.484",
+        "880": "-227.75"
+      }
+    },
+    {
+      "before": "2026-09-15",
+      "after": "2026-09-16",
+      "national_delta_outage_mw": "400.708",
+      "facility_delta_outage_mw": "400.708",
+      "generator_delta_outage_mw": "400.708",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "653.835",
+      "matched_unit_decreases_mw": "-253.127",
+      "matched_unit_net_delta_mw": "400.708",
+      "opposing_change_mw": "253.127",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "204",
+          "generator": "1",
+          "facility_name": "Clinton Power Station",
+          "before_outage_mw": "184.093",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-184.093"
+        },
+        {
+          "facility": "6020",
+          "generator": "1",
+          "facility_name": "Perry",
+          "before_outage_mw": "0",
+          "after_outage_mw": "74.4",
+          "delta_outage_mw": "74.4"
+        },
+        {
+          "facility": "6023",
+          "generator": "2",
+          "facility_name": "Byron Generating Station",
+          "before_outage_mw": "56.8",
+          "after_outage_mw": "68.16",
+          "delta_outage_mw": "11.36"
+        },
+        {
+          "facility": "6051",
+          "generator": "2",
+          "facility_name": "Edwin I Hatch",
+          "before_outage_mw": "35.32",
+          "after_outage_mw": "150.11",
+          "delta_outage_mw": "114.79"
+        },
+        {
+          "facility": "6118",
+          "generator": "1",
+          "facility_name": "PSEG Hope Creek Generating Station",
+          "before_outage_mw": "23.484",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-23.484"
+        },
+        {
+          "facility": "649",
+          "generator": "3",
+          "facility_name": "Vogtle",
+          "before_outage_mw": "0",
+          "after_outage_mw": "445.6",
+          "delta_outage_mw": "445.6"
+        },
+        {
+          "facility": "8036",
+          "generator": "1",
+          "facility_name": "Cooper",
+          "before_outage_mw": "115.275",
+          "after_outage_mw": "122.96",
+          "delta_outage_mw": "7.685"
+        },
+        {
+          "facility": "880",
+          "generator": "2",
+          "facility_name": "Quad Cities Generating Station",
+          "before_outage_mw": "45.55",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-45.55"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "204",
+          "reported_delta_outage_mw": "-184.093",
+          "matched_unit_delta_outage_mw": "-184.093",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6020",
+          "reported_delta_outage_mw": "74.4",
+          "matched_unit_delta_outage_mw": "74.4",
+          "gap_mw": "0.0"
+        },
+        {
+          "facility": "6023",
+          "reported_delta_outage_mw": "11.36",
+          "matched_unit_delta_outage_mw": "11.36",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6051",
+          "reported_delta_outage_mw": "114.79",
+          "matched_unit_delta_outage_mw": "114.79",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6118",
+          "reported_delta_outage_mw": "-23.484",
+          "matched_unit_delta_outage_mw": "-23.484",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "649",
+          "reported_delta_outage_mw": "445.6",
+          "matched_unit_delta_outage_mw": "445.6",
+          "gap_mw": "0.0"
+        },
+        {
+          "facility": "8036",
+          "reported_delta_outage_mw": "7.685",
+          "matched_unit_delta_outage_mw": "7.685",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "880",
+          "reported_delta_outage_mw": "-45.55",
+          "matched_unit_delta_outage_mw": "-45.55",
+          "gap_mw": "0.00"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "204": "-184.093",
+        "6020": "74.4",
+        "6023": "11.36",
+        "6051": "114.79",
+        "6118": "-23.484",
+        "649": "445.6",
+        "8036": "7.685",
+        "880": "-45.55"
+      }
+    },
+    {
+      "before": "2026-09-16",
+      "after": "2026-09-17",
+      "national_delta_outage_mw": "174.057",
+      "facility_delta_outage_mw": "174.057",
+      "generator_delta_outage_mw": "174.057",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "373.767",
+      "matched_unit_decreases_mw": "-199.71",
+      "matched_unit_net_delta_mw": "174.057",
+      "opposing_change_mw": "199.71",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "3166",
+          "generator": "2",
+          "facility_name": "Peach Bottom",
+          "before_outage_mw": "12.647",
+          "after_outage_mw": "25.294",
+          "delta_outage_mw": "12.647"
+        },
+        {
+          "facility": "6000",
+          "generator": "1",
+          "facility_name": "Donald C Cook",
+          "before_outage_mw": "0",
+          "after_outage_mw": "292.61",
+          "delta_outage_mw": "292.61"
+        },
+        {
+          "facility": "6020",
+          "generator": "1",
+          "facility_name": "Perry",
+          "before_outage_mw": "74.4",
+          "after_outage_mw": "24.8",
+          "delta_outage_mw": "-49.6"
+        },
+        {
+          "facility": "6023",
+          "generator": "2",
+          "facility_name": "Byron Generating Station",
+          "before_outage_mw": "68.16",
+          "after_outage_mw": "79.52",
+          "delta_outage_mw": "11.36"
+        },
+        {
+          "facility": "6045",
+          "generator": "2",
+          "facility_name": "St Lucie",
+          "before_outage_mw": "78.96",
+          "after_outage_mw": "98.7",
+          "delta_outage_mw": "19.74"
+        },
+        {
+          "facility": "6051",
+          "generator": "2",
+          "facility_name": "Edwin I Hatch",
+          "before_outage_mw": "150.11",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-150.11"
+        },
+        {
+          "facility": "6103",
+          "generator": "1",
+          "facility_name": "PPL Susquehanna",
+          "before_outage_mw": "0",
+          "after_outage_mw": "37.41",
+          "delta_outage_mw": "37.41"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "3166",
+          "reported_delta_outage_mw": "12.647",
+          "matched_unit_delta_outage_mw": "12.647",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6000",
+          "reported_delta_outage_mw": "292.61",
+          "matched_unit_delta_outage_mw": "292.61",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6020",
+          "reported_delta_outage_mw": "-49.6",
+          "matched_unit_delta_outage_mw": "-49.6",
+          "gap_mw": "0.0"
+        },
+        {
+          "facility": "6023",
+          "reported_delta_outage_mw": "11.36",
+          "matched_unit_delta_outage_mw": "11.36",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6045",
+          "reported_delta_outage_mw": "19.74",
+          "matched_unit_delta_outage_mw": "19.74",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6051",
+          "reported_delta_outage_mw": "-150.11",
+          "matched_unit_delta_outage_mw": "-150.11",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6103",
+          "reported_delta_outage_mw": "37.41",
+          "matched_unit_delta_outage_mw": "37.41",
+          "gap_mw": "0.00"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "3166": "12.647",
+        "6000": "292.61",
+        "6020": "-49.6",
+        "6023": "11.36",
+        "6045": "19.74",
+        "6051": "-150.11",
+        "6103": "37.41"
+      }
+    },
+    {
+      "before": "2026-09-17",
+      "after": "2026-09-18",
+      "national_delta_outage_mw": "-382.156",
+      "facility_delta_outage_mw": "-382.156",
+      "generator_delta_outage_mw": "-382.156",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "125.654",
+      "matched_unit_decreases_mw": "-507.81",
+      "matched_unit_net_delta_mw": "-382.156",
+      "opposing_change_mw": "125.654",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "6000",
+          "generator": "1",
+          "facility_name": "Donald C Cook",
+          "before_outage_mw": "292.61",
+          "after_outage_mw": "383.42",
+          "delta_outage_mw": "90.81"
+        },
+        {
+          "facility": "6020",
+          "generator": "1",
+          "facility_name": "Perry",
+          "before_outage_mw": "24.8",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-24.8"
+        },
+        {
+          "facility": "6023",
+          "generator": "2",
+          "facility_name": "Byron Generating Station",
+          "before_outage_mw": "79.52",
+          "after_outage_mw": "90.88",
+          "delta_outage_mw": "11.36"
+        },
+        {
+          "facility": "6103",
+          "generator": "1",
+          "facility_name": "PPL Susquehanna",
+          "before_outage_mw": "37.41",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-37.41"
+        },
+        {
+          "facility": "6118",
+          "generator": "1",
+          "facility_name": "PSEG Hope Creek Generating Station",
+          "before_outage_mw": "0",
+          "after_outage_mw": "23.484",
+          "delta_outage_mw": "23.484"
+        },
+        {
+          "facility": "649",
+          "generator": "3",
+          "facility_name": "Vogtle",
+          "before_outage_mw": "445.6",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-445.6"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "6000",
+          "reported_delta_outage_mw": "90.81",
+          "matched_unit_delta_outage_mw": "90.81",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6020",
+          "reported_delta_outage_mw": "-24.8",
+          "matched_unit_delta_outage_mw": "-24.8",
+          "gap_mw": "0.0"
+        },
+        {
+          "facility": "6023",
+          "reported_delta_outage_mw": "11.36",
+          "matched_unit_delta_outage_mw": "11.36",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6103",
+          "reported_delta_outage_mw": "-37.41",
+          "matched_unit_delta_outage_mw": "-37.41",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6118",
+          "reported_delta_outage_mw": "23.484",
+          "matched_unit_delta_outage_mw": "23.484",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "649",
+          "reported_delta_outage_mw": "-445.6",
+          "matched_unit_delta_outage_mw": "-445.6",
+          "gap_mw": "0.0"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "6000": "90.81",
+        "6020": "-24.8",
+        "6023": "11.36",
+        "6103": "-37.41",
+        "6118": "23.484",
+        "649": "-445.6"
+      }
+    },
+    {
+      "before": "2026-09-18",
+      "after": "2026-09-19",
+      "national_delta_outage_mw": "1885.772",
+      "facility_delta_outage_mw": "1885.772",
+      "generator_delta_outage_mw": "1885.772",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "2034.416",
+      "matched_unit_decreases_mw": "-148.644",
+      "matched_unit_net_delta_mw": "1885.772",
+      "opposing_change_mw": "148.644",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "204",
+          "generator": "1",
+          "facility_name": "Clinton Power Station",
+          "before_outage_mw": "0",
+          "after_outage_mw": "216.58",
+          "delta_outage_mw": "216.58"
+        },
+        {
+          "facility": "3166",
+          "generator": "2",
+          "facility_name": "Peach Bottom",
+          "before_outage_mw": "25.294",
+          "after_outage_mw": "37.941",
+          "delta_outage_mw": "12.647"
+        },
+        {
+          "facility": "6000",
+          "generator": "1",
+          "facility_name": "Donald C Cook",
+          "before_outage_mw": "383.42",
+          "after_outage_mw": "1009",
+          "delta_outage_mw": "625.58"
+        },
+        {
+          "facility": "6011",
+          "generator": "2",
+          "facility_name": "Calvert Cliffs Nuclear Power Plant",
+          "before_outage_mw": "0",
+          "after_outage_mw": "129.15",
+          "delta_outage_mw": "129.15"
+        },
+        {
+          "facility": "6014",
+          "generator": "1",
+          "facility_name": "Brunswick",
+          "before_outage_mw": "0",
+          "after_outage_mw": "272.02",
+          "delta_outage_mw": "272.02"
+        },
+        {
+          "facility": "6023",
+          "generator": "2",
+          "facility_name": "Byron Generating Station",
+          "before_outage_mw": "90.88",
+          "after_outage_mw": "102.24",
+          "delta_outage_mw": "11.36"
+        },
+        {
+          "facility": "6099",
+          "generator": "2",
+          "facility_name": "Diablo Canyon",
+          "before_outage_mw": "0",
+          "after_outage_mw": "514.28",
+          "delta_outage_mw": "514.28"
+        },
+        {
+          "facility": "6118",
+          "generator": "1",
+          "facility_name": "PSEG Hope Creek Generating Station",
+          "before_outage_mw": "23.484",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-23.484"
+        },
+        {
+          "facility": "6149",
+          "generator": "1",
+          "facility_name": "Davis Besse",
+          "before_outage_mw": "894",
+          "after_outage_mw": "768.84",
+          "delta_outage_mw": "-125.16"
+        },
+        {
+          "facility": "6462",
+          "generator": "1",
+          "facility_name": "River Bend Station",
+          "before_outage_mw": "0",
+          "after_outage_mw": "29.049",
+          "delta_outage_mw": "29.049"
+        },
+        {
+          "facility": "869",
+          "generator": "3",
+          "facility_name": "Dresden Generating Station",
+          "before_outage_mw": "0",
+          "after_outage_mw": "223.75",
+          "delta_outage_mw": "223.75"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "204",
+          "reported_delta_outage_mw": "216.58",
+          "matched_unit_delta_outage_mw": "216.58",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "3166",
+          "reported_delta_outage_mw": "12.647",
+          "matched_unit_delta_outage_mw": "12.647",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6000",
+          "reported_delta_outage_mw": "625.58",
+          "matched_unit_delta_outage_mw": "625.58",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6011",
+          "reported_delta_outage_mw": "129.15",
+          "matched_unit_delta_outage_mw": "129.15",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6014",
+          "reported_delta_outage_mw": "272.02",
+          "matched_unit_delta_outage_mw": "272.02",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6023",
+          "reported_delta_outage_mw": "11.36",
+          "matched_unit_delta_outage_mw": "11.36",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6099",
+          "reported_delta_outage_mw": "514.28",
+          "matched_unit_delta_outage_mw": "514.28",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6118",
+          "reported_delta_outage_mw": "-23.484",
+          "matched_unit_delta_outage_mw": "-23.484",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6149",
+          "reported_delta_outage_mw": "-125.16",
+          "matched_unit_delta_outage_mw": "-125.16",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6462",
+          "reported_delta_outage_mw": "29.049",
+          "matched_unit_delta_outage_mw": "29.049",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "869",
+          "reported_delta_outage_mw": "223.75",
+          "matched_unit_delta_outage_mw": "223.75",
+          "gap_mw": "0.00"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "204": "216.58",
+        "3166": "12.647",
+        "6000": "625.58",
+        "6011": "129.15",
+        "6014": "272.02",
+        "6023": "11.36",
+        "6099": "514.28",
+        "6118": "-23.484",
+        "6149": "-125.16",
+        "6462": "29.049",
+        "869": "223.75"
+      }
+    },
+    {
+      "before": "2026-09-19",
+      "after": "2026-09-20",
+      "national_delta_outage_mw": "-1410.425",
+      "facility_delta_outage_mw": "-1410.425",
+      "generator_delta_outage_mw": "-1410.425",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "19.045",
+      "matched_unit_decreases_mw": "-1429.470",
+      "matched_unit_net_delta_mw": "-1410.425",
+      "opposing_change_mw": "19.045",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "3166",
+          "generator": "2",
+          "facility_name": "Peach Bottom",
+          "before_outage_mw": "37.941",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-37.941"
+        },
+        {
+          "facility": "6011",
+          "generator": "2",
+          "facility_name": "Calvert Cliffs Nuclear Power Plant",
+          "before_outage_mw": "129.15",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-129.15"
+        },
+        {
+          "facility": "6014",
+          "generator": "1",
+          "facility_name": "Brunswick",
+          "before_outage_mw": "272.02",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-272.02"
+        },
+        {
+          "facility": "6023",
+          "generator": "2",
+          "facility_name": "Byron Generating Station",
+          "before_outage_mw": "102.24",
+          "after_outage_mw": "113.6",
+          "delta_outage_mw": "11.36"
+        },
+        {
+          "facility": "6099",
+          "generator": "2",
+          "facility_name": "Diablo Canyon",
+          "before_outage_mw": "514.28",
+          "after_outage_mw": "491.92",
+          "delta_outage_mw": "-22.36"
+        },
+        {
+          "facility": "6149",
+          "generator": "1",
+          "facility_name": "Davis Besse",
+          "before_outage_mw": "768.84",
+          "after_outage_mw": "53.64",
+          "delta_outage_mw": "-715.20"
+        },
+        {
+          "facility": "6462",
+          "generator": "1",
+          "facility_name": "River Bend Station",
+          "before_outage_mw": "29.049",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-29.049"
+        },
+        {
+          "facility": "8036",
+          "generator": "1",
+          "facility_name": "Cooper",
+          "before_outage_mw": "122.96",
+          "after_outage_mw": "130.645",
+          "delta_outage_mw": "7.685"
+        },
+        {
+          "facility": "869",
+          "generator": "3",
+          "facility_name": "Dresden Generating Station",
+          "before_outage_mw": "223.75",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-223.75"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "3166",
+          "reported_delta_outage_mw": "-37.941",
+          "matched_unit_delta_outage_mw": "-37.941",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6011",
+          "reported_delta_outage_mw": "-129.15",
+          "matched_unit_delta_outage_mw": "-129.15",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6014",
+          "reported_delta_outage_mw": "-272.02",
+          "matched_unit_delta_outage_mw": "-272.02",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6023",
+          "reported_delta_outage_mw": "11.36",
+          "matched_unit_delta_outage_mw": "11.36",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6099",
+          "reported_delta_outage_mw": "-22.36",
+          "matched_unit_delta_outage_mw": "-22.36",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6149",
+          "reported_delta_outage_mw": "-715.20",
+          "matched_unit_delta_outage_mw": "-715.20",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6462",
+          "reported_delta_outage_mw": "-29.049",
+          "matched_unit_delta_outage_mw": "-29.049",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "8036",
+          "reported_delta_outage_mw": "7.685",
+          "matched_unit_delta_outage_mw": "7.685",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "869",
+          "reported_delta_outage_mw": "-223.75",
+          "matched_unit_delta_outage_mw": "-223.75",
+          "gap_mw": "0.00"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "3166": "-37.941",
+        "6011": "-129.15",
+        "6014": "-272.02",
+        "6023": "11.36",
+        "6099": "-22.36",
+        "6149": "-715.20",
+        "6462": "-29.049",
+        "8036": "7.685",
+        "869": "-223.75"
+      }
+    },
+    {
+      "before": "2026-09-20",
+      "after": "2026-09-21",
+      "national_delta_outage_mw": "-520.190",
+      "facility_delta_outage_mw": "-520.190",
+      "generator_delta_outage_mw": "-520.190",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "124.07",
+      "matched_unit_decreases_mw": "-644.26",
+      "matched_unit_net_delta_mw": "-520.19",
+      "opposing_change_mw": "124.07",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "3251",
+          "generator": "2",
+          "facility_name": "H B Robinson",
+          "before_outage_mw": "0",
+          "after_outage_mw": "7.59",
+          "delta_outage_mw": "7.59"
+        },
+        {
+          "facility": "6023",
+          "generator": "2",
+          "facility_name": "Byron Generating Station",
+          "before_outage_mw": "113.6",
+          "after_outage_mw": "124.96",
+          "delta_outage_mw": "11.36"
+        },
+        {
+          "facility": "6045",
+          "generator": "2",
+          "facility_name": "St Lucie",
+          "before_outage_mw": "98.7",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-98.7"
+        },
+        {
+          "facility": "6051",
+          "generator": "1",
+          "facility_name": "Edwin I Hatch",
+          "before_outage_mw": "0",
+          "after_outage_mw": "105.12",
+          "delta_outage_mw": "105.12"
+        },
+        {
+          "facility": "6099",
+          "generator": "2",
+          "facility_name": "Diablo Canyon",
+          "before_outage_mw": "491.92",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-491.92"
+        },
+        {
+          "facility": "6149",
+          "generator": "1",
+          "facility_name": "Davis Besse",
+          "before_outage_mw": "53.64",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-53.64"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "3251",
+          "reported_delta_outage_mw": "7.59",
+          "matched_unit_delta_outage_mw": "7.59",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6023",
+          "reported_delta_outage_mw": "11.36",
+          "matched_unit_delta_outage_mw": "11.36",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6045",
+          "reported_delta_outage_mw": "-98.7",
+          "matched_unit_delta_outage_mw": "-98.7",
+          "gap_mw": "0.0"
+        },
+        {
+          "facility": "6051",
+          "reported_delta_outage_mw": "105.12",
+          "matched_unit_delta_outage_mw": "105.12",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6099",
+          "reported_delta_outage_mw": "-491.92",
+          "matched_unit_delta_outage_mw": "-491.92",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6149",
+          "reported_delta_outage_mw": "-53.64",
+          "matched_unit_delta_outage_mw": "-53.64",
+          "gap_mw": "0.00"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "3251": "7.59",
+        "6023": "11.36",
+        "6045": "-98.7",
+        "6051": "105.12",
+        "6099": "-491.92",
+        "6149": "-53.64"
+      }
+    },
+    {
+      "before": "2026-09-21",
+      "after": "2026-09-22",
+      "national_delta_outage_mw": "25.236",
+      "facility_delta_outage_mw": "25.236",
+      "generator_delta_outage_mw": "25.236",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "166.013",
+      "matched_unit_decreases_mw": "-140.777",
+      "matched_unit_net_delta_mw": "25.236",
+      "opposing_change_mw": "140.777",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "204",
+          "generator": "1",
+          "facility_name": "Clinton Power Station",
+          "before_outage_mw": "216.58",
+          "after_outage_mw": "75.803",
+          "delta_outage_mw": "-140.777"
+        },
+        {
+          "facility": "6023",
+          "generator": "2",
+          "facility_name": "Byron Generating Station",
+          "before_outage_mw": "124.96",
+          "after_outage_mw": "159.04",
+          "delta_outage_mw": "34.08"
+        },
+        {
+          "facility": "6026",
+          "generator": "2",
+          "facility_name": "LaSalle Generating Station",
+          "before_outage_mw": "0",
+          "after_outage_mw": "79.373",
+          "delta_outage_mw": "79.373"
+        },
+        {
+          "facility": "6051",
+          "generator": "1",
+          "facility_name": "Edwin I Hatch",
+          "before_outage_mw": "105.12",
+          "after_outage_mw": "157.68",
+          "delta_outage_mw": "52.56"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "204",
+          "reported_delta_outage_mw": "-140.777",
+          "matched_unit_delta_outage_mw": "-140.777",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6023",
+          "reported_delta_outage_mw": "34.08",
+          "matched_unit_delta_outage_mw": "34.08",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6026",
+          "reported_delta_outage_mw": "79.373",
+          "matched_unit_delta_outage_mw": "79.373",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6051",
+          "reported_delta_outage_mw": "52.56",
+          "matched_unit_delta_outage_mw": "52.56",
+          "gap_mw": "0.00"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "204": "-140.777",
+        "6023": "34.08",
+        "6026": "79.373",
+        "6051": "52.56"
+      }
+    },
+    {
+      "before": "2026-09-22",
+      "after": "2026-09-23",
+      "national_delta_outage_mw": "-48.872",
+      "facility_delta_outage_mw": "-48.872",
+      "generator_delta_outage_mw": "-48.872",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "174.315",
+      "matched_unit_decreases_mw": "-223.187",
+      "matched_unit_net_delta_mw": "-48.872",
+      "opposing_change_mw": "174.315",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "204",
+          "generator": "1",
+          "facility_name": "Clinton Power Station",
+          "before_outage_mw": "75.803",
+          "after_outage_mw": "10.829",
+          "delta_outage_mw": "-64.974"
+        },
+        {
+          "facility": "3251",
+          "generator": "2",
+          "facility_name": "H B Robinson",
+          "before_outage_mw": "7.59",
+          "after_outage_mw": "15.18",
+          "delta_outage_mw": "7.59"
+        },
+        {
+          "facility": "6023",
+          "generator": "2",
+          "facility_name": "Byron Generating Station",
+          "before_outage_mw": "159.04",
+          "after_outage_mw": "318.08",
+          "delta_outage_mw": "159.04"
+        },
+        {
+          "facility": "6026",
+          "generator": "2",
+          "facility_name": "LaSalle Generating Station",
+          "before_outage_mw": "79.373",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-79.373"
+        },
+        {
+          "facility": "6051",
+          "generator": "1",
+          "facility_name": "Edwin I Hatch",
+          "before_outage_mw": "157.68",
+          "after_outage_mw": "78.84",
+          "delta_outage_mw": "-78.84"
+        },
+        {
+          "facility": "8036",
+          "generator": "1",
+          "facility_name": "Cooper",
+          "before_outage_mw": "130.645",
+          "after_outage_mw": "138.33",
+          "delta_outage_mw": "7.685"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "204",
+          "reported_delta_outage_mw": "-64.974",
+          "matched_unit_delta_outage_mw": "-64.974",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "3251",
+          "reported_delta_outage_mw": "7.59",
+          "matched_unit_delta_outage_mw": "7.59",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6023",
+          "reported_delta_outage_mw": "159.04",
+          "matched_unit_delta_outage_mw": "159.04",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6026",
+          "reported_delta_outage_mw": "-79.373",
+          "matched_unit_delta_outage_mw": "-79.373",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6051",
+          "reported_delta_outage_mw": "-78.84",
+          "matched_unit_delta_outage_mw": "-78.84",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "8036",
+          "reported_delta_outage_mw": "7.685",
+          "matched_unit_delta_outage_mw": "7.685",
+          "gap_mw": "0.000"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "204": "-64.974",
+        "3251": "7.59",
+        "6023": "159.04",
+        "6026": "-79.373",
+        "6051": "-78.84",
+        "8036": "7.685"
+      }
+    },
+    {
+      "before": "2026-09-23",
+      "after": "2026-09-24",
+      "national_delta_outage_mw": "-25.845",
+      "facility_delta_outage_mw": "-25.845",
+      "generator_delta_outage_mw": "-25.845",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "89.675",
+      "matched_unit_decreases_mw": "-115.52",
+      "matched_unit_net_delta_mw": "-25.845",
+      "opposing_change_mw": "89.675",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "3251",
+          "generator": "2",
+          "facility_name": "H B Robinson",
+          "before_outage_mw": "15.18",
+          "after_outage_mw": "22.77",
+          "delta_outage_mw": "7.59"
+        },
+        {
+          "facility": "6020",
+          "generator": "1",
+          "facility_name": "Perry",
+          "before_outage_mw": "0",
+          "after_outage_mw": "74.4",
+          "delta_outage_mw": "74.4"
+        },
+        {
+          "facility": "6023",
+          "generator": "2",
+          "facility_name": "Byron Generating Station",
+          "before_outage_mw": "318.08",
+          "after_outage_mw": "272.64",
+          "delta_outage_mw": "-45.44"
+        },
+        {
+          "facility": "6051",
+          "generator": "1",
+          "facility_name": "Edwin I Hatch",
+          "before_outage_mw": "78.84",
+          "after_outage_mw": "8.76",
+          "delta_outage_mw": "-70.08"
+        },
+        {
+          "facility": "8036",
+          "generator": "1",
+          "facility_name": "Cooper",
+          "before_outage_mw": "138.33",
+          "after_outage_mw": "146.015",
+          "delta_outage_mw": "7.685"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "3251",
+          "reported_delta_outage_mw": "7.59",
+          "matched_unit_delta_outage_mw": "7.59",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6020",
+          "reported_delta_outage_mw": "74.4",
+          "matched_unit_delta_outage_mw": "74.4",
+          "gap_mw": "0.0"
+        },
+        {
+          "facility": "6023",
+          "reported_delta_outage_mw": "-45.44",
+          "matched_unit_delta_outage_mw": "-45.44",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6051",
+          "reported_delta_outage_mw": "-70.08",
+          "matched_unit_delta_outage_mw": "-70.08",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "8036",
+          "reported_delta_outage_mw": "7.685",
+          "matched_unit_delta_outage_mw": "7.685",
+          "gap_mw": "0.000"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "3251": "7.59",
+        "6020": "74.4",
+        "6023": "-45.44",
+        "6051": "-70.08",
+        "8036": "7.685"
+      }
+    },
+    {
+      "before": "2026-09-24",
+      "after": "2026-09-25",
+      "national_delta_outage_mw": "-125.494",
+      "facility_delta_outage_mw": "-125.494",
+      "generator_delta_outage_mw": "-125.494",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "36.655",
+      "matched_unit_decreases_mw": "-162.149",
+      "matched_unit_net_delta_mw": "-125.494",
+      "opposing_change_mw": "36.655",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "204",
+          "generator": "1",
+          "facility_name": "Clinton Power Station",
+          "before_outage_mw": "10.829",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-10.829"
+        },
+        {
+          "facility": "3251",
+          "generator": "2",
+          "facility_name": "H B Robinson",
+          "before_outage_mw": "22.77",
+          "after_outage_mw": "30.36",
+          "delta_outage_mw": "7.59"
+        },
+        {
+          "facility": "4046",
+          "generator": "1",
+          "facility_name": "Point Beach",
+          "before_outage_mw": "0",
+          "after_outage_mw": "5.913",
+          "delta_outage_mw": "5.913"
+        },
+        {
+          "facility": "6020",
+          "generator": "1",
+          "facility_name": "Perry",
+          "before_outage_mw": "74.4",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-74.4"
+        },
+        {
+          "facility": "6023",
+          "generator": "2",
+          "facility_name": "Byron Generating Station",
+          "before_outage_mw": "272.64",
+          "after_outage_mw": "204.48",
+          "delta_outage_mw": "-68.16"
+        },
+        {
+          "facility": "6038",
+          "generator": "2",
+          "facility_name": "McGuire",
+          "before_outage_mw": "0",
+          "after_outage_mw": "23.152",
+          "delta_outage_mw": "23.152"
+        },
+        {
+          "facility": "6051",
+          "generator": "1",
+          "facility_name": "Edwin I Hatch",
+          "before_outage_mw": "8.76",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-8.76"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "204",
+          "reported_delta_outage_mw": "-10.829",
+          "matched_unit_delta_outage_mw": "-10.829",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "3251",
+          "reported_delta_outage_mw": "7.59",
+          "matched_unit_delta_outage_mw": "7.59",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "4046",
+          "reported_delta_outage_mw": "5.913",
+          "matched_unit_delta_outage_mw": "5.913",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6020",
+          "reported_delta_outage_mw": "-74.4",
+          "matched_unit_delta_outage_mw": "-74.4",
+          "gap_mw": "0.0"
+        },
+        {
+          "facility": "6023",
+          "reported_delta_outage_mw": "-68.16",
+          "matched_unit_delta_outage_mw": "-68.16",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6038",
+          "reported_delta_outage_mw": "23.152",
+          "matched_unit_delta_outage_mw": "23.152",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6051",
+          "reported_delta_outage_mw": "-8.76",
+          "matched_unit_delta_outage_mw": "-8.76",
+          "gap_mw": "0.00"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "204": "-10.829",
+        "3251": "7.59",
+        "4046": "5.913",
+        "6020": "-74.4",
+        "6023": "-68.16",
+        "6038": "23.152",
+        "6051": "-8.76"
+      }
+    },
+    {
+      "before": "2026-09-25",
+      "after": "2026-09-26",
+      "national_delta_outage_mw": "1619.705",
+      "facility_delta_outage_mw": "1619.705",
+      "generator_delta_outage_mw": "1619.705",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "1642.857",
+      "matched_unit_decreases_mw": "-23.152",
+      "matched_unit_net_delta_mw": "1619.705",
+      "opposing_change_mw": "23.152",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "4046",
+          "generator": "1",
+          "facility_name": "Point Beach",
+          "before_outage_mw": "5.913",
+          "after_outage_mw": "11.826",
+          "delta_outage_mw": "5.913"
+        },
+        {
+          "facility": "6038",
+          "generator": "2",
+          "facility_name": "McGuire",
+          "before_outage_mw": "23.152",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-23.152"
+        },
+        {
+          "facility": "6072",
+          "generator": "1",
+          "facility_name": "Grand Gulf",
+          "before_outage_mw": "0",
+          "after_outage_mw": "446.944",
+          "delta_outage_mw": "446.944"
+        },
+        {
+          "facility": "6153",
+          "generator": "1",
+          "facility_name": "Callaway",
+          "before_outage_mw": "0",
+          "after_outage_mw": "1190",
+          "delta_outage_mw": "1190"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "4046",
+          "reported_delta_outage_mw": "5.913",
+          "matched_unit_delta_outage_mw": "5.913",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6038",
+          "reported_delta_outage_mw": "-23.152",
+          "matched_unit_delta_outage_mw": "-23.152",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6072",
+          "reported_delta_outage_mw": "446.944",
+          "matched_unit_delta_outage_mw": "446.944",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6153",
+          "reported_delta_outage_mw": "1190",
+          "matched_unit_delta_outage_mw": "1190",
+          "gap_mw": "0"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "4046": "5.913",
+        "6038": "-23.152",
+        "6072": "446.944",
+        "6153": "1190"
+      }
+    },
+    {
+      "before": "2026-09-26",
+      "after": "2026-09-27",
+      "national_delta_outage_mw": "148.865",
+      "facility_delta_outage_mw": "148.865",
+      "generator_delta_outage_mw": "148.865",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "595.809",
+      "matched_unit_decreases_mw": "-446.944",
+      "matched_unit_net_delta_mw": "148.865",
+      "opposing_change_mw": "446.944",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "204",
+          "generator": "1",
+          "facility_name": "Clinton Power Station",
+          "before_outage_mw": "0",
+          "after_outage_mw": "259.896",
+          "delta_outage_mw": "259.896"
+        },
+        {
+          "facility": "3166",
+          "generator": "2",
+          "facility_name": "Peach Bottom",
+          "before_outage_mw": "0",
+          "after_outage_mw": "12.647",
+          "delta_outage_mw": "12.647"
+        },
+        {
+          "facility": "3251",
+          "generator": "2",
+          "facility_name": "H B Robinson",
+          "before_outage_mw": "30.36",
+          "after_outage_mw": "37.95",
+          "delta_outage_mw": "7.59"
+        },
+        {
+          "facility": "6026",
+          "generator": "1",
+          "facility_name": "LaSalle Generating Station",
+          "before_outage_mw": "0",
+          "after_outage_mw": "226.1",
+          "delta_outage_mw": "226.1"
+        },
+        {
+          "facility": "6072",
+          "generator": "1",
+          "facility_name": "Grand Gulf",
+          "before_outage_mw": "446.944",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-446.944"
+        },
+        {
+          "facility": "6105",
+          "generator": "1",
+          "facility_name": "Limerick",
+          "before_outage_mw": "0",
+          "after_outage_mw": "89.576",
+          "delta_outage_mw": "89.576"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "204",
+          "reported_delta_outage_mw": "259.896",
+          "matched_unit_delta_outage_mw": "259.896",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "3166",
+          "reported_delta_outage_mw": "12.647",
+          "matched_unit_delta_outage_mw": "12.647",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "3251",
+          "reported_delta_outage_mw": "7.59",
+          "matched_unit_delta_outage_mw": "7.59",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6026",
+          "reported_delta_outage_mw": "226.1",
+          "matched_unit_delta_outage_mw": "226.1",
+          "gap_mw": "0.0"
+        },
+        {
+          "facility": "6072",
+          "reported_delta_outage_mw": "-446.944",
+          "matched_unit_delta_outage_mw": "-446.944",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6105",
+          "reported_delta_outage_mw": "89.576",
+          "matched_unit_delta_outage_mw": "89.576",
+          "gap_mw": "0.000"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "204": "259.896",
+        "3166": "12.647",
+        "3251": "7.59",
+        "6026": "226.1",
+        "6072": "-446.944",
+        "6105": "89.576"
+      }
+    },
+    {
+      "before": "2026-09-27",
+      "after": "2026-09-28",
+      "national_delta_outage_mw": "1070.985",
+      "facility_delta_outage_mw": "1070.985",
+      "generator_delta_outage_mw": "1070.985",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "1580.155",
+      "matched_unit_decreases_mw": "-509.170",
+      "matched_unit_net_delta_mw": "1070.985",
+      "opposing_change_mw": "509.170",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "204",
+          "generator": "1",
+          "facility_name": "Clinton Power Station",
+          "before_outage_mw": "259.896",
+          "after_outage_mw": "32.487",
+          "delta_outage_mw": "-227.409"
+        },
+        {
+          "facility": "3166",
+          "generator": "2",
+          "facility_name": "Peach Bottom",
+          "before_outage_mw": "12.647",
+          "after_outage_mw": "25.294",
+          "delta_outage_mw": "12.647"
+        },
+        {
+          "facility": "3251",
+          "generator": "2",
+          "facility_name": "H B Robinson",
+          "before_outage_mw": "37.95",
+          "after_outage_mw": "45.54",
+          "delta_outage_mw": "7.59"
+        },
+        {
+          "facility": "4046",
+          "generator": "1",
+          "facility_name": "Point Beach",
+          "before_outage_mw": "11.826",
+          "after_outage_mw": "17.739",
+          "delta_outage_mw": "5.913"
+        },
+        {
+          "facility": "6023",
+          "generator": "2",
+          "facility_name": "Byron Generating Station",
+          "before_outage_mw": "204.48",
+          "after_outage_mw": "1136",
+          "delta_outage_mw": "931.52"
+        },
+        {
+          "facility": "6026",
+          "generator": "1",
+          "facility_name": "LaSalle Generating Station",
+          "before_outage_mw": "226.1",
+          "after_outage_mw": "33.915",
+          "delta_outage_mw": "-192.185"
+        },
+        {
+          "facility": "6105",
+          "generator": "1",
+          "facility_name": "Limerick",
+          "before_outage_mw": "89.576",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-89.576"
+        },
+        {
+          "facility": "8036",
+          "generator": "1",
+          "facility_name": "Cooper",
+          "before_outage_mw": "146.015",
+          "after_outage_mw": "768.5",
+          "delta_outage_mw": "622.485"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "204",
+          "reported_delta_outage_mw": "-227.409",
+          "matched_unit_delta_outage_mw": "-227.409",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "3166",
+          "reported_delta_outage_mw": "12.647",
+          "matched_unit_delta_outage_mw": "12.647",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "3251",
+          "reported_delta_outage_mw": "7.59",
+          "matched_unit_delta_outage_mw": "7.59",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "4046",
+          "reported_delta_outage_mw": "5.913",
+          "matched_unit_delta_outage_mw": "5.913",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6023",
+          "reported_delta_outage_mw": "931.52",
+          "matched_unit_delta_outage_mw": "931.52",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "6026",
+          "reported_delta_outage_mw": "-192.185",
+          "matched_unit_delta_outage_mw": "-192.185",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6105",
+          "reported_delta_outage_mw": "-89.576",
+          "matched_unit_delta_outage_mw": "-89.576",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "8036",
+          "reported_delta_outage_mw": "622.485",
+          "matched_unit_delta_outage_mw": "622.485",
+          "gap_mw": "0.000"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "204": "-227.409",
+        "3166": "12.647",
+        "3251": "7.59",
+        "4046": "5.913",
+        "6023": "931.52",
+        "6026": "-192.185",
+        "6105": "-89.576",
+        "8036": "622.485"
+      }
+    },
+    {
+      "before": "2026-09-28",
+      "after": "2026-09-29",
+      "national_delta_outage_mw": "1180.598",
+      "facility_delta_outage_mw": "1180.598",
+      "generator_delta_outage_mw": "1180.598",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "1247",
+      "matched_unit_decreases_mw": "-66.402",
+      "matched_unit_net_delta_mw": "1180.598",
+      "opposing_change_mw": "66.402",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "204",
+          "generator": "1",
+          "facility_name": "Clinton Power Station",
+          "before_outage_mw": "32.487",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-32.487"
+        },
+        {
+          "facility": "6026",
+          "generator": "1",
+          "facility_name": "LaSalle Generating Station",
+          "before_outage_mw": "33.915",
+          "after_outage_mw": "0",
+          "delta_outage_mw": "-33.915"
+        },
+        {
+          "facility": "6103",
+          "generator": "1",
+          "facility_name": "PPL Susquehanna",
+          "before_outage_mw": "0",
+          "after_outage_mw": "1247",
+          "delta_outage_mw": "1247"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "204",
+          "reported_delta_outage_mw": "-32.487",
+          "matched_unit_delta_outage_mw": "-32.487",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6026",
+          "reported_delta_outage_mw": "-33.915",
+          "matched_unit_delta_outage_mw": "-33.915",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "6103",
+          "reported_delta_outage_mw": "1247",
+          "matched_unit_delta_outage_mw": "1247",
+          "gap_mw": "0"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "204": "-32.487",
+        "6026": "-33.915",
+        "6103": "1247"
+      }
+    },
+    {
+      "before": "2026-09-29",
+      "after": "2026-09-30",
+      "national_delta_outage_mw": "36.979",
+      "facility_delta_outage_mw": "36.979",
+      "generator_delta_outage_mw": "36.979",
+      "facility_minus_national_delta_mw": "0.000",
+      "generator_minus_national_delta_mw": "0.000",
+      "matched_unit_increases_mw": "36.979",
+      "matched_unit_decreases_mw": "0",
+      "matched_unit_net_delta_mw": "36.979",
+      "opposing_change_mw": "0",
+      "matched_units_minus_national_delta_mw": "0.000",
+      "added_observation_keys": [],
+      "removed_observation_keys": [],
+      "matched_unit_changes": [
+        {
+          "facility": "204",
+          "generator": "1",
+          "facility_name": "Clinton Power Station",
+          "before_outage_mw": "0",
+          "after_outage_mw": "10.829",
+          "delta_outage_mw": "10.829"
+        },
+        {
+          "facility": "3166",
+          "generator": "2",
+          "facility_name": "Peach Bottom",
+          "before_outage_mw": "25.294",
+          "after_outage_mw": "37.941",
+          "delta_outage_mw": "12.647"
+        },
+        {
+          "facility": "3251",
+          "generator": "2",
+          "facility_name": "H B Robinson",
+          "before_outage_mw": "45.54",
+          "after_outage_mw": "53.13",
+          "delta_outage_mw": "7.59"
+        },
+        {
+          "facility": "4046",
+          "generator": "1",
+          "facility_name": "Point Beach",
+          "before_outage_mw": "17.739",
+          "after_outage_mw": "23.652",
+          "delta_outage_mw": "5.913"
+        }
+      ],
+      "facility_change_attribution": [
+        {
+          "facility": "204",
+          "reported_delta_outage_mw": "10.829",
+          "matched_unit_delta_outage_mw": "10.829",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "3166",
+          "reported_delta_outage_mw": "12.647",
+          "matched_unit_delta_outage_mw": "12.647",
+          "gap_mw": "0.000"
+        },
+        {
+          "facility": "3251",
+          "reported_delta_outage_mw": "7.59",
+          "matched_unit_delta_outage_mw": "7.59",
+          "gap_mw": "0.00"
+        },
+        {
+          "facility": "4046",
+          "reported_delta_outage_mw": "5.913",
+          "matched_unit_delta_outage_mw": "5.913",
+          "gap_mw": "0.000"
+        }
+      ],
+      "matched_unit_change_by_facility_mw": {
+        "204": "10.829",
+        "3166": "12.647",
+        "3251": "7.59",
+        "4046": "5.913"
+      }
+    }
+  ],
+  "facility_gap_diagnostics": {
+    "capacity": {
+      "mismatched_facility_day_groups": 0,
+      "signed_gap_sum_mw": "0",
+      "absolute_gap_sum_mw": "0"
+    },
+    "outage": {
+      "mismatched_facility_day_groups": 0,
+      "signed_gap_sum_mw": "0",
+      "absolute_gap_sum_mw": "0"
+    }
+  },
+  "historical_coverage_checks": {
+    "archive_sha256": "8516768d0e36dc5778b783c5dab60f181e9249ccf14be26904ba6601937a01cf",
+    "samples": [
+      {
+        "year": "2007",
+        "interval": [
+          "2007-01-01",
+          "2007-02-10"
+        ],
+        "reconciled_days": 41,
+        "reconciled_facility_day_groups": 2706,
+        "capacity_and_outage_gaps_mw": "0",
+        "river_bend_missing_dates": 0,
+        "missing_dates_with_nrc_full_power": 0
+      },
+      {
+        "year": "2013",
+        "interval": [
+          "2013-06-25",
+          "2013-08-02"
+        ],
+        "reconciled_days": 39,
+        "reconciled_facility_day_groups": 2427,
+        "capacity_and_outage_gaps_mw": "0",
+        "river_bend_missing_dates": 30,
+        "missing_dates_with_nrc_full_power": 30
+      },
+      {
+        "year": "2015",
+        "interval": [
+          "2015-10-01",
+          "2015-11-05"
+        ],
+        "reconciled_days": 36,
+        "reconciled_facility_day_groups": 2219,
+        "capacity_and_outage_gaps_mw": "0",
+        "river_bend_missing_dates": 13,
+        "missing_dates_with_nrc_full_power": 13
+      },
+      {
+        "year": "2017",
+        "interval": [
+          "2017-07-01",
+          "2017-08-05"
+        ],
+        "reconciled_days": 36,
+        "reconciled_facility_day_groups": 2180,
+        "capacity_and_outage_gaps_mw": "0",
+        "river_bend_missing_dates": 16,
+        "missing_dates_with_nrc_full_power": 0
+      }
+    ],
+    "total_reconciled_days": 152,
+    "total_facility_day_groups": 9532,
+    "denominator_sensitivity_example": {
+      "period": "2015-10-03",
+      "facility": "6462",
+      "generator": "1",
+      "outage_mw": "14532.875",
+      "reported_capacity_mw": "100034.4",
+      "previous_day_capacity_mw": "101001.4",
+      "capacity_difference_mw": "-967.0",
+      "reported_input_share_percent": "14.52787741017090120998376558",
+      "same_outage_previous_capacity_reference_percent": "14.38878570000019801705718931",
+      "difference_percentage_points": "0.13909171017070319292657627",
+      "interpretation": "Sensitivity only; adjacent-date capacity is not a verified same-day correction"
+    }
+  },
+  "combined_sample_coverage": {
+    "sampled_dates": 182,
+    "facility_day_groups": 11182,
+    "interpretation": "Five nonoverlapping sampled intervals, not continuous historical coverage"
+  }
+}

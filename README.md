@@ -144,12 +144,22 @@ values. All capacity and outage gaps are **zero MW**. The
 [reconciliation analysis](docs/challenge/reconciliation.md) documents the method,
 source values, concrete examples, gap reporting and evidence limits.
 
+The [extended analysis](docs/challenge/reconciliation.md#extended-analysis)
+adds historical coverage, denominator sensitivity, daily unit/facility attribution,
+weighted percentages, partial outages, composite identities and offsetting-error
+diagnostics. Across five saved sample windows, coverage totals **182 dates** and
+**11,182 facility/day groups**; this is sampled history, not continuous coverage.
+
 Replay from committed inputs without credentials or application dependencies:
 
 ```sh
 python3 docs/challenge/evidence/facility_row_count.py --reconciliation-only > /tmp/outage-reconciliation.json
 diff -u docs/challenge/evidence/reconciliation.json /tmp/outage-reconciliation.json
 ```
+
+For the extended report, run
+`python3 docs/challenge/evidence/reconciliation_extensions.py`.
+The analysis documents its saved-report comparison command.
 
 ### Anomalies and limits
 

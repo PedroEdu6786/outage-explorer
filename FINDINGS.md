@@ -11,6 +11,14 @@ documents September 1–30, 2026: all 1,650 generator/facility groups and all
 concrete values, the comparison method, gap semantics, evidence limits and a
 clean-checkout offline reproduction command with a separate saved report.
 
+The [extended analysis](docs/challenge/reconciliation.md#extended-analysis)
+adds historical samples (182 dates and 11,182 facility/day groups including the
+September baseline), daily change attribution, weighting/denominator examples,
+partial-outage counts, identity scoping and offsetting-error diagnostics.
+Its [offline replay](docs/challenge/evidence/reconciliation_extensions.py)
+recomputes the saved source evidence; synthetic method tests remain separate
+from the three real anomalies.
+
 ## Anomalies
 
 | Finding | Result | Status |
