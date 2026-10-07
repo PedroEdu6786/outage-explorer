@@ -7,7 +7,9 @@ from typing import Literal, Protocol
 
 from outage_explorer.domain.observations import Grain
 
-ArtifactKind = Literal["raw", "pages", "dispositions", "modeled", "public", "ledger"]
+ArtifactKind = Literal[
+    "raw", "pages", "dispositions", "modeled", "public", "ledger", "resource"
+]
 
 
 class ArtifactError(ValueError):

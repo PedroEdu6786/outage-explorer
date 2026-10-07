@@ -78,7 +78,11 @@ def incoming_day(
 
 
 def prior_days(
-    store: LocalParquetStore, ref: ArtifactRef | None, bounds: RefreshBounds
+    store: LocalParquetStore,
+    ref: ArtifactRef | None,
+    bounds: RefreshBounds,
+    *,
+    resource: bool = False,
 ) -> Iterator[tuple[date, tuple[ModeledRow, ...]]]:
     """Stream the prior single modeled file as ascending day groups.
 
@@ -87,7 +91,7 @@ def prior_days(
     """
     if ref is None:
         return
-    if ref.kind != "modeled" or ref.partition is not None:
+    if ref.kind != ("resource" if resource else "modeled") or ref.partition is not None:
         raise RefreshInputError("Prior modeled input must be one unpartitioned file")
     group: list[ModeledRow] = []
     previous: tuple[date, tuple[str, ...]] | None = None

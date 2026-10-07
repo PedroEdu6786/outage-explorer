@@ -10,7 +10,11 @@ from outage_explorer.application.errors import (
     ConnectorFailure,
 )
 from outage_explorer.application.ports.artifacts import StoredObject
-from outage_explorer.application.ports.candidates import GrainSummary
+from outage_explorer.application.ports.candidates import (
+    CandidateResult,
+    GrainSummary,
+    ResourceBaseline,
+)
 from outage_explorer.application.ports.source import SourceQuality
 from outage_explorer.domain.access import SeededUser
 from outage_explorer.domain.observations import (
@@ -185,3 +189,49 @@ class CurrentIdentity:
     user: SeededUser
     expires_at: datetime
     csrf_token: str = field(repr=False)
+
+
+@dataclass(frozen=True)
+class ResourceRequest:
+    interval: Interval
+    run_id: str
+    generation_id: str
+    bounds: RefreshBounds
+    prior: ResourceBaseline | None = None
+    contract_id: str = "eia-nuclear-observations-v1"
+    transformation_id: str = "outage-share-exact-v1"
+
+    def __post_init__(self) -> None:
+        ConnectorRequest(
+            self.interval,
+            self.run_id,
+            self.generation_id,
+            self.bounds,
+            contract_id=self.contract_id,
+            transformation_id=self.transformation_id,
+        )
+        if self.prior is not None and (
+            self.prior.generation_id == self.generation_id
+            or self.prior.contract_id != self.contract_id
+            or self.prior.transformation_id != self.transformation_id
+        ):
+            raise ConnectorConfigurationError("Incompatible resource baseline")
+
+
+@dataclass(frozen=True)
+class ResourceReport:
+    run_id: str
+    generation_id: str
+    interval: Interval
+    stage: ConnectorStage
+    outcome: ConnectorOutcome | None = None
+    error: ConnectorFailure | None = None
+    candidate: CandidateResult | None = None
+    sources: tuple[SourceQuality, ...] = ()
+    published: Literal[False] = False
+
+
+@dataclass(frozen=True)
+class ResourceResult:
+    report: ResourceReport
+    report_written: bool

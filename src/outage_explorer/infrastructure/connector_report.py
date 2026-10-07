@@ -8,7 +8,7 @@ from dataclasses import asdict
 from datetime import date
 from pathlib import Path
 
-from outage_explorer.application.dto import ConnectorReport
+from outage_explorer.application.dto import ConnectorReport, ResourceReport
 from outage_explorer.application.errors import ConnectorReportError
 
 
@@ -19,14 +19,14 @@ class LocalConnectorReports:
         self.root, self.limit = root / "runs" / run_id, byte_limit
         self._used = self._sequence = 0
 
-    def progress(self, report: ConnectorReport) -> None:
+    def progress(self, report: ConnectorReport | ResourceReport) -> None:
         self._write(f"progress-{self._sequence:02d}.json", report)
         self._sequence += 1
 
-    def finish(self, report: ConnectorReport) -> None:
+    def finish(self, report: ConnectorReport | ResourceReport) -> None:
         self._write("report.json", report)
 
-    def _write(self, name: str, report: ConnectorReport) -> None:
+    def _write(self, name: str, report: ConnectorReport | ResourceReport) -> None:
         temporary: Path | None = None
         try:
             self.root.mkdir(parents=True, exist_ok=True)

@@ -4,12 +4,20 @@ from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from typing import Protocol
 
-from outage_explorer.application.dto import ConnectorReport
-from outage_explorer.application.ports.artifacts import ExactArtifactStore, StoredObject
+from outage_explorer.application.dto import ConnectorReport, ResourceReport
+from outage_explorer.application.ports.artifacts import (
+    ArtifactError,
+    ArtifactRef,
+    ExactArtifactStore,
+    StoredObject,
+)
 from outage_explorer.application.ports.candidates import (
     CandidateManifest,
     EvidenceBundle,
+    ResourceBaseline,
     SanitizedPage,
+    TransientInput,
+    validate_resources,
 )
 from outage_explorer.application.ports.source import SourcePages, SourceRequest
 from outage_explorer.domain.refresh import RefreshBounds
@@ -37,6 +45,33 @@ class ConnectorReports(Protocol):
     def progress(self, report: ConnectorReport) -> None: ...
 
     def finish(self, report: ConnectorReport) -> None: ...
+
+
+class ResourceInputs(Protocol):
+    def collect_resources(self, pages: Iterable[SanitizedPage]) -> TransientInput: ...
+
+    def verify_baseline(
+        self, baseline: ResourceBaseline, bounds: RefreshBounds
+    ) -> None: ...
+
+
+class ResourceReports(Protocol):
+    def progress(self, report: ResourceReport) -> None: ...
+
+    def finish(self, report: ResourceReport) -> None: ...
+
+
+@dataclass(frozen=True)
+class DurableResourceReceipt:
+    """All-file durable readback result; no manifest or publication authority."""
+
+    generation_id: str
+    resources: tuple[ArtifactRef, ...]
+
+    def __post_init__(self) -> None:
+        validate_resources(self.resources)
+        if not self.generation_id:
+            raise ArtifactError("Missing durable generation identity")
 
 
 @dataclass(frozen=True)

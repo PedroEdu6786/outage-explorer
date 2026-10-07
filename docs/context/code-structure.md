@@ -1,6 +1,28 @@
 # Layered Flask monolith structure
 
 Status: **accepted structure**, [ADR-0030](../adr/0030-layered-flask-monolith.md).
+
+Refresh persistence is migrating under accepted
+[ADR-0060](../adr/0060-persist-only-three-resource-files-per-generation.md).
+The application ports describe exactly three resource files, baseline identity,
+interval, versions and bounded transient quality; Parquet infrastructure preserves
+private provenance/source strings and exact arithmetic in the unified physical
+codec. Analytical views project only existing public columns. PostgreSQL publication
+owns exact file descriptors; S3 verifies every file by bounded full readback.
+Supporting graph writes and duplicate public files are being retired through
+[phase checkpoints](../specs/refresh-persistence/tasks.md), with cutover/key mapping
+still gated. Graph-related implementation descriptions below are pre-migration
+context, not requirements to preserve that superseded architecture.
+
+Phase 1 now supplies `CreateResourceCandidate`, `ParquetResourceBuilder` and
+`LocalConnectorEvidence.collect_resources` for explicit local composition.
+The collector validates bounded copied input and discards page/transport metadata;
+the builder reuses pure merge policies and the existing exact codec, streams prior
+resource files, writes three unified files and compares them with the transient
+merge before releasing inputs. Existing CLI/refresh/bootstrap composition switches
+in phase 4 after durable consumers are ready. No new candidate writes both layouts
+and no graph conversion or fallback is implemented. New behavior is covered in
+`tests/integration/test_resource_candidates.py` and pure connector service tests.
 The health scaffold and offline national/facility/generator verification are implemented; product
 data HTTP delivery is implemented with explicit enablement and controlled
 verification; actual analytical runtime readiness remains separate. This guide governs application code and refactors;

@@ -125,7 +125,7 @@ def schema_for(kind: ArtifactKind, grain: Grain) -> Any:
             _field("old_origin", _origin_type(), True),
             _field("exclusion_positions", _list(pa.int64())),
         ]
-    elif kind == "modeled":
+    elif kind in ("modeled", "resource"):
         fields = [
             *key,
             _field("facility_name", pa.string(), grain == "national"),

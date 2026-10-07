@@ -15,12 +15,20 @@ from outage_explorer.application.ports.artifacts import (
 from outage_explorer.application.ports.candidates import (
     CandidateManifest,
     EvidenceBundle,
+    ResourceBaseline,
     SanitizedPage,
+    TransientInput,
 )
 from outage_explorer.application.ports.connector_workers import ConnectorWorkers
 from outage_explorer.domain.refresh import RefreshBounds
-from outage_explorer.infrastructure.parquet.candidates import ParquetCandidateBuilder
-from outage_explorer.infrastructure.parquet.evidence import write_evidence
+from outage_explorer.infrastructure.parquet.candidates import (
+    ParquetCandidateBuilder,
+    ParquetResourceBuilder,
+)
+from outage_explorer.infrastructure.parquet.evidence import (
+    collect_resources,
+    write_evidence,
+)
 from outage_explorer.infrastructure.parquet.manifests import load_manifest
 from outage_explorer.infrastructure.parquet.storage import LocalParquetStore
 
@@ -35,6 +43,14 @@ class LocalConnectorEvidence:
 
     def write(self, pages: Iterable[SanitizedPage]) -> EvidenceBundle:
         return write_evidence(self.store, pages)
+
+    def collect_resources(self, pages: Iterable[SanitizedPage]) -> TransientInput:
+        return collect_resources(self.store, pages)
+
+    def verify_baseline(
+        self, baseline: ResourceBaseline, bounds: RefreshBounds
+    ) -> None:
+        ParquetResourceBuilder(self.store).verify_baseline(baseline, bounds)
 
     def reopen(
         self, reference: StoredObject, bounds: RefreshBounds

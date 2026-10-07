@@ -30,6 +30,12 @@ is wrong, propose a change here rather than silently deviating.
   standard-library checks and is excluded from Ruff to avoid unrelated rewrites.
 - Tests accompany every behavior change. No Flask/AWS/database dependencies in
   pure use-case tests; inject application ports.
+- Refresh persistence follows accepted [ADR-0060](../adr/0060-persist-only-three-resource-files-per-generation.md):
+  three unified resource Parquet files preserve private provenance/source values and
+  exact calculation evidence; analytical views expose only existing public columns.
+  Supporting evidence is bounded transient data. PostgreSQL owns quality summaries
+  and exact publication descriptors. Implement through the phase checkpoints;
+  current-generation cutover and physical S3 keys require their named task gates.
 - Never commit secrets; supply credentials through the environment. Connector
   resource limits use typed defaults with optional `--config PATH` JSON overrides,
   not `OUTAGE_CONNECTOR_*` variables ([ADR-0041](../adr/0041-connector-defaults-and-json-configuration.md)).

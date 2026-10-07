@@ -36,16 +36,25 @@ run flags take precedence over file values. `EIA_API_KEY` remains environment-on
 do not reintroduce mandatory `OUTAGE_CONNECTOR_*` budget variables. Defaults are
 initial limits, not measured live/production budgets.
 
-Connector CLI candidate runs persist their complete verified graph to S3 by
-default under [ADR-0042](docs/adr/0042-connector-cli-default-s3-persistence.md).
+Connector CLI candidate runs persist to S3 by default under
+[ADR-0042](docs/adr/0042-connector-cli-default-s3-persistence.md), with its complete
+evidence-graph requirement superseded by
+[ADR-0060](docs/adr/0060-persist-only-three-resource-files-per-generation.md).
 Explicit `--local-only` (Make: `LOCAL_ONLY=1`) remains AWS-independent. Validate
 S3 target configuration before source work; default success requires full durable
-readback/replay, with no local-only fallback after S3 failure. Preserve local
+readback of all three exact resource files, with no local-only fallback after S3 failure. Preserve local
 artifacts for explicit persistence retries; a durable receipt is not publication.
 
-Modeled data follows [ADR-0057](docs/adr/0057-single-file-modeled-datasets.md):
-per generation and dataset, exactly one modeled Parquet file (prior input,
-verification, persistence) and one public projection file (only worker input).
+Modeled data follows [ADR-0060](docs/adr/0060-persist-only-three-resource-files-per-generation.md),
+superseding the six-file and audit-preservation clauses of ADR-0057: exactly three
+unified resource Parquet files per generation, one per grain. Each preserves
+private provenance, original numeric strings, units, natural identity and exact
+calculation evidence for faithful baseline retention. Analytical views explicitly
+project only the existing public columns. Raw/pages/dispositions/ledgers remain
+bounded transient candidate inputs; quality and exact publication descriptors
+belong in PostgreSQL. No durable supporting artifacts or S3 manifest are required.
+The implementation proceeds through the refresh-persistence phase checkpoints;
+existing-generation cutover and physical S3 key mapping remain explicit gates.
 Do not write or read daily modeled partitions, or add old-layout compatibility
 code. Readers never rebuild inputs per request; workers scan views over exact
 staged files, without whole-input table imports. No reset CLI exists:

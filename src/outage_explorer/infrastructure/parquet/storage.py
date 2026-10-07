@@ -97,8 +97,42 @@ class LocalParquetStore:
         self.bounds = bounds
         self._lock = RLock()
         self._bytes = 0
+        self._transient_bytes = 0
         self._objects: set[str] = set()
         root.mkdir(parents=True, exist_ok=True)
+
+    def account_transient(self, size: int) -> None:
+        """Charge cumulative transient input against this shared staging session.
+
+        Accounting remains conservative after inputs are released, just as
+        immutable file writes consume the session's aggregate budget.
+        """
+        self.check()
+        with self._lock:
+            if self._bytes + self._transient_bytes + size > self.bounds.total_bytes:
+                raise ArtifactLimitError("Exceeded aggregate transient staging bytes")
+            self._transient_bytes += size
+
+    def adopt_exact(self, reference: ArtifactRef) -> None:
+        """Charge an explicitly referenced existing file once, without listing.
+
+        Reopened sessions start without an inventory. Verify the complete file
+        before admitting it into the same aggregate budget as future writes and
+        transient input. Repeated validation never double charges a digest.
+        """
+        self.verify(reference)
+        with self._lock:
+            if reference.object.key in self._objects:
+                return
+            if len(self._objects) >= self.bounds.objects:
+                raise ArtifactLimitError("Exceeded object count")
+            if (
+                self._bytes + self._transient_bytes + reference.object.byte_count
+                > self.bounds.total_bytes
+            ):
+                raise ArtifactLimitError("Exceeded total bytes")
+            self._objects.add(reference.object.key)
+            self._bytes += reference.object.byte_count
 
     def _path(self, reference: StoredObject) -> Path:
         self.check()
@@ -134,7 +168,10 @@ class LocalParquetStore:
             if digest not in self._objects:
                 if len(self._objects) >= self.bounds.objects:
                     raise ArtifactLimitError("Exceeded object count")
-                if self._bytes + len(payload) > self.bounds.total_bytes:
+                if (
+                    self._bytes + self._transient_bytes + len(payload)
+                    > self.bounds.total_bytes
+                ):
                     raise ArtifactLimitError("Exceeded total bytes")
                 temporary: Path | None = None
                 try:
@@ -267,7 +304,7 @@ class LocalParquetStore:
                 schema,
                 compression="NONE",
                 use_dictionary=False,
-                write_statistics=kind == "public",
+                write_statistics=kind in ("public", "resource"),
                 write_page_checksum=True,
             ) as writer:
 

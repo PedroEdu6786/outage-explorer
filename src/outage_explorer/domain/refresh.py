@@ -359,6 +359,11 @@ def _check_prior(row: ModeledRow, grain: Grain, bounds: RefreshBounds) -> None:
         raise RefreshInputError("Prior derived value does not match source")
 
 
+def validate_baseline_row(row: ModeledRow, grain: Grain, bounds: RefreshBounds) -> None:
+    """Validate an exact unified baseline row without inventing source evidence."""
+    _check_prior(row, grain, bounds)
+
+
 def merge_partition(
     incoming: ModeledPartition,
     prior: Iterable[ModeledRow],

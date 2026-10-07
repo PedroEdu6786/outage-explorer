@@ -5,6 +5,25 @@ The liveness endpoint and import-boundary checks exercise initial composition.
 Product use cases, runtime, storage, and execution mechanisms retain their
 explicit accepted/proposed status and are not proven by liveness.
 
+Accepted [ADR-0060](../adr/0060-persist-only-three-resource-files-per-generation.md)
+supersedes ADR-0042 complete evidence-graph persistence/replay and ADR-0057's
+six-file/audit-preservation clauses. The target is three unified resource files,
+with original provenance, numeric source strings, units and exact calculation
+evidence retained privately for baseline merges. Analytical views explicitly
+project the existing public columns. Supporting evidence remains bounded and
+transient; PostgreSQL stores quality summaries and exact publication descriptors.
+Implementation proceeds through [refresh-persistence tasks](../specs/refresh-persistence/tasks.md);
+physical S3 object identity and current-generation cutover remain explicit gates.
+The graph implementation descriptions below record the pre-migration behavior;
+ADR acceptance alone does not establish implementation or runtime rollout.
+
+The local Phase 1 implementation now provides an explicitly injected three-file
+collector/builder/coordinator with exact private-field round trips, sorted prior
+resource scans and transient semantic verification. The existing composed
+CLI/refresh/bootstrap paths remain scheduled for the phase-4 switch; S3 readback,
+PostgreSQL descriptors/quality publication and production analytical cache
+integration are later-phase acceptance, not established by the local tests.
+
 The product HTTP refresh action uses a configured inclusive interval under
 [ADR-0051](../adr/0051-configured-http-refresh-range.md), with no request date
 overrides. Admission records that interval for the complete all-grain background
