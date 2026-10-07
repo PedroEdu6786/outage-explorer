@@ -35,13 +35,13 @@ This is a navigation map, not a new implementation audit or completion score.
 | Challenge area | What we need to demonstrate | Starting point |
 | --- | --- | --- |
 | Part 1 — Connector, US-01/06 | Three routes, pagination, required-field validation, Parquet, logging, safe reruns, documented failure behavior and an environment-supplied key | [Connector spec and status](../specs/data-connector/tasks.md); count semantics in [point 001](001-facility-row-count.md) |
-| Part 2 — Model | Documented schema, ER diagram, keys, relationships, types, duplicate/invalid handling, backend-available Parquet or Delta | [National contract](../specs/national-data-verification/contract.md), [detail contracts](../specs/facility-generator-verification/contract.md) |
+| Part 2 — Model | Documented schema, ER diagram, keys, relationships, types, duplicate/invalid handling, backend-available Parquet or Delta | [Data model and ER diagrams](../context/data-model.md), [national contract](../specs/national-data-verification/contract.md), [detail contracts](../specs/facility-generator-verification/contract.md) |
 | Part 2 — Daily fleet metric, US-08 | Implement and explain the daily fleet capacity offline share | [National verification](../specs/national-data-verification/verification.md), [metric meaning](../adr/0035-national-outage-capacity-meaning.md) |
 | Part 2 — Reconciliation, US-07 | Compare all three grains over at least 30 days; identify period, entity, values and gap wherever they differ, with explanations | [Point 001](001-facility-row-count.md) replays all 30 September days and all observed facility/day groups |
 | Part 2 — Anomalies | At least three actual anomalies, each with a concrete period/entity/value example and product treatment; runnable queries or code | One documented response-metadata discrepancy accepted; two further findings remain to be established |
 | Part 3 — Backend | Seeded personas, authentication, authorization before reads/execution, read-only SQL with every referenced table checked and results capped, Admin refresh, secrets excluded, rejection tests | [Backend specification](../specs/outage-explorer-backend/spec.md) |
 | Part 4 — Web application | Login, permitted datasets, backend-paginated table and SQL input/results | Deferred in this project's current scope; still core to the full challenge |
-| Delivery and live explanation | Runnable README, tests, ER diagram, DECISIONS.md, FINDINGS.md, Engineering Notes and incremental history; explain and change the solution live | [Findings entry point](../../FINDINGS.md), [ADRs](../adr/), [devlog](../devlog/); final submission completeness is a separate review |
+| Delivery and live explanation | Runnable README, tests, ER diagram, DECISIONS.md, FINDINGS.md, Engineering Notes and incremental history; explain and change the solution live | [ER diagrams](../context/data-model.md), [findings entry point](../../FINDINGS.md), [ADRs](../adr/), [devlog](../devlog/); final submission completeness is a separate review |
 
 ## Discussion points
 

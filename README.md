@@ -7,6 +7,10 @@ The core promises are availability from our own storage after ingestion, trust t
 reproducible evidence from actual EIA records, and access control that never
 exposes facility or generator details to Viewers.
 
+See the [data model and ER diagrams](docs/context/data-model.md) for all three
+analytical datasets and seven operational entities, including keys, relationships,
+types, private provenance and duplicate/invalid-row handling.
+
 “Local data” means the application's own ingested data, served by a shared
 backend to authorized users. Development runs locally; deployment must retain
 data independently of disposable application containers. The current scope is
