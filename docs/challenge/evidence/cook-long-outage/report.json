@@ -1,0 +1,300 @@
+{
+  "source_archive_sha256": "1138a365e58b054bf6a3357a074df3047abe95a42f8de1f47615cdc00a2b76e1",
+  "interval": [
+    "2008-01-01",
+    "2012-12-31"
+  ],
+  "eia_retrieved_at_utc": "2026-10-07T05:56:53.722613+00:00",
+  "eia_rows": {
+    "national": 1827,
+    "facility": 1827,
+    "generator": 3654
+  },
+  "nrc_unit_day_observations": 190008,
+  "nrc_units": 104,
+  "nrc_zero_power_runs": 859,
+  "completed_runs": 844,
+  "boundary_censored_runs": 15,
+  "completed_run_median_observations": 7.0,
+  "longest_completed_runs": [
+    {
+      "unit": "D.C. Cook 1",
+      "first": "2008-09-21",
+      "last": "2009-12-17",
+      "observations": 453,
+      "complete": true
+    },
+    {
+      "unit": "San Onofre 2",
+      "first": "2009-09-27",
+      "last": "2010-04-09",
+      "observations": 195,
+      "complete": true
+    },
+    {
+      "unit": "Turkey Point 3",
+      "first": "2012-02-26",
+      "last": "2012-08-15",
+      "observations": 172,
+      "complete": true
+    },
+    {
+      "unit": "Columbia Generating Station",
+      "first": "2011-04-03",
+      "last": "2011-09-19",
+      "observations": 170,
+      "complete": true
+    },
+    {
+      "unit": "South Texas 2",
+      "first": "2011-11-29",
+      "last": "2012-04-21",
+      "observations": 145,
+      "complete": true
+    },
+    {
+      "unit": "San Onofre 3",
+      "first": "2010-10-10",
+      "last": "2011-02-16",
+      "observations": 130,
+      "complete": true
+    },
+    {
+      "unit": "Saint Lucie 1",
+      "first": "2011-11-28",
+      "last": "2012-03-29",
+      "observations": 123,
+      "complete": true
+    },
+    {
+      "unit": "Saint Lucie 2",
+      "first": "2011-01-03",
+      "last": "2011-05-04",
+      "observations": 122,
+      "complete": true
+    },
+    {
+      "unit": "Davis-Besse",
+      "first": "2010-02-28",
+      "last": "2010-06-28",
+      "observations": 121,
+      "complete": true
+    },
+    {
+      "unit": "Robinson 2",
+      "first": "2010-03-29",
+      "last": "2010-07-18",
+      "observations": 112,
+      "complete": true
+    }
+  ],
+  "cook_event": {
+    "unit": "D.C. Cook 1",
+    "first": "2008-09-21",
+    "last": "2009-12-17",
+    "observations": 453,
+    "complete": true
+  },
+  "eia_nrc_cook_comparisons": 3654,
+  "cook_facility_day_reconciliations": 1827,
+  "daily_html_controls": [
+    {
+      "date": "2008-09-21",
+      "power_percent": 0
+    },
+    {
+      "date": "2009-12-18",
+      "power_percent": 3
+    }
+  ],
+  "examples": [
+    {
+      "date": "2008-09-20",
+      "generator": {
+        "period": "2008-09-20",
+        "facility": "6000",
+        "facilityName": "Donald C Cook",
+        "generator": "1",
+        "capacity": "1009",
+        "outage": "0",
+        "percentOutage": "0",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      "facility": {
+        "period": "2008-09-20",
+        "facility": "6000",
+        "facilityName": "Donald C Cook",
+        "capacity": "2069",
+        "outage": "0",
+        "percentOutage": "0",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      "national": {
+        "period": "2008-09-20",
+        "capacity": "100754.9",
+        "outage": "10469.168",
+        "percentOutage": "10.39",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      "nrc_power_percent": 100
+    },
+    {
+      "date": "2008-09-21",
+      "generator": {
+        "period": "2008-09-21",
+        "facility": "6000",
+        "facilityName": "Donald C Cook",
+        "generator": "1",
+        "capacity": "1009",
+        "outage": "1009",
+        "percentOutage": "100",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      "facility": {
+        "period": "2008-09-21",
+        "facility": "6000",
+        "facilityName": "Donald C Cook",
+        "capacity": "2069",
+        "outage": "1009",
+        "percentOutage": "48.77",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      "national": {
+        "period": "2008-09-21",
+        "capacity": "100754.9",
+        "outage": "14005.318",
+        "percentOutage": "13.9",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      "nrc_power_percent": 0
+    },
+    {
+      "date": "2009-12-17",
+      "generator": {
+        "period": "2009-12-17",
+        "facility": "6000",
+        "facilityName": "Donald C Cook",
+        "generator": "1",
+        "capacity": "1084",
+        "outage": "1084",
+        "percentOutage": "100",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      "facility": {
+        "period": "2009-12-17",
+        "facility": "6000",
+        "facilityName": "Donald C Cook",
+        "capacity": "2191",
+        "outage": "1084",
+        "percentOutage": "49.48",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      "national": {
+        "period": "2009-12-17",
+        "capacity": "102489.1",
+        "outage": "6872.432",
+        "percentOutage": "6.71",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      "nrc_power_percent": 0
+    },
+    {
+      "date": "2009-12-18",
+      "generator": {
+        "period": "2009-12-18",
+        "facility": "6000",
+        "facilityName": "Donald C Cook",
+        "generator": "1",
+        "capacity": "1084",
+        "outage": "1051.48",
+        "percentOutage": "97",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      "facility": {
+        "period": "2009-12-18",
+        "facility": "6000",
+        "facilityName": "Donald C Cook",
+        "capacity": "2191",
+        "outage": "1051.48",
+        "percentOutage": "47.99",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      "national": {
+        "period": "2009-12-18",
+        "capacity": "102489.1",
+        "outage": "6335.472",
+        "percentOutage": "6.18",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      "nrc_power_percent": 3
+    },
+    {
+      "date": "2009-12-23",
+      "generator": {
+        "period": "2009-12-23",
+        "facility": "6000",
+        "facilityName": "Donald C Cook",
+        "generator": "1",
+        "capacity": "1084",
+        "outage": "0",
+        "percentOutage": "0",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      "facility": {
+        "period": "2009-12-23",
+        "facility": "6000",
+        "facilityName": "Donald C Cook",
+        "capacity": "2191",
+        "outage": "0",
+        "percentOutage": "0",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      "national": {
+        "period": "2009-12-23",
+        "capacity": "102489.1",
+        "outage": "5987.751",
+        "percentOutage": "5.84",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      },
+      "nrc_power_percent": 100
+    }
+  ],
+  "limitations": [
+    "EIA responses are sanitized and omit credential-bearing echoed requests; original source value strings and selected response fields are retained.",
+    "Sequential EIA requests are not an atomic upstream snapshot.",
+    "NRC is EIA status source, not an independent physical measurement.",
+    "Outage runs count consecutive daily observations; they do not measure uninterrupted duration or lost energy.",
+    "Ranking uses complete observed NRC runs over 2008-2012, excluding boundary-censored runs.",
+    "The EIA bundle is facility-filtered for Cook; national data is unfiltered. It cannot by itself replay whole-fleet cross-grain sums."
+  ]
+}

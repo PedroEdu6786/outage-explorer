@@ -10,9 +10,11 @@ reconciles the saved September samples. The accepted conclusion for the observed
 requests is that EIA's facility `total` reflects generator records. Use actual
 facility rows received across all successfully retrieved pages as our retrieved
 count, preserving EIA's total separately. Counting before aggregation remains
-the inferred internal explanation. We have not completed the three-anomaly
-requirement. [Point 002](002-river-bend-missing-observations.md) adds corroborated
-historical River Bend omissions; two independent findings are now documented.
+the inferred internal explanation. [Point 002](002-river-bend-missing-observations.md)
+adds corroborated historical River Bend omissions. [Point 003](003-cook-prolonged-outage.md)
+adds a verified unusually long Cook Unit 1 outage. Three independent findings
+are now documented, including an operating outlier within the user's expressly
+accepted anomaly scope; broader challenge acceptance remains separate.
 
 ## Source and scope
 
@@ -39,7 +41,7 @@ This is a navigation map, not a new implementation audit or completion score.
 | Part 2 — Model | Documented schema, ER diagram, keys, relationships, types, duplicate/invalid handling, backend-available Parquet or Delta | [Data model and ER diagrams](../context/data-model.md), [national contract](../specs/national-data-verification/contract.md), [detail contracts](../specs/facility-generator-verification/contract.md) |
 | Part 2 — Daily fleet metric, US-08 | Implement and explain the daily fleet capacity offline share | [National verification](../specs/national-data-verification/verification.md), [metric meaning](../adr/0035-national-outage-capacity-meaning.md) |
 | Part 2 — Reconciliation, US-07 | Compare all three grains over at least 30 days; identify period, entity, values and gap wherever they differ, with explanations | [Point 001](001-facility-row-count.md) replays all 30 September days and all observed facility/day groups |
-| Part 2 — Anomalies | At least three actual anomalies, each with a concrete period/entity/value example and product treatment; runnable queries or code | Two documented findings: response metadata and corroborated River Bend omissions; one further anomaly remains open |
+| Part 2 — Anomalies | At least three actual anomalies, each with a concrete period/entity/value example and product treatment; runnable queries or code | Three documented findings: response metadata, River Bend omissions and a verified prolonged Cook outage; each has runnable evidence and product treatment |
 | Part 3 — Backend | Seeded personas, authentication, authorization before reads/execution, read-only SQL with every referenced table checked and results capped, Admin refresh, secrets excluded, rejection tests | [Backend specification](../specs/outage-explorer-backend/spec.md) |
 | Part 4 — Web application | Login, permitted datasets, backend-paginated table and SQL input/results | Deferred in this project's current scope; still core to the full challenge |
 | Delivery and live explanation | Runnable README, tests, ER diagram, DECISIONS.md, FINDINGS.md, Engineering Notes and incremental history; explain and change the solution live | [Decisions](../../DECISIONS.md), [ER diagrams](../context/data-model.md), [findings entry point](../../FINDINGS.md), [ADRs](../adr/), [devlog](../devlog/); final submission completeness is a separate review |
@@ -50,6 +52,7 @@ This is a navigation map, not a new implementation audit or completion score.
 | --- | --- | --- | --- |
 | [001 — Facility advertised total exceeds returned rows](001-facility-row-count.md) | Part 1 pagination; Part 2 reconciliation/anomalies; US-07 | Confirmed in recorded samples and bounded live probes; internal cause inferred | Accepted discrepancy and received-row accounting; broader pagination evidence remains open |
 | [002 — River Bend observations disappear](002-river-bend-missing-observations.md) | Part 2 reconciliation/anomalies; US-07 | EIA omissions on 43 dates corroborated by NRC; zero cross-grain MW gaps | Observed omission documented; upstream cause and any product change remain open |
+| [003 — Prolonged Cook Unit 1 outage](003-cook-prolonged-outage.md) | Part 2 anomalies | 453 consecutive full-outage observations; longest completed run in the selected five-year NRC population; corroborated event context | Verified operating outlier within user-approved scope; valid source rows retained |
 
 Use a new numbered file for each independent point. Link its input artifacts and
 reproduction command. For findings, record the interval, entity identifiers,

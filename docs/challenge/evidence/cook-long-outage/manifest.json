@@ -1,0 +1,100 @@
+{
+  "format": "gzip-json-utf8-original-source-files-v1",
+  "packaged_at_utc": "2026-10-07T05:59:00.028397+00:00",
+  "archive_sha256": "1138a365e58b054bf6a3357a074df3047abe95a42f8de1f47615cdc00a2b76e1",
+  "archive_bytes": 661873,
+  "eia_bundle_path": "data/investigations/eia-cook-history-2008-01-01_2012-12-31/20261007T055653Z",
+  "nrc_urls": {
+    "nrc/2008.txt": "https://www.nrc.gov/reading-rm/doc-collections/event-status/reactor-status/2008/2008PowerStatus.txt",
+    "nrc/2009.txt": "https://www.nrc.gov/reading-rm/doc-collections/event-status/reactor-status/2009/2009PowerStatus.txt",
+    "nrc/2010.txt": "https://www.nrc.gov/reading-rm/doc-collections/event-status/reactor-status/2010/2010PowerStatus.txt",
+    "nrc/2011.txt": "https://www.nrc.gov/reading-rm/doc-collections/event-status/reactor-status/2011/2011PowerStatus.txt",
+    "nrc/2012.txt": "https://www.nrc.gov/reading-rm/doc-collections/event-status/reactor-status/2012/2012PowerStatus.txt",
+    "nrc/20080921.html": "https://www.nrc.gov/reading-rm/doc-collections/event-status/reactor-status/2008/20080921ps.html",
+    "nrc/20091218.html": "https://www.nrc.gov/reading-rm/doc-collections/event-status/reactor-status/2009/20091218ps.html",
+    "nrc/event-20080920.html": "https://www.nrc.gov/reading-rm/doc-collections/event-status/event/2008/20080920en"
+  },
+  "nrc_retrieval_note": "Downloaded during the October 7, 2026 UTC investigation; individual NRC request timestamps were not captured.",
+  "files": {
+    "eia/manifest.json": {
+      "bytes": 4149,
+      "sha256": "f47771b91ebe56f1604260dafbeaa2d850efb33181e3c3740345ca9f5c1a5627"
+    },
+    "eia/national/metadata.json": {
+      "bytes": 1074,
+      "sha256": "2af6d15ebc67e4740287dffc7b1403142b82ee531fd871dd353097a7e7d22461"
+    },
+    "eia/national/page-000.json": {
+      "bytes": 477861,
+      "sha256": "171c007b68766c82e28b38fe45b1ee73f4a73ddd814af84d795bedfe83d3abb3"
+    },
+    "eia/national/page-001.json": {
+      "bytes": 854,
+      "sha256": "eb14f4029703fe38a1ecfd87794ea6f5b01b94632c8acb747efbebfebd387972"
+    },
+    "eia/facility/metadata.json": {
+      "bytes": 1188,
+      "sha256": "38995dab1b65407e13990a2a17d5ad3529ce57a40055b63fc887c1b5b3204720"
+    },
+    "eia/facility/page-000.json": {
+      "bytes": 583808,
+      "sha256": "86c1fcbe150d1bb026c19b1d67864114fc8808151c02f5b50b376081492c4706"
+    },
+    "eia/facility/page-001.json": {
+      "bytes": 971,
+      "sha256": "66bb36d72bcc31eb16e12d5d100836fc3c20afb9077c036aadba53addb2fd66a"
+    },
+    "eia/generator/metadata.json": {
+      "bytes": 1292,
+      "sha256": "612c3a0ccb6ef78fb636f1838310ffe00e340fdc14ecfe64ad2199376f9b6a3d"
+    },
+    "eia/generator/page-000.json": {
+      "bytes": 1254962,
+      "sha256": "28f6128c95c9981957e4f74c6332d5db001e0b008e3a5c07870a8ab69371d775"
+    },
+    "eia/generator/page-001.json": {
+      "bytes": 1042,
+      "sha256": "70f0663d1d35c57d0be1556f83785f21b9f6f0510639b92b16f76662ef6ff068"
+    },
+    "nrc/2008.txt": {
+      "bytes": 1109051,
+      "sha256": "1927090d7752da58a2f09255945d0d9b3ffd4a7dcdbde40bcc18c2c4768925cf"
+    },
+    "nrc/2009.txt": {
+      "bytes": 1106690,
+      "sha256": "ac10c37cc32eeb11e3749ecc262b0cddafa309de37b4e1a6ae421d1a2265b946"
+    },
+    "nrc/2010.txt": {
+      "bytes": 1107736,
+      "sha256": "61b6ca7347c067db1f1ca742c71bc89aa7628831b935ee29aa4e1439c4228959"
+    },
+    "nrc/2011.txt": {
+      "bytes": 1067806,
+      "sha256": "b176eba81c40dbca04ec51be04f7bffaca03a982a2caf3c99e25362e6c432100"
+    },
+    "nrc/2012.txt": {
+      "bytes": 1068864,
+      "sha256": "e246f4e40377d45a81a12788a9448c419eae4c4a64306aa37cc4b9eeb01a52eb"
+    },
+    "nrc/20080921.html": {
+      "bytes": 157743,
+      "sha256": "2a01b7cf3c55388b911649c69c67ef8664c36b0327b631b79187e184e4e95cb7"
+    },
+    "nrc/20091218.html": {
+      "bytes": 157681,
+      "sha256": "6c8744a543f201c2ce437a8375ecb8eb7942a4c37e0c8c637dfc4d9dcc04b75d"
+    },
+    "nrc/event-20080920.html": {
+      "bytes": 120136,
+      "sha256": "3b1e0572b21e72a7d192aaedc8fd15a9dcbf4ab337d35a3a629abdaac99631f0"
+    }
+  },
+  "limitations": [
+    "EIA responses are sanitized and omit credential-bearing echoed requests; original source value strings and selected response fields are retained.",
+    "Sequential EIA requests are not an atomic upstream snapshot.",
+    "NRC is EIA status source, not an independent physical measurement.",
+    "Outage runs count consecutive daily observations; they do not measure uninterrupted duration or lost energy.",
+    "Ranking uses complete observed NRC runs over 2008-2012, excluding boundary-censored runs.",
+    "The EIA bundle is facility-filtered for Cook; national data is unfiltered. It cannot by itself replay whole-fleet cross-grain sums."
+  ]
+}
