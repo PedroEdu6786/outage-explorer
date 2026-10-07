@@ -20,8 +20,10 @@ This investigation supports Part 1 pagination and Part 2 reconciliation and
 anomalies (US-07; backend FR13/FR14 and AC11). The challenge asks for at least
 30 days of cross-grain comparison and three real anomalies with concrete
 examples, product treatment and rerunnable evidence. This document records one
-response-metadata discrepancy accepted for our findings. The three-anomaly
-deliverable remains incomplete; multiple probes of this issue are one finding.
+response-metadata discrepancy accepted for our findings; multiple probes of
+this issue are one finding. The [findings index](../../FINDINGS.md) lists all
+three independent anomalies. The [dedicated reconciliation](reconciliation.md)
+documents the complete 30-day MW comparison separately.
 
 ## Recorded evidence
 
@@ -89,8 +91,9 @@ count gap is two; its capacity/outage aggregation gap is zero.
 
 Eight read-only requests ran on **October 3, 2026, 20:07:13–20:07:32 UTC**.
 All returned HTTP 200 and API version 2.1.14. Their exact public request
-parameters, retrieval times and sanitized response bodies are preserved in
-local `data/investigations/facility-row-count/live-probes.json` (Git-ignored).
+parameters, retrieval times and sanitized response bodies are preserved in the
+versioned [probe fixture](evidence/facility-row-count/live-probes.json). This is
+a byte-identical copy of the original local investigation download.
 API keys and credential-bearing echoed requests are omitted; these are not
 original wire bytes. The historical verification bundles remain unchanged.
 
@@ -169,10 +172,10 @@ routes over the initial six-month load.
 
 From the repository root, Python 3.12+ or the existing virtual environment is
 sufficient; no network, API key, database or application startup is needed.
-Full reproduction also requires the original Git-ignored
-`data/investigations/facility-row-count/live-probes.json` on the local machine;
-a clean checkout contains the derived report and September regression fixtures,
-but not these downloaded live probes:
+All required inputs are versioned: the September regression fixtures and the
+eight sanitized [recorded probes](evidence/facility-row-count/live-probes.json).
+Replay verifies the fixture manifests and the probe file's SHA-256 before use.
+A clean checkout needs no local investigation downloads:
 
 ```sh
 .venv/bin/python docs/challenge/evidence/facility_row_count.py

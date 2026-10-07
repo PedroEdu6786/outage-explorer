@@ -136,6 +136,23 @@ local development does not require an EC2 instance.
 
 ## Findings and current limits
 
+### Reconciliation
+
+For **September 1–30, 2026**, generator sums match all **1,650 facility/day
+groups**, and facility and generator daily sums independently match national
+values. All capacity and outage gaps are **zero MW**. The
+[reconciliation analysis](docs/challenge/reconciliation.md) documents the method,
+source values, concrete examples, gap reporting and evidence limits.
+
+Replay from committed inputs without credentials or application dependencies:
+
+```sh
+python3 docs/challenge/evidence/facility_row_count.py --reconciliation-only > /tmp/outage-reconciliation.json
+diff -u docs/challenge/evidence/reconciliation.json /tmp/outage-reconciliation.json
+```
+
+### Anomalies and limits
+
 [FINDINGS.md](FINDINGS.md) links the 30-day cross-grain reconciliation and three
 reproducible findings: facility response-count metadata, historical River Bend
 omissions and an unusually long Cook Unit 1 outage. Each investigation includes

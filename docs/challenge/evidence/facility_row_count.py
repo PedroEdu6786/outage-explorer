@@ -1,5 +1,6 @@
 """Replay the bounded September samples and saved probes; no network or app imports."""
 
+import argparse
 import hashlib
 import json
 from collections import Counter, defaultdict
@@ -38,7 +39,7 @@ def sums(rows):
     }
 
 
-def main():
+def reconcile():
     rows, sources, counts = {}, {}, {}
     expected_days = {
         (date(2026, 9, 1) + timedelta(days=offset)).isoformat() for offset in range(30)
@@ -132,7 +133,47 @@ def main():
             }
         )
 
-    probe_path = ROOT / "data/investigations/facility-row-count/live-probes.json"
+    result = {
+        "scope": "Recorded September 1–30, 2026 cross-grain reconciliation",
+        "sources": sources,
+        "counts": counts,
+        "facility_advertised_minus_received": counts["facility"]["advertised_total"]
+        - counts["facility"]["received_rows"],
+        "generator_groups": len(generators),
+        "generator_rows_without_parent": sum(
+            len(generators[identity]) for identity in missing_parents
+        ),
+        "missing_parent_keys": missing_parents,
+        "facility_keys_without_generators": without_children,
+        "generator_to_facility_differences": differences,
+        "daily_reconciliation": daily,
+        "browns_ferry_example": {
+            "facility": facilities.get(("2026-09-01", "46")),
+            "generators": generators.get(("2026-09-01", "46"), []),
+        },
+    }
+    return rows, facilities, generators, result
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--reconciliation-only",
+        action="store_true",
+        help="Replay the 30-day reconciliation without the separate live-probe analysis",
+    )
+    args = parser.parse_args()
+    rows, facilities, generators, result = reconcile()
+    if args.reconciliation_only:
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return
+
+    probe_path = ROOT / "docs/challenge/evidence/facility-row-count/live-probes.json"
+    if (
+        digest(probe_path)
+        != "1e8e485a23b799a88d641b4f757ace59b80d93991e422cadfaa2c1e0878ff311"
+    ):
+        raise ValueError("Live-probe evidence hash differs")
     probes = json.loads(probe_path.read_text())["probes"]
     by_id = {probe["id"]: probe for probe in probes}
     probe_rows = {
@@ -159,41 +200,29 @@ def main():
             and len(probe_rows[probe_id]) == 1
         )
 
-    result = {
-        "scope": "Recorded September 1–30, 2026 plus eight October 3 live probes",
-        "sources": sources,
-        "counts": counts,
-        "facility_advertised_minus_received": counts["facility"]["advertised_total"]
-        - counts["facility"]["received_rows"],
-        "generator_groups": len(generators),
-        "generator_rows_without_parent": sum(
-            len(generators[identity]) for identity in missing_parents
-        ),
-        "missing_parent_keys": missing_parents,
-        "facility_keys_without_generators": without_children,
-        "generator_to_facility_differences": differences,
-        "daily_reconciliation": daily,
-        "live_evidence": {
-            "path": str(probe_path.relative_to(ROOT)),
-            "sha256": digest(probe_path),
-            "checks": live_checks,
-            "probes": [
-                {
-                    "id": probe["id"],
-                    "http_status": probe["http_status"],
-                    "api_version": probe["apiVersion"],
-                    "retrieved_at_utc": probe["retrieved_at_utc"],
-                    "advertised_total": int(probe["response"]["total"]),
-                    "received_rows": len(probe["response"]["data"]),
-                }
-                for probe in probes
-            ],
-        },
-        "browns_ferry_example": {
-            "facility": facilities[("2026-09-01", "46")],
-            "generators": generators[("2026-09-01", "46")],
-        },
-    }
+    example = result.pop("browns_ferry_example")
+    result.update(
+        {
+            "scope": "Recorded September 1–30, 2026 plus eight October 3 live probes",
+            "live_evidence": {
+                "path": str(probe_path.relative_to(ROOT)),
+                "sha256": digest(probe_path),
+                "checks": live_checks,
+                "probes": [
+                    {
+                        "id": probe["id"],
+                        "http_status": probe["http_status"],
+                        "api_version": probe["apiVersion"],
+                        "retrieved_at_utc": probe["retrieved_at_utc"],
+                        "advertised_total": int(probe["response"]["total"]),
+                        "received_rows": len(probe["response"]["data"]),
+                    }
+                    for probe in probes
+                ],
+            },
+        }
+    )
+    result["browns_ferry_example"] = example
     print(json.dumps(result, indent=2, ensure_ascii=False))
 
 

@@ -1,5 +1,5 @@
 {
-  "scope": "Recorded September 1–30, 2026 plus eight October 3 live probes",
+  "scope": "Recorded September 1–30, 2026 cross-grain reconciliation",
   "sources": {
     "national": {
       "snapshot": "data/verification/national-2026-09/national.json",
@@ -1101,83 +1101,6 @@
       }
     }
   ],
-  "live_evidence": {
-    "path": "docs/challenge/evidence/facility-row-count/live-probes.json",
-    "sha256": "1e8e485a23b799a88d641b4f757ace59b80d93991e422cadfaa2c1e0878ff311",
-    "checks": {
-      "paged_union_equals_full_day": true,
-      "full_day_equals_recorded_baseline": true,
-      "browns_ferry_generators_equal_baseline": true,
-      "browns-ferry-facility_equals_baseline": true,
-      "clinton-facility_equals_baseline": true
-    },
-    "probes": [
-      {
-        "id": "facility-day",
-        "http_status": 200,
-        "api_version": "2.1.14",
-        "retrieved_at_utc": "2026-10-03T20:07:13.727469+00:00",
-        "advertised_total": 95,
-        "received_rows": 55
-      },
-      {
-        "id": "browns-ferry-facility",
-        "http_status": 200,
-        "api_version": "2.1.14",
-        "retrieved_at_utc": "2026-10-03T20:07:17.815555+00:00",
-        "advertised_total": 3,
-        "received_rows": 1
-      },
-      {
-        "id": "browns-ferry-generators",
-        "http_status": 200,
-        "api_version": "2.1.14",
-        "retrieved_at_utc": "2026-10-03T20:07:21.278868+00:00",
-        "advertised_total": 3,
-        "received_rows": 3
-      },
-      {
-        "id": "clinton-facility",
-        "http_status": 200,
-        "api_version": "2.1.14",
-        "retrieved_at_utc": "2026-10-03T20:07:24.356507+00:00",
-        "advertised_total": 1,
-        "received_rows": 1
-      },
-      {
-        "id": "facility-day-offset-55",
-        "http_status": 200,
-        "api_version": "2.1.14",
-        "retrieved_at_utc": "2026-10-03T20:07:27.133747+00:00",
-        "advertised_total": 95,
-        "received_rows": 0
-      },
-      {
-        "id": "facility-day-page-1",
-        "http_status": 200,
-        "api_version": "2.1.14",
-        "retrieved_at_utc": "2026-10-03T20:07:29.317853+00:00",
-        "advertised_total": 95,
-        "received_rows": 50
-      },
-      {
-        "id": "facility-day-page-2",
-        "http_status": 200,
-        "api_version": "2.1.14",
-        "retrieved_at_utc": "2026-10-03T20:07:30.923901+00:00",
-        "advertised_total": 95,
-        "received_rows": 5
-      },
-      {
-        "id": "facility-month-offset-1650",
-        "http_status": 200,
-        "api_version": "2.1.14",
-        "retrieved_at_utc": "2026-10-03T20:07:32.784483+00:00",
-        "advertised_total": 2850,
-        "received_rows": 0
-      }
-    ]
-  },
   "browns_ferry_example": {
     "facility": {
       "period": "2026-09-01",

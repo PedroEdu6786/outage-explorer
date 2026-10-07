@@ -3,6 +3,16 @@
 The [challenge discussion index](docs/challenge/README.md) maps criteria to
 evidence and keeps individual investigations separate.
 
+## Reconciliation
+
+The [dedicated reconciliation analysis](docs/challenge/reconciliation.md)
+documents September 1–30, 2026: all 1,650 generator/facility groups and all
+30 daily detail/national comparisons have zero capacity/outage gaps. It includes
+concrete values, the comparison method, gap semantics, evidence limits and a
+clean-checkout offline reproduction command with a separate saved report.
+
+## Anomalies
+
 | Finding | Result | Status |
 | --- | --- | --- |
 | [001 — Facility response counts](docs/challenge/001-facility-row-count.md) | September 2026 advertises 2,850 and returns 1,650 facility rows. In the observed requests, EIA's facility total reflects generator records. | Documented discrepancy and received-row accounting accepted; upstream internal cause inferred |
