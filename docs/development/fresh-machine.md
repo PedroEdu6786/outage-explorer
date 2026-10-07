@@ -130,7 +130,12 @@ do not run that command to print secrets. The identity check above is read-only.
 
 ## 5. Fill in backend settings
 
-Prepare the RDS certificate trust bundle:
+If your existing `.env` already configures a valid CA file, keep that path and
+skip this download. `.local-runtime/rds-ca.pem` is a suggested location for a
+new setup, not a required existing file. `make local-configure` copies the CA
+from your configured path into the guest.
+
+On a new machine without a CA bundle, prepare one:
 
 ```sh
 make local-ca
@@ -145,7 +150,8 @@ instead and skip this command. Put the printed path in the setting below.
 
 Edit `.env`, preserving secrets privately. For IAM mode, **remove the entire
 `OUTAGE_ACCESS_DATABASE_DSN=` line**, even if empty. Set these values with your
-actual identifiers; use an absolute CA path, not the placeholder below:
+actual identifiers; use your existing absolute CA path, or the path printed
+by `make local-ca`, rather than the placeholder below:
 
 ```dotenv
 AWS_PROFILE=outage-explorer

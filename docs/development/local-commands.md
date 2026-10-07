@@ -64,7 +64,9 @@ It does not start the API or connect to application services.
 
 ## `make local-ca`
 
-**Before:** Install host tools. No AWS login is required.
+**Before:** Install host tools. No AWS login is required. This command is optional
+if your existing database settings already reference a valid CA file; the
+`.local-runtime/rds-ca.pem` filename is not a required application convention.
 
 **Does:** Downloads Amazon RDS’s public global CA bundle over HTTPS into
 `.local-runtime/rds-ca.pem`. It checks that the download contains a certificate
