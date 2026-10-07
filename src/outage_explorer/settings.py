@@ -21,7 +21,7 @@ class SourceSettings:
     rows: int = 30_000
     pages: int = 100
     requests: int = 200
-    attempts: int = 3
+    attempts: int = 5
     request_bytes: int = 4_000
     response_bytes: int = 1_000_000
     total_bytes: int = 30_000_000
@@ -30,8 +30,8 @@ class SourceSettings:
     json_nodes: int = 20_000
     field_bytes: int = 20_000
     elapsed_seconds: int = 1_800
-    timeout_seconds: int = 10
-    backoff_seconds: int = 1
+    timeout_seconds: int = 30
+    backoff_seconds: int = 30
 
 
 @dataclass(frozen=True)

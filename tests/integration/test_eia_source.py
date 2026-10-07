@@ -30,6 +30,7 @@ from outage_explorer.infrastructure.parquet.evidence import (
     collect_resources,
 )
 from outage_explorer.infrastructure.parquet.storage import LocalParquetStore
+from outage_explorer.settings import SourceSettings
 
 SECRET = "synthetic-eia-secret-keep-private"
 NOW = datetime(2026, 10, 3, tzinfo=UTC)
@@ -581,6 +582,48 @@ def test_retry_after_is_honored_within_bounds(retry_after):
     )
     list(adapter.pages())
     assert clock.sleeps == [2]
+
+
+def test_default_retries_recover_after_four_read_timeouts_at_same_offset():
+    bounds = SourceBounds(**asdict(SourceSettings()))
+    adapter, calls, clock = source(
+        [
+            response(metadata()),
+            *[httpx.ReadTimeout(SECRET) for _ in range(4)],
+            response(page([row()], "1")),
+            response(page([], "1")),
+        ],
+        bounds=bounds,
+    )
+    pages = list(adapter.pages())
+    assert pages[0].attempt == 5
+    assert adapter.quality.received == 1
+    assert all(wire.url == calls[1].url for wire in calls[1:6])
+    assert clock.sleeps == [0.5, 1.0, 2.0, 4.0]
+    assert calls[1].extensions["timeout"] == {
+        phase: 30 for phase in ("connect", "read", "write", "pool")
+    }
+
+
+def test_default_retry_after_accepts_ten_seconds_and_exhausts_five_attempts():
+    bounds = SourceBounds(**asdict(SourceSettings()))
+    adapter, calls, clock = source(
+        [response(status=429, headers={"retry-after": "10"}) for _ in range(5)],
+        bounds=bounds,
+    )
+    with pytest.raises(SourceLimitError, match="attempts"):
+        list(adapter.pages())
+    assert len(calls) == 5
+    assert clock.sleeps == [10.0] * 4
+
+
+def test_request_timeout_is_clamped_to_remaining_retrieval_deadline():
+    bounds = replace(SourceBounds(**asdict(SourceSettings())), elapsed_seconds=7)
+    adapter, calls, _ = source(standard(), bounds=bounds)
+    list(adapter.pages())
+    assert calls[0].extensions["timeout"] == {
+        phase: 7 for phase in ("connect", "read", "write", "pool")
+    }
 
 
 def test_total_deadline_covers_consumer_pause_request_and_sleep():

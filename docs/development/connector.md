@@ -38,6 +38,16 @@ in the environment. Limits are bounded contributor settings, not measured
 production capacity. Page/endpoint workers default to one; S3 workers default
 to three. Concurrent pages are consumed in canonical source order.
 
+EIA requests default to a 30-second timeout per network phase and five total
+attempts per request (including the first). Retry delays use exponential backoff
+with jitter: 0.5–1, 1–2, 2–4 and 4–8 seconds before the four retries. The
+30-second backoff cap also permits valid `Retry-After` values up to 30 seconds.
+The remaining retrieval deadline can shorten timeouts or prevent further retries;
+the default overall retrieval allowance remains 1,800 seconds. Other resource
+limits still apply. These defaults also apply to the independent HTTP refresh
+worker after restart. Connector JSON `source` overrides can tune `attempts`,
+`timeout_seconds` and `backoff_seconds` independently.
+
 ## Safe reruns, persistence and recovery
 
 Use a prior verified local report from the same staging store for merge/retention:
