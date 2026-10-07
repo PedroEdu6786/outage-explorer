@@ -4,6 +4,7 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import date
+from urllib.parse import unquote_to_bytes
 
 from flask import request
 
@@ -87,10 +88,17 @@ class PreviewParameters:
     end: date | None = None
     size: int | None = None
     cursor: str | None = None
+    facility: str | None = None
 
 
 def preview_parameters() -> PreviewParameters:
-    values = parameters({"start_date", "end_date", "page_size", "cursor"})
+    values = parameters({"start_date", "end_date", "page_size", "cursor", "facility"})
+    # Werkzeug preserves malformed UTF-8 as percent escapes. Validate the
+    # bounded transport bytes so an invalid encoding cannot become an ID.
+    try:
+        unquote_to_bytes(request.query_string).decode("utf-8", errors="strict")
+    except UnicodeDecodeError:
+        raise InvalidRequestError("Invalid request") from None
     if "cursor" in values:
         if len(values) != 1:
             raise InvalidRequestError("Invalid request")
@@ -99,7 +107,10 @@ def preview_parameters() -> PreviewParameters:
     if start is not None and end is not None and start > end:
         raise InvalidRequestError("Invalid request")
     return PreviewParameters(
-        start, end, positive(values.get("page_size"), 100, maximum=500)
+        start,
+        end,
+        positive(values.get("page_size"), 100, maximum=500),
+        facility=values.get("facility"),
     )
 
 

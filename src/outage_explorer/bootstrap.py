@@ -876,7 +876,7 @@ def build_query_worker(
 
     settings = AnalyticalWorkerSettings() if settings is None else settings
     if settings != AnalyticalWorkerSettings():
-        raise ValueError("Worker limits must match internal v1 image profile")
+        raise ValueError("Worker limits must match the paired image profile")
     bounds = ExecutionBounds(
         settings.preparation_seconds,
         settings.overall_seconds,

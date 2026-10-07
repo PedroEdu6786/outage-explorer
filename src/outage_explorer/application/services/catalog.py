@@ -68,7 +68,8 @@ class CatalogService:
                     "label": entry.dataset.label,
                     "schema_version": entry.dataset.schema_version,
                     "columns": encoding.columns(entry.dataset.columns),
-                    "supported_filters": ["start_date", "end_date"],
+                    "supported_filters": ["start_date", "end_date"]
+                    + ([] if entry.dataset.id == "national" else ["facility"]),
                     "coverage": None
                     if entry.coverage is None
                     else {

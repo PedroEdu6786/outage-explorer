@@ -59,7 +59,7 @@ def envelope(result):
     import json
 
     return canonical_json(
-        {"version": 1, "operation": "query", "result": json.loads(result.document)}
+        {"version": 2, "operation": "query", "result": json.loads(result.document)}
     )
 
 
@@ -105,7 +105,7 @@ def test_query_corruption(transport, mutation):
 @pytest.mark.parametrize(
     "raw",
     [
-        b'{"version":1,"version":1}',
+        b'{"version":2,"version":2}',
         b'{"version":NaN}',
         b"{}{}",
         b"\xff",
@@ -150,7 +150,7 @@ def test_exact_order_and_canonical_bytes(transport):
     ],
 )
 def test_safe_errors_and_exit_pairing(transport, code, cls):
-    raw = canonical_json({"version": 1, "error": {"code": code}})
+    raw = canonical_json({"version": 2, "error": {"code": code}})
     with pytest.raises(cls):
         transport.decode(raw, request=QueryRead("SELECT 42", ()), exit_code=1)
     with pytest.raises(RuntimeUnavailableError):
@@ -387,9 +387,8 @@ def test_request_rejects_invalid_descriptors_without_paths(transport):
         )
 
 
-def test_v1_transport_rejects_facility_selection_until_paired_worker_support(transport):
-    """The old wire must never silently discard a new internal selection."""
-    from dataclasses import replace
+def test_paired_transport_carries_exact_facility_selection(transport):
+    import json
 
     request = PreviewRead(
         PUBLIC_DATASETS[1],
@@ -400,8 +399,81 @@ def test_v1_transport_rejects_facility_selection_until_paired_worker_support(tra
         100,
         facility="001",
     )
-    assert b'"operation":"preview"' in transport.request(
-        replace(request, facility=None)
+    payload = json.loads(transport.request(request))
+    assert payload["version"] == 2
+    assert payload["facility"] == "001"
+
+
+@pytest.mark.parametrize("version", [1, True, 3, "2", None])
+@pytest.mark.parametrize("error", [False, True])
+def test_parent_rejects_old_or_mismatched_response_and_error_protocol(
+    transport, version, error
+):
+    import json
+
+    value = json.loads(envelope(query_result(transport)))
+    if error:
+        value = {"version": 2, "error": {"code": "data_unavailable"}}
+    value["version"] = version
+    with pytest.raises(RuntimeUnavailableError):
+        transport.decode(
+            canonical_json(value),
+            request=QueryRead("SELECT 42", ()),
+            exit_code=int(error),
+        )
+
+
+@pytest.mark.parametrize("facility", ["", "001 ", "\x85", "\ud800", "é" * 129, 1])
+def test_parent_request_independently_rejects_invalid_facility(transport, facility):
+    request = PreviewRead(
+        PUBLIC_DATASETS[1],
+        (ApprovedFile("/private", "a" * 64, 1, 1),),
+        None,
+        None,
+        None,
+        100,
+        facility=facility,
     )
     with pytest.raises(RuntimeUnavailableError):
         transport.request(request)
+
+
+@pytest.mark.parametrize("dataset", PUBLIC_DATASETS[1:])
+def test_parent_rejects_forged_filtered_row_identity(transport, dataset):
+    from dataclasses import replace
+    from pathlib import Path
+
+    values = {
+        "period": date(2026, 9, 1),
+        "facility": "1",
+        "generator": "01",
+        "facility_name": "Other",
+    }
+    row = tuple(values.get(c.name, Decimal("1")) for c in dataset.columns)
+    key = tuple(
+        str(values[c.name])
+        for c in dataset.columns
+        if c.name in {"period", "facility", "generator"}
+    )
+    worker = AnalyticalWorker(
+        Path("/inputs"),
+        lambda _: PreviewRows((row,), (key,), False),
+        lambda _: None,
+        DuckdbSqlInspector(max_sql_bytes=65536, max_nodes=10000, max_depth=64),
+        PreviewEncoding(transport.bounds),
+    )
+    request = PreviewRead(
+        dataset, (ApprovedFile("/private", "a" * 64, 1, 1),), None, None, None, 100
+    )
+    raw = worker.execute(transport.request(request))
+    assert transport.decode(raw, request=request, exit_code=0).keys == (key,)
+    with pytest.raises(RuntimeUnavailableError):
+        transport.decode(raw, request=replace(request, facility="001"), exit_code=0)
+
+
+def test_parent_request_rejects_national_facility(transport):
+    from dataclasses import replace
+
+    request, _, _ = preview_fixture(transport)
+    with pytest.raises(RuntimeUnavailableError):
+        transport.request(replace(request, facility="001"))

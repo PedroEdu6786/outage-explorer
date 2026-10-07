@@ -28,6 +28,9 @@ def profile(**changes):
     "changes",
     [
         {"image_id": "worker:latest"},
+        {"protocol_version": 1},
+        {"protocol_version": True},
+        {"protocol_version": 3},
         {"daemon_endpoint": "tcp://localhost:2375"},
         {"memory_bytes": 0},
         {"network": "host"},
@@ -123,3 +126,11 @@ def test_lifetimes_are_sixty_seconds_and_capacity_is_one_hundred_per_user():
     assert (value.results_per_user, value.result_count) == (100, 100)
     with pytest.raises(ValueError):  # A user can never exceed the global count.
         profile(results_per_user=101)
+
+
+def test_profile_requires_current_paired_protocol():
+    from outage_explorer.infrastructure.worker_runtime.configuration import (
+        WORKER_PROTOCOL_VERSION,
+    )
+
+    assert profile().protocol_version == WORKER_PROTOCOL_VERSION == 2

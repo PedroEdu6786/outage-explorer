@@ -112,3 +112,13 @@ def test_local_cookie_names_are_instance_specific():
         if p["in"] == "cookie"
     ]
     assert cookies == ["outage_login"]
+
+
+def test_served_preview_facility_parameter_matches_backend_contract():
+    served = documented_app().test_client().get("/api/openapi.json").json
+    operation = served["paths"]["/api/datasets/{dataset}/preview"]["get"]
+    facility = next(p for p in operation["parameters"] if p["name"] == "facility")
+    assert facility["schema"]["type"] == "string"
+    assert facility["required"] is False
+    assert "facilities/generators" in facility["description"]
+    assert "cursor" in facility["description"]

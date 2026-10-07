@@ -209,6 +209,11 @@ def allowed_dependency(source: str, target: str) -> bool:
         return True
     if source == f"{ROOT}.application.data_payloads" and target == "json.loads":
         return True  # Pure durable-to-public DTO projection; no file readers.
+    if (
+        source == f"{ROOT}.entrypoints.http.data_schemas"
+        and target == "urllib.parse.unquote_to_bytes"
+    ):
+        return True  # Pure bounded query decoding; no urllib network capability.
     external = target.split(".")[0]
     if source == f"{ROOT}.entrypoints.http.routes.documentation" and target in {
         "json",
