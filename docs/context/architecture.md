@@ -1,204 +1,194 @@
 # Architecture
 
-Status: **layered Python/Flask monolith implemented; deployment and full runtime
-acceptance remain separate**. This page describes current code and accepted
-boundaries. Dated task checkpoints and evidence records describe what was
-verified at that time; they are not interchangeable with production readiness.
+Outage Explorer lets authorized users browse stored nuclear outage data, preview
+observations, run read-only SQL and request a data refresh.
 
-For visual flows, see the [high-level module and endpoint diagrams](module-diagrams.md),
-covering the connector, HTTP operations, and model verification.
+The backend is **one layered Python/Flask monolith**. HTTP handlers, refresh and
+analytical workers share its codebase; they have different process lifecycles.
+The Next.js web client lives in the
+[separate web repository](https://github.com/PedroEdu6786/outage-explorer-web).
 
-## Product and application structure
+Use this page for the system overview. Use [code structure](code-structure.md)
+to decide where code belongs, [module/endpoint diagrams](module-diagrams.md) for
+individual flows, and [first-time setup](../development/fresh-machine.md) to run it.
 
-One backend replica serves shared EIA data to authorized clients. Amazon S3 owns
-modeled Parquet, PostgreSQL on Amazon RDS owns operational records, Cognito owns
-credentials, and DuckDB executes analytical reads. EC2 is the deployment target;
-local development does not require an EC2 instance. See ADR-0001, ADR-0018,
-ADR-0032 and [ADR-0038](../adr/0038-ec2-deployment-local-development.md).
+## Main components
 
-[ADR-0030](../adr/0030-layered-flask-monolith.md) selects one layer-first product
-codebase and release:
+```mermaid
+flowchart LR
+    Web["Web client"] --> API["Flask API"]
+    API --> Cognito["Cognito<br/>Login identity"]
+    API --> DB["PostgreSQL / RDS<br/>Access, sessions, refresh, publication"]
+    API --> S3["S3<br/>Published Parquet resources"]
+    API --> Queries["Isolated parser and query workers"]
+    Refresh["Independent refresh worker"] --> EIA["EIA API"]
+    Refresh --> S3
+    Refresh --> DB
+```
 
-- `domain/`: pure modeling, retention, roles, publication and pagination policies.
-- `application/`: authorization, use cases, transaction orchestration and ports.
-- `infrastructure/`: EIA, Cognito, PostgreSQL, S3, Parquet, cache, SQL inspection,
-  worker execution and result storage adapters.
-- `entrypoints/`: thin HTTP, CLI and independently supervised worker entry points.
-- `bootstrap.py`: concrete dependency construction and injection.
+| Component | Responsibility |
+| --- | --- |
+| Web client | Pages, sign-in navigation, data exploration and refresh controls. |
+| Flask API | HTTP transport and application use cases; authorization before protected work. |
+| Cognito | Provider login and verified identity. Application roles come from PostgreSQL. |
+| PostgreSQL on RDS | Users/roles, login attempts, sessions, refresh coordination and active-generation descriptors. |
+| S3 | Exactly three immutable Parquet resource files per generation. |
+| Parser/query workers | Bounded SQL inspection and isolated analytical execution over authorized inputs. |
+| Refresh worker | Fetch EIA data, construct/verify candidate files and publish successful generations. |
 
-The [structure guide](code-structure.md) and [AGENTS.md](../../AGENTS.md) define
-allowed dependencies. Flask factories register constructed services and perform
-no ingestion, migrations, database queries or worker startup. Separately
-supervised refresh and analytical workers remain part of this monolith.
-The independent-services example in the [architecture study](../specs/outage-explorer-backend/architecture-options.md)
-is an alternative, not the selected design.
+Concrete adapters are built and injected by `bootstrap.py`. Domain rules are
+pure; application services orchestrate use cases through ports; infrastructure
+implements storage/provider/engine operations; entrypoints translate transport.
+See [ADR-0030](../adr/0030-layered-flask-monolith.md) and the
+[dependency matrix](code-structure.md#dependency-matrix).
 
-The separate `outage-explorer-web` repository contains the Next.js/TypeScript UI,
-session integration and live adapters. It is outside this repository's release.
-The [UI handoff](ui-client/README.md) records its contract. Code presence and
-user acceptance do not substitute for every outstanding integrated test.
+## What runs where locally
 
-## Source, model and durable data
+The selected development environment is Apple Silicon macOS with the dedicated
+Colima `outage-runtime` Linux VM. Its Linux controls support parser/worker
+resource limits and the private ext4 spill filesystem.
 
-EIA's national, facility and generator routes remain independent grains. Their
-keys are respectively date, date/facility, and date/facility/generator. Contracts
-and public columns live in `domain/datasets.py`, `domain/observations.py` and
-`infrastructure/parquet/schemas.py`. The [verification contracts](../specs/facility-generator-verification/verification.md)
-document bounded source evidence; they do not prove every historical schema.
+| Process | Location | How it starts |
+| --- | --- | --- |
+| Web client | macOS | `npm run dev` in the web checkout. |
+| API and trusted analytical controller | Colima Linux guest | `make run-analytical` from the backend checkout. |
+| SQL inspection subprocess and analytical Docker workers | Colima Linux guest | Started by the API's explicit runtime lifecycle as needed; no separate developer command. |
+| Independent refresh worker | macOS | `make run-worker` when refresh processing is intended. |
 
-The shared connector/refresh pipeline constructs exactly three unified resource
-Parquet files per generation under [ADR-0060](../adr/0060-persist-only-three-resource-files-per-generation.md).
-Physical files preserve private provenance, original numeric strings, units,
-natural identity and exact calculation evidence. Raw pages, dispositions and
-ledgers are bounded transient inputs. No durable supporting graph, S3 manifest,
-daily modeled partitions or separate public-file copy is produced.
+`make local-forward` exposes the guest API at macOS `localhost:8000`; reuse an
+existing working tunnel instead of starting another. The API supervisor renews
+AWS credentials privately. Analytical workers receive no cloud credentials,
+operational database, daemon socket, network or unrelated cache paths.
 
-Physical keys follow [ADR-0061](../adr/0061-generation-prefixed-resource-object-keys.md):
-`<configured-prefix>generations/<generation-id>/{national,facilities,generators}.parquet`.
-Local immutable files use checksum identity instead. S3 conditional writes and
-full readback establish an exact durable receipt. The receipt is not publication:
-PostgreSQL stores exact descriptors and quality with the active-generation update.
-Migration 0005 removes obsolete manifest columns and the old publication adapter
-under [ADR-0064](../adr/0064-remove-obsolete-manifest-publication-columns.md).
-Historical rows without exact resource descriptors fail closed; code never
-silently converts them or clears publication history.
+Local preview/SQL acceptance uses one threaded API process and one analytical
+execution slot. Refresh has its own supervisor: API shutdown does not stop a
+healthy refresh worker. Imports and app factories start no connections, jobs or
+threads. See [daily development](../development/local-setup.md) for commands.
 
-Pure policies collapse identical duplicates and choose the last valid source
-record for within-retrieval conflicts. Refresh preserves older valid rows after
-invalid replacements, absent keys and wholly excluded routes while allowing other
-valid updates. All-excluded refreshes retain the active generation without
-publication. Initial loading requires usable output in all three grains; the
-accepted initial interval is April 2–October 1, 2026 inclusive
-([ADR-0037](../adr/0037-connector-initial-load-and-retention.md)). Complete route
-counts share one domain eligibility policy; streaming never reconstructs a
-whole-history partition just to evaluate eligibility.
+## Login and authorization
 
-The national public dataset includes source and calculated outage percentages.
-Calculation preserves precision; presentation uses two decimals and halfway-up
-rounding. The metric is daily reported capacity out of service, including partial
-reductions, not duration, lost energy or cause. See the
-[national contract](../specs/national-data-verification/contract.md) and
-[challenge findings](../challenge/README.md), including reproducible reconciliation
-and three documented anomalies. Offline contributor commands replay recorded
-inputs without live retrieval or publication.
+1. The API creates a bounded, browser-bound, single-use login attempt.
+2. Cognito completes Authorization Code with PKCE; its adapter exchanges the code
+   and verifies the identity.
+3. The application resolves that identity to a seeded PostgreSQL user with
+   exactly one role and creates a fixed-expiry session.
+4. Every protected use case resolves the current session/role before data access,
+   including preview continuations and SQL result pages.
 
-## Authentication and authorization
+| Role | Access |
+| --- | --- |
+| Viewer | National data only. |
+| Analyst | All analytical datasets, previews and SQL. |
+| Admin | Analyst capabilities plus refresh admission and status. |
 
-`LoginService` and the Cognito adapter implement Authorization Code with PKCE,
-bounded HTTPX exchanges and PyJWT access-token/JWKS verification. Authlib is not
-a dependency. PostgreSQL contains seeded users, one role per user, application
-sessions and browser-bound single-use login attempts. Provider roles and scopes
-do not determine application permissions. Registration and Admin user management
-are excluded (ADR-0043/0044).
+Cognito claims/scopes do not grant application roles. Registration and Admin user
+management are excluded. There are no per-user grants or row/column access policies.
+Sessions default to one hour without automatic renewal; logout revokes the current
+session. Expired login attempts are reclaimed before new admission. HTTP handles
+cookies, Origin/CORS and safe responses; the application/security boundary checks
+CSRF. See the [auth contract](../specs/user-access/http-contract.md).
 
-Sessions default to a fixed one-hour lease without automatic renewal. Logout
-invalidates only the current application session. Expired login attempts are
-reclaimed before admission capacity checks under the same transaction lock;
-explicit maintenance remains available. Cookie, Origin/CORS and sanitized error handling live at the HTTP boundary;
-cryptographic CSRF validation uses the injected application/security seam. Application use cases independently
-resolve current sessions and roles before analytical data access, including on
-continuation requests. Viewer is national-only; Analyst/Admin can read all grains;
-only Admin can initiate or inspect refresh.
+## Preview and SQL requests
 
-IAM signing per physical PostgreSQL connection, confidential Cognito client
-support and typed HTTP guards are implemented. The user accepted the web auth
-integration; the [verification record](../specs/user-access/verification.md#subsequent-local-authentication-and-web-integration--2026-10-05)
-distinguishes this and specific Viewer evidence from still-open comprehensive
-live-persona/browser cases. Do not repeat the superseded claim that no login or
-application integration exists. Controlled tests do not prove all live behavior.
+1. Authenticate and authorize the requested dataset scope. For user SQL,
+   authenticate before bounded subprocess inspection and authorize the complete
+   inspected references before fetching analytical inputs.
+2. Select the published generation and exact resource descriptors from PostgreSQL.
+3. Fetch/check the approved resource through the bounded cache and pin it against
+   eviction. Stage only authorized files for the isolated worker.
+4. Execute over public-column views of those files, preserving private provenance
+   inside the physical files. There is no API-process DuckDB/parser fallback or
+   whole-input reconstruction per request.
+5. Return a bounded preview or retain the SQL result for subsequent page reads.
 
-## HTTP, analytical preparation and execution
+SQL executes **once**. Paging reads that retained execution, preserving order,
+multiplicity and explicit SQL clauses; it never injects pagination SQL or silently
+reruns the query. Fresh access and original-owner checks apply to result pages.
+Preview/query metadata is process-owned and in memory, not PostgreSQL.
+Continuations expire after 60 seconds without renewal; restart/expiry requires an
+explicit new preview or query. Pages default to 100 rows, up to 500; SQL output
+is capped at 1,000 rows or 1 MiB with explicit truncation.
 
-HTTP refresh uses the configured start through today's UTC date, resolved at
-admission and saved with the run. There is no fixed 183-day ceiling; all non-date
-resource bounds and the explicit initial-load policy remain enforced under
-[ADR-0063](../adr/0063-configured-start-current-end-refresh.md).
-Refresh idempotency uses `(requester_id, key_digest)` under
-[ADR-0065](../adr/0065-simplify-refresh-run-idempotency-and-metadata.md); constant
-operation/request identity and unused update timestamps are removed. Replays
-return the original admitted interval and configuration.
-The configured database and local API source were updated through migrations
-0005/0006 on October 7, 2026. The [schema-update evidence](../specs/data-api/evidence/2026-10-07-schema-cleanup.json)
-records unchanged retained data and pointers, 9 refresh runs, 5 generations,
-local API health 200 and refresh idle. This is schema-update evidence, not broader
-runtime acceptance.
+The runtime bounds admission, CPU, memory, process count, time, transport and
+spill storage. Ownership intent is recorded before staging allocation; uncertain
+termination retains the slot and pins until cleanup is confirmed. Reviewed
+host/image/parser identities and Linux quota prerequisites are startup gates.
+These mechanisms do not by themselves establish production capacity.
 
-Opt-in data HTTP mounts seven operations: catalog, dataset preview, SQL submission
-and retained paging, and refresh admission/latest/by-ID. Auth routes handle login,
-callback, session and logout. See the implemented [HTTP contract](../specs/data-api/http-contract.md)
-and [OpenAPI](../specs/data-api/openapi.json). Public dataset/SQL names are
-`national`, `facilities` and `generators`. Preview supports date bounds and one
-exact facility ID for facility/generator datasets; national is date-only. The
-[facility-filter checkpoint](../specs/preview-facility-filter/tasks.md) records
-verification limits and the required matching version-2 worker image/profile.
-The [feature verification](../specs/preview-facility-filter/verification.md) separates
-portable HTTP/worker acceptance from unavailable database and actual-host checks.
+See the [endpoint diagrams](diagrams/endpoints.md),
+[HTTP contract](../specs/data-api/http-contract.md) and
+[runtime runbook](../../infrastructure/analytical-worker/README.md).
 
-SQL inspection runs in a separate bounded subprocess under ADR-0054. Authentication
-precedes inspection; complete reference authorization precedes analytical inputs.
-The trusted cache downloads only approved exact resource files, streams misses
-to temporary disk with byte/checksum checks, verifies schema/coverage and pins
-entries against eviction. Workers receive exact staged files; DuckDB views
-explicitly project public columns. Physical private columns are not queryable
-through those views. There is no API-process DuckDB fallback or per-request
-public-file reconstruction.
+## Refresh and publication
 
-The implemented launcher/supervisor enforces configured lifecycle, admission,
-transport and resource controls. Worker grants exclude operational PostgreSQL,
-cloud credentials, network and unrelated cache paths. Ownership intent precedes
-staging allocation; cleanup retains ownership until worker termination and
-reclamation are confirmed. Linux quota storage and reviewed profile/image/evidence
-checks are startup prerequisites. These mechanisms and controlled tests are not
-blanket proof of production isolation or measured capacity.
+1. An Admin request admits a run with frozen settings: configured start through
+   today's UTC date. Callers cannot override the dates; there is no fixed
+   183-day HTTP ceiling. Replay is scoped to the authenticated application user's
+   ID and the digested `Idempotency-Key`: the same user/key returns the original
+   run and frozen configuration. Another user's identical key is a separate
+   identity, subject to the single active refresh limit.
+2. The independent worker claims the run using a database-time lease and restores
+   its pinned baseline. The API never fetches EIA data in the request lifecycle.
+3. The worker retrieves bounded EIA inputs, applies pure validation/merge rules
+   and constructs all three resource files. Invalid replacements, absent keys
+   and wholly excluded routes retain prior valid data; initial loading needs
+   usable data in every grain.
+4. Persist and fully read back every exact S3 resource. A durable receipt alone
+   does not activate data.
+5. Recheck ownership/lease/baseline and atomically commit exact descriptors,
+   quality, successful outcome and the active pointer in PostgreSQL.
 
-SQL executes once into bounded private result storage. Numbered pages preserve
-that execution's order, multiplicity and explicit clauses; no pagination SQL is
-injected and no continuation silently reruns it. Metadata is process-owned and
-in memory, never PostgreSQL. Preview and SQL sequences expire without renewal
-at 60 seconds under [ADR-0059](../adr/0059-sixty-second-preview-result-lifetime-and-capacity.md).
-Pages default to 100 and allow up to 500 rows; SQL output is capped at 1,000 rows
-or 1 MiB with explicit truncation. Active readers and unresolved reaping prevent
-premature release. Expiry/store loss requires an explicit new sequence.
+Failures preserve the previous valid generation; existing readers retain their
+selected snapshot. All-excluded refreshes keep the active generation. Fence stale
+owners and reconcile publication after worker loss. Interrupted unpublished work
+requires explicit Admin retry, never an automatic source rerun. Application
+transactions stay short and do not hold PostgreSQL writes across external I/O.
 
-## Refresh admission, execution and publication
+See the [connector diagram](diagrams/data-connector.md),
+[refresh worker instructions](../development/connector.md#product-refresh-worker),
+[retention decision](../adr/0037-connector-initial-load-and-retention.md) and
+[recovery decision](../adr/0052-interrupted-refresh-recovery.md).
 
-Admin HTTP admission records the configured inclusive date range and frozen
-settings; callers cannot override dates (ADR-0051). A separately supervised worker
-claims runs with database-time leases, restores the pinned base, builds/verifies
-the candidate, persists all three files, verifies exact durable identity, then
-publishes descriptors and quality atomically through PostgreSQL. The previous
-valid generation remains available on failure. API shutdown does not own refresh.
+## Where state lives
 
-Publication and recovery are fenced against stale owners. A healthy worker
-survives API-only restarts; lost-worker recovery reconciles committed publication.
-Unpublished interrupted runs require explicit Admin retry, not automatic source
-reruns (ADR-0052). There is no reset CLI, review queue or second publish action.
-The [refresh-persistence checkpoint](../specs/refresh-persistence/tasks.md) and
-[refresh recovery code](../../src/outage_explorer/application/services/refresh_recovery.py)
-describe current implementation; infrastructure recovery/backup policy is distinct.
+| Storage | Contents and lifetime |
+| --- | --- |
+| RDS PostgreSQL | Durable operational state and exact publication descriptors; authoritative active-generation pointer. |
+| S3 | `national.parquet`, `facilities.parquet`, `generators.parquet` under `<prefix>generations/<generation-id>/`. |
+| Private local files | Bounded transient source/candidate inputs, verified cache/staging, spill, retained result output and the execution recovery ledger. |
+| API process memory | Expiring preview cursors, query IDs and query/result ownership metadata; lost on API restart. |
 
-## Runtime scope and remaining evidence
+Physical resource files retain private provenance, original numeric strings,
+units, natural identity and exact calculation evidence. Analytical views expose
+only the public columns. There are no daily modeled partitions, supporting S3
+graph, manifest or duplicate public resource files. Legacy publication rows
+without exact descriptors fail closed; there is no automatic conversion or
+publication reset. See [ADR-0060](../adr/0060-persist-only-three-resource-files-per-generation.md),
+[ADR-0061](../adr/0061-generation-prefixed-resource-object-keys.md) and
+[ADR-0064](../adr/0064-remove-obsolete-manifest-publication-columns.md).
 
-ADR-0053 accepts one threaded API serving process, one analytical slot and
-independent refresh for local analytical acceptance. Final EC2 process topology,
-ingress/TLS, supervision, storage provisioning and capacity remain open.
-[ADR-0055](../adr/0055-scoped-local-analytical-readiness.md) separates narrow local
-readiness with refresh idle from full high-water/spill, S3 performance and overlap
-acceptance. [ADR-0056](../adr/0056-user-directed-local-api-activation.md) records the
-user's later local activation direction and instruction to stop further external
-validation. Earlier unperformed checks remain evidence gaps, not a new request
-to block or repeat activation.
+PostgreSQL is also used for local integration tests; unit tests may use fakes.
+There is no implicit SQLite fallback. The [data model](data-model.md) documents
+entities, grains, public columns and calculation semantics.
 
-Imports/factories remain inert. Without supplied reviewed runtime resources,
-analytical forwarding ports fail closed; catalog and refresh have independent
-prerequisites. Startup and shutdown are explicit and process-owned. No documentation
-edit grants deployment, service startup, publication reset or cloud access.
+## Acceptance and deployment scope
 
-The [runtime evidence map](../specs/data-api/runtime-evidence.md),
-[analytical-worker runbook](../../infrastructure/analytical-worker/README.md) and
-[user-access verification](../specs/user-access/verification.md) retain their
-scoped and dated limitations. The five login-admission cleanup PostgreSQL cases
-added during review have not run without an explicit disposable test DSN. General
-snapshot deletion/backup recovery, broader historical source completeness and
-production capacity remain open. This documentation update performs no runtime,
-external-service or new database validation.
+The user accepted local integration and authorized local API activation. The
+reviewed preview/SQL scope keeps **refresh idle**; full high-water/spill,
+S3 performance and simultaneous API/refresh capacity evidence remain separate
+open checkpoints. Initial limits are not measured production budgets.
+See [ADR-0053](../adr/0053-local-single-owner-analytical-acceptance.md),
+[ADR-0055](../adr/0055-scoped-local-analytical-readiness.md) and
+[ADR-0056](../adr/0056-user-directed-local-api-activation.md).
+
+EC2 is the accepted deployment target, but final topology, ingress/TLS,
+supervision, storage provisioning and capacity are not settled by local
+acceptance. Local development does not require an EC2 instance
+([ADR-0038](../adr/0038-ec2-deployment-local-development.md)).
+
+For dated results and remaining evidence, use the
+[runtime evidence map](../specs/data-api/runtime-evidence.md),
+[auth verification](../specs/user-access/verification.md) and
+[refresh checkpoints](../specs/refresh-persistence/tasks.md).
+Historical tests and documentation edits do not grant new service startup,
+external validation, refresh, publication reset or deployment authorization.

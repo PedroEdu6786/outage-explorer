@@ -166,13 +166,22 @@ Foreign, expired or lost results return unavailable errors; invalid page/size re
 flowchart TD
     Request["POST /api/refresh<br/>Empty body and Idempotency-Key"] --> Transport["Validate Origin and session-bound CSRF"]
     Transport --> Access["Application authorizes current Admin<br/>Validate empty body and idempotency key"]
-    Access --> Replay{"Existing matching<br/>admission?"}
-    Replay -->|"Yes"| Existing["Return existing durable run"]
+    Access --> Identity["requester_id from authorized application principal<br/>key_digest from Idempotency-Key"]
+    Identity --> Replay{"Existing run for this<br/>requester_id + key_digest?"}
+    Replay -->|"Yes"| Existing["Return original durable run<br/>Reuse its frozen interval and configuration"]
     Replay -->|"No"| Admit["Resolve/freeze configured inclusive interval<br/>PostgreSQL admits one owned run and baseline"]
     Existing --> Receipt["202 for nonterminal run; 200 for terminal replay<br/>run_id, effective interval, status URL"]
     Admit --> Receipt
     Admit -.-> Worker["Independent worker later claims the run<br/>Connector, verification and fenced publication"]
 ```
+
+Replay identity is the pair `(requester_id, key_digest)`. The requester is the
+application user's ID resolved from the authenticated session, not a caller-supplied
+field. The key is digested before lookup/storage. The same user repeating the same
+key receives the original run, even if today's date or current configuration has
+changed. Another user using that key does not replay the first user's run; new
+admission still respects the single active refresh limit. Every request must pass
+current Admin authorization and input validation before replay lookup.
 
 Admission performs no EIA retrieval or S3 upload. Dates/datasets cannot be overridden by the caller. The worker is independently supervised; browser/API lifetimes do not own it.
 

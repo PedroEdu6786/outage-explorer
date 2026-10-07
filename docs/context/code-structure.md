@@ -1,521 +1,223 @@
-# Layered Flask monolith structure
+# Code structure
 
-Status: **accepted structure**, [ADR-0030](../adr/0030-layered-flask-monolith.md).
+Outage Explorer is one **layered Python/Flask monolith**, selected in
+[ADR-0030](../adr/0030-layered-flask-monolith.md). HTTP, CLI, refresh and analytical
+workers share the same backend codebase. Organize code by technical layer.
 
-Refresh persistence is implemented under accepted
-[ADR-0060](../adr/0060-persist-only-three-resource-files-per-generation.md).
-The application ports describe exactly three resource files, baseline identity,
-interval, versions and bounded transient quality; Parquet infrastructure preserves
-private provenance/source strings and exact arithmetic in the unified physical
-codec. Analytical views project only existing public columns. PostgreSQL publication
-owns exact file descriptors; S3 verifies every file by bounded full readback.
-Supporting graph writes and duplicate public files have been removed through
-[phase checkpoints](../specs/refresh-persistence/tasks.md). Existing legacy bases fail closed.
-[ADR-0061](../adr/0061-generation-prefixed-resource-object-keys.md) selects exact
-generation-prefixed physical keys, distinct from local checksum identities;
-[ADR-0064](../adr/0064-remove-obsolete-manifest-publication-columns.md) removes
-obsolete manifest columns and the old publication adapter. Existing rows without
-exact resource descriptors still fail closed; no conversion is implemented.
-
-Phase 1 now supplies `CreateResourceCandidate`, `ParquetResourceBuilder` and
-`LocalConnectorEvidence.collect_resources` for explicit local composition.
-The collector validates bounded copied input and discards page/transport metadata;
-the builder reuses pure merge policies and the existing exact codec, streams prior
-resource files, writes three unified files and compares them with the transient
-merge before releasing inputs. Both bounded partition facts and streaming candidate
-eligibility use `domain.refresh.refresh_facts_from_counts` after aggregating complete
-route counts; the adapter maps those facts to candidate/retention outcomes.
-Shared CLI/refresh/bootstrap composition now uses this pipeline. No new candidate writes both layouts
-and no graph conversion or fallback is implemented. New behavior is covered in
-`tests/integration/test_resource_candidates.py` and pure connector service tests.
-The health scaffold and offline national/facility/generator verification are implemented; product
-data HTTP delivery is implemented with explicit enablement and controlled
-verification; actual analytical runtime readiness remains separate. This guide governs application code and refactors;
-[AGENTS.md](../../AGENTS.md) makes its rules discoverable to agents.
-
-Phase 2 adds explicitly injected `PersistResourceArtifacts`,
-`RecoverResourceArtifacts` and `S3ResourceStore`. Exact physical descriptors carry
-the generation-prefixed keys, while local files retain checksum identity. Durable
-receipts copy admitted interval, versions and baseline identity. Conditional writes
-and full streamed readback share locked transfer bounds; recovery reserves missing
-file bytes, verifies schema/rows, joins workers and cleans only recovery-owned files
-on failure. `ResourceWorkerSettings` defaults new S3 consumers to three workers;
-shared CLI/refresh/bootstrap use these settings. Controlled tests live in
-`tests/integration/test_resource_artifacts.py`; publication, exact analytical cache
-reads and the composed end-to-end flow passed the phase-4 checkpoint.
-
-Under [ADR-0063](../adr/0063-configured-start-current-end-refresh.md), HTTP refresh
-admission resolves the configured start through today's UTC date, with no fixed
-183-day ceiling, and records the inclusive interval for background
-execution; routes accept no caller date overrides. Configuration wiring belongs
-in bootstrap/settings and admission orchestration in the application layer.
-Under [ADR-0065](../adr/0065-simplify-refresh-run-idempotency-and-metadata.md),
-refresh idempotency uses requester/key only; entities and PostgreSQL omit constant
-operation/request identity and unused update timestamps. Replay preserves the
-original frozen configuration.
-
-[ADR-0052](../adr/0052-interrupted-refresh-recovery.md) requires publication
-reconciliation before marking lost-worker runs interrupted, followed by explicit
-Admin retry for unpublished work. Supervision/recovery belongs outside HTTP
-request lifetimes; application ports own the durable transitions.
-
-Operational storage uses [PostgreSQL on Amazon RDS](../adr/0032-postgresql-on-rds.md).
-Use PostgreSQL for local development and integration tests as well; pure unit
-tests may substitute application ports with fakes. User-access Phase 1 now has
-PostgreSQL repositories, explicit Alembic migrations and controlled local seeding
-using Psycopg 3. Disposable PostgreSQL 18.6 tests verify storage/setup. October 5
-read-only checks verified Aurora PostgreSQL 17.9, the application schema and three
-seeded identity/role links. Runtime-only IAM signing and Cognito integration are
-implemented. The user subsequently accepted local authentication and web integration;
-the [verification record](../specs/user-access/verification.md) distinguishes that
-evidence from the remaining comprehensive live acceptance cases. Integration and tooling
-records remain proposed in ADR-0046/0047. See the
-[Phase 1 checkpoint](../specs/user-access/tasks/phase-1.md).
-Phase 2 adds injected login/access services, cryptographic material and bounded
-Cognito access-token/JWKS adapters. Atomic attempt consumption precedes provider
-exchange; sessions resolve current local roles and invalidate only their own digest.
-Controlled provider and real PostgreSQL tests prove fixed expiry and committed
-logout without connector access; subsequent local integration evidence is recorded separately. See the [Phase 2 checkpoint](../specs/user-access/tasks/phase-2.md).
-Phase 3 adds trusted authorization operation/grain enums and a pure role matrix.
-The access service returns a local principal and exact approved grain set only after
-fresh session/role checks. Downstream harnesses verify denial before data/execution
-on direct and later pages; actual SQL reference extraction, result ownership and
-catalog/SQL/refresh integration are implemented by the subsequent data API phases. See the
-[Phase 3 checkpoint](../specs/user-access/tasks/phase-3.md).
-Phase 4 registers opt-in thin auth routes with injected login/access services,
-HTTP schemas and host-only cookie/origin transport. Cryptographic CSRF checks stay
-in the application/security seam. Bootstrap owns lazy process-bound PostgreSQL
-and Cognito resources with explicit shutdown; imports/factories start no requests,
-connections, migrations or threads. Health remains independent. The
-[HTTP contract](../specs/user-access/http-contract.md) and
-[Phase 4 checkpoint](../specs/user-access/tasks/phase-4.md) distinguish controlled
-verification from the separately recorded local browser/provider evidence and remaining live cases.
-
-
-Use one application organized by technical layer. Keep business policies
-independent of Flask and storage through small application-owned interfaces.
-This provides a simple layered layout with testable dependencies. HTTP,
-background refresh, and verification commands reuse the same use cases.
+Use this page to decide **where code belongs and what it may depend on**.
+For system behavior, see the [architecture overview](architecture.md) and
+[module/endpoint diagrams](module-diagrams.md). For installation and commands,
+use the [developer setup guide](../development/fresh-machine.md).
+Implementation history and acceptance evidence live in the linked specifications,
+ADRs and devlogs rather than in this directory guide.
 
 ## Directory layout
 
-The HTTP entry point also serves public Swagger UI at `/api/docs` and the full
-OpenAPI 3.1 contract at `/api/openapi.json`. Its packaged transport contract lives
-in `entrypoints/http/openapi.json`; locally served assets come from the pinned
-flask-swagger-ui dependency. Documentation requires no external services and does
-not enable optional auth/data operations. Route coverage and data-contract parity
-tests guard its coverage; the architecture check admits only the documentation
-module's JSON and Swagger rendering imports.
+| Location | Responsibility | Examples |
+| --- | --- | --- |
+| `domain/` | Pure business rules and types; no I/O. | Roles, observation identity, retention and calculations. |
+| `application/services/` | Use cases, authorization and transaction orchestration. | Login, preview, SQL, refresh and publication coordination. |
+| `application/ports/` | Interfaces the application needs from external capabilities. | Published inputs, storage, SQL inspection and execution. |
+| `infrastructure/` | Concrete implementations of those interfaces. | PostgreSQL, Cognito, EIA, S3, Parquet, cache and worker runtime. |
+| `entrypoints/` | Translate HTTP, CLI and worker inputs/outputs. | Flask routes, command arguments and worker protocols. |
+| `bootstrap.py` | Construct dependencies and inject them at explicit startup. | Connect a use case to PostgreSQL/S3/worker adapters. |
+| `settings.py` | Read and validate startup configuration. | Environment values and enabled features. |
+
+Selected existing files and packages:
 
 ```text
 src/outage_explorer/
-  bootstrap.py                  # concrete wiring and process composition
-  settings.py                   # environment/configuration at startup
+  bootstrap.py
+  settings.py
   domain/
-    access.py                   # permission rules and policy types
-    datasets.py                 # schema and generation contracts
-    validation.py               # observation validity and exclusion rules
-    refresh.py                  # bounded connector modeling/merge and provenance
-    metrics.py                  # national offline share
+    access.py                  # roles and access policy
+    datasets.py                # public dataset contracts
+    national.py                # national observation/calculation rules
+    observations.py            # facility/generator observation rules
+    refresh.py                 # merge, retention and quality policies
   application/
     services/
-      access.py                 # principal/session resolution and logout
-      catalog.py                # permitted dataset descriptions
-      preview.py                # authorized snapshot-bound browsing
-      queries.py                # inspect, authorize, prepare, execute, page
-      refresh.py                # admission, execution, outcome, publication
-      evidence.py               # reconciliation and reproducible findings
-    ports/                      # contracts for external capabilities
-    dto.py                      # transport-independent inputs and results
-    errors.py                   # application failures, without HTTP codes
+      login.py                 # login orchestration
+      access.py                # session/principal resolution and logout
+      connector.py             # build a resource candidate
+      resource_artifacts.py    # persist/recover exact resource files
+      catalog.py               # authorized dataset descriptions
+      preview.py               # snapshot-bound browsing
+      queries.py               # inspect, authorize, execute and page SQL
+      refresh.py               # refresh admission
+      refresh_execution.py     # execute admitted work and publish
+      refresh_recovery.py      # reconcile interrupted work
+    ports/                     # application-owned interfaces
   infrastructure/
-    postgresql/                     # operational repositories and transactions
-    cognito/                    # trusted access-token validation
-    eia/                        # upstream metadata/pages and HTTP retries
-    parquet/                    # bounded read/write and model transformations
-    s3/                         # immutable exact resource transfers/readback
-    sql_validation/             # parser-specific AST inspection
-    duckdb/                     # engine setup and execution in worker only
-    local_cache/                # downloads, checksums, pinning, eviction
-    query_results/              # expiring metadata and bounded retained output
-    worker_runtime/             # sandbox launch, limits, termination, reaping
+    postgresql/                # operational repositories and transactions
+    cognito/                   # provider exchange/token verification
+    eia/                       # bounded source retrieval
+    parquet/                   # physical schemas, reads and writes
+    s3/                        # exact resource transfer and readback
+    sql_validation/            # bounded parser subprocess and inspection
+    duckdb/                    # query engine adapter, used in workers
+    local_cache/               # verified downloads, pins and eviction
+    query_results/             # retained output and expiring metadata
+    worker_runtime/            # isolation, quotas, ownership and cleanup
   entrypoints/
     http/
-      app.py                    # create_app and Blueprint registration
-      routes/                   # access, datasets, queries, refresh
-      schemas.py                # HTTP validation and serialization
-      errors.py                 # application errors to HTTP responses
-    cli.py                      # controlled operations and verification
-    refresh_worker.py           # supervised refresh entry point
-    query_worker.py             # restricted analytical entry point
-tests/
-  unit/
-  integration/
-  architecture/
-  acceptance/
+      app.py                   # register injected services and routes
+      data_schemas.py          # data HTTP input/output handling
+      routes/                  # health, auth, datasets, queries, refresh, docs
+      openapi.json             # packaged HTTP contract
+      analytical_startup.py    # explicit analytical API startup
+    cli/                       # connector, setup and offline verification
+    refresh_worker.py          # independent refresh worker loop
+    query_worker.py            # restricted analytical worker protocol
+    refresh_worker_startup.py  # refresh process composition seam
+    query_worker_startup.py    # query process composition seam
 ```
 
-Names illustrate ownership; create files only when behavior needs them.
-Split an oversized file into a package within its existing layer. Group related
-features within each layer as needed; do not introduce a second feature-first
-hierarchy alongside this one. No framework package, ORM, or interface base class
-is required merely because a directory exists.
+Split an oversized module into a package **within its existing layer**. Related
+features can be grouped inside each layer. Create files only when behavior needs
+them; do not add a parallel `modules/<feature>/{domain,application}` hierarchy,
+generic CRUD framework or repository for every analytical row type.
 
 ## Dependency matrix
 
-Rows describe the importing code. This matrix concerns internal imports;
-external I/O libraries belong in infrastructure or the relevant entry point.
+Read each row as: “code in this location may import these internal modules.”
+Runtime calls through a port do not permit importing its concrete implementation.
 
-| From | Allowed internal dependencies | Forbidden dependencies |
+| Importing code | Allowed internal dependencies | Forbidden dependencies |
 | --- | --- | --- |
-| `domain` | Domain types/functions; standard library without I/O | Application, infrastructure, entry points, bootstrap, runtime settings |
-| `application` | Domain, application DTOs/errors/ports and explicit services | Infrastructure, entry points, bootstrap, runtime settings |
-| `infrastructure` | Domain, application ports/DTOs/errors; cohesive infrastructure helpers | Entry points, bootstrap, application service orchestration |
-| `entrypoints` handlers | Application services/DTOs/errors; entry-point schemas/helpers | Concrete infrastructure, direct domain policy execution, runtime wiring |
-| `bootstrap` | All layers and settings for construction only | Business policy or request orchestration |
+| `domain` | Domain types/functions; pure standard-library operations. | Application, infrastructure, entrypoints, bootstrap and settings. |
+| `application` | Domain; application services, DTOs, errors and ports. | Infrastructure, entrypoints, bootstrap and settings. |
+| `infrastructure` | Domain; application ports/DTOs/errors; cohesive infrastructure helpers. | Entrypoints, bootstrap and application service orchestration. |
+| `entrypoints` handlers | Application services/DTOs/errors; entrypoint schemas/helpers. | Concrete infrastructure, direct domain policy execution and runtime wiring. |
+| `bootstrap` | All layers and settings, for construction and injection. | Business rules and request orchestration. |
 
-Database drivers and standard-library file/network calls are infrastructure: an import
-check alone cannot prove a function is pure. No relative import, dynamic import,
-or re-export may circumvent a forbidden dependency.
+Database drivers, SDKs, engine calls and file/network I/O belong in infrastructure.
+Flask request context (`request`, `g`, `current_app`) stays out of domain and
+application code. Relative imports, dynamic imports and re-exports must not bypass
+the matrix. An allowed import alone does not prove the code is pure.
 
-A process startup wrapper may call a dedicated bootstrap function. For example,
-the query-worker executable calls `build_query_worker`, which constructs only
-its restricted execution dependencies. This is a narrow startup exception, not
-permission for handlers to use bootstrap as a service locator. The same applies
-to starting HTTP, CLI, and refresh processes. Factories and imports do not start
-jobs or perform source retrieval.
+**Startup exception:** a small process startup wrapper may call its dedicated
+bootstrap function. For example, `query_worker_startup.py` builds the restricted
+worker and passes it to the protocol entrypoint. The architecture tests check
+these wrappers against exact permitted structures. A handler cannot import a
+wrapper or use bootstrap as a service locator. New wrappers need checker coverage.
 
 ## Responsibilities and examples
 
-| Change | Put it here | Keep out of |
+| You need to… | Put it in… | Keep out of… |
 | --- | --- | --- |
-| Validate `page_size` HTTP input and serialize JSON | HTTP schema/route | Domain and repositories |
-| Authorize preview and choose a pinned generation | Application preview service | Route decorators as sole enforcement |
-| Decide whether positive capacity permits an offline-share calculation | Domain metric/validation policy | DuckDB SQL or HTTP handlers as the sole policy definition |
-| Verify a Cognito signature and translate verified claims | Cognito adapter | Domain and HTTP route body |
-| Read application roles or commit publication metadata | PostgreSQL adapter through application ports | Flask routes and SQL worker |
-| Extract referenced datasets from a SQLGlot tree | SQL-validation adapter | Application code importing SQLGlot AST classes |
-| Download verified Parquet and manage cache pins | Cache/S3 adapters | Domain and user-controlled filesystem paths |
+| Parse `page_size`, reject malformed HTTP input or serialize JSON. | HTTP schemas/routes. | Domain rules and database repositories. |
+| Resolve current access and choose a pinned preview generation. | Application preview/access services. | Route decorators as the sole authorization check. |
+| Decide whether capacity is valid and calculate the offline share. | Pure domain policy. | HTTP handlers or DuckDB SQL as the sole policy definition. |
+| Verify a Cognito signature or exchange an authorization code. | Cognito adapter behind an application port. | Domain and route bodies. |
+| Read role assignments or commit publication metadata. | PostgreSQL adapter through an application port. | Flask routes and analytical workers. |
+| Inspect SQLGlot AST references. | SQL-validation adapter behind the inspection port. | Application code importing parser AST classes. |
+| Download/checksum Parquet and manage cache pins. | S3/cache adapters. | Domain and caller-selected filesystem paths. |
+| Register or start a concrete adapter. | Bootstrap and the explicit process lifecycle. | Imports, HTTP requests and `create_app`. |
 
-An HTTP preview follows this runtime flow:
+For example, a preview request follows this flow:
 
 ```text
-HTTP schema/route
-  → preview application service
-    → session and access checks
-    → published-generation and input ports
-    → bounded execution port
-  ← plain application result
-← JSON response
+HTTP route: validate input
+  → application service: resolve session and authorize
+  → application ports: select published inputs and execute bounded preview
+  ← application result
+HTTP route: serialize response
 ```
 
-The application calls interfaces; bootstrap supplies concrete adapters. Source
-imports therefore stay inward even when execution calls outward to storage.
-This use of a Flask service layer is supported by
-[Cosmic Python's worked example](https://www.cosmicpython.com/book/chapter_04_service_layer).
-The concrete package layout and rules above are this project's design.
-
-Business checks must also run when the use case is invoked by a CLI or worker.
-A refresh worker executes an admitted run under a trusted internal identity;
-it does not accept a caller-supplied role string as authorization. Keep pure
-functions lightweight and use narrow protocols for meaningful external seams.
-Avoid a command bus or one repository per analytical row type.
+The application calls interfaces; bootstrap provides the adapters. The same
+business checks must hold when a use case is called directly, from a CLI or
+from a worker. Pure functions stay lightweight; use narrow protocols for actual
+external capabilities rather than adding a command bus or generic abstractions.
 
 ## State and execution rules
 
-[ADR-0053](../adr/0053-local-single-owner-analytical-acceptance.md) accepts a single
-API serving process with threads, one analytical slot and independently supervised
-refresh for local endpoint acceptance. Process-owned continuations remain ephemeral;
-reloader/fork/multiple-process rejection remains required. This does not settle
-EC2 topology or grant runtime startup/enablement permission.
+These are boundaries to preserve when changing code. The architecture overview
+and linked ADRs explain the full behavior.
 
-[ADR-0054](../adr/0054-bounded-subprocess-sql-inspection.md) accepts subprocess
-SQL inspection behind the application port, with concrete launch/transport in
-infrastructure and wiring in bootstrap. Admission, time/CPU/memory/output and
-termination must be bounded before SQL enablement; no API-process fallback.
-The bounded Linux subprocess implementation and native owner-loss/resource checks
-are delivered. The user accepted initial 4-second wall, 1 CPU-second, 256-MiB
-address-space and 1-second termination caps; full parser/report readiness remains
-pending. Bootstrap supplies no API-process parsing fallback.
+| Area | Rule |
+| --- | --- |
+| Authorization | Application use cases check the current session/role before analytical access, including continuation pages. Cognito supplies identity; seeded PostgreSQL users and exactly one role determine access. Registration, Admin user management, per-user grants and ABAC are excluded. |
+| Operational storage | PostgreSQL on RDS owns users, sessions, refresh outcomes and publication descriptors. Local integration tests also use PostgreSQL; pure unit tests may use fakes. No implicit SQLite fallback. |
+| Transactions | Application services choose transaction boundaries; adapters execute them through ports. Use bounded pools and short transactions. Do not hold database writes across EIA/S3 calls or analytical execution. |
+| Durable data | Each generation has exactly three unified Parquet resources. Physical files preserve private provenance; analytical views project public columns. No daily modeled partitions, supporting S3 graph, manifest or duplicate public files. |
+| Publication | Verify all three immutable uploads by full durable readback before committing exact descriptors and the active pointer in PostgreSQL. A receipt is not publication. Preserve the previous generation on failure and each reader's selected snapshot. Legacy rows without descriptors fail closed; do not convert/reset history implicitly. |
+| Retention | Invalid replacements, absent keys and wholly excluded routes retain prior valid data. Initial loading requires usable output in all three grains. Pure merge/eligibility rules stay in domain. |
+| Refresh | An independent worker executes admitted runs; HTTP/import/app-factory lifetimes never own it. Freeze configuration at admission. HTTP dates are configured start through today's UTC date, without caller overrides or a fixed 183-day ceiling. Requester/key idempotency replays the original configuration. |
+| Recovery | Fence stale owners. A healthy refresh worker survives API restarts. After worker loss, reconcile publication before marking work interrupted; unpublished work requires explicit Admin retry, not an automatic source rerun. |
+| SQL inspection | Parse and inspect user SQL in a separate bounded subprocess. Enforce admission, CPU, memory, wall time, transport and confirmed termination; no API-process parsing fallback. |
+| SQL execution | Use only the isolated execution port with authorized exact staged inputs. Workers get no operational database, cloud credentials, unrestricted cache or network. No API-process DuckDB fallback or per-request input reconstruction. |
+| Continuations | Execute SQL once and retain that result for pagination. Do not inject pagination SQL or silently rerun it. Query-ID/cursor metadata is bounded, expiring and process-owned, never PostgreSQL. |
+| Analytical ownership | Local acceptance uses one threaded API process and one analytical slot. Preserve ownership/pins until termination and cleanup are confirmed. Reject reloaders, inherited/forked resources and multiple API owners. |
+| Startup/shutdown | Imports and factories are inert: no live connections, migrations, jobs or threads. Start/close resources explicitly. API shutdown does not own the independent refresh worker. |
 
-[ADR-0055](../adr/0055-scoped-local-analytical-readiness.md) separates local
-preview/SQL readiness with refresh idle from complete capacity evidence. Local
-review retains actual-host/auth, isolation, bounds and lifecycle gates; original
-full checkpoints stay open. Explicit local-scope evidence cannot satisfy generic
-runtime readiness and grants no implicit activation.
+Related decisions:
 
-[ADR-0056](../adr/0056-user-directed-local-api-activation.md) records explicit
-user authorization for local activation using accepted service assumptions.
-Additional external-service/browser checks no longer block this local startup;
-normal authorization, isolation, bounded execution and cleanup remain enforced.
-
-Under [ADR-0043](../adr/0043-seeded-users-and-role-only-access.md), seed local
-users, roles and assignments with essential Cognito identity linkage. Keep
-credentials in Cognito. Registration and Admin user management are excluded
-throughout implementation; access is role-only, without separate read/write/delete
-permissions, per-user grants, ABAC or row/column restrictions for current scope.
-
-Keep operational PostgreSQL on Amazon RDS (ADR-0032) separate from analytical Parquet and from ephemeral
-query-ID state. PostgreSQL owns permissions, application-session state, refresh
-outcomes, and the active publication reference. Query metadata stays bounded,
-expiring, and in-memory; result placement remains a separate implementation choice.
-
-The application defines transaction boundaries; infrastructure performs the
-transaction through a port. Use bounded connection pools and short transactions;
-do not hold PostgreSQL writes across EIA/S3 calls or
-analytical execution. Complete and verify immutable uploads before committing
-the publication reference. Readers retain their selected generation.
-
-User SQL runs behind the isolated execution port. A worker gets only authorized
-inputs and enforced limits, without application secrets or operational data.
-HTTP request lifetime cannot own refresh. Import-time jobs, global database
-connections, and implicit worker startup in `create_app` are forbidden.
-
-Development runs locally without an EC2 instance under
-[ADR-0038](../adr/0038-ec2-deployment-local-development.md); deployment choices
-do not block independent local implementation or testing.
-
-These rules implement existing requirements. WSGI process count, worker launcher,
-EC2 deployment/storage, session integration, and resource sizes still require their
-own decisions and feasibility evidence. Do not treat the earlier topology
-recommendation as a settled implementation contract.
+- [RDS storage](../adr/0032-postgresql-on-rds.md),
+  [retention](../adr/0037-connector-initial-load-and-retention.md),
+  [seeded role-only access](../adr/0043-seeded-users-and-role-only-access.md).
+- [Three resource files](../adr/0060-persist-only-three-resource-files-per-generation.md),
+  [generation-prefixed keys](../adr/0061-generation-prefixed-resource-object-keys.md),
+  [obsolete manifest removal](../adr/0064-remove-obsolete-manifest-publication-columns.md).
+- [Refresh recovery](../adr/0052-interrupted-refresh-recovery.md),
+  [current-end refresh interval](../adr/0063-configured-start-current-end-refresh.md),
+  [refresh idempotency](../adr/0065-simplify-refresh-run-idempotency-and-metadata.md).
+- [Local API ownership](../adr/0053-local-single-owner-analytical-acceptance.md),
+  [bounded SQL inspection](../adr/0054-bounded-subprocess-sql-inspection.md).
 
 ## Agent change checklist and automated enforcement
 
-Before a change, identify its layer, the affected use case, applicable ADRs,
-and the behavior to verify. After the change:
+Before editing, identify the layer, affected use case, relevant ADRs and behavior
+to verify. Read [AGENTS.md](../../AGENTS.md) and [conventions](conventions.md).
 
-1. Check added imports against the matrix, including transitive wrappers.
-2. Verify authorization precedes data access on every affected entry point.
-3. Test business behavior through application/domain APIs without Flask or AWS;
-   use real-adapter tests where transactions, file formats, or engine behavior matter.
-4. Run available checks and document unresolved runtime limitations honestly.
-5. If changing an accepted boundary, record the user-authorized revision in a
-   new ADR and synchronize this guide and `AGENTS.md` in the same change.
+1. Check imports against the matrix, including wrappers and re-exports.
+2. Preserve authorization before data access on all affected paths.
+3. Verify pure behavior through domain/application APIs; use adapter tests for
+   transactions, file formats, engine behavior and isolation where relevant.
+4. Run the relevant available checks and report what actually passed or remains
+   untested. See [testing](../development/testing.md) and the [README](../../README.md).
+5. If changing an accepted boundary, record its user-authorized revision in a new
+   ADR and update this guide and `AGENTS.md`; do not rewrite historical decisions.
 
-With the first application scaffold, add automated tests under
-`tests/architecture/` for the forbidden import directions and startup exception,
-then run them in CI. The checks must detect both absolute and relative imports;
-include negative fixtures to prove they reject violations. Supplement them with
-behavior tests for permissions, publication, and isolated execution: package
-placement cannot prove those guarantees.
+[Architecture tests](../../tests/architecture/) enforce import directions,
+relative imports/re-exports, cycles, inner-layer external dependencies and exact
+startup exceptions. Negative fixtures prove forbidden patterns are rejected.
+[CI](../../.github/workflows/ci.yml) runs these alongside behavior/static checks.
+Narrow pure-library/transport exceptions are defined in the
+[checker](../../tests/architecture/import_rules.py); they do not authorize general
+JSON file I/O or process execution in inner layers.
 
-**Enforcement status:** the health scaffold, AST dependency checks and negative
-fixtures in `tests/architecture/`, and CI in `.github/workflows/ci.yml` are
-implemented. Checks resolve absolute/relative imports, inspect re-exports,
-reject wildcard/dynamic loading patterns, constrain inner-layer external imports,
-and detect module cycles. The HTTP startup exception is
-`entrypoints/http/startup.py`, structurally restricted to a factory forwarding
-to `bootstrap.build_http_app`. The additional `entrypoints/cli/startup.py`
-exception is structurally restricted to passing `build_national_verifier()` to
-the CLI command and its executable guard. `facility_startup.py` and
-`generator_startup.py` have the same exact-AST restriction for their dedicated
-bootstrap builders. Other modules cannot import these wrappers. Further startup wrappers require explicit checker coverage.
+Static checks cannot prove runtime authorization, publication integrity or
+sandbox containment. Tests must establish those behaviors separately. Explicit
+startup and fresh-interpreter tests also guard inert imports/factories.
 
-`GET /health` follows HTTP route → application service → clock port, with a UTC
-clock adapter injected by bootstrap. There is no domain rule or persistence in
-this use case, so domain/storage packages and runtime settings are created when
-needed. The factory registers services without executing them. Fresh-interpreter
-tests guard against import-time app construction, network/process/thread startup,
-and factory-time probe execution. These checks do not establish runtime purity,
-authorization, publication correctness, or analytical isolation; their behavior
-tests are still required as the corresponding use cases are implemented.
+## Runtime and implementation references
 
-Offline national verification follows CLI → application evidence service →
-pure national policies and recorded-evidence/report ports. Infrastructure reads
-the hashed local evidence bundle and writes deterministic JSON/Markdown.
-`Fraction` is a reviewed pure dependency; CLI transport imports (`argparse`,
-`sys`) are allowed only in its command module. The baseline verifier is a
-contributor command, with no product-data authorization claim. See its
-[contract](../specs/national-data-verification/contract.md).
+Local installation uses the dedicated Apple Silicon/Colima environment in the
+[first-time guide](../development/fresh-machine.md). Operator helpers in
+`scripts/` prepare/configure/supervise it; product layers do not import them.
+The native Linux quota backend requires the controller on the Docker daemon host
+and a dedicated bounded ext4 spill filesystem. Docker Desktop is unsupported by
+that backend; see the [runtime runbook](../../infrastructure/analytical-worker/README.md).
 
-The connector foundation in `domain/refresh.py` reuses the observation policies
-for explicitly bounded groups with caller-supplied limits. It models source
-positions, preserves origin references during valid replacement/invalid retention,
-and reports quality and transformation eligibility. Under
-[ADR-0037](../adr/0037-connector-initial-load-and-retention.md), absent keys retain
-their prior rows, wholly excluded routes retain prior data during refresh, and
-initial loading requires usable output in all three grains. It accepts sanitized input and
-performs no I/O, authorization or publication.
+Local preview/SQL readiness with refresh idle is separate from full capacity
+acceptance ([ADR-0055](../adr/0055-scoped-local-analytical-readiness.md)).
+[ADR-0056](../adr/0056-user-directed-local-api-activation.md) records the user's
+local activation and instruction to stop further external-service/browser checks.
+Keep normal authorization, actual-host profile matching, isolation and lifecycle
+checks; those service assumptions do not establish new live evidence.
 
-`application/ports/artifacts.py` and `candidates.py` define exact three-resource
-contracts without Arrow types. `ParquetResourceBuilder` evaluates bounded transient
-source input and merges sorted prior resource rows, writes one unified file per
-grain and compares its exact values/quality before releasing transient inputs.
-Private provenance and original numeric strings remain in the physical codec;
-DuckDB views project only the existing public columns. There is no graph-writing
-candidate or manifest serializer. Bounded source adapters and `collect_resources`
-validate canonical page/source order and lookahead without persisting supporting
-artifacts. Finding 001 and source anomaly fixtures remain in repository tests.
+Full high-water/spill, S3 performance and API/refresh overlap evidence, measured
+production budgets and final EC2 topology/storage/deployment remain separate open
+checkpoints. Documentation changes grant no deployment, startup, refresh,
+publication or reset authorization.
 
-`bootstrap.execute_connector` composes local source/candidate/report ports;
-`execute_connector_to_s3` validates S3 configuration before source work and uses
-`PersistResourceArtifacts`. Explicit retry takes a bounded local report path;
-recovery takes a bounded exact receipt and reads only the three supplied objects.
-Default S3 concurrency is 3 (configurable1–3), sharing aggregate transfer/staging
-bounds. Every admitted worker joins before cleanup. Reports/receipts are local
-transport metadata, with no publication authority.
-
-`RefreshExecution` restores the admitted resource base, validates candidate and
-receipt identity/coverage, and atomically publishes exact descriptors and quality
-through `PostgresqlResourcePublicationStore`. Its per-run composition checks the
-lease during I/O and uses separate frozen candidate/persistence deadlines.
-`VerifiedResourceCache` downloads only the approved dataset file. Local immutable
-storage streams incoming chunks to a temporary file while counting and hashing,
-checks exact identity and session admission bounds, then links it atomically.
-Failed transfers remove their temporary file; independent source reads remain
-outside the admission lock. Worker input checksums also use bounded reads.
-Analytical workers scan public-only views over the exact staged resource. Factories/imports
-remain inert and API shutdown never owns the independent refresh worker.
-Legacy publication rows remain immutable and fail closed under ADR-0062.
-
-Facility and generator verification reuse `domain/observations.py` (national's
-API remains in `domain/national.py`) and the shared evidence service/adapters,
-with explicit grain contracts and entity/date coverage. Their separate commands
-remain offline contributor tools. The source-total difference is reported as
-unresolved evidence; this does not establish live pagination completeness or
-product authorization. See the [detail contract](../specs/facility-generator-verification/contract.md).
-
-The earlier connector graph implementation and its authorized historical live
-measurements are recorded in the [resource evidence](../specs/data-connector/resource-evidence.md).
-They describe the superseded layout; current resource persistence claims rely on
-the refresh-persistence controlled checkpoints, not those earlier measurements.
-
-ADR-0049 adds independently configured1–3 page fetch workers within a route.
-Bounded speculative windows account for unused lookahead and retain source order.
-Raw/page inputs are transient under ADR-0060; current generations persist only
-the three unified resource files, not the earlier transport/evidence graph. CLI/Make fetch/S3 overrides win JSON, with endpoint default1 unchanged.
-Shared source bounds count all fetched rows/pages, including unused lookahead;
-logical admission includes endpoint*page buffers. Modeling stays coordinated.
-
-
-Data API Phase 1 adds shared v1 public projections in `domain/datasets.py`,
-parser reference inspection behind an application port, and bounded canonical
-encoding/type adapters in infrastructure. Portable OpenAPI and synthetic fixtures
-are in `docs/specs/data-api/`; real DuckDB compatibility runs only in a controlled
-test subprocess. Subsequent phases implement the product HTTP routes and isolated
-Linux launcher; controlled checks do not imply complete runtime acceptance. See the [Phase 1 evidence](../specs/data-api/runtime-evidence.md)
-and [client handoff](../specs/data-api/client-handoff.md).
-
-User-access Phase 5 now adds shared explicit DSN/local/password/IAM settings,
-bounded runtime-only IAM signing for each physical PostgreSQL connection,
-confidential Cognito HTTP Basic token exchange with PKCE, and reusable typed HTTP
-authentication/CSRF/query-and-JSON guards. These guards pass values explicitly and
-do not replace fresh authorization in application use cases. Controlled acceptance
-uses disposable PostgreSQL, provider transports and persistent Chromium profiles;
-CI provisions its database/browser dependencies without cloud credentials.
-See the [operator runbook](../specs/user-access/setup.md) and
-[verification record](../specs/user-access/verification.md), including the subsequent
-user acceptance of local authentication/web integration. Comprehensive live cases
-remain open evidence; they do not imply missing Phase 5 implementation.
-
-Data API Phase 3 adds admitted-run execution and quality mapping in
-`application/services/refresh_execution.py` and `application/refresh_outcomes.py`.
-A separate explicit `entrypoints/refresh_worker_startup.py` executable composes
-per-run EIA/Parquet/S3 dependencies in bootstrap, commits ownership before source
-work, renews database-time leases independently, and closes its resources.
-`application/services/refresh_recovery.py` reuses serialized PostgreSQL history
-reconciliation; interrupted unpublished work requires explicit Admin retry.
-The worker restores and replays the pinned base, verifies all-grain identity,
-persists and verifies all three exact resource files before publication, and reports retained
-all-excluded input without moving the pointer. Exact-AST startup checks constrain
-the new wrapper. Inner layers permit only the pure `json.dumps` status encoder
-and the `contextlib.AbstractContextManager` type contract, with negative fixtures
-rejecting file decoding and execution helpers. Controlled process restart,
-PostgreSQL/Parquet/S3 and commit-loss evidence is recorded in the
-[Phase 3 checkpoint](../specs/data-api/tasks/phase-3.md); later phases implement
-product HTTP and preview/SQL continuations.
-
-
-Data API Phase 4 adds application catalog/preview services, published-input and
-isolated-execution ports, a verified resource cache, and bounded snapshot cursor
-metadata. Workers receive exact staged unified resource files; analytical views
-explicitly project public columns and SQL inspection rejects private references.
-Separate raw/page inputs never enter the analytical input grant. Preview
-metadata holds generation pins until fixed expiry and supervised cleanup; active
-reads and unproven reaping prevent premature pin release. Controlled worker
-fixtures exercise real DuckDB in a separate process, without asserting OS
-isolation. Product execution fails closed without configured reviewed runtime
-resources. Phase 6 implements HTTP integration and explicit lifecycle composition; see the [Phase 4 checkpoint](../specs/data-api/tasks/phase-4.md).
-
-
-Data API Phase 5 adds `application/services/queries.py`, explicit reference-free
-expression authorization, bounded process-owned query metadata/private spools,
-reader leases and autonomous cleanup lifecycle. Query output is materialized
-once through the isolated port, then arbitrary/revisited numbered pages read
-immutable row offsets with current roles and original-owner checks. SQL input
-pins release after confirmed reaping; query metadata never enters PostgreSQL.
-Bootstrap constructs inert lifecycle resources for explicit start/close. This
-store rejects incompatible multiple-process ownership without selecting the
-final WSGI topology. Controlled integration evidence is in the
-[Phase 5 checkpoint](../specs/data-api/tasks/phase-5.md). The Linux launcher and
-Phase 6 HTTP integration are implemented; ADR-0055/0056 separately record scoped
-local readiness and user-directed activation, with full runtime checkpoints open.
-
-
-### Data HTTP integration (Phase 6)
-
-`entrypoints/http/data_schemas.py` owns strict bounded transport parsing;
-`data_services.py` groups already-constructed application services for the inert
-factory. Dataset/query/refresh routes invoke those services. Public catalog and
-refresh projections remain in application code; the latter decodes bounded
-operational JSON using a narrowly allowed pure `json.loads` import. Architecture
-negative fixtures still reject JSON file readers there.
-
-Bootstrap controls `OUTAGE_DATA_HTTP_ENABLED`, configured refresh dates and
-optional supervisor-supplied `DataHttpResources`. Analytical ports fail closed
-when no reviewed resources are supplied. Process lifecycle extensions are explicit:
-the factory never invokes start, and API close does not stop refresh supervision.
-Migration 0003 records actual start/finish times; historical unknown values remain
-null. Verified unified resource summaries supply reported refresh coverage.
-See the [Phase 6 checkpoint](../specs/data-api/tasks/phase-6.md) and
-[evidence map](../specs/data-api/runtime-evidence.md).
-
-Analytical-runtime Phase 3 adds inert forwarding ports built in `bootstrap.py`
-and explicit ownership in `infrastructure/worker_runtime/supervisor.py`.
-`QueryCleanup` runs recovery and preview expiry before result expiry; strong
-leases preserve active readers and unresolved execution. The exact-AST
-`entrypoints/http/analytical_startup.py` exception only passes the dedicated
-bootstrap callable to its argument parser. Imports, HTTP factories and help
-perform no runtime startup. One local owner, explicit lifecycle and ephemeral
-restart loss are adapter constraints. Native Linux quota storage is implemented;
-host provisioning, full measured runtime readiness and deployment remain separate. No refresh ownership is added to analytical HTTP shutdown.
-
-The analytical corrective storage pass implements native Linux `quota-disk` in
-`infrastructure/worker_runtime/quota.py`: a separately provisioned finite ext4
-filesystem, strict mount/identity/capacity checks, private request directories and
-one retained filesystem lock. Bootstrap probes these prerequisites only at
-explicit start. The ownership ledger persists spill paths and preparing/creating/
-removed phases; cleanup retains ownership until confirmed worker removal and
-complete reclamation. Docker Desktop is unsupported by this backend. Controlled
-verification covers these mechanisms. ADR-0055/0056 record scoped local readiness
-and activation; full high-water/spill, S3 performance and API/refresh overlap
-checkpoints, final EC2 host provisioning and deployment remain open. See the
-[storage checklist](../../infrastructure/analytical-worker/README.md).
-
-The committed `worker.json` record is authoritative during analytical restart.
-After acquiring the exclusive owner lock, the ledger discards an abandoned
-private regular `worker.partial` file; incomplete writes never authorize a worker
-transition. A committed record still requires normal worker reconciliation before
-new admission, and invalid temporary file types or permissions fail closed.
-
-Input preparation plans a fresh staging path and commits its `preparing` intent,
-including the exact spill path when configured, before creating either directory
-or copying input bytes. Recovery accepts a missing staging directory in that
-phase and reclaims only recorded paths. Copying retains the existing size,
-checksum, source-identity, row-count, deadline and sealing checks. Ordinary cleanup
-also handles a planned directory that was never created or was already reclaimed.
-
-The DuckDB query adapter translates specific binding, syntax, type and value
-errors during submitted SQL execution or row fetching into safe `invalid_sql`
-responses. Engine out-of-memory errors become `query_resource_limit`. Internal
-view setup, I/O and unexpected engine failures retain unavailable responses;
-engine diagnostic text never crosses the worker protocol. Connections close on
-each path, and application cleanup still proves worker termination before
-releasing execution capacity or retaining a successful result.
-
-Local machine installation and startup are documented in
-[the fresh-machine walkthrough](../development/fresh-machine.md).
-Operator-only `scripts/local_analytical.py`, `local_api_entrypoint.py` and
-`review_local_runtime.py` configure/supervise the trusted Linux controller and
-record explicit local containment review; product layers do not import them.
+| Need more detail? | Read |
+| --- | --- |
+| Functional module and individual HTTP flows | [Module diagrams](module-diagrams.md). |
+| Endpoint contracts and OpenAPI | [HTTP contract](../specs/data-api/http-contract.md) and [packaged OpenAPI](../../src/outage_explorer/entrypoints/http/openapi.json). |
+| Entities, public schema and provenance | [Data model](data-model.md). |
+| Connector/refresh implementation checkpoints | [Refresh persistence tasks](../specs/refresh-persistence/tasks.md). |
+| Auth implementation and accepted/live evidence | [User-access verification](../specs/user-access/verification.md). |
+| Analytical startup and evidence scope | [Runtime evidence map](../specs/data-api/runtime-evidence.md). |
+| Recorded modeling findings and offline reproduction | [Challenge documentation](../challenge/README.md). |
