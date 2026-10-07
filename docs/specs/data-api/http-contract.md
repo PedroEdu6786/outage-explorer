@@ -15,6 +15,14 @@ isolation, process ownership and measured resource/retention quotas remain open
 in [runtime-evidence.md](runtime-evidence.md). The formal
 [specification](spec.md) continues to govern behavior.
 
+## Planned facility-filter extension
+
+The user subsequently requested single-facility preview filtering for facility
+and generator datasets. The [feature spec](../preview-facility-filter/spec.md)
+and [implementation plan](../preview-facility-filter/plan.md) describe that planned
+extension. It is not implemented yet; the current date-only contract below
+remains accurate until the coordinated backend/worker/web change ships.
+
 ## Agreed behavior and selected routes
 
 User decisions: SQL comes from the frontend editor; SQL page selection belongs
