@@ -7,25 +7,22 @@ Follow the numbered steps in order. Commands are manual: reading this document
 installs nothing. Replace example resource identifiers with values from your
 environment owner. Keep credentials out of Git and terminal output.
 
-## 1. Choose where Linux will run
+## 1. Use the required environment
 
-The API and analytical controller run on the **Linux Docker daemon host**.
-The analytical worker runs in Docker; the SQL parser runs in a bounded Linux
-subprocess. Docker CLI alone is insufficient.
+Use **Apple Silicon macOS with the dedicated Colima `outage-runtime` VM**,
+matching the environment used for this project. The checked-in creation helper
+selects aarch64, Apple's VZ backend, Docker, 4 CPUs, 6 GiB RAM and 20 GiB disks.
+These are initial setup allowances, not measured application capacity.
 
-| Your computer | Recommended route |
-| --- | --- |
-| Ubuntu 24.04 | Run everything on this machine, using the native commands below. |
-| Windows or macOS | Use an Ubuntu 24.04 VM and follow the native commands inside it. Open the browser inside the VM too. |
-| Apple Silicon macOS | Alternatively, use the dedicated Colima route below; Python, AWS CLI, web client and browser stay on macOS. |
+Python, AWS CLI, the web client and browser run on macOS. The API and analytical
+controller run inside this Colima Linux VM; analytical workers run in its Docker
+daemon and the SQL parser runs in a bounded Linux subprocess. The Docker CLI
+alone is insufficient. Follow the single Colima sequence below throughout.
 
-For an Ubuntu VM, use a hypervisor supporting your CPU architecture and an
-[Ubuntu installer](https://ubuntu.com/download/desktop). Start with 4 CPUs,
-6 GiB RAM and at least 20 GiB disk. These are setup allowances, not measured
-application capacity. The runtime needs systemd, cgroups, loop mounts and ext4;
-a direct macOS/Windows API process or a remote Docker socket does not supply it.
-Use a dedicated development machine/VM: the preparation step creates private
-system directories and a deliberately small, bounded spill filesystem.
+The VM has no host directory mounts, SSH-agent forwarding or automatic port
+forwarding. The guide installs source explicitly and forwards the API port in
+a dedicated terminal. You need administrator access and enough disk/memory to
+create this VM.
 
 ## 2. Obtain the environment settings
 
@@ -53,53 +50,31 @@ needed for refresh, not for browsing existing published data.
 
 ## 3. Install the dependencies
 
-On Ubuntu 24.04 (native machine or VM):
+On Apple Silicon macOS, install [Homebrew](https://brew.sh/) if needed, then
+install the host dependencies:
 
 ```sh
-sudo apt-get update
-sudo apt-get install -y git make curl ca-certificates python3 python3-venv python3-pip util-linux e2fsprogs
-python3 --version
+brew install git make python@3.12 colima docker
+export PATH="$(brew --prefix python@3.12)/libexec/bin:$PATH"
 ```
 
-Python must be 3.12 or later. Install **Docker Engine**, including its CLI,
-using Docker's [Ubuntu installation instructions](https://docs.docker.com/engine/install/ubuntu/).
-Use the official apt repository instructions for your architecture. Then enable
-the daemon and allow your development account to run the CLI:
+Keep that Python directory on your shell's PATH for future terminals. Colima
+provides the Linux VM and Docker daemon; the Docker package provides its host
+CLI. See [Colima's installation instructions](https://colima.run/docs/installation/).
+The guest's Python/system dependencies are installed by the repository helper
+in step 6. Docker Desktop is not part of this setup.
 
-```sh
-sudo systemctl enable --now docker
-sudo usermod -aG docker "$USER"
-```
-
-Log out and back in before continuing so the new group takes effect. Docker
-group membership grants control of the local daemon; use it only on the trusted
-development host. Check both CLI and daemon:
-
-```sh
-docker --version
-docker info --format '{{.ServerVersion}} {{.OSType}} {{.Architecture}}'
-systemctl is-system-running
-```
-
-The daemon must report Linux. Investigate failed system services if systemd
-reports `degraded`; do not proceed with a broken Docker service.
-
-On Apple Silicon using Colima, install Git, Make and Python 3.12+ on macOS,
-then install the [Colima dependencies](https://colima.run/docs/installation/):
-
-```sh
-brew install colima docker
-```
-
-For either route, install **AWS CLI v2** using the
-[official instructions for your host](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
-Install [nvm](https://github.com/nvm-sh/nvm#install--update-script) on the host
-that will run the web client; its pinned Node version is installed in step 10.
-Verify `git --version`, `make --version`, `python3 --version` and `aws --version`.
+Install **AWS CLI v2 for macOS** using the
+[official installer](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
+Install [nvm](https://github.com/nvm-sh/nvm#install--update-script) on macOS;
+the web repository's pinned Node version is installed in step 10.
+Verify `git --version`, `make --version`, `python3 --version`, `aws --version`,
+`colima version` and `docker --version`. Python must be 3.12 or later.
+The daemon is created in step 6.
 
 ## 4. Clone both repositories and configure AWS login
 
-Run on Ubuntu for the native route, or on macOS for Colima:
+Run on macOS:
 
 ```sh
 mkdir -p ~/Projects
@@ -181,13 +156,7 @@ its path. Keep RDS network access limited to the intended developer host/VPN.
 
 ## 6. Prepare the Linux runtime and install this revision
 
-**Native Ubuntu:** run from the backend checkout:
-
-```sh
-sh infrastructure/analytical-worker/native-linux-validation/prepare-guest.sh
-```
-
-**Colima:** run these instead, from the macOS backend checkout:
+Run from the macOS backend checkout:
 
 ```sh
 sh infrastructure/analytical-worker/native-linux-validation/start-colima.sh
@@ -207,15 +176,6 @@ git diff --quiet HEAD -- src tests scripts infrastructure/analytical-worker pypr
 git archive --format=tar --output=.local-runtime/source.tar HEAD src tests scripts infrastructure/analytical-worker pyproject.toml requirements-dev.txt README.md
 ```
 
-Native Ubuntu:
-
-```sh
-sudo tar -xf .local-runtime/source.tar -C /opt/outage-runtime-validation
-sh infrastructure/analytical-worker/native-linux-validation/build-guest.sh
-```
-
-Colima, instead:
-
 ```sh
 colima ssh --profile outage-runtime -- sudo tar -xf - -C /opt/outage-runtime-validation < .local-runtime/source.tar
 colima ssh --profile outage-runtime -- sh /opt/outage-runtime-validation/infrastructure/analytical-worker/native-linux-validation/build-guest.sh
@@ -228,8 +188,8 @@ refresh worker, AWS migration or publication starts here.
 
 ## 7. Generate and check this machine's containment evidence
 
-For Colima, first enter Linux with `colima ssh --profile outage-runtime --`.
-For native Ubuntu, stay in your existing terminal. On **Linux**, enter the
+Enter the Colima guest with `colima ssh --profile outage-runtime --`.
+Inside this **Linux guest**, enter the
 unprivileged controller shell with the actual socket group:
 
 ```sh
@@ -282,22 +242,11 @@ API/refresh overlap, and does not validate your external resources or start the
 API. Full runtime acceptance remains separate. Numeric defaults are initial
 limits. Existing review files are preserved rather than overwritten.
 
-For Colima, also `exit` the guest SSH shell to return to macOS.
+Also `exit` the guest SSH shell to return to macOS.
 
 ## 8. Install private API configuration
 
 Back in your backend checkout, copy the nonsecret reviewed settings.
-Native Ubuntu:
-
-```sh
-sudo cat /var/lib/outage-runtime-validation/runtime-reviewed.json > .local-runtime/runtime-reviewed.json
-sudo cat /var/lib/outage-runtime-validation/parser-reviewed.json > .local-runtime/parser-reviewed.json
-sudo -v
-.venv/bin/python scripts/local_analytical.py --native --configure --config .local-runtime/runtime-reviewed.json --inspection-config .local-runtime/parser-reviewed.json
-```
-
-Colima, instead:
-
 ```sh
 colima ssh --profile outage-runtime -- sudo cat /var/lib/outage-runtime-validation/runtime-reviewed.json > .local-runtime/runtime-reviewed.json
 colima ssh --profile outage-runtime -- sudo cat /var/lib/outage-runtime-validation/parser-reviewed.json > .local-runtime/parser-reviewed.json
@@ -313,14 +262,7 @@ refresh has its own process and configuration.
 
 ## 9. Start the API
 
-Native Ubuntu, in a dedicated backend terminal:
-
-```sh
-sudo -v
-make run-analytical NATIVE=1
-```
-
-Colima, instead:
+In a dedicated macOS backend terminal:
 
 ```sh
 make run-analytical
@@ -330,7 +272,7 @@ Keep this process running for credential renewal. It starts one threaded API
 process and preserves one analytical execution slot. Credentials go only to
 the trusted API, not to analytical containers.
 
-For Colima, use a second macOS terminal for explicit port forwarding:
+Use a second macOS terminal for explicit port forwarding:
 
 ```sh
 cd ~/Projects/outage-explorer
@@ -339,8 +281,8 @@ chmod 600 .local-runtime/ssh-config
 ssh -F .local-runtime/ssh-config -o ExitOnForwardFailure=yes -N -L 127.0.0.1:8000:127.0.0.1:8000 colima-outage-runtime
 ```
 
-Keep this terminal running too. For Ubuntu VMs, the simple route is to run the
-web client and browser inside Ubuntu; `localhost` then reaches the same API.
+Keep this terminal running too. The macOS web client and browser reach the
+guest API through this localhost forwarding.
 
 Check from the machine running the browser:
 
@@ -353,7 +295,7 @@ These check reachability and documentation, not login or analytical acceptance.
 
 ## 10. Configure and start the web client
 
-In another terminal on Ubuntu (native/VM) or macOS (Colima):
+In another macOS terminal:
 
 ```sh
 cd ~/Projects/outage-explorer-web
@@ -396,29 +338,30 @@ requested refresh, configure and supervise `make run-worker` independently using
 
 Ctrl+C in the API supervisor stops the API; Ctrl+C also stops the web server
 and SSH forwarding in their respective terminals. From another backend terminal,
-use `make stop-analytical NATIVE=1` on Ubuntu or `make stop-analytical` for Colima.
+use `make stop-analytical` on macOS.
 API restarts invalidate process-owned result IDs/cursors; start a new preview or
 explicitly rerun the SQL afterward. Restart Next.js after editing its settings.
 
 | Symptom | Next check |
 | --- | --- |
-| Docker connection denied | Daemon is running; logged-in user has the new Docker group. |
+| Docker connection denied | The `outage-runtime` Colima guest is running; its Docker socket group matches the controller. |
 | Setup refuses an existing path | Preserve existing evidence; this is a fresh-install helper. Use the existing installation's recovery procedure. |
 | Configuration fails | Reviewed identities match; API is stopped; CA file exists; `.env` uses one valid database mode. |
-| API fails to start | AWS login/profile is current; Linux service configuration is installed; inspect `sudo journalctl -u outage-api-local` privately. |
+| API fails to start | AWS login/profile is current; Linux service configuration is installed; inspect `colima ssh --profile outage-runtime -- sudo journalctl -u outage-api-local` privately. |
 | Browser cannot reach API on macOS | SSH forwarding is running and port 8000 is free. |
 | Cognito redirect fails | Client callback, sign-out URL, scopes and both localhost origins match exactly. |
 | Preview/SQL unavailable | Check actual containment tests, matching reviewed profiles and published generation descriptors. |
 | RDS connection fails | Endpoint/region/user, verified CA, IAM grants or password, and host network/VPN access. |
 
-After reboot, `/run/outage-api` is gone. Restore the spill mount before startup
+After a guest reboot, `/run/outage-api` is gone. Enter the guest with
+`colima ssh --profile outage-runtime --` and restore the spill mount before startup
 if `mountpoint /var/lib/outage-analytical/spill` reports it is not mounted:
 
 ```sh
 sudo mount -o loop,rw,noexec,nosuid,nodev /var/lib/outage-analytical/spill.img /var/lib/outage-analytical/spill
 ```
 
-Then repeat step 8 and start the API. If filesystem, daemon, image or parser
+Exit the guest shell, then repeat step 8 from macOS and start the API. If filesystem, daemon, image or parser
 identities changed, preserve the previous candidate/reports/review as an archive
 outside the active report directory and repeat steps 7–8 for the new identities.
 Do not patch old evidence. Source updates require installing the new committed
@@ -427,6 +370,6 @@ preparation is not an update command. See the
 [runtime recovery contract](../../infrastructure/analytical-worker/README.md).
 
 The guide and setup helpers have controlled automated coverage. A complete
-fresh Ubuntu/Colima installation has not been executed for this documentation
+fresh Colima installation has not been executed for this documentation
 change; the actual-host tests in step 7 are mandatory evidence for your host.
 Existing integrated acceptance was confirmed by the user on October 7, 2026.

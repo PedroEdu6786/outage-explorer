@@ -4,8 +4,9 @@ Status: implementation authorized by user, October 7, 2026.
 
 Provide a guided setup for the existing local architecture, including Docker,
 without relying on another contributor's private startup scripts or temporary
-files. Native Ubuntu is the common runtime; other operating systems can use an
-Ubuntu VM. Apple Silicon can use the existing dedicated Colima guest.
+files. The required environment is Apple Silicon macOS with the existing
+dedicated Colima `outage-runtime` guest, as directed by the user. Do not offer
+alternative native Linux, VM or Docker Desktop routes.
 
 - Document installation, cloning both repositories, external resource/account
   prerequisites, configuration, worker build, candidate identities, actual-host
@@ -15,7 +16,7 @@ Ubuntu VM. Apple Silicon can use the existing dedicated Colima guest.
   images, source archives and analytical/parser workers.
 - Preserve reviewed profile/parser gates, UID/GID 65534, dynamic Docker socket
   group, one API owner/analytical slot and independent refresh supervision.
-- Support native Linux configuration/credential renewal as well as Colima. Do
+- Use only the dedicated Colima transport for configuration/credential renewal. Do
   not require a private `/tmp` script, hard-coded host architecture or group 991.
 - Generate parser executable hashes and worker platform from the actual host.
 - Setup must not migrate, seed, retrieve EIA, publish, start refresh or activate

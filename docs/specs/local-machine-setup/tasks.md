@@ -2,7 +2,7 @@
 
 - [x] Deliver portable candidate identity generation and pinned guest installation.
 - [x] Deliver explicit API configuration and checked-in entry point.
-- [x] Support native Linux launch and actual Docker socket group discovery.
+- [x] Use dedicated Colima launch and actual Docker socket group discovery.
 - [x] Document complete guided setup, configuration, review, run and recovery.
 - [x] Verify controlled behavior, links, static checks and package build; record limits.
 
@@ -13,3 +13,6 @@ package build, guide shell syntax/local links, containment gate names and native
 Colima Make dry runs passed. Fresh VM provisioning, native parser/Docker runtime
 acceptance, AWS and browser checks were not executed for this change. The guide
 requires actual-host checks and preserves deferred capacity evidence.
+
+User correction: require the existing Apple Silicon macOS/Colima environment.
+Alternative guide routes and the native launcher option have been removed.

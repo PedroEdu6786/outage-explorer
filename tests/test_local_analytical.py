@@ -270,12 +270,11 @@ def test_configure_rejects_unreviewed_candidate_before_transfer(tmp_path, monkey
         local.configure({}, *reviewed_configs(tmp_path, reviewed=False))
 
 
-def test_native_configuration_does_not_start_or_export_credentials(
+def test_colima_configuration_does_not_start_or_export_credentials(
     tmp_path, monkeypatch
 ):
-    monkeypatch.setattr(local.sys, "platform", "linux")
     monkeypatch.setattr(local, "ROOT", tmp_path)
-    monkeypatch.setattr(local, "SSH", ["unused"])
+    expected_transport = list(local.SSH)
     calls = []
     monkeypatch.setattr(local, "configure", lambda *args: calls.append(args))
     monkeypatch.setattr(
@@ -286,7 +285,6 @@ def test_native_configuration_does_not_start_or_export_credentials(
     assert (
         local.main(
             [
-                "--native",
                 "--configure",
                 "--config",
                 "runtime.json",
@@ -296,7 +294,7 @@ def test_native_configuration_does_not_start_or_export_credentials(
         )
         == 0
     )
-    assert local.SSH == [] and len(calls) == 1
+    assert local.SSH == expected_transport and len(calls) == 1
 
 
 def test_checked_in_entrypoint_executes_only_configured_environment(
@@ -358,3 +356,9 @@ def test_iam_mode_exports_both_required_profiles():
             "OUTAGE_ACCESS_DATABASE_PROFILE": "database",
         }
     ) == ["database", "storage"]
+
+
+def test_native_transport_option_is_rejected():
+    with pytest.raises(SystemExit) as failure:
+        local.main(["--native"])
+    assert failure.value.code == 2

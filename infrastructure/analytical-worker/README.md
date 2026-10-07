@@ -292,8 +292,8 @@ and the host Docker context remains `desktop-linux`. No Mac directory mounts,
 SSH-agent forwarding, SSH-config edits or automatic context activation were used.
 
 Reusable, reviewable helpers live in [native-linux-validation](native-linux-validation/).
-The Colima creation helper targets Apple Silicon; the Linux preparation/build
-helpers also support a dedicated native Ubuntu host. For a complete application
+The required setup uses Apple Silicon macOS and the dedicated Colima guest;
+the Linux preparation/build helpers run inside that guest. For a complete application
 installation, follow the [fresh-machine walkthrough](../../docs/development/fresh-machine.md).
 This historical sequence describes fresh guest directories:
 Before exporting HEAD, commit the reviewed implementation, including the O_PATH

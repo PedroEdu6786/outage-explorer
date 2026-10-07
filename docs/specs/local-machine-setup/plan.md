@@ -3,10 +3,10 @@
 1. Reuse existing Linux provisioning/image helpers and public analytical startup.
    Pin guest installation to the repository dependency lock, include helper scripts
    in the source archive and discover the actual worker/parser identities.
-2. Extend the existing operator launcher with explicit configuration and native
-   Linux transport. Install a checked-in entry point plus private settings, CA and
+2. Extend the existing operator launcher with explicit configuration through the
+   dedicated Colima transport. Install a checked-in entry point plus private settings, CA and
    reviewed JSON through an in-memory archive. Discover the Docker socket group.
-3. Write a numbered guide with a shared Ubuntu path, Colima adaptation, exact
+3. Write a numbered guide with one required Apple Silicon/Colima path, exact
    configuration examples, review steps and lifecycle/troubleshooting checkpoints.
 4. Verify configuration transport, secret handling, startup environment and command
    behavior with controlled tests; run relevant existing checks. Do not provision

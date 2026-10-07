@@ -237,11 +237,7 @@ def configure(environment, runtime_path, inspection_path):
 
 
 def main(argv=None):
-    global SSH
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--native", action="store_true", help="Use this Linux host instead of Colima"
-    )
     parser.add_argument(
         "--configure",
         action="store_true",
@@ -256,10 +252,6 @@ def main(argv=None):
         help="Reviewed parser JSON (configuration only)",
     )
     args = parser.parse_args(argv)
-    if args.native:
-        if sys.platform != "linux":
-            parser.error("--native requires the Linux Docker daemon host")
-        SSH = []
     if args.configure != (
         args.config is not None and args.inspection_config is not None
     ) or (not args.configure and (args.config or args.inspection_config)):

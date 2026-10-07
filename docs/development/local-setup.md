@@ -11,9 +11,9 @@ authentication, authorization, stored observations, SQL execution and refresh.
 
 - Python 3.12+ for the backend; Node 24.18.0 and npm 11.16.0 for the web client.
 - AWS CLI with a working local login for the profiles configured below.
-- Docker CLI and a Linux Docker daemon, with the API/controller on that Linux
-  host. Use native Ubuntu, an Ubuntu VM, or the dedicated Apple Silicon Colima
-  route in the [fresh-machine walkthrough](fresh-machine.md).
+- Apple Silicon macOS with Docker CLI and the dedicated Colima `outage-runtime`
+  Linux VM, matching the environment used for this project. Follow the single
+  environment in the [fresh-machine walkthrough](fresh-machine.md).
 - Configured PostgreSQL/RDS, Cognito and S3 resources, three seeded persona
   bindings, and a published three-resource generation for browsing stored data.
 - For preview and SQL, matching actual-host analytical/parser configuration and
@@ -24,7 +24,7 @@ authentication, authorization, stored observations, SQL execution and refresh.
 
 Follow the [numbered fresh-machine walkthrough](fresh-machine.md) from dependency
 installation through browser sign-in and recovery. It includes Docker setup,
-pinned source installation, native Linux and Colima commands, actual-host
+pinned source installation, dedicated Colima commands, actual-host
 containment checks, a checked-in API entry point and private configuration
 installation. `make run-analytical` starts the configured service and renews
 credentials; preparation and review are explicit earlier steps. `/run` files
@@ -100,7 +100,7 @@ The client secret and AWS/database credentials stay on the backend.
 Run the backend in one terminal and the web client in another:
 
 ```sh
-# Terminal 1: configured backend; add NATIVE=1 on native Ubuntu
+# Terminal 1: configured backend on macOS, dedicated Colima outage-runtime VM
 make run-analytical
 
 # Terminal 2: web checkout
