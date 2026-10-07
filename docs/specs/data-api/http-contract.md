@@ -61,6 +61,8 @@ synchronous response; refresh admission is asynchronous.
   representative adapter verification is required before claiming support.
 - Reject duplicate query parameters, unknown request fields, malformed dates,
   invalid positive integers, and unsupported filter combinations with `400`.
+  SQL text must encode as valid UTF-8 and fit within 65,536 bytes; unpaired
+  surrogate escapes in JSON return `400 invalid_request` before SQL inspection.
 
 ## Catalog
 

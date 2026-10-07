@@ -1,5 +1,6 @@
 """Adversarial transport boundaries; no database or analytical adapters."""
 
+import json
 from unittest.mock import Mock
 
 import pytest
@@ -97,6 +98,51 @@ def test_strict_query_body(transport, body):
     )
     assert response.status_code == 400
     assert not services.queries.mock_calls
+
+
+@pytest.mark.parametrize(
+    "sql",
+    ["SELECT '\ud800'", "SELECT '\udfff'", "SELECT '\ud800x'", "SELECT '\udc00\ud800'"],
+)
+def test_query_rejects_unpaired_surrogates_before_services(transport, sql):
+    client, _, services = transport
+    response = client.post("/api/query", json={"sql": sql}, headers={"Origin": ORIGIN})
+    assert response.status_code == 400
+    assert response.json == {
+        "error": {"code": "invalid_request", "message": "Invalid request"}
+    }
+    assert not services.queries.mock_calls
+
+
+@pytest.mark.parametrize(
+    "sql,status",
+    [
+        ("SELECT 'español'", 200),
+        ("SELECT '😀'", 200),
+        ("é" * 32768, 200),
+        ("é" * 32769, 400),
+    ],
+    ids=["unicode", "supplementary-character", "byte-limit", "over-byte-limit"],
+)
+def test_query_preserves_valid_unicode_and_enforces_utf8_byte_limit(
+    transport, sql, status
+):
+    client, _, services = transport
+    services.queries.execute.return_value = {"accepted": True}
+    body = json.dumps({"sql": sql}, ensure_ascii=False).encode("utf-8")
+    response = client.post(
+        "/api/query",
+        data=body,
+        content_type="application/json",
+        headers={"Origin": ORIGIN},
+    )
+    assert response.status_code == status
+    if status == 200:
+        assert services.queries.execute.call_args.args[1] == sql
+        assert services.queries.execute.call_count == 1
+    else:
+        assert response.json["error"]["code"] == "invalid_request"
+        assert not services.queries.mock_calls
 
 
 @pytest.mark.parametrize(

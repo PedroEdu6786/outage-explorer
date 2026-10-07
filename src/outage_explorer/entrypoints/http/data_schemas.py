@@ -116,11 +116,13 @@ def query_parameters(*, submission: bool) -> tuple[str, int, int | None]:
     )
     if submission:
         sql = json_object({"sql"})["sql"]
-        if (
-            not isinstance(sql, str)
-            or not sql.strip()
-            or len(sql.encode()) > MAX_SQL_BYTES
-        ):
+        if not isinstance(sql, str) or not sql.strip():
+            raise InvalidRequestError("Invalid request")
+        try:
+            sql_bytes = len(sql.encode("utf-8"))
+        except UnicodeEncodeError:
+            raise InvalidRequestError("Invalid request") from None
+        if sql_bytes > MAX_SQL_BYTES:
             raise InvalidRequestError("Invalid request")
         return sql, page, size
     return identifier(values.get("query_id")), page, size
