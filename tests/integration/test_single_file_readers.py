@@ -324,7 +324,7 @@ def test_memory_exhaustion_fails_inside_bounds_and_locked_engine_still_spills(
         relations,
         tight,
     )
-    assert isinstance(exhausted, Exception) and "Memory" in str(exhausted)
+    assert isinstance(exhausted, AnalyticalResourceError)
     spilled = run_query(
         "SELECT count(*) FROM (SELECT row_number() OVER (ORDER BY random()) r "
         "FROM range(5000000) t(x)) WHERE r % 2 = 0",

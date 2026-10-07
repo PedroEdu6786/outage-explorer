@@ -3,9 +3,12 @@
 from collections.abc import Iterator
 from typing import cast
 
+import duckdb
+
 from outage_explorer.application.errors import AnalyticalResourceError
 from outage_explorer.application.ports.execution import ExecutionBounds, QueryRead
 from outage_explorer.application.ports.query_results import QueryOutput
+from outage_explorer.application.ports.sql_inspection import SqlRejected
 from outage_explorer.domain.datasets import Column
 from outage_explorer.infrastructure.duckdb.views import open_restricted
 from outage_explorer.infrastructure.query_results.duckdb_types import (
@@ -23,6 +26,7 @@ from outage_explorer.infrastructure.query_results.encoding import (
 def execute_query(
     request: QueryRead, bounds: ExecutionBounds, encoding: EncodingBounds
 ) -> QueryOutput:
+    # Internal view/setup failures are not errors in the submitted SQL.
     connection = open_restricted(
         bounds, [(dataset.id, dataset, files) for dataset, files in request.relations]
     )
@@ -46,6 +50,20 @@ def execute_query(
         return QueryOutput(
             output.document, output.retained_row_count, output.truncation_reason
         )
+    except (
+        duckdb.BinderException,
+        duckdb.CatalogException,
+        duckdb.ConversionException,
+        duckdb.InvalidInputException,
+        duckdb.InvalidTypeException,
+        duckdb.OutOfRangeException,
+        duckdb.ParserException,
+        duckdb.SyntaxException,
+        duckdb.TypeMismatchException,
+    ):
+        raise SqlRejected("invalid_sql") from None
+    except duckdb.OutOfMemoryException:
+        raise AnalyticalResourceError("Analytical worker memory limit") from None
     except (EncodingLimit, UnsupportedValue) as exc:
         raise AnalyticalResourceError(
             "Unsupported or oversized query representation"

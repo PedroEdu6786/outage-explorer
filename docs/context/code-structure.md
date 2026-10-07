@@ -490,3 +490,11 @@ or copying input bytes. Recovery accepts a missing staging directory in that
 phase and reclaims only recorded paths. Copying retains the existing size,
 checksum, source-identity, row-count, deadline and sealing checks. Ordinary cleanup
 also handles a planned directory that was never created or was already reclaimed.
+
+The DuckDB query adapter translates specific binding, syntax, type and value
+errors during submitted SQL execution or row fetching into safe `invalid_sql`
+responses. Engine out-of-memory errors become `query_resource_limit`. Internal
+view setup, I/O and unexpected engine failures retain unavailable responses;
+engine diagnostic text never crosses the worker protocol. Connections close on
+each path, and application cleanup still proves worker termination before
+releasing execution capacity or retaining a successful result.
