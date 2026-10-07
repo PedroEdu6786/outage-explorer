@@ -4,13 +4,18 @@
 
 
 Keep the `outage-explorer` and `outage-explorer-web` checkouts next to each other.
-The web client is implemented in the separate repository; the backend owns
+The web client is implemented in the [separate repository](https://github.com/PedroEdu6786/outage-explorer-web); the backend owns
 authentication, authorization, stored observations, SQL execution and refresh.
 
 ### Prerequisites and configuration
 
 - Python 3.12+ for the backend; Node 24.18.0 and npm 11.16.0 for the web client.
 - AWS CLI with a working local login for the profiles configured below.
+- Docker CLI and a Linux Docker daemon. The existing local launcher uses Colima's
+  dedicated `outage-runtime` guest; installing the Docker CLI alone is insufficient.
+  The supplied VM creation helper targets Apple Silicon macOS with Colima's VZ
+  backend. Other hosts need their own runtime setup; these helpers do not establish
+  a portable Docker Desktop or native Linux application startup path.
 - Configured PostgreSQL/RDS, Cognito and S3 resources, three seeded persona
   bindings, and a published three-resource generation for browsing stored data.
 - For preview and SQL, the already provisioned and reviewed `outage-runtime`
@@ -20,6 +25,43 @@ authentication, authorization, stored observations, SQL execution and refresh.
   startup; installing Python dependencies alone is insufficient. See the
   [analytical runtime contract](../../infrastructure/analytical-worker/README.md) and
   [local startup evidence](../../docs/specs/data-api/runtime-evidence.md).
+
+### Manual fresh-machine setup
+
+**Partial setup is available.** The repository contains manual helpers to create
+the dedicated Colima VM, prepare the Linux filesystem and Python environment,
+build the Docker worker image, and generate a candidate runtime profile:
+
+1. Install Git, Python, Node/npm, AWS CLI, Docker CLI and Colima on the host.
+   Clone this backend and the linked web repository into sibling directories.
+2. Follow the [dedicated Colima setup sequence](../../infrastructure/analytical-worker/README.md#recorded-dedicated-colima-validation-october-5-2026).
+   Its `start-colima.sh`, `prepare-guest.sh` and `build-guest.sh` helpers create the
+   Docker runtime, private spill storage, guest dependencies and worker image.
+   Fresh-provisioning helpers refuse existing resources; use their documented
+   recovery instructions for an existing guest.
+3. Follow the runtime-profile and containment instructions in that runbook.
+   New host/image/profile identities need matching review evidence; copying another
+   machine's reviewed configuration does not establish readiness on this one.
+4. Configure the database, Cognito, S3, seeded users and published data using the
+   linked operator guides, then complete the application configuration below.
+
+The remaining manual operator step is **full API guest setup**: install the exact
+backend revision, create the private runtime configuration and API entry point
+at `/run/outage-api/start.py`, provide its directories/permissions and configure
+local port forwarding. The existing launcher also assumes a configured guest
+Python at `/opt/outage-runtime-validation/.venv/bin/python` and Docker socket
+supplementary group `991`; verify the actual guest group before configuring it.
+These steps are not yet supplied as a complete versioned bootstrap procedure.
+`/run` is transient, so its application files also need restoration after a guest
+reboot. `make run-analytical` renews credentials and starts the configured service;
+it does not fill in this missing setup.
+
+Thus we can manually provision the **worker environment including Docker** from
+the runbook, but cannot yet claim a complete fresh-machine application setup
+using only the delivered instructions. No installation or provisioning runs when
+reading this guide.
+
+### Application configuration
 
 From the backend checkout, install dependencies and create `.env` only if it
 does not already exist:
@@ -129,8 +171,8 @@ Run the backend checks using the disposable PostgreSQL/Chromium instructions in 
 and `npm run build`; its README documents additional boundary and browser checks.
 Reproduce the three findings with the commands linked from [FINDINGS.md](../../FINDINGS.md).
 
-The user confirmed on October 7, 2026 that integrated SQL denials work as
-expected. This is user acceptance of that behavior; no additional automated or
-browser validation is claimed here. Clean-machine analytical provisioning and
-the remaining release evidence are separate from these startup instructions.
+The user confirmed on October 7, 2026 that integrated acceptance is complete,
+including the earlier confirmation that SQL denials work as expected. This records
+user acceptance; no additional automated or browser validation is claimed here.
+Fresh-machine provisioning remains separate from that accepted integration.
 EC2 deployment is not required for this local workflow.

@@ -13,8 +13,9 @@ and inspect the daily share of fleet capacity offline.
 
 **Start with the [setup guide](docs/development/local-setup.md).** It covers
 installation, environment settings and seeded-user access for this Flask backend
-and the separate `outage-explorer-web` client. Full startup requires the configured
-Colima runtime, RDS, Cognito, S3 and published data; it does not provision them.
+and the separate [web client](https://github.com/PedroEdu6786/outage-explorer-web).
+Full startup requires Docker, the configured Colima runtime, RDS, Cognito, S3
+and published data; see the [manual fresh-machine setup status](docs/development/local-setup.md#manual-fresh-machine-setup).
 
 Once configured, run these in separate terminals:
 
@@ -63,7 +64,8 @@ codes, initial-load requirements, all-excluded handling and recovery.
 
 Python/Flask layered monolith · PostgreSQL on RDS for operational state ·
 S3 Parquet for durable data · isolated DuckDB workers for SQL · Cognito for identity.
-The separate client uses React, Next.js, TypeScript and Tailwind CSS.
+The [web repository](https://github.com/PedroEdu6786/outage-explorer-web) contains
+the React, Next.js, TypeScript and Tailwind CSS client and its setup instructions.
 
 See [architecture](docs/context/architecture.md) and the
 [schema/ER diagrams](docs/context/data-model.md). The fleet metric is

@@ -26,8 +26,10 @@ checkout does not depend on a contributor's Downloads directory. The
 [backend specification](../specs/outage-explorer-backend/spec.md) translates it
 into requirements and acceptance criteria.
 
-The full challenge includes the web application. Its deferral in this project
-does not remove it from the challenge's core requirements. Some extras, such as
+The full challenge includes the web application, implemented in the separate
+[web repository](https://github.com/PedroEdu6786/outage-explorer-web). The user
+confirmed integrated acceptance complete on October 7, 2026; this records that
+confirmation without claiming another automated verification run. Some extras, such as
 broad analytical SQL and OAuth2, became project requirements through later
 accepted decisions; keep those distinctions when discussing scope.
 
@@ -43,7 +45,7 @@ This is a navigation map, not a new implementation audit or completion score.
 | Part 2 — Reconciliation, US-07 | Compare all three grains over at least 30 days; identify period, entity, values and gap wherever they differ, with explanations | [Dedicated reconciliation](reconciliation.md): 30-day baseline plus historical, temporal, metric and identity analysis; 182 sampled dates, 11,182 facility/day groups and offline replay |
 | Part 2 — Anomalies | At least three actual anomalies, each with a concrete period/entity/value example and product treatment; runnable queries or code | Three documented findings: response metadata, River Bend omissions and a verified prolonged Cook outage; each has runnable evidence and product treatment |
 | Part 3 — Backend | Seeded personas, authentication, authorization before reads/execution, read-only SQL with every referenced table checked and results capped, Admin refresh, secrets excluded, rejection tests | [Backend specification](../specs/outage-explorer-backend/spec.md) |
-| Part 4 — Web application | Login, permitted datasets, backend-paginated table and SQL input/results | Deferred in this project's current scope; still core to the full challenge |
+| Part 4 — Web application | Login, permitted datasets, backend-paginated table and SQL input/results | Implemented in the [web repository](https://github.com/PedroEdu6786/outage-explorer-web); integrated acceptance user-confirmed October 7, 2026 |
 | Delivery and live explanation | Runnable README, tests, ER diagram, DECISIONS.md, FINDINGS.md, Engineering Notes and incremental history; explain and change the solution live | [Decisions](../../DECISIONS.md), [ER diagrams](../context/data-model.md), [findings entry point](../../FINDINGS.md), [ADRs](../adr/), [devlog](../devlog/); final submission completeness is a separate review |
 
 ## Discussion points
