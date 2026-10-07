@@ -143,6 +143,7 @@ its evidence, reproduction command and product treatment.
 | Dataset, query and refresh API | [HTTP contract](docs/specs/data-api/http-contract.md) |
 | Offline baseline verification | [National](docs/specs/national-data-verification/verification.md) · [Facility/generator](docs/specs/facility-generator-verification/verification.md) |
 | Challenge requirements and evidence | [Challenge index](docs/challenge/README.md) |
+| My contributions, AI workflow, corrections and manual verification | [Engineering Notes](NOTES.md) |
 | Decisions, engineering history and conventions | [Decisions](DECISIONS.md) · [Devlog](docs/devlog/) · [Conventions](docs/context/conventions.md) |
 
 Run `make help` for all backend commands.
