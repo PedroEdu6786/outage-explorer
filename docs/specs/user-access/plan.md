@@ -76,7 +76,7 @@ The four user-access tables below are implemented; phase 5 requires no additiona
 
 ## Dependencies & integrations
 
-- Existing Flask/HTTPX, PyJWT cryptographic verification and UTC clock seam; extend the current bounded code-exchange/JWKS implementation rather than replacing it with Authlib. Refresh remains disabled and unused token responses are discarded. (FR2, FR19, TR2, TR3)
+- Existing Flask/HTTPX, PyJWT cryptographic verification and UTC clock seam; extend the current bounded code-exchange/JWKS implementation. Authlib and its unused `joserfc` dependency are excluded from runtime and development requirements. Refresh remains disabled and unused token responses are discarded. (FR2, FR19, TR2, TR3)
 - Psycopg 3/pool and Alembic/SQLAlchemy migration dependencies, narrowly permitted in infrastructure/explicit setup entry points by architecture checks. Pool connection creation is deferred to explicit runtime use, bounded, and owned/closed per process; no global or fork-inherited connection. (FR1, FR12, TR4)
 - Configured Cognito pool/issuer, client/domain, callback, OAuth scopes and client authentication where applicable; public registration disabled and email login/seeded users verified. Use explicit configured scopes, with no application role derived from scopes. Credentials remain server/provider-side and outside source control. The dated readiness record below distinguishes verified control reads from pending live browser login. (FR1, FR2, FR6, FR19, TR1, TR2)
 - AWS SDK credential/signing support stays infrastructure-only, injected for controlled tests; profile-based development and later runtime IAM role inputs share the same bounded provider contract. No new EC2 setup or identity replacement is a prerequisite. (FR2, FR12, TR1, TR4)
