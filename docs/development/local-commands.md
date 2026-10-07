@@ -74,7 +74,10 @@ before replacing the previous bundle; failed downloads preserve the old file.
 
 **After:** Prints the absolute path to use in the database CA setting. This lets
 `sslmode=verify-full` verify the RDS server’s certificate and hostname. It is
-public trust material, not a password, IAM token or AWS login. Skip this command
+public trust material, not a password, IAM token or AWS login. You obtain the
+certificates from AWS; generating a self-signed certificate would not establish
+trust in the RDS server. See [obtaining and configuring the CA file](fresh-machine.md#obtain-the-rds-ca-file).
+Skip this command
 if your environment owner already supplied the correct CA file. It starts no
 services. Rerunning it downloads the current bundle again.
 

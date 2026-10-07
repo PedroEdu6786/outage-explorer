@@ -130,23 +130,44 @@ do not run that command to print secrets. The identity check above is read-only.
 
 ## 5. Fill in backend settings
 
-If your existing `.env` already configures a valid CA file, keep that path and
-skip this download. `.local-runtime/rds-ca.pem` is a suggested location for a
-new setup, not a required existing file. `make local-configure` copies the CA
-from your configured path into the guest.
+### Obtain the RDS CA file
 
-On a new machine without a CA bundle, prepare one:
+For a new setup, obtain Amazon RDS’s published CA bundle with:
 
 ```sh
 make local-ca
 ```
 
-This downloads Amazon RDS’s public CA certificates to `.local-runtime/rds-ca.pem`
-and prints its absolute path. The database connection uses them to verify that
-it is talking to the intended RDS server over TLS (`sslmode=verify-full`). The
-bundle is public and contains no credentials; it does not log you in to AWS.
-If your environment owner already supplied the correct CA bundle, use that file
-instead and skip this command. Put the printed path in the setting below.
+This creates `.local-runtime/rds-ca.pem` and prints its absolute path. You do not
+need AWS login or access to the database to download it. The file contains public
+CA certificates used to verify the RDS server over TLS; it contains no password
+or private key. Obtain these certificates from AWS rather than generating a
+self-signed certificate, which would not establish trust in the RDS server.
+See [AWS’s certificate download documentation](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.SSL.html#UsingWithRDS.SSL.CertificatesAllRegions).
+
+If you prefer a browser download, save the official
+[RDS global PEM bundle](https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem)
+as `rds-ca.pem` in `.local-runtime`. The filename can also be `ca.pem`; what
+matters is that the database setting points to the actual file.
+
+### Configure the CA path
+
+For IAM mode, put the absolute path printed by `make local-ca` in `.env`:
+
+```dotenv
+OUTAGE_ACCESS_DATABASE_SSLROOTCERT=/absolute/path/to/outage-explorer/.local-runtime/rds-ca.pem
+```
+
+For password mode, set `sslrootcert` to that absolute path inside
+`OUTAGE_ACCESS_DATABASE_DSN`, together with `sslmode=verify-full`; do not add
+IAM-only settings to password mode.
+
+If your existing settings already point to a valid CA file supplied for this
+environment, you can keep that path instead. A file’s existence alone does not
+prove it trusts the RDS certificate. `make local-configure` copies your selected
+file into the VM and adjusts the path; it does not require a particular filename
+on your Mac. After the review steps below, run `make local-configure` with the
+API stopped to install changed settings.
 
 Edit `.env`, preserving secrets privately. For IAM mode, **remove the entire
 `OUTAGE_ACCESS_DATABASE_DSN=` line**, even if empty. Set these values with your
