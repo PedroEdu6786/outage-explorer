@@ -25,7 +25,7 @@ def test_application_obeys_import_boundaries():
     ["\nimport boto3\n", "\nprint('side effect')\n", "\ndef route():\n    pass\n"],
 )
 def test_query_worker_startup_exception_remains_exact(tmp_path, addition):
-    from tests.architecture.import_rules import QUERY_STARTUP_SOURCE
+    from .import_rules import QUERY_STARTUP_SOURCE
 
     root = source_tree(
         tmp_path,
