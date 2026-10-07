@@ -1,6 +1,6 @@
 # API endpoints: individual flow diagrams
 
-Each HTTP operation has its own high-level diagram below. Flask handles transport;
+Each authentication and data operation has its own high-level diagram below. Flask handles transport;
 application services enforce current identity and role before protected work.
 Reviewed against current workspace source on October 7, 2026. These diagrams
 explain responsibilities, not fresh live acceptance or deployment.
@@ -15,9 +15,6 @@ safe errors rather than continuing along the successful paths shown.
 
 | HTTP operation | Diagram |
 | --- | --- |
-| `GET /health` | [Health](#health) |
-| `GET /api/docs` | [API documentation](#api-documentation) |
-| `GET /api/openapi.json` | [OpenAPI contract](#openapi-contract) |
 | `GET /api/auth/login` | [Begin login](#begin-login) |
 | `GET /api/auth/callback` | [Complete login](#complete-login) |
 | `GET /api/auth/session` | [Current session](#current-session) |
@@ -29,44 +26,6 @@ safe errors rather than continuing along the successful paths shown.
 | `POST /api/refresh` | [Admit refresh](#admit-refresh) |
 | `GET /api/refresh/latest` | [Latest refresh](#latest-refresh) |
 | `GET /api/refresh/{run_id}` | [Refresh status](#refresh-status) |
-
-## Health
-
-`GET /health`
-
-```mermaid
-flowchart TD
-    Request["GET /health"] --> Check["HealthService.check<br/>Read clock and scaffold liveness"]
-    Check --> Response["200 JSON<br/>status, service, checked_at"]
-```
-
-Public liveness only. Does not query PostgreSQL, Cognito, S3 or DuckDB and does not establish readiness.
-
-## API documentation
-
-`GET /api/docs`
-
-```mermaid
-flowchart TD
-    Request["GET /api/docs"] --> UI["Serve packaged Swagger UI assets"]
-    UI --> Browser["Browser loads API documentation"]
-    Browser --> Contract["Fetch GET /api/openapi.json"]
-```
-
-Public documentation. Trying protected operations still requires their normal authentication, authorization and configured resources.
-
-## OpenAPI contract
-
-`GET /api/openapi.json`
-
-```mermaid
-flowchart TD
-    Request["GET /api/openapi.json"] --> File["Read packaged OpenAPI contract"]
-    File --> Mode["Apply configured development cookie names<br/>when development HTTP is selected"]
-    Mode --> Response["200 OpenAPI JSON<br/>Cache-Control: no-store"]
-```
-
-Public contract metadata; serving the contract starts no connector or analytical worker.
 
 ## Begin login
 
