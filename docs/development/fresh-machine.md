@@ -7,6 +7,27 @@ Follow the numbered steps in order. Commands are manual: reading this document
 installs nothing. Replace example resource identifiers with values from your
 environment owner. Keep credentials out of Git and terminal output.
 
+## Make command checklist
+
+After cloning and installing Homebrew, run from the backend checkout:
+
+```sh
+make local-dependencies
+# Open a new terminal after the printed Python/nvm shell setup instructions.
+make setup
+make local-runtime
+make local-candidate
+make local-validate
+make local-reports
+make local-review REVIEWER="Your name"
+```
+
+Read the reports before the review command. Configure your AWS login and `.env`
+using steps 4–5, then run `make local-configure`. Start `make run-analytical`
+and `make local-forward` in separate terminals. Start the web client with
+`npm run dev` in its checkout after step 10. `make local-help` prints this sequence.
+The details below explain prerequisites and what each step does.
+
 ## 1. Use the required environment
 
 Use **Apple Silicon macOS with the dedicated Colima `outage-runtime` VM**,
@@ -50,11 +71,21 @@ needed for refresh, not for browsing existing published data.
 
 ## 3. Install the dependencies
 
-On Apple Silicon macOS, install [Homebrew](https://brew.sh/) if needed, then
-install the host dependencies:
+On Apple Silicon macOS, install [Homebrew](https://brew.sh/) if needed. Clone
+both repositories and enter the backend checkout:
 
 ```sh
-brew install git make python@3.12 colima docker
+mkdir -p ~/Projects
+cd ~/Projects
+git clone https://github.com/PedroEdu6786/outage-explorer.git
+git clone https://github.com/PedroEdu6786/outage-explorer-web.git
+cd outage-explorer
+```
+
+Then install the host dependencies:
+
+```sh
+make local-dependencies
 export PATH="$(brew --prefix python@3.12)/libexec/bin:$PATH"
 ```
 
@@ -64,24 +95,19 @@ CLI. See [Colima's installation instructions](https://colima.run/docs/installati
 The guest's Python/system dependencies are installed by the repository helper
 in step 6. Docker Desktop is not part of this setup.
 
-Install **AWS CLI v2 for macOS** using the
-[official installer](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
-Install [nvm](https://github.com/nvm-sh/nvm#install--update-script) on macOS;
-the web repository's pinned Node version is installed in step 10.
+The target also installs AWS CLI and nvm. Follow Homebrew’s printed nvm shell
+initialization instructions, then open a new terminal. The web repository’s
+pinned Node version is installed in step 10.
 Verify `git --version`, `make --version`, `python3 --version`, `aws --version`,
 `colima version` and `docker --version`. Python must be 3.12 or later.
 The daemon is created in step 6.
 
-## 4. Clone both repositories and configure AWS login
+## 4. Install backend dependencies and configure AWS login
 
 Run on macOS:
 
 ```sh
-mkdir -p ~/Projects
-cd ~/Projects
-git clone https://github.com/PedroEdu6786/outage-explorer.git
-git clone https://github.com/PedroEdu6786/outage-explorer-web.git
-cd outage-explorer
+cd ~/Projects/outage-explorer
 make setup
 mkdir -p .local-runtime
 chmod 700 .local-runtime
@@ -154,111 +180,65 @@ Remove every other `OUTAGE_ACCESS_DATABASE_*` assignment. Follow the
 the application. The configuration helper copies the CA to Linux and rewrites
 its path. Keep RDS network access limited to the intended developer host/VPN.
 
-## 6. Prepare the Linux runtime and install this revision
+## 6. Prepare the runtime with Make
 
-Run from the macOS backend checkout:
-
-```sh
-sh infrastructure/analytical-worker/native-linux-validation/start-colima.sh
-colima ssh --profile outage-runtime -- sh -s < infrastructure/analytical-worker/native-linux-validation/prepare-guest.sh
-```
-
-The Colima helper creates a separate `outage-runtime` VM without host mounts,
-agent forwarding or automatic port forwarding. The preparation script refuses
-existing runtime resources. Do not rerun it to repair an existing installation.
-
-Archive committed source only. These commands deliberately omit `.env`, AWS
-credentials and Git history. A successful diff check prints nothing; if it fails,
-commit or otherwise resolve your intended source changes before continuing:
+Run these from the macOS backend checkout, one at a time:
 
 ```sh
-git diff --quiet HEAD -- src tests scripts infrastructure/analytical-worker pyproject.toml requirements-dev.txt README.md
-git archive --format=tar --output=.local-runtime/source.tar HEAD src tests scripts infrastructure/analytical-worker pyproject.toml requirements-dev.txt README.md
+make local-help
+make local-runtime
+make local-candidate
 ```
+
+`local-runtime` checks that the source to export is committed, creates the
+required Colima VM, prepares its Linux dependencies/private spill storage,
+transfers committed source and installs pinned dependencies/builds the worker
+image. It excludes `.env`, credentials and Git history. It is a **fresh-install**
+command: existing resources are preserved and cause preparation to refuse.
+Do not use it to repair an existing installation.
+
+`local-candidate` captures this guest's daemon, image, filesystem and parser
+executable identities. It refuses existing candidate files. No API or refresh
+worker starts. Logs stay in `/var/lib/outage-runtime-validation/` inside Colima.
+
+## 7. Check and review containment
 
 ```sh
-colima ssh --profile outage-runtime -- sudo tar -xf - -C /opt/outage-runtime-validation < .local-runtime/source.tar
-colima ssh --profile outage-runtime -- sh /opt/outage-runtime-validation/infrastructure/analytical-worker/native-linux-validation/build-guest.sh
+make local-validate
+make local-reports
 ```
 
-This installs the pinned Python dependencies and package, then builds the
-analytical Docker image. Success prints its image identity/platform and engine
-versions. Logs stay in `/var/lib/outage-runtime-validation/` on Linux. No API,
-refresh worker, AWS migration or publication starts here.
+The first command runs controlled tests, native parser checks and actual Docker
+containment/lifecycle tests inside Colima as UID/GID 65534, with the actual
+Docker socket group. The second prints the XML and JSON evidence for inspection.
+All selected tests and required gates must pass without skips. Investigate
+failures; do not copy another machine's review or edit reports to pass startup.
 
-## 7. Generate and check this machine's containment evidence
-
-Enter the Colima guest with `colima ssh --profile outage-runtime --`.
-Inside this **Linux guest**, enter the
-unprivileged controller shell with the actual socket group:
+After personally reviewing the successful reports, record your explicit review:
 
 ```sh
-cd /opt/outage-runtime-validation
-outage_docker_group=$(stat -c %g /run/docker.sock)
-sudo setpriv --reuid=65534 --regid=65534 --groups="$outage_docker_group" env -i PATH=/usr/bin:/bin HOME=/nonexistent PYTHONDONTWRITEBYTECODE=1 /bin/bash --noprofile --norc
+make local-review REVIEWER="Your name"
 ```
 
-Run the following inside that shell. Candidate generation discovers the daemon,
-image, filesystem and parser executable identities; it refuses existing outputs.
+This binds the passing reports to the exact profiles, runs the exact parser smoke
+check and records a private named review. It accepts **local preview/SQL with
+refresh idle**. Capacity/high-water/spill measurements, S3 performance and
+API/refresh overlap remain deferred. External services are not verified by this
+command. Existing reviews are preserved; review does not start the application.
+
+## 8. Install private API settings
+
+Complete AWS login and `.env` from steps 4–5, then run:
 
 ```sh
-.venv/bin/python infrastructure/analytical-worker/native-linux-validation/create-profile.py
-.venv/bin/python -m pytest -q -p no:cacheprovider tests/unit tests/architecture tests/test_local_analytical.py tests/test_local_runtime_setup.py tests/integration/test_sql_compatibility.py --junitxml=/var/lib/outage-runtime-validation/controlled.xml
-.venv/bin/python -m pytest -q -p no:cacheprovider tests/integration/test_sql_parser_process.py --junitxml=/var/lib/outage-runtime-validation/parser.xml
-OUTAGE_RUNTIME_TEST_PROFILE=/var/lib/outage-runtime-validation/candidate.json OUTAGE_RUNTIME_DOCKER_EXECUTABLE=/usr/bin/docker .venv/bin/python -m pytest -q -p no:cacheprovider tests/acceptance/test_query_runtime.py -m runtime_docker --junitxml=/var/lib/outage-runtime-validation/docker.xml
+make local-configure
 ```
 
-These are local tests using synthetic inputs. Docker tests exercise isolation,
-resource limits, termination, restart and cleanup. Failures must be investigated;
-do not copy another machine's review or edit a report to make startup pass.
-Inspect the XML summaries and the JSON reports:
-
-```sh
-ls /var/lib/outage-runtime-validation/owned/validation-reports
-cat /var/lib/outage-runtime-validation/controlled.xml
-cat /var/lib/outage-runtime-validation/parser.xml
-cat /var/lib/outage-runtime-validation/docker.xml
-cat /var/lib/outage-runtime-validation/owned/validation-reports/*.json
-```
-
-All selected tests and required containment gates must pass without skips,
-including the bounded CPU throttling probe. Full representative capacity
-measurements are a separate deferred checkpoint.
-
-After personally reviewing successful reports, explicitly record your local
-review, substituting your name:
-
-```sh
-.venv/bin/python scripts/review_local_runtime.py --reviewer "YOUR NAME" --accept-local-containment
-exit
-```
-
-This command checks report/profile matches and runs an additional smoke check
-with the exact parser configuration. It writes `local-scope-review.json`,
-`runtime-reviewed.json` and `parser-reviewed.json`, with private permissions.
-It accepts only the scoped local preview/SQL path with **refresh idle**. It does
-not measure production budgets, high-water/spill capacity, S3 performance or
-API/refresh overlap, and does not validate your external resources or start the
-API. Full runtime acceptance remains separate. Numeric defaults are initial
-limits. Existing review files are preserved rather than overwritten.
-
-Also `exit` the guest SSH shell to return to macOS.
-
-## 8. Install private API configuration
-
-Back in your backend checkout, copy the nonsecret reviewed settings.
-```sh
-colima ssh --profile outage-runtime -- sudo cat /var/lib/outage-runtime-validation/runtime-reviewed.json > .local-runtime/runtime-reviewed.json
-colima ssh --profile outage-runtime -- sudo cat /var/lib/outage-runtime-validation/parser-reviewed.json > .local-runtime/parser-reviewed.json
-.venv/bin/python scripts/local_analytical.py --configure --config .local-runtime/runtime-reviewed.json --inspection-config .local-runtime/parser-reviewed.json
-```
-
-Then `chmod 600 .local-runtime/*reviewed.json`. Configuration reads backend
-`.env` plus exported environment overrides, installs the checked-in entry point,
-reviewed files and private settings under `/run/outage-api`, and copies the RDS
-CA. It refuses reconfiguration while the API is running. It does not export AWS
-credentials or start services. It intentionally excludes EIA credentials:
-refresh has its own process and configuration.
+This copies the guest's reviewed settings and installs the checked-in entry point,
+private configuration and RDS CA under `/run/outage-api`. It reads `.env` plus
+exported overrides, refuses configuration while the API is running and does not
+start services or export AWS credentials. EIA credentials remain excluded:
+refresh has its own configuration and process.
 
 ## 9. Start the API
 
@@ -268,6 +248,9 @@ In a dedicated macOS backend terminal:
 make run-analytical
 ```
 
+`make run` is the separate macOS Flask health/docs scaffold; it does not provide
+preview/SQL execution. Use `make run-analytical` for this complete application.
+
 Keep this process running for credential renewal. It starts one threaded API
 process and preserves one analytical execution slot. Credentials go only to
 the trusted API, not to analytical containers.
@@ -275,10 +258,7 @@ the trusted API, not to analytical containers.
 Use a second macOS terminal for explicit port forwarding:
 
 ```sh
-cd ~/Projects/outage-explorer
-colima ssh-config --profile outage-runtime > .local-runtime/ssh-config
-chmod 600 .local-runtime/ssh-config
-ssh -F .local-runtime/ssh-config -o ExitOnForwardFailure=yes -N -L 127.0.0.1:8000:127.0.0.1:8000 colima-outage-runtime
+make local-forward
 ```
 
 Keep this terminal running too. The macOS web client and browser reach the

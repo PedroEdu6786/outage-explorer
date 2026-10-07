@@ -11,3 +11,7 @@
 4. Verify configuration transport, secret handling, startup environment and command
    behavior with controlled tests; run relevant existing checks. Do not provision
    or change the user's running services to validate documentation.
+
+Make-driven follow-up: a standard-library host orchestrator sequences existing
+helpers and sends bounded controller commands through stdin. Expose each stage
+with Make; preserve fresh-resource guards and explicit report/review/run steps.

@@ -11,6 +11,7 @@ CONFIG ?=
 LOCAL_ONLY ?= 0
 FETCH_WORKERS ?=
 S3_WORKERS ?=
+REVIEWER ?=
 OPERATION ?=
 RESOURCES ?=
 PRIOR ?=
@@ -22,8 +23,9 @@ shell_quote = '$(subst ','"'"',$(1))'
 
 help:
 	@printf '%s\n' \
+	  'make local-help   Show the guided Colima setup commands' \
 	  'make setup   Install the pinned dependencies in .venv' \
-	  'make run     Start Flask without preview/SQL execution resources' \
+	  'make run     Start macOS Flask health/docs scaffold (preview/SQL unavailable)' \
 	  'make run-analytical   Serve the configured Colima API with AWS credential renewal' \
 	  'make stop-analytical  Stop the configured Colima API' \
 	  'make run-worker   Run the independent refresh worker using .env' \
@@ -39,6 +41,33 @@ help:
 	  'make test-browser-setup   Install controlled Chromium acceptance browser' \
 	  'make check   Run lint, format, type, test, and build checks' \
 	  'Overrides: make run PORT=8080; make setup PYTHON=python3.14'
+
+# Manual local setup, always using the dedicated Colima outage-runtime guest.
+LOCAL_STEPS := dependencies runtime candidate validate reports configure forward
+.PHONY: local-help local-review $(addprefix local-,$(LOCAL_STEPS))
+local-help:
+	@printf '%s\n' \
+	  '1. make local-dependencies       Install macOS tools (Homebrew required)' \
+	  '2. make setup                    Install host Python dependencies' \
+	  '3. make local-runtime            Create fresh Colima VM, install source/build image' \
+	  '4. make local-candidate          Capture this host/image/parser identity' \
+	  '5. make local-validate           Run actual-guest containment checks' \
+	  '6. make local-reports            Inspect the check reports' \
+	  '7. make local-review REVIEWER="Your name"  Explicitly accept local containment' \
+	  '8. make local-configure          Install reviewed API settings from .env' \
+	  '9. make run-analytical           Start API (separate terminal)' \
+	  '10. make local-forward           Forward API port (separate terminal)' \
+	  'Then npm run dev in the sibling web checkout; see docs/development/fresh-machine.md.' \
+	  'Runtime is fresh-install only. Configure AWS login and .env before configuration.'
+
+$(addprefix local-,$(LOCAL_STEPS)):
+	$(PYTHON) scripts/local_machine.py $(patsubst local-%,%,$@)
+
+local-configure: check-env
+
+local-review:
+	$(PYTHON) scripts/local_machine.py review --reviewer $(call shell_quote,$(REVIEWER))
+
 
 $(VENV_PYTHON):
 	@$(PYTHON) -c 'import sys; sys.exit(0 if sys.version_info >= (3, 12) else "Python 3.12+ required. Try: make setup PYTHON=python3.14")'

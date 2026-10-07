@@ -20,7 +20,7 @@ matching the environment used for this project.
 Full application startup needs configured RDS, Cognito, S3 and published data.
 The [application setup reference](docs/development/local-setup.md) summarizes settings.
 
-Once configured, run these in separate terminals:
+Run `make local-help` for the setup sequence. Once configured, run these in separate terminals:
 
 ```sh
 # Backend checkout on macOS: dedicated Colima outage-runtime VM

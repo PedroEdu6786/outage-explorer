@@ -25,3 +25,11 @@ alternative native Linux, VM or Docker Desktop routes.
   acceptance of the existing application remains complete.
 
 No persistence, deployment or authorization boundary changes are selected.
+
+## Make-driven setup
+
+Expose a short sequence of Make targets for host dependencies, fresh Colima
+runtime preparation/source installation/build, candidate creation, actual-host
+checks, report inspection, explicit named review, private API configuration and
+port forwarding. Require Apple Silicon macOS. Keep review and startup separate;
+no setup target may silently approve evidence or start the API/refresh worker.

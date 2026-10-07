@@ -51,6 +51,6 @@ jobs:
       - name: Architecture boundaries and negative fixtures
         run: pytest tests/architecture
       - name: Behavior, PostgreSQL, HTTP and persistent browser acceptance
-        run: pytest tests/unit tests/integration tests/acceptance tests/test_devlog_hook.py tests/test_local_analytical.py tests/test_local_runtime_setup.py -m "not live_provider"
+        run: pytest tests/unit tests/integration tests/acceptance tests/test_devlog_hook.py tests/test_local_analytical.py tests/test_local_runtime_setup.py tests/test_local_machine.py -m "not live_provider"
       - name: Build distribution
         run: python -m build --no-isolation

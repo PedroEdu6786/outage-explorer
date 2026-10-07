@@ -16,3 +16,9 @@ requires actual-host checks and preserves deferred capacity evidence.
 
 User correction: require the existing Apple Silicon macOS/Colima environment.
 Alternative guide routes and the native launcher option have been removed.
+
+- [x] Expose guided Make stages for dependencies, runtime installation, candidate,
+  actual-host validation, reports, named review, configuration and forwarding.
+- [x] Enforce Apple Silicon/macOS and dedicated Colima transport; retain failure
+  stops, committed source export, private settings and separate startup/review.
+- [x] Verify orchestration with controlled tests and Make dry runs; shorten guide.
