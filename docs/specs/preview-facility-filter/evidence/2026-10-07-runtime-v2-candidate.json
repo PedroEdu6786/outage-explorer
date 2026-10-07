@@ -1,0 +1,1329 @@
+{
+  "controlled_log_sha256": "75af97e01c26d7570e67ee30ac351ff49b14cb1ad7d6884aea92fa76df7ee033",
+  "controlled_summary": "143 passed in 0.58s",
+  "date": "2026-10-07",
+  "filtered_worker": {
+    "name": "facility-filter-report.json",
+    "report": {
+      "daemon_version": "29.5.2",
+      "gates": {
+        "cleanup": {
+          "metrics": {},
+          "status": "passed"
+        },
+        "disk_quota": {
+          "metrics": {},
+          "status": "not_run"
+        },
+        "facility_filter": {
+          "metrics": {
+            "cases": 6
+          },
+          "status": "passed"
+        },
+        "identity": {
+          "metrics": {},
+          "status": "passed"
+        }
+      },
+      "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+      "platform": "linux/arm64",
+      "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+      "readiness": "unreviewed",
+      "schema": 1,
+      "temporary_backend": "quota-disk"
+    },
+    "sha256": "f6e9cf18199ba31e7047d29e40640e62b5e065002bd35015fc72c946abffb539"
+  },
+  "gaps": [
+    "No Cognito/RDS/S3 or browser probes",
+    "No representative high-water, S3 performance or API/refresh-overlap measurements",
+    "User review of this matching candidate is pending",
+    "Running API remains the previous version; activation not yet performed"
+  ],
+  "native_reports": [
+    {
+      "name": "worker_protocol_and_canonical_output-f55bbc731d544faba45e970c3ed36e2c.json",
+      "report": {
+        "daemon_version": "29.5.2",
+        "gates": {
+          "cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "disk_quota": {
+            "metrics": {},
+            "status": "not_run"
+          },
+          "identity": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "worker_protocol": {
+            "metrics": {
+              "output_bytes": 266,
+              "protocol_version": 2,
+              "seconds": 0.8296799029994872
+            },
+            "status": "passed"
+          },
+          "worker_protocol_and_canonical_output": {
+            "metrics": {},
+            "status": "passed"
+          }
+        },
+        "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+        "platform": "linux/arm64",
+        "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+        "readiness": "unreviewed",
+        "schema": 1,
+        "temporary_backend": "quota-disk"
+      },
+      "sha256": "757ee9d9574851860832714c0b392b9069ab26940edf34274c2f99b72194ec44"
+    },
+    {
+      "name": "namespace_network_mount_env_denial-f723036de5e5491ca60a5c244d596df1.json",
+      "report": {
+        "daemon_version": "29.5.2",
+        "gates": {
+          "cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "disk_quota": {
+            "metrics": {},
+            "status": "not_run"
+          },
+          "identity": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "namespace_network_mount_env_denial": {
+            "metrics": {},
+            "status": "passed"
+          }
+        },
+        "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+        "platform": "linux/arm64",
+        "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+        "readiness": "unreviewed",
+        "schema": 1,
+        "temporary_backend": "quota-disk"
+      },
+      "sha256": "c79fd075412e983103d922e0ec5a142b0a01246bd0664ee163a2ba83eb517bb3"
+    },
+    {
+      "name": "source_replacement_cannot_mutate_staged_input-ae90f99e0b9b4a2597b3b7c6b28c5631.json",
+      "report": {
+        "daemon_version": "29.5.2",
+        "gates": {
+          "cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "disk_quota": {
+            "metrics": {},
+            "status": "not_run"
+          },
+          "identity": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "source_replacement_cannot_mutate_staged_input": {
+            "metrics": {},
+            "status": "passed"
+          }
+        },
+        "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+        "platform": "linux/arm64",
+        "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+        "readiness": "unreviewed",
+        "schema": 1,
+        "temporary_backend": "quota-disk"
+      },
+      "sha256": "77f0b59211537f1a65e61d1524ffc8550fe88d971dc3f2574f466313fb409e7d"
+    },
+    {
+      "name": "cpu_memory_process_temp_policy-544db065fa5a4dfa870632fafead57cb.json",
+      "report": {
+        "daemon_version": "29.5.2",
+        "gates": {
+          "cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "cpu_memory_process_temp_policy": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "disk_quota": {
+            "metrics": {},
+            "status": "not_run"
+          },
+          "identity": {
+            "metrics": {},
+            "status": "passed"
+          }
+        },
+        "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+        "platform": "linux/arm64",
+        "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+        "readiness": "unreviewed",
+        "schema": 1,
+        "temporary_backend": "quota-disk"
+      },
+      "sha256": "e6d27225910f1707134caad285838c1d720e21f13645407e34d0317eec415baf"
+    },
+    {
+      "name": "cpu_quota_throttles_busy_children-9852b840d5c248a9aded7f43d5d906b5.json",
+      "report": {
+        "daemon_version": "29.5.2",
+        "gates": {
+          "cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "cpu_quota_throttles_busy_children": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "disk_quota": {
+            "metrics": {},
+            "status": "not_run"
+          },
+          "identity": {
+            "metrics": {},
+            "status": "passed"
+          }
+        },
+        "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+        "platform": "linux/arm64",
+        "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+        "readiness": "unreviewed",
+        "schema": 1,
+        "temporary_backend": "quota-disk"
+      },
+      "sha256": "2beee22ba3f59825e6df129d6ad3d41c03da1a669360a2ad07105ca6075944ab"
+    },
+    {
+      "name": "temporary_quota_enforcement-59359ac94d6e4e589429eb4c411e34f1.json",
+      "report": {
+        "daemon_version": "29.5.2",
+        "gates": {
+          "cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "disk_quota": {
+            "metrics": {},
+            "status": "not_run"
+          },
+          "identity": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "temporary_quota_enforcement": {
+            "metrics": {},
+            "status": "passed"
+          }
+        },
+        "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+        "platform": "linux/arm64",
+        "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+        "readiness": "unreviewed",
+        "schema": 1,
+        "temporary_backend": "quota-disk"
+      },
+      "sha256": "b300f30549a6dc353e5bff8f87469e0c4311e5b6c9b9f099589d5b9c3785ccbf"
+    },
+    {
+      "name": "memory_quota_enforcement-cdb0636f7f6e43d19255e85c79063f11.json",
+      "report": {
+        "daemon_version": "29.5.2",
+        "gates": {
+          "cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "disk_quota": {
+            "metrics": {},
+            "status": "not_run"
+          },
+          "identity": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "memory_quota_enforcement": {
+            "metrics": {},
+            "status": "passed"
+          }
+        },
+        "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+        "platform": "linux/arm64",
+        "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+        "readiness": "unreviewed",
+        "schema": 1,
+        "temporary_backend": "quota-disk"
+      },
+      "sha256": "222b6dcdb39729475722b5358bd23f08278c3167a65dc06999909c46f56caca5"
+    },
+    {
+      "name": "process_quota_and_descendant_reap-9282fb4112d84778b318d4930bd39e4b.json",
+      "report": {
+        "daemon_version": "29.5.2",
+        "gates": {
+          "cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "disk_quota": {
+            "metrics": {},
+            "status": "not_run"
+          },
+          "identity": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "process_quota_and_descendant_reap": {
+            "metrics": {},
+            "status": "passed"
+          }
+        },
+        "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+        "platform": "linux/arm64",
+        "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+        "readiness": "unreviewed",
+        "schema": 1,
+        "temporary_backend": "quota-disk"
+      },
+      "sha256": "5ec9f7fb5e45df1bd23fcc810648acf4ba3942dee9dd444bf951e09c22989655"
+    },
+    {
+      "name": "deadline_crash_io_cleanup-db931bda4df5469c902566eaf14e0f4d.json",
+      "report": {
+        "daemon_version": "29.5.2",
+        "gates": {
+          "cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "deadline_crash_io_cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "disk_quota": {
+            "metrics": {},
+            "status": "not_run"
+          },
+          "identity": {
+            "metrics": {},
+            "status": "passed"
+          }
+        },
+        "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+        "platform": "linux/arm64",
+        "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+        "readiness": "unreviewed",
+        "schema": 1,
+        "temporary_backend": "quota-disk"
+      },
+      "sha256": "e8e87e184f28b92e8b1d87d4a78478656ae22a035445125653d65c56391723aa"
+    },
+    {
+      "name": "deadline_crash_io_cleanup-e4e49aad548e4fe8bff6c830f04f3fa0.json",
+      "report": {
+        "daemon_version": "29.5.2",
+        "gates": {
+          "cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "deadline_crash_io_cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "disk_quota": {
+            "metrics": {},
+            "status": "not_run"
+          },
+          "identity": {
+            "metrics": {},
+            "status": "passed"
+          }
+        },
+        "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+        "platform": "linux/arm64",
+        "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+        "readiness": "unreviewed",
+        "schema": 1,
+        "temporary_backend": "quota-disk"
+      },
+      "sha256": "e8e87e184f28b92e8b1d87d4a78478656ae22a035445125653d65c56391723aa"
+    },
+    {
+      "name": "deadline_crash_io_cleanup-4f07058dff0943aba2f93c85a1f0f191.json",
+      "report": {
+        "daemon_version": "29.5.2",
+        "gates": {
+          "cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "deadline_crash_io_cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "disk_quota": {
+            "metrics": {},
+            "status": "not_run"
+          },
+          "identity": {
+            "metrics": {},
+            "status": "passed"
+          }
+        },
+        "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+        "platform": "linux/arm64",
+        "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+        "readiness": "unreviewed",
+        "schema": 1,
+        "temporary_backend": "quota-disk"
+      },
+      "sha256": "e8e87e184f28b92e8b1d87d4a78478656ae22a035445125653d65c56391723aa"
+    },
+    {
+      "name": "deadline_crash_io_cleanup-5f13bd41dd374bdfa75192b513b2b4bb.json",
+      "report": {
+        "daemon_version": "29.5.2",
+        "gates": {
+          "cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "deadline_crash_io_cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "disk_quota": {
+            "metrics": {},
+            "status": "not_run"
+          },
+          "identity": {
+            "metrics": {},
+            "status": "passed"
+          }
+        },
+        "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+        "platform": "linux/arm64",
+        "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+        "readiness": "unreviewed",
+        "schema": 1,
+        "temporary_backend": "quota-disk"
+      },
+      "sha256": "e8e87e184f28b92e8b1d87d4a78478656ae22a035445125653d65c56391723aa"
+    },
+    {
+      "name": "deadline_crash_io_cleanup-6093e81e0e534547b2a18b1be426290e.json",
+      "report": {
+        "daemon_version": "29.5.2",
+        "gates": {
+          "cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "deadline_crash_io_cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "disk_quota": {
+            "metrics": {},
+            "status": "not_run"
+          },
+          "identity": {
+            "metrics": {},
+            "status": "passed"
+          }
+        },
+        "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+        "platform": "linux/arm64",
+        "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+        "readiness": "unreviewed",
+        "schema": 1,
+        "temporary_backend": "quota-disk"
+      },
+      "sha256": "e8e87e184f28b92e8b1d87d4a78478656ae22a035445125653d65c56391723aa"
+    },
+    {
+      "name": "deadline_crash_io_cleanup-f3895cfc9e7a4ce89810792f6b74630f.json",
+      "report": {
+        "daemon_version": "29.5.2",
+        "gates": {
+          "cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "deadline_crash_io_cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "disk_quota": {
+            "metrics": {},
+            "status": "not_run"
+          },
+          "identity": {
+            "metrics": {},
+            "status": "passed"
+          }
+        },
+        "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+        "platform": "linux/arm64",
+        "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+        "readiness": "unreviewed",
+        "schema": 1,
+        "temporary_backend": "quota-disk"
+      },
+      "sha256": "e8e87e184f28b92e8b1d87d4a78478656ae22a035445125653d65c56391723aa"
+    },
+    {
+      "name": "deadline_crash_io_cleanup-839321e7997a4e5087e8f03fc266a8cb.json",
+      "report": {
+        "daemon_version": "29.5.2",
+        "gates": {
+          "cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "deadline_crash_io_cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "disk_quota": {
+            "metrics": {},
+            "status": "not_run"
+          },
+          "identity": {
+            "metrics": {},
+            "status": "passed"
+          }
+        },
+        "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+        "platform": "linux/arm64",
+        "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+        "readiness": "unreviewed",
+        "schema": 1,
+        "temporary_backend": "quota-disk"
+      },
+      "sha256": "e8e87e184f28b92e8b1d87d4a78478656ae22a035445125653d65c56391723aa"
+    },
+    {
+      "name": "failed_reap_preserves_slot_pins_and_recovers-caf7209b545e4c3d93afdc1ea6dd0715.json",
+      "report": {
+        "daemon_version": "29.5.2",
+        "gates": {
+          "cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "disk_quota": {
+            "metrics": {},
+            "status": "not_run"
+          },
+          "failed_reap_preserves_slot_pins_and_recovers": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "identity": {
+            "metrics": {},
+            "status": "passed"
+          }
+        },
+        "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+        "platform": "linux/arm64",
+        "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+        "readiness": "unreviewed",
+        "schema": 1,
+        "temporary_backend": "quota-disk"
+      },
+      "sha256": "9fec56b0c69d61805ade999f79cc1c9b910ff3f294b9a84f26578539e9e36a6a"
+    },
+    {
+      "name": "restart_reconciles_owned_container-43fae4a4c0094aa195b820f4fa299694.json",
+      "report": {
+        "daemon_version": "29.5.2",
+        "gates": {
+          "cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "disk_quota": {
+            "metrics": {},
+            "status": "not_run"
+          },
+          "identity": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "restart_reconciles_owned_container": {
+            "metrics": {},
+            "status": "passed"
+          }
+        },
+        "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+        "platform": "linux/arm64",
+        "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+        "readiness": "unreviewed",
+        "schema": 1,
+        "temporary_backend": "quota-disk"
+      },
+      "sha256": "04147c181e9b479d8c7653c2e14c455325f4a09649038e323ef326a3d15ea676"
+    },
+    {
+      "name": "ambiguous_create_and_daemon_failure-0d80a9be5a9b45239717e8c0c64ae6c2.json",
+      "report": {
+        "daemon_version": "29.5.2",
+        "gates": {
+          "ambiguous_create_and_daemon_failure": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "disk_quota": {
+            "metrics": {},
+            "status": "not_run"
+          },
+          "identity": {
+            "metrics": {},
+            "status": "passed"
+          }
+        },
+        "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+        "platform": "linux/arm64",
+        "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+        "readiness": "unreviewed",
+        "schema": 1,
+        "temporary_backend": "quota-disk"
+      },
+      "sha256": "3560319c9df2cadac1d8c828419e9b4030bab695c5290c2fc36534052daffdef"
+    },
+    {
+      "name": "disk_spill_readiness_requires_supported_backend-252d3759fd0b463490f2301dbb151234.json",
+      "report": {
+        "daemon_version": "29.5.2",
+        "gates": {
+          "cleanup": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "disk_quota": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "disk_spill_readiness_requires_supported_backend": {
+            "metrics": {},
+            "status": "passed"
+          },
+          "identity": {
+            "metrics": {},
+            "status": "passed"
+          }
+        },
+        "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+        "platform": "linux/arm64",
+        "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+        "readiness": "unreviewed",
+        "schema": 1,
+        "temporary_backend": "quota-disk"
+      },
+      "sha256": "8f0c5db62db102254acba85c6f5251eac0d1aed04af177796e886da291bae6c5"
+    }
+  ],
+  "native_tests": {
+    "deselected": 1,
+    "passed": 19,
+    "seconds": 17.22
+  },
+  "prior_attempt": {
+    "cause": "obsolete public-only synthetic fixture; corrected to unified resource builder",
+    "failed": 1,
+    "passed": 18,
+    "reports": [
+      {
+        "name": "worker_protocol_and_canonical_output-b16eb0a0514d488aaf364b4d2d7ccc5d.json",
+        "report": {
+          "daemon_version": "29.5.2",
+          "gates": {
+            "cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "disk_quota": {
+              "metrics": {},
+              "status": "not_run"
+            },
+            "identity": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "worker_protocol": {
+              "metrics": {
+                "output_bytes": 266,
+                "protocol_version": 2,
+                "seconds": 0.8068581830011681
+              },
+              "status": "passed"
+            },
+            "worker_protocol_and_canonical_output": {
+              "metrics": {},
+              "status": "passed"
+            }
+          },
+          "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+          "platform": "linux/arm64",
+          "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+          "readiness": "unreviewed",
+          "schema": 1,
+          "temporary_backend": "quota-disk"
+        },
+        "sha256": "7c56468b7169fb4d76883a8a286f8aa6b77b3a638115549abadfa63a7fbed0dd"
+      },
+      {
+        "name": "namespace_network_mount_env_denial-b043ab09b25f427a8ef76c52837d23b7.json",
+        "report": {
+          "daemon_version": "29.5.2",
+          "gates": {
+            "cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "disk_quota": {
+              "metrics": {},
+              "status": "not_run"
+            },
+            "identity": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "namespace_network_mount_env_denial": {
+              "metrics": {},
+              "status": "passed"
+            }
+          },
+          "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+          "platform": "linux/arm64",
+          "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+          "readiness": "unreviewed",
+          "schema": 1,
+          "temporary_backend": "quota-disk"
+        },
+        "sha256": "c79fd075412e983103d922e0ec5a142b0a01246bd0664ee163a2ba83eb517bb3"
+      },
+      {
+        "name": "source_replacement_cannot_mutate_staged_input-f4d00f5ee5a34e4f8fe10608c004a07c.json",
+        "report": {
+          "daemon_version": "29.5.2",
+          "gates": {
+            "cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "disk_quota": {
+              "metrics": {},
+              "status": "not_run"
+            },
+            "identity": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "source_replacement_cannot_mutate_staged_input": {
+              "metrics": {},
+              "status": "passed"
+            }
+          },
+          "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+          "platform": "linux/arm64",
+          "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+          "readiness": "unreviewed",
+          "schema": 1,
+          "temporary_backend": "quota-disk"
+        },
+        "sha256": "77f0b59211537f1a65e61d1524ffc8550fe88d971dc3f2574f466313fb409e7d"
+      },
+      {
+        "name": "cpu_memory_process_temp_policy-e3555f0027444477a55e9d1f8c915bc8.json",
+        "report": {
+          "daemon_version": "29.5.2",
+          "gates": {
+            "cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "cpu_memory_process_temp_policy": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "disk_quota": {
+              "metrics": {},
+              "status": "not_run"
+            },
+            "identity": {
+              "metrics": {},
+              "status": "passed"
+            }
+          },
+          "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+          "platform": "linux/arm64",
+          "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+          "readiness": "unreviewed",
+          "schema": 1,
+          "temporary_backend": "quota-disk"
+        },
+        "sha256": "e6d27225910f1707134caad285838c1d720e21f13645407e34d0317eec415baf"
+      },
+      {
+        "name": "cpu_quota_throttles_busy_children-2dd973d7b099401caa2f913cbf8aee7a.json",
+        "report": {
+          "daemon_version": "29.5.2",
+          "gates": {
+            "cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "cpu_quota_throttles_busy_children": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "disk_quota": {
+              "metrics": {},
+              "status": "not_run"
+            },
+            "identity": {
+              "metrics": {},
+              "status": "passed"
+            }
+          },
+          "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+          "platform": "linux/arm64",
+          "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+          "readiness": "unreviewed",
+          "schema": 1,
+          "temporary_backend": "quota-disk"
+        },
+        "sha256": "2beee22ba3f59825e6df129d6ad3d41c03da1a669360a2ad07105ca6075944ab"
+      },
+      {
+        "name": "temporary_quota_enforcement-b621f340f3d8445aa55cadeafdc6b9ba.json",
+        "report": {
+          "daemon_version": "29.5.2",
+          "gates": {
+            "cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "disk_quota": {
+              "metrics": {},
+              "status": "not_run"
+            },
+            "identity": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "temporary_quota_enforcement": {
+              "metrics": {},
+              "status": "passed"
+            }
+          },
+          "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+          "platform": "linux/arm64",
+          "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+          "readiness": "unreviewed",
+          "schema": 1,
+          "temporary_backend": "quota-disk"
+        },
+        "sha256": "b300f30549a6dc353e5bff8f87469e0c4311e5b6c9b9f099589d5b9c3785ccbf"
+      },
+      {
+        "name": "memory_quota_enforcement-dbbc61bc1b32484193c9cfdc7ce366de.json",
+        "report": {
+          "daemon_version": "29.5.2",
+          "gates": {
+            "cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "disk_quota": {
+              "metrics": {},
+              "status": "not_run"
+            },
+            "identity": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "memory_quota_enforcement": {
+              "metrics": {},
+              "status": "passed"
+            }
+          },
+          "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+          "platform": "linux/arm64",
+          "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+          "readiness": "unreviewed",
+          "schema": 1,
+          "temporary_backend": "quota-disk"
+        },
+        "sha256": "222b6dcdb39729475722b5358bd23f08278c3167a65dc06999909c46f56caca5"
+      },
+      {
+        "name": "process_quota_and_descendant_reap-6d727fb159e34a07a46add95a194ecb8.json",
+        "report": {
+          "daemon_version": "29.5.2",
+          "gates": {
+            "cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "disk_quota": {
+              "metrics": {},
+              "status": "not_run"
+            },
+            "identity": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "process_quota_and_descendant_reap": {
+              "metrics": {},
+              "status": "passed"
+            }
+          },
+          "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+          "platform": "linux/arm64",
+          "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+          "readiness": "unreviewed",
+          "schema": 1,
+          "temporary_backend": "quota-disk"
+        },
+        "sha256": "5ec9f7fb5e45df1bd23fcc810648acf4ba3942dee9dd444bf951e09c22989655"
+      },
+      {
+        "name": "deadline_crash_io_cleanup-6ff52b7e99cd4e48ac35203787883b2c.json",
+        "report": {
+          "daemon_version": "29.5.2",
+          "gates": {
+            "cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "deadline_crash_io_cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "disk_quota": {
+              "metrics": {},
+              "status": "not_run"
+            },
+            "identity": {
+              "metrics": {},
+              "status": "passed"
+            }
+          },
+          "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+          "platform": "linux/arm64",
+          "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+          "readiness": "unreviewed",
+          "schema": 1,
+          "temporary_backend": "quota-disk"
+        },
+        "sha256": "e8e87e184f28b92e8b1d87d4a78478656ae22a035445125653d65c56391723aa"
+      },
+      {
+        "name": "deadline_crash_io_cleanup-a3f6895f4fac464f82b4726a38c54b48.json",
+        "report": {
+          "daemon_version": "29.5.2",
+          "gates": {
+            "cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "deadline_crash_io_cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "disk_quota": {
+              "metrics": {},
+              "status": "not_run"
+            },
+            "identity": {
+              "metrics": {},
+              "status": "passed"
+            }
+          },
+          "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+          "platform": "linux/arm64",
+          "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+          "readiness": "unreviewed",
+          "schema": 1,
+          "temporary_backend": "quota-disk"
+        },
+        "sha256": "e8e87e184f28b92e8b1d87d4a78478656ae22a035445125653d65c56391723aa"
+      },
+      {
+        "name": "deadline_crash_io_cleanup-1b79fe15e79f400b8dc6cadf443db6db.json",
+        "report": {
+          "daemon_version": "29.5.2",
+          "gates": {
+            "cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "deadline_crash_io_cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "disk_quota": {
+              "metrics": {},
+              "status": "not_run"
+            },
+            "identity": {
+              "metrics": {},
+              "status": "passed"
+            }
+          },
+          "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+          "platform": "linux/arm64",
+          "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+          "readiness": "unreviewed",
+          "schema": 1,
+          "temporary_backend": "quota-disk"
+        },
+        "sha256": "e8e87e184f28b92e8b1d87d4a78478656ae22a035445125653d65c56391723aa"
+      },
+      {
+        "name": "deadline_crash_io_cleanup-109bc49b2e2541fd896c2f80b78f434e.json",
+        "report": {
+          "daemon_version": "29.5.2",
+          "gates": {
+            "cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "deadline_crash_io_cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "disk_quota": {
+              "metrics": {},
+              "status": "not_run"
+            },
+            "identity": {
+              "metrics": {},
+              "status": "passed"
+            }
+          },
+          "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+          "platform": "linux/arm64",
+          "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+          "readiness": "unreviewed",
+          "schema": 1,
+          "temporary_backend": "quota-disk"
+        },
+        "sha256": "e8e87e184f28b92e8b1d87d4a78478656ae22a035445125653d65c56391723aa"
+      },
+      {
+        "name": "deadline_crash_io_cleanup-d0c64cf395a94ff3a0982fd49b3e5d2b.json",
+        "report": {
+          "daemon_version": "29.5.2",
+          "gates": {
+            "cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "deadline_crash_io_cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "disk_quota": {
+              "metrics": {},
+              "status": "not_run"
+            },
+            "identity": {
+              "metrics": {},
+              "status": "passed"
+            }
+          },
+          "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+          "platform": "linux/arm64",
+          "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+          "readiness": "unreviewed",
+          "schema": 1,
+          "temporary_backend": "quota-disk"
+        },
+        "sha256": "e8e87e184f28b92e8b1d87d4a78478656ae22a035445125653d65c56391723aa"
+      },
+      {
+        "name": "deadline_crash_io_cleanup-7b12de6bd0f5416b81acd5e7196bdc23.json",
+        "report": {
+          "daemon_version": "29.5.2",
+          "gates": {
+            "cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "deadline_crash_io_cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "disk_quota": {
+              "metrics": {},
+              "status": "not_run"
+            },
+            "identity": {
+              "metrics": {},
+              "status": "passed"
+            }
+          },
+          "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+          "platform": "linux/arm64",
+          "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+          "readiness": "unreviewed",
+          "schema": 1,
+          "temporary_backend": "quota-disk"
+        },
+        "sha256": "e8e87e184f28b92e8b1d87d4a78478656ae22a035445125653d65c56391723aa"
+      },
+      {
+        "name": "deadline_crash_io_cleanup-45854673329e481fa6681c8dec24221a.json",
+        "report": {
+          "daemon_version": "29.5.2",
+          "gates": {
+            "cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "deadline_crash_io_cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "disk_quota": {
+              "metrics": {},
+              "status": "not_run"
+            },
+            "identity": {
+              "metrics": {},
+              "status": "passed"
+            }
+          },
+          "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+          "platform": "linux/arm64",
+          "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+          "readiness": "unreviewed",
+          "schema": 1,
+          "temporary_backend": "quota-disk"
+        },
+        "sha256": "e8e87e184f28b92e8b1d87d4a78478656ae22a035445125653d65c56391723aa"
+      },
+      {
+        "name": "failed_reap_preserves_slot_pins_and_recovers-ba181b9ce7f044daa43af52f0b5452fa.json",
+        "report": {
+          "daemon_version": "29.5.2",
+          "gates": {
+            "cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "disk_quota": {
+              "metrics": {},
+              "status": "not_run"
+            },
+            "failed_reap_preserves_slot_pins_and_recovers": {
+              "metrics": {},
+              "status": "failed"
+            },
+            "identity": {
+              "metrics": {},
+              "status": "passed"
+            }
+          },
+          "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+          "platform": "linux/arm64",
+          "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+          "readiness": "unreviewed",
+          "schema": 1,
+          "temporary_backend": "quota-disk"
+        },
+        "sha256": "b4249ddf7b3b970f2180a747b54949d5efccc2f830320036e0cfe05a5a17b2c3"
+      },
+      {
+        "name": "restart_reconciles_owned_container-25f2980e652e46dd94e500ceee0a1bf7.json",
+        "report": {
+          "daemon_version": "29.5.2",
+          "gates": {
+            "cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "disk_quota": {
+              "metrics": {},
+              "status": "not_run"
+            },
+            "identity": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "restart_reconciles_owned_container": {
+              "metrics": {},
+              "status": "passed"
+            }
+          },
+          "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+          "platform": "linux/arm64",
+          "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+          "readiness": "unreviewed",
+          "schema": 1,
+          "temporary_backend": "quota-disk"
+        },
+        "sha256": "04147c181e9b479d8c7653c2e14c455325f4a09649038e323ef326a3d15ea676"
+      },
+      {
+        "name": "ambiguous_create_and_daemon_failure-6c51479d4041403a896ba5dbe801e0f3.json",
+        "report": {
+          "daemon_version": "29.5.2",
+          "gates": {
+            "ambiguous_create_and_daemon_failure": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "disk_quota": {
+              "metrics": {},
+              "status": "not_run"
+            },
+            "identity": {
+              "metrics": {},
+              "status": "passed"
+            }
+          },
+          "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+          "platform": "linux/arm64",
+          "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+          "readiness": "unreviewed",
+          "schema": 1,
+          "temporary_backend": "quota-disk"
+        },
+        "sha256": "3560319c9df2cadac1d8c828419e9b4030bab695c5290c2fc36534052daffdef"
+      },
+      {
+        "name": "disk_spill_readiness_requires_supported_backend-7943bbcb74394b46997f2d4ecd883d83.json",
+        "report": {
+          "daemon_version": "29.5.2",
+          "gates": {
+            "cleanup": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "disk_quota": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "disk_spill_readiness_requires_supported_backend": {
+              "metrics": {},
+              "status": "passed"
+            },
+            "identity": {
+              "metrics": {},
+              "status": "passed"
+            }
+          },
+          "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+          "platform": "linux/arm64",
+          "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+          "readiness": "unreviewed",
+          "schema": 1,
+          "temporary_backend": "quota-disk"
+        },
+        "sha256": "8f0c5db62db102254acba85c6f5251eac0d1aed04af177796e886da291bae6c5"
+      }
+    ]
+  },
+  "profile": {
+    "cache_bytes": 2147483647,
+    "cache_root": "/var/lib/outage-runtime-validation/facility-v2-ff53787/cache",
+    "cleanup_interval_seconds": 30,
+    "container_memory_bytes": 536870912,
+    "control_seconds": 5,
+    "cpu_millicores": 1000,
+    "daemon_endpoint": "unix:///run/docker.sock",
+    "daemon_version": "29.5.2",
+    "docker_executable": "/usr/bin/docker",
+    "drop_capabilities": [
+      "ALL"
+    ],
+    "engine_version": "1.5.6",
+    "environment": [],
+    "filesystem_identity": "colima-outage-runtime-private-linux-validation",
+    "gid": 65534,
+    "image_id": "sha256:a29b0629d4d6e4b16f4c6c0c3943e717d71b9e127ecfaa38f6f1f5602f4419d9",
+    "input_bytes": 2147483647,
+    "input_files": 10000,
+    "ipc": "none",
+    "json_nodes": 100000,
+    "mounts": [],
+    "network": "none",
+    "no_new_privileges": true,
+    "platform": "linux/arm64",
+    "preview_lifetime_seconds": 60,
+    "process_limit": 32,
+    "protocol_version": 2,
+    "read_only_root": true,
+    "request_bytes": 131072,
+    "result_bytes": 10485760,
+    "result_count": 100,
+    "result_lifetime_seconds": 60,
+    "result_root": "/var/lib/outage-runtime-validation/facility-v2-ff53787/results",
+    "results_per_user": 100,
+    "serving_processes": 1,
+    "staging_bytes": 2147483647,
+    "staging_root": "/var/lib/outage-runtime-validation/facility-v2-ff53787/staging",
+    "stderr_bytes": 65536,
+    "stdout_bytes": 1179648,
+    "swap_bytes": 536870912,
+    "temporary_backend": "quota-disk",
+    "temporary_filesystem_identity": "7:0:3907811015087046803",
+    "temporary_inodes": 4096,
+    "temporary_layout_version": 1,
+    "temporary_options": [
+      "noexec",
+      "nosuid",
+      "nodev"
+    ],
+    "temporary_root": "/var/lib/outage-analytical/spill",
+    "termination_seconds": 5,
+    "uid": 65534,
+    "worker": {
+      "execution_seconds": 10,
+      "max_cell_bytes": 1048576,
+      "max_columns": 100,
+      "max_depth": 16,
+      "max_nested_items": 10000,
+      "max_schema_bytes": 65536,
+      "memory_bytes": 134217728,
+      "output_bytes": 1048576,
+      "overall_seconds": 40,
+      "preparation_seconds": 30,
+      "temporary_bytes": 16777216
+    }
+  },
+  "profile_identity": "fba95355d4f9c459767347db638248bd4f4e5b168163a23dfd207b68b823e58d",
+  "schema": 1,
+  "scope": "local-preview-sql",
+  "source_revision": "ff53787",
+  "status": "unreviewed",
+  "wheel": {
+    "name": "outage_explorer-0.1.0-py3-none-any.whl",
+    "sha256": "a0be5b206c3ef9fb110d741e539d5d945366d252aa3de03300bab20a03fc6cd8"
+  }
+}

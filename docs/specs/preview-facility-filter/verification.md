@@ -112,3 +112,8 @@ fixtures and served contract parity. `git diff --check` passed.
 - Web UI implementation, consumer rollout and live Analyst/Admin browsing are
   outside this repository and this acceptance scope. API handoff does not prove
   those consumers accepted the expanded catalog metadata.
+
+Subsequent local runtime upgrade preparation is recorded separately in
+[runtime-upgrade.md](runtime-upgrade.md), including actual native protocol-v2
+checks, the corrected synthetic fixture and pending review/activation status.
+It does not retroactively change this phase's portable verification results.

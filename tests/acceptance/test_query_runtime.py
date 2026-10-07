@@ -3,15 +3,11 @@
 import json
 import os
 import shutil
-from datetime import date
-from decimal import Decimal
 from pathlib import Path
 from threading import Event, Thread
 from time import monotonic
 from uuid import uuid4
 
-import pyarrow as pa
-import pyarrow.parquet as pq
 import pytest
 
 from outage_explorer.application.errors import (
@@ -23,7 +19,6 @@ from outage_explorer.application.errors import (
 from outage_explorer.application.ports.analytical_inputs import ApprovedFile
 from outage_explorer.application.ports.execution import QueryRead
 from outage_explorer.domain.datasets import PUBLIC_DATASETS
-from outage_explorer.infrastructure.parquet.schemas import schema_for
 from outage_explorer.infrastructure.worker_runtime.docker import DockerRuntime
 from outage_explorer.infrastructure.worker_runtime.launcher import VerifiedLauncher
 from outage_explorer.infrastructure.worker_runtime.ownership import OwnershipLedger
@@ -77,25 +72,20 @@ def harness(request):
 
 @pytest.fixture
 def synthetic_file(tmp_path):
-    # Public generator projection with fake entity values, no private provenance.
-    path = tmp_path / "public.parquet"
-    dataset = PUBLIC_DATASETS[2]
-    modeled = schema_for("modeled", dataset.grain)
-    schema = pa.schema([modeled.field(c.name) for c in dataset.columns])
-    row = {
-        "period": date(2026, 4, 2),
-        "capacity_mw": Decimal("100"),
-        "outage_mw": Decimal("10"),
-        "reported_percentage": Decimal("10"),
-        "facility": "synthetic",
-        "facility_name": "Synthetic",
-        "generator": "1",
-    }
-    pq.write_table(pa.Table.from_pylist([row], schema=schema), path)
-    import hashlib
+    # Fake source values, encoded with the accepted unified resource layout.
+    from outage_explorer.infrastructure.parquet.storage import LocalParquetStore
+    from tests.integration.test_connector_parquet import ARTIFACT_BOUNDS
+    from tests.integration.test_resource_candidates import build
 
-    raw = path.read_bytes()
-    return ApprovedFile(str(path), hashlib.sha256(raw).hexdigest(), len(raw), 1)
+    store = LocalParquetStore(tmp_path / "objects", ARTIFACT_BOUNDS)
+    candidate = build(store)
+    resource = next(item for item in candidate.resources if item.grain == "generator")
+    return ApprovedFile(
+        str(store.root / resource.object.key),
+        resource.object.sha256,
+        resource.object.byte_count,
+        resource.row_count,
+    )
 
 
 @pytest.mark.runtime_docker
