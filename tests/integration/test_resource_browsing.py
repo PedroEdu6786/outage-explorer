@@ -6,7 +6,6 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
-import duckdb
 import pyarrow.parquet as pq
 import pytest
 
@@ -16,6 +15,7 @@ from outage_explorer.application.errors import (
     ForbiddenError,
     PreviewUnavailableError,
 )
+from outage_explorer.application.ports.sql_inspection import SqlRejected
 from outage_explorer.application.services.catalog import CatalogService
 from outage_explorer.application.services.preview import PreviewService
 from outage_explorer.application.services.queries import QueryService
@@ -373,8 +373,9 @@ def test_private_columns_are_not_queryable_and_viewer_is_denied(
 ):
     service, runtime = queries
     for private in ("origin", "identity", "capacity_source", "share_numerator"):
-        with pytest.raises(duckdb.BinderException):
+        with pytest.raises(SqlRejected) as rejected:
             service.execute(system[2][Role.ADMIN], f'SELECT "{private}" FROM national')
+        assert rejected.value.code == "invalid_sql"
     durable = browsing[5]
     durable.client.calls.clear()
     with pytest.raises(ForbiddenError):

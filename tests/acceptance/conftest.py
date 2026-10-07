@@ -9,6 +9,7 @@ import httpx
 import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
+from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 from outage_explorer.application.dto import SeedIdentity
 from outage_explorer.application.services.access import AccessService
@@ -76,12 +77,19 @@ def harness_factory(database):
 
     def create(origin="http://localhost:8000", *, iam=False):
         signatures = []
+        connection_values = conninfo_to_dict(database)
+        # Simulate signing with the local database credential, without mixing
+        # a static DSN password with the IAM password-provider path.
+        password = connection_values.pop("password", "CONTROLLED-IAM")
 
         def sign():
             signatures.append(time.monotonic())
-            return "CONTROLLED-IAM-" + str(len(signatures))
+            return password
 
-        pool = BoundedPostgresqlPool(database, password_provider=sign if iam else None)
+        pool = BoundedPostgresqlPool(
+            make_conninfo(**connection_values) if iam else database,
+            password_provider=sign if iam else None,
+        )
         store = PostgresqlAccessStore(pool)
         SeedUsers(store).execute(
             tuple(

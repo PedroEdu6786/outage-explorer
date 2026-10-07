@@ -6,6 +6,7 @@ import sys
 from dataclasses import asdict
 
 import pytest
+from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 from outage_explorer.application.dto import AccessSetupInput
 from outage_explorer.application.errors import (
@@ -114,8 +115,17 @@ def test_shared_iam_setup_signs_explicit_connections_without_cognito(
 ):  # noqa: F811
     from outage_explorer.settings import DatabaseSettings
 
+    connection_values = conninfo_to_dict(database)
+    # The controlled signer supplies the disposable database's real password;
+    # production IAM configuration must never contain a static DSN password.
+    password = connection_values.pop("password", "CONTROLLED-TOKEN")
     database_config = DatabaseSettings(
-        "iam", database, "controlled.test", 5432, "controlled", "us-east-1"
+        "iam",
+        make_conninfo(**connection_values),
+        "controlled.test",
+        5432,
+        "controlled",
+        "us-east-1",
     )
     monkeypatch.setattr(
         "outage_explorer.bootstrap.database_settings", lambda env: database_config
@@ -124,7 +134,7 @@ def test_shared_iam_setup_signs_explicit_connections_without_cognito(
 
     def sign(self):
         signed.append(len(signed))
-        return "CONTROLLED-TOKEN-" + str(len(signed))
+        return password
 
     monkeypatch.setattr("outage_explorer.bootstrap.IAMCredentials.token", sign)
     for name in (
