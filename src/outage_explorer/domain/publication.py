@@ -173,13 +173,11 @@ class RefreshRun:
     id: str
     requester_id: str
     key_digest: str
-    request_identity: str
     configuration: RefreshConfiguration
     base_generation_id: str | None
     status: RunStatus
     stage: RefreshStage
     admitted_at: datetime
-    updated_at: datetime
     epoch: int | None
     generation_id: str | None
     publication: PublicationState

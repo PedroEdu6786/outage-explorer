@@ -12,14 +12,11 @@ from outage_explorer.domain.publication import (
 
 
 class RefreshStore(Protocol):
-    def replay(
-        self, requester_id: str, key_digest: str, request_identity: str
-    ) -> RefreshRun | None: ...
+    def replay(self, requester_id: str, key_digest: str) -> RefreshRun | None: ...
     def admit(
         self,
         requester_id: str,
         key_digest: str,
-        request_identity: str,
         configuration: RefreshConfiguration,
     ) -> RefreshRun: ...
     def get_run(self, run_id: str) -> RefreshRun | None: ...

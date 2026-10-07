@@ -66,9 +66,9 @@ See [structure](../../context/code-structure.md),
 
 | Record | Fields and invariants |
 | --- | --- |
-| Refresh run | UUID, requester local user, operation/key digest, canonical request identity, immutable interval and nonsecret configuration/version snapshot, base generation, status/stage, timestamps, owner epoch, candidate manifest identity, bounded quality and safe failure. Unique requester/operation/key; admission is committed before acknowledgement. |
+| Refresh run | UUID, requester local user, key digest, immutable interval and nonsecret configuration/version snapshot, base generation, status/stage, admission/start/finish timestamps, owner epoch, outcome generation, bounded quality and safe failure. Unique requester/key under ADR-0065; admission is committed before acknowledgement. |
 | Coordination singleton | Active run, monotonically increasing fencing epoch, owner identity, database-time lease deadline and active generation. One accepted/running/unresolved run occupies admission. |
-| Published generation | UUID, unique publishing run, base generation, immutable manifest key/hash, verification version/time and dataset schema/count/coverage summaries. Publication history persists independently of which generation is active. |
+| Published generation | UUID, unique publishing run, base generation, verification version/time and three exact resource descriptors under ADR-0060/0064. Publication history persists independently of which generation is active. |
 
 Application ports define transaction boundaries; adapters take short row locks.
 No transaction spans source retrieval, S3 transfer or analytical execution.
@@ -230,7 +230,8 @@ contain references/summaries, never analytical rows or query-ID metadata.
   April 2–October 1, 2026 rather than silently overriding configuration.
   (FR14, FR23–FR24, TR8)
 - Validate an opaque 16–128-character ASCII key from letters, digits, hyphen and
-  underscore. Scope its digest to local user and refresh operation. Same key
+  underscore. Scope its digest to local user within the refresh-only table
+  (ADR-0065). Same key
   returns the original frozen run before resolving changed current configuration;
   return `202` while nonterminal, `200` when terminal. A deliberate retry supplies
   a new key/run and uses current settings. Retain key binding with durable run

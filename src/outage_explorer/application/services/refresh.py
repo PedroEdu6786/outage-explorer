@@ -36,11 +36,10 @@ class RefreshService:
         ):
             raise InvalidRequestError("Invalid refresh request")
         digest = self._security.digest(key)
-        identity = "refresh:v1:{}"
-        replay = self._store.replay(principal.id, digest, identity)
+        replay = self._store.replay(principal.id, digest)
         if replay is not None:
             return replay
-        return self._store.admit(principal.id, digest, identity, self._configuration())
+        return self._store.admit(principal.id, digest, self._configuration())
 
     def status(self, token: str, run_id: str) -> RefreshRun | None:
         self._access.authorize(token, AccessOperation.REFRESH_OUTCOME)

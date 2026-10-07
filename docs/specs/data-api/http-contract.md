@@ -244,12 +244,14 @@ Admission means the run has been durably recorded for supervised processing;
 it does not mean retrieval or publication has succeeded. Failure to admit
 durably returns an error rather than a success receipt.
 
-Scope idempotency to local user and operation. Repeating the same key and empty
+Scope idempotency to local user and key within the refresh-only table
+([ADR-0065](../../adr/0065-simplify-refresh-run-idempotency-and-metadata.md)). Repeating the same key and empty
 request returns the same run and its original resolved interval, even if backend
 configuration has changed: selected `202` if active, `200` if terminal. A fresh
 key resolves the current configuration. Never silently change a recorded run's
-interval. Conflicting key reuse yields `409 idempotency_conflict`; caller date
-overrides remain invalid input rather than a way to reconfigure a run.
+interval. Caller date overrides and other nonempty bodies remain invalid input.
+The existing `idempotency_conflict` error code is retained in schemas for contract
+stability; empty-body refresh admission no longer emits it.
 Another run while refresh is occupied yields `409 refresh_busy`.
 Keys are 16–128 ASCII letters/digits/hyphen/underscore. Keep the scoped key binding with durable run records; no independent key expiry is introduced. Accepted-but-unclaimed runs may be claimed after restart; claimed runs with lost owners must reconcile. The user selected
 reconciliation followed by explicit Admin retry for an unpublished interrupted

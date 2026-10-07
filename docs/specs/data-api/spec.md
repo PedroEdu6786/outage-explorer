@@ -196,6 +196,11 @@ observable background refresh of all three datasets with verified publication.
   [NEEDS CLARIFICATION: Q9 — finalize admission idempotency, key/run retention and
   explicit retry identity/interval semantics; a fresh key/run using current
   configuration is proposed.]
+  Subsequent [ADR-0065](../../adr/0065-simplify-refresh-run-idempotency-and-metadata.md)
+  records the current empty-body contract: unique requester/key binding in the
+  refresh-only table, original frozen configuration on replay and a fresh key
+  for deliberate retry. Constant operation/request identity and unused update
+  timestamps are removed from entities and storage.
 - **Errors:** distinguish FR12 outcomes without protected details.
   [NEEDS CLARIFICATION: Q10 — finalize error/status mappings, empty/out-of-range
   page behavior, retry hints and browser-auth transport extensions.]

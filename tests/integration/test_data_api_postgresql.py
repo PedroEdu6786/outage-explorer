@@ -4,7 +4,7 @@ import json
 import os
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
-from dataclasses import replace
+from dataclasses import asdict, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
@@ -20,7 +20,6 @@ from outage_explorer.application.dto import SeedIdentity
 from outage_explorer.application.errors import (
     AccessStoreError,
     ForbiddenError,
-    IdempotencyConflictError,
     InvalidRequestError,
     RefreshBusyError,
     StaleRefreshOwnerError,
@@ -190,8 +189,8 @@ def test_admission_freezes_interval_replays_before_config_and_rejects_overrides(
     assert service.latest(tokens[Role.ADMIN]).id == run.id
     with pytest.raises(InvalidRequestError):
         service.admit(tokens[Role.ADMIN], "k" * 16, {"start": "2026-10-01"})
-    with pytest.raises(IdempotencyConflictError):
-        store.replay(users[Role.ADMIN].id, run.key_digest, "different")
+    assert store.replay(users[Role.ADMIN].id, run.key_digest) == run
+    assert store.replay(users[Role.ANALYST].id, run.key_digest) is None
 
 
 def test_scoped_idempotency_races_and_busy(system):
@@ -213,7 +212,6 @@ def test_initial_interval_and_all_grains(system):
         store.admit(
             users[Role.ADMIN].id,
             "a" * 64,
-            "refresh:v1:{}",
             replace(CONFIG, start=INITIAL_END),
         )
     assert store.latest() is None
@@ -718,7 +716,7 @@ def _state(dsn):
             connection.execute(query).fetchall()
             for query in (
                 "SELECT id, run_id, base_generation_id, verification_version, verified_at, datasets FROM published_generations ORDER BY id",
-                "SELECT * FROM refresh_runs ORDER BY id",
+                "SELECT to_jsonb(r) - 'operation' - 'request_identity' - 'updated_at' FROM refresh_runs r ORDER BY id",
                 "SELECT * FROM refresh_coordination",
             )
         ]
@@ -734,7 +732,7 @@ def test_remove_columns_preserves_history_pointer_and_guards(empty_database):
         for statement in (
             "UPDATE published_generations SET datasets = '[]'",
             "DELETE FROM published_generations",
-            "UPDATE refresh_runs SET request_identity = 'x'",
+            "UPDATE refresh_runs SET key_digest = repeat('x',64)",
         ):
             with pytest.raises(psycopg.Error):
                 connection.execute(statement)
@@ -754,7 +752,7 @@ def test_remove_columns_preserves_history_pointer_and_guards(empty_database):
                 connection.execute("SELECT id FROM users LIMIT 1").fetchone()[0]
             )
         with pytest.raises(UnsupportedPublicationLayoutError):
-            store.admit(requester, "z" * 64, "refresh:v1:{}", CONFIG)
+            store.admit(requester, "z" * 64, CONFIG)
         assert _state(empty_database) == before
     finally:
         pool.close()
@@ -801,4 +799,90 @@ def test_removed_manifest_values_cannot_be_recreated_by_downgrade(resources, dat
     with psycopg.connect(database) as connection:
         assert connection.execute(
             "SELECT version_num FROM alembic_version"
-        ).fetchone() == ("0005_remove_manifest_columns",)
+        ).fetchone() == ("0006_simplify_refresh_runs",)
+
+
+def test_refresh_cleanup_preserves_admitted_retry_and_fenced_publication(
+    empty_database,
+):
+    migrate(empty_database, "upgrade", "0005_remove_manifest_columns")
+    with contextmanager(system.__wrapped__)(empty_database) as state:
+        store, service, tokens, users, pool = state
+        run_id = str(uuid4())
+        key = "migration-key-001"
+        digest = service._security.digest(key)
+        configuration = asdict(CONFIG) | {
+            "start": CONFIG.start.isoformat(),
+            "end": CONFIG.end.isoformat(),
+        }
+        with psycopg.connect(empty_database) as connection:
+            connection.execute(
+                "INSERT INTO refresh_runs(id, requester_id, key_digest, request_identity, configuration, status, stage, publication) VALUES (%s,%s,%s,'refresh:v1:{}',%s,'accepted','queued','pending')",
+                (
+                    run_id,
+                    users[Role.ADMIN].id,
+                    digest,
+                    psycopg.types.json.Jsonb(configuration),
+                ),
+            )
+            connection.execute(
+                "UPDATE refresh_coordination SET active_run_id=%s", (run_id,)
+            )
+        before = _state(empty_database)
+        migrate(empty_database, "upgrade", "head")
+        assert _state(empty_database) == before
+        with psycopg.connect(empty_database) as connection:
+            assert (
+                connection.execute(
+                    "SELECT column_name FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='refresh_runs' AND column_name IN ('operation','request_identity','updated_at')"
+                ).fetchall()
+                == []
+            )
+
+        def changed_configuration():
+            pytest.fail("Replay must not resolve changed configuration")
+
+        service._configuration = changed_configuration
+        run = service.admit(tokens[Role.ADMIN], key, {})
+        assert run.id == run_id
+        assert run.configuration == CONFIG
+        assert store.replay(users[Role.ANALYST].id, digest) is None
+        owner = store.claim("worker", 60)
+        store.progress(owner, RefreshStage.PUBLISHING)
+        generation = resource_candidate(run)
+        assert store.publish(owner, generation).status is RunStatus.SUCCEEDED
+        assert store.active_generation() == generation
+        assert service.admit(tokens[Role.ADMIN], key, {}).generation_id == generation.id
+        with psycopg.connect(empty_database) as connection:
+            with pytest.raises(psycopg.errors.UniqueViolation):
+                connection.execute(
+                    "INSERT INTO refresh_runs(id, requester_id, key_digest, configuration, status, stage, publication) VALUES (%s,%s,%s,%s,'accepted','queued','pending')",
+                    (
+                        str(uuid4()),
+                        users[Role.ADMIN].id,
+                        digest,
+                        psycopg.types.json.Jsonb(configuration),
+                    ),
+                )
+            connection.rollback()
+            for field, value in (
+                ("requester_id", str(users[Role.ANALYST].id)),
+                ("key_digest", "e" * 64),
+                ("configuration", "{}"),
+                ("base_generation_id", generation.id),
+            ):
+                with pytest.raises(
+                    psycopg.Error, match="Refresh admission is immutable"
+                ):
+                    connection.execute(
+                        sql.SQL("UPDATE refresh_runs SET {}=%s WHERE id=%s").format(
+                            sql.Identifier(field)
+                        ),
+                        (value, run_id),
+                    )
+                connection.rollback()
+            with pytest.raises(
+                psycopg.Error, match="Durable publication history is immutable"
+            ):
+                connection.execute("DELETE FROM refresh_runs WHERE id=%s", (run_id,))
+            connection.rollback()

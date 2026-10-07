@@ -110,6 +110,15 @@ HTTP refresh uses the configured start through today's UTC date, resolved at
 admission and saved with the run. There is no fixed 183-day ceiling; all non-date
 resource bounds and the explicit initial-load policy remain enforced under
 [ADR-0063](../adr/0063-configured-start-current-end-refresh.md).
+Refresh idempotency uses `(requester_id, key_digest)` under
+[ADR-0065](../adr/0065-simplify-refresh-run-idempotency-and-metadata.md); constant
+operation/request identity and unused update timestamps are removed. Replays
+return the original admitted interval and configuration.
+The configured database and local API source were updated through migrations
+0005/0006 on October 7, 2026. The [schema-update evidence](../specs/data-api/evidence/2026-10-07-schema-cleanup.json)
+records unchanged retained data and pointers, 9 refresh runs, 5 generations,
+local API health 200 and refresh idle. This is schema-update evidence, not broader
+runtime acceptance.
 
 Opt-in data HTTP mounts seven operations: catalog, dataset preview, SQL submission
 and retained paging, and refresh admission/latest/by-ID. Auth routes handle login,

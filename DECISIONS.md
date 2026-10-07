@@ -248,13 +248,17 @@ manifest publication columns and the previous adapter are removed by migration
 fails closed for resource readers; no automatic conversion,
 history rewrite or pointer reset is authorized. Shared composition and managed
 rollout remain subject to their implementation checkpoints.
+Refresh-run metadata is also simplified under ADR-0065: idempotency uses
+requester/key in the refresh-only table, without constant operation/request
+identity or unused update timestamps. Replays preserve the admitted snapshot.
 
 **Basis:** [ADR-0001](docs/adr/0001-s3-parquet-duckdb.md),
 [ADR-0032](docs/adr/0032-postgresql-on-rds.md),
 [ADR-0060](docs/adr/0060-persist-only-three-resource-files-per-generation.md),
 [ADR-0061](docs/adr/0061-generation-prefixed-resource-object-keys.md),
 [ADR-0062](docs/adr/0062-fail-closed-legacy-publication-layout.md),
-[ADR-0064](docs/adr/0064-remove-obsolete-manifest-publication-columns.md).
+[ADR-0064](docs/adr/0064-remove-obsolete-manifest-publication-columns.md),
+[ADR-0065](docs/adr/0065-simplify-refresh-run-idempotency-and-metadata.md).
 The [October 6 journal](docs/devlog/2026-10-06.md) records the three-file direction,
 phase checkpoints and explicit fail-closed selection for the old active layout.
 

@@ -141,6 +141,10 @@ are listed after the diagram rather than marking their members individually.
 `published_generations` stores three exact resource descriptors in `datasets`.
 Migration 0005 removes the previous implementation's manifest columns under
 [ADR-0064](../adr/0064-remove-obsolete-manifest-publication-columns.md).
+The configured database was upgraded through migration 0006 on October 7, 2026;
+the [schema-update evidence](../specs/data-api/evidence/2026-10-07-schema-cleanup.json)
+records removal of all five obsolete columns with retained rows and pointers
+unchanged.
 
 ```mermaid
 erDiagram
@@ -173,15 +177,12 @@ erDiagram
     refresh_runs {
         uuid id PK
         uuid requester_id FK
-        text operation "refresh"
         text key_digest "SHA-256 hex"
-        text request_identity
         jsonb configuration
         uuid base_generation_id FK "nullable"
         text status
         text stage
         timestamptz admitted_at
-        timestamptz updated_at
         bigint epoch "nullable"
         uuid generation_id FK "nullable"
         text publication
@@ -227,7 +228,10 @@ erDiagram
 - Login attempts deliberately have no user FK: they exist before authentication
   identifies a local user. State and browser bindings are digests; the bounded
   PKCE verifier is temporary login state. Expiry must follow creation.
-- Refresh idempotency uses unique `(requester_id, operation, key_digest)`.
+- Refresh idempotency uses unique `(requester_id, key_digest)` within the
+  refresh-only table. Migration 0006 removes the constant `operation` and
+  `request_identity` columns and unused `updated_at` under
+  [ADR-0065](../adr/0065-simplify-refresh-run-idempotency-and-metadata.md).
   Admission snapshots configuration and the nullable base generation. Admission
   fields are immutable, and refresh history cannot be deleted. Status/stage and
   publication-state constraints describe progress and outcomes; only `succeeded`

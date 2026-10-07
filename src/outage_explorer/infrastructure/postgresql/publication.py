@@ -11,7 +11,6 @@ from psycopg.types.json import Jsonb
 
 from outage_explorer.application.errors import (
     AccessStoreError,
-    IdempotencyConflictError,
     RefreshBusyError,
     StaleRefreshOwnerError,
     UnsupportedPublicationLayoutError,
@@ -52,13 +51,11 @@ def _run(row: DictRow) -> RefreshRun:
         str(row["id"]),
         str(row["requester_id"]),
         row["key_digest"],
-        row["request_identity"],
         configuration,
         str(row["base_generation_id"]) if row["base_generation_id"] else None,
         RunStatus(row["status"]),
         RefreshStage(row["stage"]),
         row["admitted_at"],
-        row["updated_at"],
         row["epoch"],
         str(row["generation_id"]) if row["generation_id"] else None,
         PublicationState(row["publication"]),
@@ -169,36 +166,28 @@ class PostgresqlResourcePublicationStore:
         connection: Connection[DictRow],
         requester_id: str,
         key_digest: str,
-        request_identity: str,
     ) -> RefreshRun | None:
         row = connection.execute(
-            "SELECT * FROM refresh_runs WHERE requester_id = %s AND operation = 'refresh' AND key_digest = %s",
+            "SELECT * FROM refresh_runs WHERE requester_id = %s AND key_digest = %s",
             (requester_id, key_digest),
         ).fetchone()
         if row is None:
             return None
-        if row["request_identity"] != request_identity:
-            raise IdempotencyConflictError("Idempotency key conflict")
         return _run(row)
 
-    def replay(
-        self, requester_id: str, key_digest: str, request_identity: str
-    ) -> RefreshRun | None:
+    def replay(self, requester_id: str, key_digest: str) -> RefreshRun | None:
         with self._pool.connection() as connection:
-            return self._replay(connection, requester_id, key_digest, request_identity)
+            return self._replay(connection, requester_id, key_digest)
 
     def admit(
         self,
         requester_id: str,
         key_digest: str,
-        request_identity: str,
         configuration: RefreshConfiguration,
     ) -> RefreshRun:
         with self._pool.connection() as connection:
             coordination = self._lock(connection)
-            replay = self._replay(
-                connection, requester_id, key_digest, request_identity
-            )
+            replay = self._replay(connection, requester_id, key_digest)
             if replay is not None:
                 return replay
             if coordination["active_run_id"] is not None:
@@ -207,12 +196,11 @@ class PostgresqlResourcePublicationStore:
             configuration.validate(initial=coordination["active_generation_id"] is None)
             run_id = str(uuid4())
             connection.execute(
-                "INSERT INTO refresh_runs(id, requester_id, key_digest, request_identity, configuration, base_generation_id, status, stage, publication) VALUES (%s,%s,%s,%s,%s,%s,'accepted','queued','pending')",
+                "INSERT INTO refresh_runs(id, requester_id, key_digest, configuration, base_generation_id, status, stage, publication) VALUES (%s,%s,%s,%s,%s,'accepted','queued','pending')",
                 (
                     run_id,
                     requester_id,
                     key_digest,
-                    request_identity,
                     Jsonb(_configuration(configuration)),
                     coordination["active_generation_id"],
                 ),
@@ -280,7 +268,7 @@ class PostgresqlResourcePublicationStore:
                 (epoch, identity, lease_seconds),
             )
             connection.execute(
-                "UPDATE refresh_runs SET status = 'running', stage = 'retrieving', started_at = COALESCE(started_at, clock_timestamp()), epoch = %s, updated_at = clock_timestamp() WHERE id = %s",
+                "UPDATE refresh_runs SET status = 'running', stage = 'retrieving', started_at = COALESCE(started_at, clock_timestamp()), epoch = %s WHERE id = %s",
                 (epoch, run.id),
             )
             result = RefreshOwner(run.id, identity, epoch)
@@ -304,7 +292,7 @@ class PostgresqlResourcePublicationStore:
         with self._pool.connection() as connection:
             self._owned(connection, owner)
             connection.execute(
-                "UPDATE refresh_runs SET stage = %s, quality_json = COALESCE(%s, quality_json), updated_at = clock_timestamp() WHERE id = %s",
+                "UPDATE refresh_runs SET stage = %s, quality_json = COALESCE(%s, quality_json) WHERE id = %s",
                 (stage.value, quality, owner.run_id),
             )
 
@@ -324,7 +312,7 @@ class PostgresqlResourcePublicationStore:
             if status is RunStatus.RETAINED and run.base_generation_id is None:
                 raise ValueError("Initial data cannot be retained")
             connection.execute(
-                "UPDATE refresh_runs SET status = %s, publication = 'not_published', stage = 'finished', finished_at = clock_timestamp(), failure = %s, quality_json = COALESCE(%s, quality_json), no_publication_reason = %s, updated_at = clock_timestamp() WHERE id = %s",
+                "UPDATE refresh_runs SET status = %s, publication = 'not_published', stage = 'finished', finished_at = clock_timestamp(), failure = %s, quality_json = COALESCE(%s, quality_json), no_publication_reason = %s WHERE id = %s",
                 (
                     status.value,
                     failure,
@@ -387,7 +375,7 @@ class PostgresqlResourcePublicationStore:
                     (generation_id,),
                 )
                 connection.execute(
-                    "UPDATE refresh_runs SET status = 'succeeded', publication = 'published', generation_id = %s, stage = 'finished', finished_at = clock_timestamp(), quality_json = COALESCE(%s, quality_json), updated_at = clock_timestamp() WHERE id = %s",
+                    "UPDATE refresh_runs SET status = 'succeeded', publication = 'published', generation_id = %s, stage = 'finished', finished_at = clock_timestamp(), quality_json = COALESCE(%s, quality_json) WHERE id = %s",
                     (generation_id, quality, owner.run_id),
                 )
                 self._release(connection)
@@ -411,7 +399,7 @@ class PostgresqlResourcePublicationStore:
             if history is not None:
                 if run.status is not RunStatus.SUCCEEDED:
                     connection.execute(
-                        "UPDATE refresh_runs SET status = 'succeeded', publication = 'published', generation_id = %s, stage = 'finished', finished_at = clock_timestamp(), updated_at = clock_timestamp() WHERE id = %s",
+                        "UPDATE refresh_runs SET status = 'succeeded', publication = 'published', generation_id = %s, stage = 'finished', finished_at = clock_timestamp() WHERE id = %s",
                         (history["id"], run_id),
                     )
                 if str(coordination["active_run_id"]) == run_id:
@@ -422,7 +410,7 @@ class PostgresqlResourcePublicationStore:
                 and (force or not coordination["healthy"])
             ):
                 connection.execute(
-                    "UPDATE refresh_runs SET status = 'interrupted', publication = 'not_published', stage = 'finished', finished_at = clock_timestamp(), failure = 'interrupted', updated_at = clock_timestamp() WHERE id = %s",
+                    "UPDATE refresh_runs SET status = 'interrupted', publication = 'not_published', stage = 'finished', finished_at = clock_timestamp(), failure = 'interrupted' WHERE id = %s",
                     (run_id,),
                 )
                 self._release(connection)

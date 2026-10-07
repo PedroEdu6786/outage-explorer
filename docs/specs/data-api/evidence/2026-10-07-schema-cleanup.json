@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-07",
+  "authorization": "User directed updating entities and database after reviewing the three refresh-run cleanup candidates.",
+  "starting_revision": "0004_refresh_resource_files",
+  "ending_revision": "0006_simplify_refresh_runs",
+  "removed_columns": {
+    "published_generations": ["manifest_key", "manifest_digest"],
+    "refresh_runs": ["operation", "request_identity", "updated_at"]
+  },
+  "verification": {
+    "focused_tests_passed": 330,
+    "ruff_lint_passed": true,
+    "ruff_format_passed": true,
+    "mypy_passed": true,
+    "retained_data_comparison": "Matched counts and canonical PostgreSQL JSON digests for all seven product tables before and after migration, excluding only the five intentionally removed columns.",
+    "refresh_runs": 9,
+    "published_generations": 5,
+    "active_pointer_unchanged": true,
+    "requester_key_unique_constraint_verified": true,
+    "obsolete_columns_absent": true,
+    "updated_guest_source_import_passed": true,
+    "local_api_active": true,
+    "local_health_status": 200,
+    "refresh_idle": true
+  },
+  "limits": "Focused regression and schema-update evidence only. No new source retrieval, publication, pointer reset, row deletion, full-suite run, browser/auth acceptance or analytical capacity validation."
+}

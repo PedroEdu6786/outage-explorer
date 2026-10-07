@@ -30,9 +30,9 @@ def service(monkeypatch, start="2026-04-02"):
     )
     store = Mock()
     saved = {}
-    store.replay.side_effect = lambda user, key, identity: saved.get(key)
+    store.replay.side_effect = lambda user, key: saved.get(key)
 
-    def admit(user, key, identity, config):
+    def admit(user, key, config):
         config.validate(initial=False)
         run = SimpleNamespace(configuration=config)
         saved[key] = run

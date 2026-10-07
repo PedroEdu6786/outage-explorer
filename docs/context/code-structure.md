@@ -49,6 +49,10 @@ admission resolves the configured start through today's UTC date, with no fixed
 183-day ceiling, and records the inclusive interval for background
 execution; routes accept no caller date overrides. Configuration wiring belongs
 in bootstrap/settings and admission orchestration in the application layer.
+Under [ADR-0065](../adr/0065-simplify-refresh-run-idempotency-and-metadata.md),
+refresh idempotency uses requester/key only; entities and PostgreSQL omit constant
+operation/request identity and unused update timestamps. Replay preserves the
+original frozen configuration.
 
 [ADR-0052](../adr/0052-interrupted-refresh-recovery.md) requires publication
 reconciliation before marking lost-worker runs interrupted, followed by explicit
