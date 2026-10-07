@@ -21,7 +21,10 @@ Phase 1 now supplies `CreateResourceCandidate`, `ParquetResourceBuilder` and
 The collector validates bounded copied input and discards page/transport metadata;
 the builder reuses pure merge policies and the existing exact codec, streams prior
 resource files, writes three unified files and compares them with the transient
-merge before releasing inputs. Shared CLI/refresh/bootstrap composition now uses this pipeline. No new candidate writes both layouts
+merge before releasing inputs. Both bounded partition facts and streaming candidate
+eligibility use `domain.refresh.refresh_facts_from_counts` after aggregating complete
+route counts; the adapter maps those facts to candidate/retention outcomes.
+Shared CLI/refresh/bootstrap composition now uses this pipeline. No new candidate writes both layouts
 and no graph conversion or fallback is implemented. New behavior is covered in
 `tests/integration/test_resource_candidates.py` and pure connector service tests.
 The health scaffold and offline national/facility/generator verification are implemented; product

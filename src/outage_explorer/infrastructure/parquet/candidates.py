@@ -29,6 +29,7 @@ from outage_explorer.domain.refresh import (
     RefreshInputError,
     merge_partition,
     model_partition,
+    refresh_facts_from_counts,
     validate_baseline_row,
 )
 from outage_explorer.infrastructure.parquet.partitions import (
@@ -126,14 +127,18 @@ class _Accounting:
 
 
 def _outcome(summaries: tuple[GrainSummary, ...], initial: bool) -> str:
-    if initial and any(summary.quality.selected == 0 for summary in summaries):
+    facts = refresh_facts_from_counts(
+        {summary.grain: summary.quality for summary in summaries},
+        {summary.grain: summary.active_count for summary in summaries},
+    )
+    if not initial and facts.mode != "refresh":
+        raise RefreshInputError("Prior generation must contain all three grains")
+    if facts.retain_active_without_publication:
+        return "retained_all_excluded"
+    if not facts.transformation_eligible:
         raise RefreshInputError(
             "Initial load requires usable output in all three grains"
         )
-    if not initial and any(summary.active_count == 0 for summary in summaries):
-        raise RefreshInputError("Prior generation must contain all three grains")
-    if all(summary.quality.selected == 0 for summary in summaries):
-        return "retained_all_excluded"
     return "candidate"
 
 

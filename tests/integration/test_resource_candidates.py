@@ -302,6 +302,45 @@ def test_sequential_refresh_retains_invalid_absent_outside_and_wholly_excluded(s
         _ = unchanged.baseline
 
 
+@pytest.mark.parametrize("initial", [True, False])
+@pytest.mark.parametrize(
+    "excluded",
+    [
+        (),
+        ("national",),
+        ("facility",),
+        ("generator",),
+        ("national", "facility"),
+        ("national", "generator"),
+        ("facility", "generator"),
+        ("national", "facility", "generator"),
+    ],
+)
+def test_route_eligibility_and_exact_retention_for_every_exclusion_combination(
+    store, initial, excluded
+):
+    prior = None if initial else build(store, "old")
+    incoming = {
+        grain: [raw(grain, capacity="0" if grain in excluded else "100", outage="20")]
+        for grain in GRAINS
+    }
+    if initial and excluded:
+        with pytest.raises(RefreshInputError, match="usable output"):
+            build(store, "new", incoming)
+        return
+    candidate = build(store, "new", incoming, prior=None if initial else prior.baseline)
+    expected_outcome = "retained_all_excluded" if len(excluded) == 3 else "candidate"
+    assert candidate.outcome == expected_outcome
+    for grain in GRAINS:
+        actual = rows(store, candidate, grain)
+        if grain in excluded:
+            assert actual == rows(store, prior, grain)
+            assert summary(candidate, grain).quality.selected == 0
+        else:
+            assert actual[0].observation.outage == 20
+            assert actual[0].origin.run_id == "new"
+
+
 @pytest.mark.parametrize("grain", GRAINS)
 def test_initial_empty_or_wholly_excluded_route_rejected(store, grain):
     values = {g: [raw(g)] for g in GRAINS}

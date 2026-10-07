@@ -8,7 +8,7 @@ call must contain a complete bounded group for its keys (including page overlaps
 import re
 from collections import Counter
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 from typing import Literal
 
@@ -413,8 +413,8 @@ def merge_partition(
 def refresh_facts(partitions: Iterable[MergedPartition]) -> RefreshFacts:
     """Evaluate exactly three bounded route groups, never publication rights.
 
-    Prior counts must describe complete supplied routes. Later streaming callers
-    must aggregate route counts before applying initial-load or refresh policy.
+    Prior counts must describe complete supplied routes. Streaming callers use
+    refresh_facts_from_counts after aggregating all days of each route.
     """
     by_grain: dict[Grain, MergedPartition] = {}
     for count, partition in enumerate(partitions, 1):
@@ -425,23 +425,42 @@ def refresh_facts(partitions: Iterable[MergedPartition]) -> RefreshFacts:
         raise RefreshInputError("All three grains are required")
     if len({part.incoming.interval for part in by_grain.values()}) != 1:
         raise RefreshInputError("Route intervals differ")
-    populated = sum(part.active_count > 0 for part in by_grain.values())
+    facts = refresh_facts_from_counts(
+        {grain: part.incoming.quality for grain, part in by_grain.items()},
+        {grain: part.active_count for grain, part in by_grain.items()},
+    )
+    absent = []
+    for grain in IDENTITY_FIELDS:
+        partition = by_grain[grain]
+        if partition.absent_prior_rows:
+            keys = tuple(row.key for row in partition.absent_prior_rows)
+            absent.append((grain, keys))
+    return replace(facts, absent_prior_keys=tuple(absent))
+
+
+def refresh_facts_from_counts(
+    quality_by_grain: Mapping[Grain, Quality], active_counts: Mapping[Grain, int]
+) -> RefreshFacts:
+    """Apply route eligibility to complete counts, without retaining modeled rows.
+
+    Streaming callers aggregate all days first. Absent-key details remain the
+    responsibility of the caller; this result contains only eligibility facts.
+    """
+    if set(quality_by_grain) != set(IDENTITY_FIELDS) or set(active_counts) != set(
+        IDENTITY_FIELDS
+    ):
+        raise RefreshInputError("All three grains are required")
+    populated = sum(count > 0 for count in active_counts.values())
     if populated not in (0, len(IDENTITY_FIELDS)):
         raise RefreshInputError("Prior generation must contain all three grains")
     mode: Literal["initial", "refresh"] = "refresh" if populated else "initial"
     excluded = []
-    absent = []
     for grain in IDENTITY_FIELDS:
-        partition = by_grain[grain]
-        quality = partition.incoming.quality
+        quality = quality_by_grain[grain]
         if quality.received == 0:
             raise EmptySourceError("Required route received no observations")
         if quality.received == quality.excluded:
             excluded.append(grain)
-        if partition.absent_prior_rows:
-            absent.append(
-                (grain, tuple(row.key for row in partition.absent_prior_rows))
-            )
     return RefreshFacts(
-        mode, len(excluded) == len(IDENTITY_FIELDS), tuple(excluded), tuple(absent)
+        mode, len(excluded) == len(IDENTITY_FIELDS), tuple(excluded), ()
     )

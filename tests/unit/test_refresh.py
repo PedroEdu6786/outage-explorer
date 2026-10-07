@@ -12,16 +12,42 @@ from outage_explorer.domain.refresh import (
     IncomingRow,
     Interval,
     Origin,
+    Quality,
     RefreshBounds,
     RefreshInputError,
     RefreshLimitError,
     merge_partition,
     model_partition,
     refresh_facts,
+    refresh_facts_from_counts,
 )
 
 WINDOW = Interval(date(2024, 2, 28), date(2024, 3, 1))
 BOUNDS = RefreshBounds(20, 20, 20, 15, 100, 40, 40, 100, 40, 100)
+
+
+@pytest.mark.parametrize("grain", ["national", "facility", "generator"])
+def test_complete_route_counts_reject_empty_source(grain):
+    qualities = {
+        g: Quality(1, 1, 0, 0, 0, ()) for g in ("national", "facility", "generator")
+    }
+    qualities[grain] = Quality(0, 0, 0, 0, 0, ())
+    with pytest.raises(EmptySourceError):
+        refresh_facts_from_counts(qualities, {g: 1 for g in qualities})
+
+
+@pytest.mark.parametrize("missing", ["quality", "active"])
+def test_complete_route_counts_require_all_three_grains(missing):
+    qualities = {
+        g: Quality(1, 1, 0, 0, 0, ()) for g in ("national", "facility", "generator")
+    }
+    active = {g: 1 for g in qualities}
+    if missing == "quality":
+        qualities.pop("facility")
+    else:
+        active.pop("facility")
+    with pytest.raises(RefreshInputError, match="All three grains"):
+        refresh_facts_from_counts(qualities, active)
 
 
 def raw(grain="national", **changes):
