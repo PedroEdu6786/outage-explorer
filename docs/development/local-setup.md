@@ -14,7 +14,9 @@ This assumes your `outage-runtime` Colima guest is running, its spill filesystem
 is mounted, private API configuration is installed and your AWS login is current.
 After a guest reboot, first follow [reboot recovery](fresh-machine.md#11-stop-restart-and-troubleshoot).
 
-Run these in three separate macOS terminals and leave them running:
+Run these in separate macOS terminals and leave them running. If an existing
+Colima SSH tunnel already exposes the API at `localhost:8000`, reuse it and skip
+terminal 2; do not start a second listener on the same port.
 
 | Terminal | Working directory | Command | Purpose |
 | --- | --- | --- | --- |

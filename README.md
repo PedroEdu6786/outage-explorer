@@ -29,7 +29,7 @@ For an existing installation, keep these running in separate terminals:
 # Backend checkout, terminal 1
 make run-analytical
 
-# Backend checkout, terminal 2
+# Backend checkout, terminal 2: skip if an existing tunnel already exposes the API
 make local-forward
 
 # Web checkout, terminal 3

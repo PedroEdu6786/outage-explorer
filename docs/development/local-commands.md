@@ -209,6 +209,11 @@ is only one of the differences. Use `make run-analytical` for the full applicati
 ## `make local-forward`
 
 **Before:** The Colima guest must be running, and host port 8000 must be free.
+If an existing Colima tunnel already exposes the API there, skip this command
+and reuse that tunnel; forwarding can outlive the terminal that originally
+created it when an SSH connection remains running. Earlier manual project setup
+already established/restored this forwarding before the Make target existed;
+those installations may not need to invoke the new target.
 Start the API separately before expecting HTTP responses.
 
 **Does:** Saves private SSH connection settings to `.local-runtime/ssh-config`

@@ -265,7 +265,9 @@ Keep this process running for credential renewal. It starts one threaded API
 process and preserves one analytical execution slot. Credentials go only to
 the trusted API, not to analytical containers.
 
-Use a second macOS terminal for explicit port forwarding:
+On a fresh setup, use a second macOS terminal for explicit port forwarding.
+If an existing Colima SSH tunnel already exposes the API at `localhost:8000`,
+reuse it and skip this command:
 
 ```sh
 make local-forward
