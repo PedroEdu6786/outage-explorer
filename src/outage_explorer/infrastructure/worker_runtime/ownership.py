@@ -76,6 +76,28 @@ class OwnershipLedger:
             os.close(fd)
             raise RuntimeUnavailableError("Runtime ownership busy") from None
         self._fd = fd
+        try:
+            self._discard_partial_write()
+        except Exception:
+            self.close()
+            raise
+
+    def _discard_partial_write(self) -> None:
+        # Only worker.json commits a transition. No caller can act on a partial
+        # write, so it is safe to discard after acquiring the dead owner's lock.
+        path = self.root / "worker.partial"
+        try:
+            info = path.lstat()
+        except FileNotFoundError:
+            return
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or info.st_uid != os.getuid()
+            or info.st_mode & 0o077
+        ):
+            raise RuntimeUnavailableError("Invalid partial runtime ownership")
+        path.unlink()
+        self._sync()
 
     def read(self) -> dict[str, str] | None:
         if self._fd is None:
@@ -155,12 +177,15 @@ class OwnershipLedger:
         fd = os.open(
             temporary, os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_NOFOLLOW, 0o600
         )
-        with os.fdopen(fd, "wb") as stream:
-            stream.write(raw)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, self.root / "worker.json")
-        self._sync()
+        try:
+            with os.fdopen(fd, "wb") as stream:
+                stream.write(raw)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary, self.root / "worker.json")
+            self._sync()
+        finally:
+            temporary.unlink(missing_ok=True)
 
     def clear(self) -> None:
         if self._fd is None:

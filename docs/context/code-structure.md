@@ -477,3 +477,9 @@ complete reclamation. Docker Desktop is unsupported by this backend. Controlled
 verification is complete; Linux host provisioning, real runtime enforcement and
 reviewed readiness remain open. See the
 [storage checklist](../../infrastructure/analytical-worker/README.md).
+
+The committed `worker.json` record is authoritative during analytical restart.
+After acquiring the exclusive owner lock, the ledger discards an abandoned
+private regular `worker.partial` file; incomplete writes never authorize a worker
+transition. A committed record still requires normal worker reconciliation before
+new admission, and invalid temporary file types or permissions fail closed.

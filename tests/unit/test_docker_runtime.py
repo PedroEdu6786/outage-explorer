@@ -325,6 +325,49 @@ def test_recover_owned_accepts_sealed_private_staging_directory(runtime):
         recovered_ledger.close()
 
 
+@pytest.mark.parametrize("phase", [None, "preparing", "creating", "removed"])
+def test_partial_ledger_restart_preserves_normal_worker_reconciliation(runtime, phase):
+    adapter, control, ledger = runtime
+    staging = Path(adapter.profile.staging_root) / "execution-orphan"
+    if phase is not None:
+        staging.mkdir(mode=0o555)
+        ledger.intend(str(staging), preparing=True)
+        if phase in {"creating", "removed"}:
+            ledger.creating()
+        if phase == "removed":
+            ledger.removed()
+    partial = ledger.root / "worker.partial"
+    partial.write_bytes(b"unfinished transition")
+    partial.chmod(0o600)
+    ledger.close()
+
+    recovered = OwnershipLedger(ledger.root, "d" * 32)
+    try:
+        recovered.open()
+        recovering = DockerRuntime(adapter.profile, control, recovered)
+        if phase == "creating":
+            control.fail = "inspect"
+            with pytest.raises(RuntimeUnavailableError):
+                recovering.recover_owned()
+            assert recovered.read()["phase"] == "creating"
+            assert staging.exists()
+            with pytest.raises(RuntimeUnavailableError, match="Unresolved"):
+                recovered.intend("/private/new-staging", preparing=True)
+            control.fail = None
+        recovering.recover_owned()
+        assert recovered.read() is None
+        assert not staging.exists()
+        assert not partial.exists()
+        if phase == "creating":
+            assert "rm" in [args[0] for args, _ in control.calls]
+        else:
+            assert control.calls == []
+        recovered.intend("/private/new-staging", preparing=True)
+        assert recovered.read()["owner"] == "d" * 32
+    finally:
+        recovered.close()
+
+
 def test_only_exact_authorized_digest_files_bound_readonly(runtime, approved):  # noqa: F811
     from outage_explorer.domain.datasets import PUBLIC_DATASETS
 
