@@ -1,6 +1,6 @@
 # Preview facility-filter contract
 
-Status: **implemented in backend source; phase 4 acceptance/evidence remains open**.
+Status: **implemented and verified for portable backend scope; runtime evidence gaps remain**.
 Phase 3 carries the field through HTTP, application sequences and isolated worker
 protocol version 2, with public catalog/OpenAPI updates. Running services need a
 matching rebuilt/reviewed worker image and runtime identity; no deployment or
@@ -62,4 +62,5 @@ validity; they are not runtime evidence.
 The pure validator proves only identifier validity: it cannot establish dataset
 support, duplicate rejection, authorization, cursor rules, date intersection,
 empty-result execution or HTTP status. Phase checkpoints separately record
-behavioral tests. Full-feature AC1–AC6 evidence is reviewed in phase 4.
+behavioral tests. AC1–AC6 evidence and remaining database/actual-host gaps are recorded in
+[verification.md](verification.md).

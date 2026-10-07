@@ -2,6 +2,7 @@
 
 import json
 from datetime import timedelta
+from decimal import Decimal
 from unittest.mock import Mock
 
 import psycopg
@@ -19,6 +20,9 @@ from outage_explorer.infrastructure.query_results.preview_encoding import (
 from outage_explorer.infrastructure.sql_validation.inspection import DuckdbSqlInspector
 from tests.integration import test_query_results as retained
 from tests.integration.test_catalog_preview import ENCODING
+from tests.integration.test_catalog_preview import (
+    portable_parquet_selection as portable_parquet_selection,
+)
 from tests.integration.test_catalog_preview import (
     portable_selection as portable_selection,
 )
@@ -390,10 +394,8 @@ def test_supervised_http_start_paging_restart_and_current_role(
         restarted.close()
 
 
-@pytest.fixture
-def portable_preview_http(portable_selection):
-    """Actual HTTP/application authorization and lifecycle with observed ports."""
-    state = portable_selection
+def preview_http_client(state):
+    """Actual HTTP/application authorization and lifecycle with injected ports."""
     access = state.service._access
     app = create_app(
         HealthService(state.clock),
@@ -411,6 +413,11 @@ def portable_preview_http(portable_selection):
     client = app.test_client()
     client.set_cookie("outage_session", state.token)
     return client, state
+
+
+@pytest.fixture
+def portable_preview_http(portable_selection):
+    return preview_http_client(portable_selection)
 
 
 @pytest.mark.parametrize("dataset", ["facilities", "generators"])
@@ -489,15 +496,16 @@ def test_portable_http_national_rejects_facility(portable_preview_http, facility
     "denial",
     ["viewer", "missing", "revoked", "expired", "changed_role", "foreign_cursor"],
 )
+@pytest.mark.parametrize("dataset", ["facilities", "generators"])
 def test_portable_http_facility_authorization_precedes_resources(
-    portable_preview_http, denial
+    portable_preview_http, denial, dataset
 ):
     from dataclasses import replace
 
     client, state = portable_preview_http
     cursor = None
     if denial in {"changed_role", "foreign_cursor"}:
-        first = client.get("/api/datasets/facilities/preview?facility=001&page_size=1")
+        first = client.get(f"/api/datasets/{dataset}/preview?facility=001&page_size=1")
         assert first.status_code == 200
         cursor = first.json["next_cursor"]
     current = state.sessions.resolve_session.return_value
@@ -518,7 +526,7 @@ def test_portable_http_facility_authorization_precedes_resources(
     state.requests.clear()
     state.inputs.prepare.reset_mock()
     response = client.get(
-        "/api/datasets/facilities/preview",
+        f"/api/datasets/{dataset}/preview",
         query_string={"cursor": cursor} if cursor else {"facility": "001"},
     )
     assert response.status_code == (
@@ -569,3 +577,95 @@ def test_portable_http_catalog_filters_match_grains(portable_preview_http):
     }
     assert state.requests == []
     state.inputs.prepare.assert_not_called()
+
+
+@pytest.mark.parametrize("dataset", ["facilities", "generators"])
+@pytest.mark.parametrize("role", [Role.ANALYST, Role.ADMIN])
+def test_filtered_http_real_worker_snapshot_pages(
+    portable_parquet_selection, dataset, role
+):
+    """HTTP to real Parquet/JSON worker, including frozen publication and revisits."""
+    from dataclasses import replace
+
+    state = portable_parquet_selection
+    current = state.sessions.resolve_session.return_value
+    state.sessions.resolve_session.return_value = replace(
+        current, user=replace(current.user, role=role)
+    )
+    client, _ = preview_http_client(state)
+    path = f"/api/datasets/{dataset}/preview"
+    first = client.get(
+        path,
+        query_string={
+            "facility": "001",
+            "start_date": "2026-09-02",
+            "end_date": "2026-09-03",
+            "page_size": 1,
+        },
+    )
+    assert first.status_code == 200
+    original = first.json
+    state.publications.active_generation.return_value = state.next_generation
+    pages = [original]
+    while pages[-1]["has_more"]:
+        response = client.get(path, query_string={"cursor": pages[-1]["next_cursor"]})
+        assert response.status_code == 200
+        pages.append(response.json)
+    columns = [column["name"] for column in original["columns"]]
+    identity = [
+        columns.index(name)
+        for name in ("period", "facility", "generator")
+        if name in columns
+    ]
+    keys = [
+        tuple(row[index] for index in identity)
+        for page in pages
+        for row in page["rows"]
+    ]
+    expected = [
+        (day, "001", *([generator] if dataset == "generators" else []))
+        for day in ("2026-09-03", "2026-09-02")
+        for generator in (("01", "A", "é") if dataset == "generators" else (None,))
+    ]
+    assert keys == expected
+    assert len(keys) == len(set(keys))
+    assert all(page["generation_id"] == original["generation_id"] for page in pages)
+    assert state.inputs.prepare.call_count == 1
+    for page in pages:
+        assert (
+            client.get(path, query_string={"cursor": page["page_cursor"]}).json == page
+        )
+    calls = len(state.requests)
+    assert (
+        client.get(
+            path, query_string={"cursor": original["page_cursor"], "facility": "001"}
+        ).status_code
+        == 400
+    )
+    assert len(state.requests) == calls
+    fresh = client.get(path, query_string={"facility": "001"})
+    assert fresh.status_code == 200 and fresh.json["generation_id"] == "new-publication"
+    assert fresh.json["rows"][0] != original["rows"][0]
+    assert Decimal(fresh.json["rows"][0][columns.index("capacity_mw")]) == 200
+    assert Decimal(original["rows"][0][columns.index("capacity_mw")]) != 200
+    # Both omitted-filter and date-only requests use the real worker and all IDs.
+    for query, count in (
+        ({}, 27 if dataset == "generators" else 9),
+        (
+            {"start_date": "2026-09-02", "end_date": "2026-09-02"},
+            9 if dataset == "generators" else 3,
+        ),
+    ):
+        response = client.get(path, query_string=query)
+        assert response.status_code == 200
+        assert len(response.json["rows"]) == count
+        assert {row[columns.index("period")] for row in response.json["rows"]} == (
+            {"2026-09-02"} if query else {"2026-09-01", "2026-09-02", "2026-09-03"}
+        )
+        assert {row[columns.index("facility")] for row in response.json["rows"]} == {
+            "001",
+            "1",
+            "other",
+        }
+    state.sequences.close()
+    assert all(entry.pins == 0 for entry in state.cache._entries.values())

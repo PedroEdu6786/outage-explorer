@@ -101,6 +101,7 @@ def synthetic_file(tmp_path):
 @pytest.mark.runtime_docker
 @record_gate
 def test_worker_protocol_and_canonical_output(harness):
+    assert harness.profile.protocol_version == 2
     output, seconds = harness.query(QueryRead("SELECT 42 AS answer", ()))
     document = json.loads(output.document)
     assert document["rows"] == [["42"]]
@@ -110,7 +111,11 @@ def test_worker_protocol_and_canonical_output(harness):
     harness.report.gate(
         "worker_protocol",
         "passed",
-        {"seconds": seconds, "output_bytes": len(output.document)},
+        {
+            "protocol_version": harness.profile.protocol_version,
+            "seconds": seconds,
+            "output_bytes": len(output.document),
+        },
     )
 
 

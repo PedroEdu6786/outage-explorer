@@ -107,3 +107,7 @@ Deliver the challenge's connector, analytical model, and authenticated backend w
 - **Q3:** Bounded grain fields/keys, required-value checks, source-order conflicts, initial loading/retention, PostgreSQL quality responses and cross-grain findings are implemented. Broader historical completeness, revision guarantees and capacity-vintage interpretation remain evidence limitations. See the connector and facility/generator contracts and [challenge evidence](../../challenge/README.md).
 - **Q4:** Pinned parser/DuckDB compatibility and authorization have controlled tests. Complete actual-host isolation and measured resource/capacity acceptance remain separate; static checks do not prove those properties.
 - **Q5:** Cognito client configuration, seeded identities/roles, token/session validation and logout mapping are implemented. The user accepted local authentication/web integration; the [verification record](../user-access/verification.md) preserves the remaining comprehensive live cases without treating them as missing implementation.
+
+Backend support for the Analyst date/facility preview story is implemented with
+portable verification in the [feature record](../preview-facility-filter/verification.md).
+This does not close broader challenge, web or actual-host runtime acceptance.

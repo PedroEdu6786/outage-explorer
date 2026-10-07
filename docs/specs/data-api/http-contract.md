@@ -25,6 +25,9 @@ version-1 image/profile must be rebuilt and reviewed before activation. This
 change performs no deployment or activation. Web implementation and verification
 belong to their own project.
 
+Portable backend acceptance and remaining database/actual-host gaps are recorded
+in [facility-filter verification](../preview-facility-filter/verification.md).
+
 ## Agreed behavior and selected routes
 
 User decisions: SQL comes from the frontend editor; SQL page selection belongs

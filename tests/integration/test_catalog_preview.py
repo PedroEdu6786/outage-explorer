@@ -724,15 +724,14 @@ def test_portable_facility_national_and_cursor_mixtures(portable_selection):
 @pytest.mark.parametrize(
     "denial", ["viewer", "absent", "expired", "revoked", "foreign", "role-change"]
 )
+@pytest.mark.parametrize("dataset", ["facilities", "generators"])
 def test_portable_facility_authorization_before_inputs_and_execution(
-    portable_selection, denial
+    portable_selection, denial, dataset
 ):
     state = portable_selection
     cursor = None
     if denial in {"foreign", "role-change"}:
-        cursor = state.service.page(state.token, "facilities", facility="001")[
-            "page_cursor"
-        ]
+        cursor = state.service.page(state.token, dataset, facility="001")["page_cursor"]
     state.inputs.prepare.reset_mock()
     state.runtime.preview.reset_mock()
     state.publications.active_generation.reset_mock()
@@ -756,7 +755,7 @@ def test_portable_facility_authorization_before_inputs_and_execution(
     with pytest.raises(error):
         state.service.page(
             "" if denial == "absent" else state.token,
-            "facilities",
+            dataset,
             cursor=cursor,
             facility=None if cursor else "",
         )
@@ -869,3 +868,111 @@ def test_portable_facility_forward_sequences_preserves_selection(portable_select
     )
     state.sequences.release(sequence)
     state.sequences.release(sequence)
+
+
+@pytest.fixture
+def portable_parquet_selection(portable_selection, tmp_path):
+    """Actual cache, paired JSON transport and separate engine; no OS sandbox."""
+    import shutil
+
+    from outage_explorer.infrastructure.worker_runtime.configuration import (
+        RuntimeProfile,
+    )
+    from outage_explorer.infrastructure.worker_runtime.decoding import WorkerTransport
+    from tests.integration.test_connector_parquet import raw
+    from tests.integration.test_resource_candidates import build
+
+    state = portable_selection
+    days = ("2026-09-01", "2026-09-02", "2026-09-03")
+    values = {
+        "national": [raw("national", period=day) for day in days],
+        "facility": [
+            raw("facility", period=day, facility=identifier)
+            for day in days
+            for identifier in ("001", "1", "other")
+        ],
+        "generator": [
+            raw("generator", period=day, facility=identifier, generator=generator)
+            for day in days
+            for identifier in ("001", "1", "other")
+            for generator in ("01", "A", "é")
+        ],
+    }
+    store = connector.LocalParquetStore(tmp_path / "objects", ARTIFACT)
+    candidate = build(store, values=values)
+
+    class Objects:
+        def read(self, reference):
+            return store.read(replace(reference, key=reference.sha256))
+
+    def publication(candidate):
+        return ResourcePublishedGeneration(
+            candidate.generation_id,
+            "synthetic-run",
+            None,
+            "v1",
+            state.clock.now(),
+            tuple(
+                DatasetSummary(
+                    AnalyticalGrain(ref.grain),
+                    "v1",
+                    ref.row_count,
+                    date(2026, 9, 1),
+                    date(2026, 9, 3),
+                    f"connector/generations/{candidate.generation_id}/{next(d.id for d in PUBLIC_DATASETS if d.grain == ref.grain)}.parquet",
+                    ref.object.sha256,
+                    ref.object.byte_count,
+                )
+                for ref in candidate.resources
+            ),
+        )
+
+    generation = publication(candidate)
+    revised = {
+        grain: [dict(value, capacity="200") for value in observations]
+        for grain, observations in values.items()
+    }
+    state.next_generation = publication(
+        build(store, generation="new-publication", values=revised)
+    )
+    cache = VerifiedResourceCache(tmp_path / "cache", Objects(), ARTIFACT, CACHE)
+    transport = WorkerTransport(
+        RuntimeProfile(
+            image_id="sha256:" + "a" * 64,
+            daemon_endpoint="unix:///var/run/docker.sock",
+            platform="controlled-subprocess",
+            daemon_version="not-run",
+            filesystem_identity="synthetic",
+        )
+    )
+    staged = tmp_path / "inputs"
+    staged.mkdir()
+    program = """
+import sys
+from pathlib import Path
+from outage_explorer.bootstrap import build_query_worker
+from outage_explorer.entrypoints.query_worker import run
+raise SystemExit(run(build_query_worker(inputs_root=Path(sys.argv[1])), sys.stdin.buffer, sys.stdout.buffer))
+"""
+
+    def preview(request, bounds, deadline):
+        state.requests.append(request)
+        for file in request.files:
+            shutil.copyfile(file.path, staged / (file.sha256 + ".parquet"))
+        response = subprocess.run(
+            [sys.executable, "-c", program, str(staged)],
+            input=transport.request(request),
+            capture_output=True,
+            timeout=20,
+            check=False,
+        )
+        assert response.returncode == 0, response.stderr
+        return transport.decode(
+            response.stdout, request=request, exit_code=response.returncode
+        )
+
+    state.runtime.preview.side_effect = preview
+    state.inputs.prepare.side_effect = cache.prepare
+    state.publications.active_generation.return_value = generation
+    state.cache = cache
+    return state

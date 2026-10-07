@@ -14,6 +14,9 @@ Using the changed backend requires paired worker protocol version 2 and a matchi
 rebuilt/reviewed image and runtime identity. This work does not activate a service;
 see the [phase checkpoint](../preview-facility-filter/tasks.md) for evidence limits.
 
+Portable backend acceptance and remaining database/actual-host gaps are recorded
+in [facility-filter verification](../preview-facility-filter/verification.md).
+
 The web client can implement fixture adapters using [openapi.json](openapi.json)
 and [fixtures.json](fixtures.json). Copy both files into the client repository;
 neither depends on backend Python. All seven operations have schemas and

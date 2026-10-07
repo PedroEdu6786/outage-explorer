@@ -282,3 +282,7 @@ Facility's advertised total differs from received rows; observed-entity date
 coverage is explicit and does not prove upstream completeness. HTTP delivery is
 implemented and cross-grain reconciliation is recorded in
 [challenge evidence](../challenge/README.md); full runtime acceptance remains separate.
+
+Backend date/facility preview acceptance and runtime prerequisites are recorded in
+the [verification record](../specs/preview-facility-filter/verification.md); this
+does not establish web-project or live/production acceptance.

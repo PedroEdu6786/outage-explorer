@@ -1,56 +1,47 @@
 # Backend integration contract and gaps
 
-The current [data API requirements](../../specs/data-api/requirements.md) and
-[proposed HTTP contract](../../specs/data-api/http-contract.md) capture the
-subsequent endpoint discussion. Shared `/api/query` pagination, configured
-all-grain background refresh, date-only initial browsing, and SQL page size/
-lifetime are user-selected there. Earlier open items below are historical
-integration notes; the new draft takes precedence where they differ.
+The implemented [HTTP contract](../../specs/data-api/http-contract.md),
+[OpenAPI](../../specs/data-api/openapi.json) and
+[client handoff](../../specs/data-api/client-handoff.md) describe backend source.
+Revalidate availability against the running backend and paired worker image;
+source implementation and controlled tests do not establish live readiness.
+This repository documents the API; web implementation belongs to its own project.
 
-The UI consumes the Outage Explorer backend. This document captures required
-semantics, not a complete OpenAPI specification. Revalidate availability against
-the backend version used for integration.
+## Current backend operations
 
-## Verified implementation status on October 4 2026
+The layered Flask monolith provides opt-in session/authentication, catalog,
+preview, SQL execution/retained paging and Admin refresh endpoints. PostgreSQL/RDS
+owns operational state, S3 owns three unified resource Parquet files per generation,
+and isolated DuckDB workers scan public-column views over exact staged files.
+Deployment targets EC2; local development does not require provisioning EC2.
+`GET /health` is unauthenticated liveness, never analytical readiness.
 
-The Flask application always registers `GET /health`. It returns
-`status`, `service` and `checked_at` and sets `Cache-Control: no-store`.
-It is unauthenticated liveness; it does not prove data, auth or SQL readiness.
+| Operation | Implemented contract |
+| --- | --- |
+| Resolve session | `/api/auth/session`; seeded application role, fixed expiry, session-bound CSRF |
+| Login/callback/logout | Flask-owned PKCE and HttpOnly cookie; no provider tokens in browser API |
+| Catalog | `/api/datasets`; authorized datasets, schema, coverage and supported filters |
+| Preview | `/api/datasets/{dataset}/preview`; initial selection then cursor-only continuation |
+| SQL | `/api/query`; one execution and numbered retained pages by query ID |
+| Refresh | Admin-only admission/latest/by-ID; background publication, no caller date overrides |
 
-Offline verification for all three grains, connector modeling, local Parquet
-verification and EIA adapter work exist. Those are not product HTTP APIs.
-User-access Phase 4 now registers opt-in login/callback/session/logout routes,
-with controlled HTTP/startup/architecture verification. See the
-[authentication contract](../../specs/user-access/http-contract.md). Transport
-choices remain draft in ADR-0046/0047; live Cognito and browser reopening checks
-remain Phase 5. Authorized catalog/preview/metrics, SQL execution/pagination and
-Admin refresh HTTP integration are pending. Cognito and RDS setup were
-user-confirmed, but end-to-end application integration is not thereby verified.
+Analyst/Admin may preview Facilities or Generators with one exact `facility` string
+and optional inclusive dates. National accepts dates only. Preserve leading zeros
+and case; omit a cleared filter rather than sending an empty string. The bound is
+1–256 UTF-8 bytes; surrounding whitespace, controls, malformed input and repeated
+parameters are rejected.
+A valid unmatched identifier yields an empty preview. Follow continuation cursors
+without resending filters or page size. Filter changes begin a new sequence.
+Catalog `supported_filters` is `["start_date", "end_date"]` for national and
+`["start_date", "end_date", "facility"]` for both detail grains. Strict two-date
+client decoders must accept the expanded array. There is no discovery endpoint.
 
-The backend stack is a layered Flask monolith, PostgreSQL on RDS for operational
-state, S3/Parquet for durable analytical data, and isolated DuckDB execution
-against backend-cached authorized inputs. Deployment targets one backend
-replica on EC2. Local UI development does not require provisioning EC2.
-
-## Logical operations to agree with the backend
-
-These names identify adapter responsibilities only. They are not endpoint paths
-or finalized method/type declarations.
-
-| Operation | Semantics/information needed | Still open |
-| --- | --- | --- |
-| Resolve session | Current identity, assigned role, fixed expiry and session-bound CSRF | Implemented `/api/auth/session`; live/browser readiness pending |
-| Login/callback/logout | Flask-owned PKCE, opaque cookie, current-session invalidation | Implemented auth contract; concrete provider/URL readiness pending |
-| List datasets/schema | Only permitted datasets, columns/types and applicable filters/coverage | Dataset IDs/SQL names, routes and payloads |
-| Preview records | Dataset and filters; bounded rows, ordering, snapshot and opaque continuation cursor | Request/response schema, cursor transport, previous-page navigation |
-| Read fleet metric | National date, source MW and reported/calculated percentages with precision | Catalog dataset versus dedicated route; encoding |
-| Execute SQL | SQL, positive `page`/`page_size`; columns, rows, query ID, snapshot and truncation information | Route, response encoding, sync/async delivery and SQL page limits |
-| Read query page | `query_id`, requested page and same effective page size; same execution | Route, TTL, out-of-range/error representation |
-| Start/check refresh | Admin-only background run, outcome, publication and quality accounting | Routes, status schema and polling mechanism; UI inclusion |
-
-Do not copy proposed `/api/...` paths from an earlier design and treat them as
-implemented. Likewise, `fleet_offline_share_daily` is a proposed prepared SQL
-dataset name; obtain stable names from the agreed catalog contract.
+The paired execution protocol is version 2. A matching rebuilt/reviewed worker
+image and updated matching runtime profile/evidence are required; restarting an
+older image or submitting a data refresh cannot add this support. Existing profile
+identities are not automatically upgraded. See the
+[feature verification](../../specs/preview-facility-filter/verification.md) and
+[worker runbook](../../../infrastructure/analytical-worker/README.md).
 
 ## Authentication integration boundary
 
@@ -83,15 +74,15 @@ unassigned identities receive no product permissions.
 
 ## Error and pagination semantics
 
-Normalize backend failures into feature states without fabricating HTTP status
-codes or error identifiers before the contract exists. Distinguish unauthenticated,
+Normalize the implemented error envelopes into feature states while preserving
+HTTP status and error codes from the contract. Distinguish unauthenticated,
 forbidden, invalid input, unsupported SQL, execution busy, execution timeout,
 unavailable data, expired preview, lost/expired query result and service failure.
 
-For SQL, include column order/types, duplicate column-label handling, nulls,
-numeric precision and date encoding in the contract. Rows may contain arbitrary
+For SQL, preserve the contracted column order/types, duplicate column labels,
+nulls, numeric precision and date encoding. Rows may contain arbitrary
 projection/aggregate results and duplicates. A simplistic object keyed solely
-by a column name can lose duplicate labels; agree an unambiguous representation.
+by a column name can lose duplicate labels; use rows aligned with ordered columns.
 
 Preserve the separate pagination contracts:
 
@@ -99,12 +90,13 @@ Preserve the separate pagination contracts:
 | --- | --- | --- |
 | Selection | Opaque continuation cursor | Numbered `page` by opaque `query_id` |
 | Stability | Original snapshot, filters and ordering | One execution's sequence and multiplicity |
-| Size | Default 100; initial configurable maximum 500 | Fixed within execution; default/maximum open |
-| Expiry | 15 minutes from first page | Fixed lifetime required; numeric TTL open |
+| Size | Default 100; initial configurable maximum 500 | Fixed within execution; default 100 / maximum 500 |
+| Expiry | 60 seconds from first page | 60 seconds from execution completion |
 | Recovery | Explicit restart of browsing | Explicit rerun, new ID |
 | Total output | Backend-paginated browsing | Baseline 1,000 rows or 1 MiB for the entire execution |
 
-Do not reuse preview defaults/expiry as SQL settings. A backend restart can lose
+Preview and SQL have separate state and pagination even though current size and
+lifetime defaults agree. A backend restart can lose
 SQL pagination metadata. Cache keys and UI state must distinguish a page of the
 same execution from a newly submitted query, even when the SQL text is identical.
 

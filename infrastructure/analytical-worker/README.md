@@ -15,7 +15,7 @@ docker build -f infrastructure/analytical-worker/Dockerfile \
 Run a reference-free synthetic query without mounting any inputs:
 
 ```sh
-printf '%s\n' '{"version":1,"operation":"query","sql":"SELECT 42 AS answer","relations":[]}' |
+printf '%s\n' '{"version":2,"operation":"query","sql":"SELECT 42 AS answer","relations":[]}' |
 docker run --rm -i --network none --read-only --cap-drop ALL \
   --security-opt no-new-privileges --memory 512m --memory-swap 512m \
   --cpus 1 --pids-limit 32 --tmpfs /tmp:rw,noexec,nosuid,size=16m \
@@ -32,18 +32,33 @@ it currently includes the declared backend dependencies as well as DuckDB.
 It never loads `.env`. Do not pass host credentials or mount the Docker socket,
 repository, raw artifacts or unrestricted cache into execution containers.
 
-## Internal protocol v1
+## Facility-filter upgrade prerequisite
+
+Backend source now requires paired execution protocol **2** for query and preview
+requests, successes and errors. Version 1 fails closed; tabular encoding and the
+separate SQL-inspection protocol remain version 1. Existing pinned worker images
+must be rebuilt from matching source and reviewed before use. Generate a fresh
+candidate profile with protocol 2 and the actual new image ID; review matching
+runtime evidence because image/protocol changes invalidate the old profile identity.
+Do not rewrite old evidence, reuse its digest, or automatically upgrade profiles.
+An API restart or data refresh alone does not rebuild a worker image. This change
+performs no image build, runtime activation or actual-host acceptance.
+
+## Internal protocol v2
 
 Requests are strict JSON, at most 131,072 bytes, with no duplicate/unknown fields
 or nonfinite JSON constants. They are trusted launcher messages, not a public
 authorization API. The parent must authorize before preparing any inputs.
 
-Query fields: `version: 1`, `operation: "query"`, `sql`, `relations`. Each relation
+Query fields: `version: 2`, `operation: "query"`, `sql`, `relations`. Each relation
 has `dataset` (a public ID) and `files`; the exact referenced grains must match
 the provided relations. The worker reuses SQL inspection before engine execution.
 
-Preview fields: `version: 1`, `operation: "preview"`, `dataset`, `files`,
-`start_date`, `end_date`, `after`, `page_size`. Dates and `after` may be null.
+Preview fields: `version: 2`, `operation: "preview"`, `dataset`, `files`,
+`start_date`, `end_date`, `facility`, `after`, `page_size`. Dates, facility and
+`after` may be null. Facility is an exact 1–256 UTF-8-byte string on detail
+grains only; national rejects non-null facility. The worker independently
+validates it and applies bound equality before keyset pagination.
 Page size is 1–500. Output includes canonical column descriptors/cells, keyset
 keys and `has_more`; the API still owns preview cursors and snapshot metadata.
 
@@ -74,12 +89,12 @@ identities and separate private staging/cache/result roots. It accepts only UID/
 no-new-privileges and no extra mounts/environment. All integer budgets are finite,
 positive and independently identified; public lifetimes stay 60 seconds.
 
-The internal v1 worker uses exact image-profile matching. Startup settings are
+The internal v2 worker uses exact image-profile matching. Startup settings are
 validated by `build_query_worker()` and translated into execution/encoding bounds;
 any deviation from the image's candidate limits is rejected. The adapter's
 `WorkerImageLimits` is separate from startup settings to preserve the repository's
 import matrix. Tests require the two contracts to agree. There are no host
-resource environment overrides, credential-bearing profiles or v1 request changes.
+resource environment overrides, credential-bearing profiles or compatibility fallback.
 
 Candidate limits are engine memory 128 MiB, temporary space 16 MiB, preparation
 30 seconds, overall 40 seconds and execution 10 seconds; encoding uses 1-MiB cells,
@@ -360,6 +375,7 @@ roots. On a Linux Docker host, a minimal candidate looks like:
 ```json
 {
   "profile": {
+    "protocol_version": 2,
     "image_id": "sha256:<exact 64 lowercase hex digits from image inspection>",
     "daemon_endpoint": "unix:///var/run/docker.sock",
     "docker_executable": "/usr/bin/docker",
@@ -505,6 +521,12 @@ alongside all measured allowances before recording approved budgets. Defaults re
 candidates; reports never mutate them or grant readiness.
 
 ### Reports and recovery after a failed validation run
+
+The following October 5 observations describe the historical manifest/public-file
+layout and remain historical evidence. Current product previews use exactly three
+unified resources with exact PostgreSQL descriptors and public-column worker views
+under ADR-0060/0061; no S3 manifest or separate public copy is used. Existing
+measurement reports do not prove the new protocol/image or current layout.
 
 October 5 measurement continuation found two existing local initial-interval
 candidate graphs and derived their exact public projections using the same domain

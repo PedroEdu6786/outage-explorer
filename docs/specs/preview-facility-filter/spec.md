@@ -1,18 +1,18 @@
 # Spec: Preview a dataset by date and facility
-> Status: planned, not implemented · Slug: preview-facility-filter
+> Status: implemented; portable backend acceptance verified; runtime gaps recorded · Slug: preview-facility-filter
 
 ## Problem and approved scope
 
 The challenge story asks: “As an Analyst, I want to preview a dataset filtered
-by date and facility.” Current preview supports dates only; SQL filtering does
-not fulfill this story. The user requested planning this addition and selected
+by date and facility.” Earlier preview supported dates only; SQL filtering did
+not fulfill this story. The user requested this addition and selected
 **one facility at a time**, applied to facility and generator datasets.
 This specification covers this backend repository only. Web implementation,
 UI design and web verification belong to the separate project and are excluded.
 This extends the initial date-only decision recorded in the
 [data API contract](../data-api/http-contract.md); it changes product filter scope,
-not the accepted architecture or role model. Existing date-only behavior remains
-implemented until this feature ships. No historical ADR is rewritten.
+not the accepted architecture or role model. Existing unfiltered/date-only
+behavior remains supported. No historical ADR is rewritten.
 
 ## Requirements
 
@@ -60,26 +60,31 @@ implemented until this feature ships. No historical ADR is rewritten.
 
 ## Acceptance criteria
 
-- [ ] **AC1 (FR1–FR2):** Known multi-facility fixtures prove facility-only,
+- [x] **AC1 (FR1–FR2):** Known multi-facility fixtures prove facility-only,
   combined inclusive-date/facility, leading-zero exact-match and empty-result
   behavior for both supported grains; unfiltered/date-only results remain unchanged.
-- [ ] **AC2 (FR2, FR5):** HTTP/application/worker validation covers unsupported
+- [x] **AC2 (FR2, FR5):** HTTP/application/worker validation covers unsupported
   national filtering, empty/invalid/oversized/duplicate values and malicious input;
   SQL treats supplied IDs as bound values. Catalog/OpenAPI/fixtures agree by grain.
-- [ ] **AC3 (FR3, TR2):** Multiple filtered pages concatenate to the expected
+- [x] **AC3 (FR3, TR2):** Multiple filtered pages concatenate to the expected
   ordered rows without skips/duplicates; revisits agree, new publication cannot
   change the original sequence, cursor-plus-filter is rejected, and expiry/store
   loss and active-reader cleanup preserve existing behavior and resource bounds.
-- [ ] **AC4 (FR4):** Viewer/unauthenticated/expired/revoked access is denied before
+- [x] **AC4 (FR4):** Viewer/unauthenticated/expired/revoked access is denied before
   preparation/execution; foreign cursors and role changes cannot reveal detail.
-- [ ] **AC5 (FR5, TR3):** Backend contract tests prove unchanged unfiltered/date-only
+- [x] **AC5 (FR5, TR3):** Backend contract tests prove unchanged unfiltered/date-only
   preview behavior and correct per-grain supported-filter metadata. OpenAPI,
   fixtures and consumer handoff describe the new parameter and catalog impact.
   Paired backend/worker protocol mismatch remains fail-closed.
-- [ ] **AC6 (TR1–TR3):** Backend architecture/Ruff/mypy and relevant pytest suites
+- [x] **AC6 (TR1–TR3):** Backend architecture/Ruff/mypy and relevant pytest suites
   pass. Distinguish portable tests, disposable PostgreSQL checks and actual-host
   runtime checks; report unavailable checks explicitly without claiming
   live/production acceptance. Web tests and end-to-end UI acceptance are excluded.
+
+Acceptance is for the approved portable backend scope. See
+[verification.md](verification.md) for exact evidence, unrun disposable PostgreSQL
+and actual-host checks, image/profile prerequisites and remaining runtime gaps.
+These checkboxes do not certify deployed behavior, isolation or web acceptance.
 
 ## Open clarifications
 

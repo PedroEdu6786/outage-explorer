@@ -1,5 +1,5 @@
 # Tasks: Preview a dataset by date and facility
-> Status: phases 1–3 complete; phase 4 pending · Slug: preview-facility-filter · Plan: ./plan.md · Spec: ./spec.md
+> Status: all four phases complete; portable backend scope verified · Slug: preview-facility-filter · Plan: ./plan.md · Spec: ./spec.md
 
 ## Overview
 
@@ -120,8 +120,47 @@ until Phase 4 consolidates cross-layer coverage, documentation and evidence.
 
 ## Phase 4: Backend verification and documentation (plan phase 4)
 
-- [ ] **T4.1** Complete cross-layer regression cases in `tests/integration/test_catalog_preview.py` and `tests/integration/test_data_api_http.py`: concatenate multiple filtered pages for both grains, revisit pages, publish a fake new snapshot, reject cursor-plus-filter, preserve unfiltered/date-only results, and deny Viewer/absent/expired/revoked/foreign-cursor/changed-role access before preparation or execution. Retain active-reader/reaping/store-loss checks alongside new filters. (FR1–FR4, TR2)
-- [ ] **T4.2** Synchronize `docs/specs/data-api/http-contract.md`, `docs/specs/data-api/preview-flow.md`, `docs/specs/data-api/client-handoff.md`, `docs/context/ui-client/02-web-experience.md`, `docs/context/ui-client/04-backend-integration.md`, `docs/context/architecture.md`, `docs/context/overview.md` and `docs/specs/outage-explorer-backend/spec.md` with implemented backend filtering and consumer compatibility. Correct obsolete preview manifest references to exact three-resource staging; consumer handoff documents the API only and introduces no web-project work. Mark the feature contract as implemented only to the extent verified. (FR5, TR1–TR3)
-- [ ] **T4.3** Update paired protocol/image prerequisites in `infrastructure/analytical-worker/README.md` and applicable fixture/profile generation in `infrastructure/analytical-worker/native-linux-validation/create-profile.py`, `tests/test_local_analytical.py` and `tests/acceptance/test_query_runtime.py`. State that existing pinned image/review identity must be rebuilt/reviewed for the new protocol before use; do not invent a digest, modify historical evidence or activate/build deployment resources during this feature implementation. (TR2, TR3)
-- [ ] **T4.4** Record current results and remaining evidence gaps in `docs/specs/preview-facility-filter/verification.md` (new) and update acceptance status in `docs/specs/preview-facility-filter/spec.md`. Separate portable behavior, explicit disposable-PostgreSQL results and unavailable Linux actual-host checks; retain broader runtime/capacity gaps and backend-only scope. (FR1–FR5, TR1–TR3)
-- [ ] **T4.C** Checkpoint: verify AC1–AC6 against actual evidence in `docs/specs/preview-facility-filter/verification.md`, run documented Ruff/mypy, `tests/architecture/` and relevant pytest suites, check paired OpenAPI/fixtures and documentation links, and run disposable PostgreSQL cases only when an explicit test DSN is supplied. Report skips/unavailable checks and protocol/image prerequisites without implying production readiness or web acceptance. (AC1–AC6)
+- [x] **T4.1** Complete cross-layer regression cases in `tests/integration/test_catalog_preview.py` and `tests/integration/test_data_api_http.py`: concatenate multiple filtered pages for both grains, revisit pages, publish a fake new snapshot, reject cursor-plus-filter, preserve unfiltered/date-only results, and deny Viewer/absent/expired/revoked/foreign-cursor/changed-role access before preparation or execution. Retain active-reader/reaping/store-loss checks alongside new filters. (FR1–FR4, TR2)
+- [x] **T4.2** Synchronize `docs/specs/data-api/http-contract.md`, `docs/specs/data-api/preview-flow.md`, `docs/specs/data-api/client-handoff.md`, `docs/context/ui-client/02-web-experience.md`, `docs/context/ui-client/04-backend-integration.md`, `docs/context/architecture.md`, `docs/context/overview.md` and `docs/specs/outage-explorer-backend/spec.md` with implemented backend filtering and consumer compatibility. Correct obsolete preview manifest references to exact three-resource staging; consumer handoff documents the API only and introduces no web-project work. Mark the feature contract as implemented only to the extent verified. (FR5, TR1–TR3)
+- [x] **T4.3** Update paired protocol/image prerequisites in `infrastructure/analytical-worker/README.md` and applicable fixture/profile generation in `infrastructure/analytical-worker/native-linux-validation/create-profile.py`, `tests/test_local_analytical.py` and `tests/acceptance/test_query_runtime.py`. State that existing pinned image/review identity must be rebuilt/reviewed for the new protocol before use; do not invent a digest, modify historical evidence or activate/build deployment resources during this feature implementation. (TR2, TR3)
+- [x] **T4.4** Record current results and remaining evidence gaps in `docs/specs/preview-facility-filter/verification.md` (new) and update acceptance status in `docs/specs/preview-facility-filter/spec.md`. Separate portable behavior, explicit disposable-PostgreSQL results and unavailable Linux actual-host checks; retain broader runtime/capacity gaps and backend-only scope. (FR1–FR5, TR1–TR3)
+- [x] **T4.C** Checkpoint: verify AC1–AC6 against actual evidence in `docs/specs/preview-facility-filter/verification.md`, run documented Ruff/mypy, `tests/architecture/` and relevant pytest suites, check paired OpenAPI/fixtures and documentation links, and run disposable PostgreSQL cases only when an explicit test DSN is supplied. Report skips/unavailable checks and protocol/image prerequisites without implying production readiness or web acceptance. (AC1–AC6)
+
+### Phase 4 checkpoint evidence — 2026-10-07
+
+T4.1–T4.4 and T4.C complete the approved backend-only feature. Four cross-layer
+cases use actual Flask HTTP, application `AccessService`, bounded sequence state,
+verified unified-resource cache and paired protocol-v2 JSON worker subprocesses
+with real Parquet/DuckDB. Analyst/Admin × facilities/generators paginate explicit
+expected ordered identities, revisit each page identically and reject cursor/filter
+mixtures. A fake publication switches to a second real candidate with changed
+capacity and exact descriptors: old sequences retain their original snapshot;
+new browsing observes changed values. Real unfiltered/date-only requests preserve
+counts, exact date sets and facility identities. Direct application and HTTP denial
+matrices now cover both detail grains before preparation/execution. Existing
+expiry, active-reader pin, metadata bounds, unresolved reaping and store-loss
+regressions remain intact.
+
+Current contracts/context/UI handoff and preview-flow now describe exact facility
+selection and exactly three unified resources, PostgreSQL descriptors and
+public-column worker views without manifest reads/public-copy reconstruction.
+The runtime runbook and candidate-profile generator describe paired protocol 2
+and fresh rebuilt/reviewed image/profile prerequisites; SQL-inspection/tabular
+encoding remain version 1. `tests/test_local_analytical.py` needed no fixture
+change: it exercises credentials/service-launch behavior rather than the worker
+protocol. Existing profile-version and real transport tests prove compatibility;
+actual-host harness reports now include the protocol version.
+
+The [verification record](verification.md) maps AC1–AC6 to evidence and records
+remaining disposable PostgreSQL, actual-host, runtime/capacity and web gaps.
+AC checkboxes mean approved portable backend acceptance, not deployed/production
+or web acceptance. Ruff lint/format (**454 files**), mypy (**148 source files**)
+and dependency consistency passed. Targeted suites including architecture passed
+**521 tests**, with **24 PostgreSQL-fixture cases deselected**. The full portable run passed **2,309 tests and 17 subtests**, with **41 skips**
+and **195 disposable-PostgreSQL fixture deselections**, in 198.38 seconds.
+All **133 relative file links** in touched Markdown resolve; shared OpenAPI
+request/response/security/schema contracts agree and JSON fixtures parse.
+`git diff --check` passed. No disposable DSN was
+supplied; no configured RDS fallback, service/image activation, live resources,
+publication/reset, deployment or web edits occurred. Historical evidence remains
+unchanged.

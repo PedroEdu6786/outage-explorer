@@ -118,6 +118,8 @@ and [OpenAPI](../specs/data-api/openapi.json). Public dataset/SQL names are
 exact facility ID for facility/generator datasets; national is date-only. The
 [facility-filter checkpoint](../specs/preview-facility-filter/tasks.md) records
 verification limits and the required matching version-2 worker image/profile.
+The [feature verification](../specs/preview-facility-filter/verification.md) separates
+portable HTTP/worker acceptance from unavailable database and actual-host checks.
 
 SQL inspection runs in a separate bounded subprocess under ADR-0054. Authentication
 precedes inspection; complete reference authorization precedes analytical inputs.

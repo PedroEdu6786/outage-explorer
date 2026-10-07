@@ -6,7 +6,10 @@ import subprocess
 from dataclasses import asdict
 from pathlib import Path
 
-from outage_explorer.infrastructure.worker_runtime.configuration import RuntimeProfile
+from outage_explorer.infrastructure.worker_runtime.configuration import (
+    WORKER_PROTOCOL_VERSION,
+    RuntimeProfile,
+)
 
 root = Path("/var/lib/outage-runtime-validation")
 spill = Path("/var/lib/outage-analytical/spill")
@@ -27,6 +30,7 @@ version = subprocess.check_output(
     ["docker", "version", "--format", "{{.Server.Version}}"], text=True
 ).strip()
 profile = RuntimeProfile(
+    protocol_version=WORKER_PROTOCOL_VERSION,
     image_id=image,
     daemon_endpoint="unix:///run/docker.sock",
     docker_executable="/usr/bin/docker",
@@ -47,6 +51,7 @@ os.chmod(path, 0o600)
 print(
     json.dumps(
         {
+            "protocol_version": profile.protocol_version,
             "image_id": image,
             "profile_identity": profile.identity,
             "platform": profile.platform,

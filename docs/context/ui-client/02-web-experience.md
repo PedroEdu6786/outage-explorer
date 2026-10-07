@@ -47,14 +47,23 @@ Render schema-driven tables; arbitrary SQL output must not be forced into a
 national-record shape. Dates, identifiers, numbers, units and nulls should be
 distinguishable. Render source strings as text, never trusted HTML.
 
-Preview filters are applied by the backend. Validate date input and ranges
+Preview filters are applied by the backend. Analyst/Admin may select one exact
+facility ID for Facilities or Generators, combined with inclusive dates. National
+accepts dates only. Preserve string IDs, including case and leading zeros; omit
+the parameter when cleared. The backend accepts 1–256 UTF-8 bytes and rejects
+empty values, outer whitespace and control characters. A valid unmatched ID is
+a normal empty result; no facility-discovery endpoint is provided. These are API
+handoff expectations, not web implementation or verification in this repository.
+
+Validate date input and ranges
 before requesting data, then respect backend validation. Changes to dataset,
 filters or page size start a new browsing sequence. Ignore stale responses
 from the previous selection.
 
 Preview pagination defaults to 100 rows, with an initial configurable maximum
 of 500. The continuation cursor belongs to the original caller, dataset,
-filters, ordering and snapshot. It expires 15 minutes after the first page;
+filters, ordering and snapshot. Continuations send only `cursor`. It expires
+60 seconds after the first page;
 continuation does not renew it. Refresh publication must not mix newer rows
 into that sequence. On expiry, explain that browsing must restart and provide
 an explicit restart action. Do not invent random page jumps or total pages
@@ -78,7 +87,7 @@ SQL pagination is different from previews:
 - Subsequent requests select a page using the opaque `query_id`, without
   resubmitting SQL. Revisiting pages uses the same execution and fixed size.
 - Changing the SQL page size requires an explicit new execution; communicate
-  that consequence before starting it. SQL defaults/maxima remain undecided.
+  that consequence before starting it. SQL defaults to 100 rows and permits up to 500.
 - Do not inject `ORDER BY`, `LIMIT` or `OFFSET`, deduplicate result rows, or
   sort just the visible page as if the entire query result were sorted.
 - Without explicit SQL ordering, the sequence is stable within that execution,
