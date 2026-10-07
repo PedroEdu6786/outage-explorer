@@ -224,36 +224,31 @@ class RefreshExecution:
                 if receipt != expected:
                     raise ArtifactError("Durable receipt mismatch")
                 self.store.progress(owner, RefreshStage.PUBLISHING, report_json)
+                published_at = connector.clock.now()
+                resources_by_grain = {ref.grain: ref for ref in receipt.resources}
+                datasets: list[DatasetSummary] = []
+                for summary in verified.summaries:
+                    resource = resources_by_grain[summary.grain]
+                    start, end = coverage[summary.grain]
+                    datasets.append(
+                        DatasetSummary(
+                            grain=AnalyticalGrain(summary.grain),
+                            schema_version="v1",
+                            rows=summary.candidate_count,
+                            start=start,
+                            end=end,
+                            object_key=resource.object.key,
+                            sha256=resource.object.sha256,
+                            byte_count=resource.object.byte_count,
+                        )
+                    )
                 generation = ResourcePublishedGeneration(
                     run.id,
                     run.id,
                     run.base_generation_id,
                     "v1",
-                    connector.clock.now(),
-                    tuple(
-                        DatasetSummary(
-                            AnalyticalGrain(item.grain),
-                            "v1",
-                            item.candidate_count,
-                            *coverage[item.grain],
-                            next(
-                                ref.object.key
-                                for ref in receipt.resources
-                                if ref.grain == item.grain
-                            ),
-                            next(
-                                ref.object.sha256
-                                for ref in receipt.resources
-                                if ref.grain == item.grain
-                            ),
-                            next(
-                                ref.object.byte_count
-                                for ref in receipt.resources
-                                if ref.grain == item.grain
-                            ),
-                        )
-                        for item in verified.summaries
-                    ),
+                    published_at,
+                    tuple(datasets),
                 )
                 publishing = True
                 return self.publication.publish(owner, generation, report_json)
