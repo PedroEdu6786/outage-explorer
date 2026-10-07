@@ -84,6 +84,35 @@ def test_configuration_copies_private_files_and_never_starts(calls):
     assert "systemd-run" not in str(calls)
 
 
+def test_configuration_reuses_installed_profiles_only_if_originals_are_absent(calls):
+    local.execute("configure", "")
+    for index, (reviewed, installed) in enumerate(
+        (
+            ("runtime-reviewed.json", "runtime.json"),
+            ("parser-reviewed.json", "parser.json"),
+        )
+    ):
+        command = calls[index][0]
+        assert command[: len(local.SSH)] == local.SSH
+        assert command[-3:-1] == ["sh", "-c"]
+        assert command[-1] == (
+            f"if sudo test -f {local.REPORTS}/{reviewed}; then "
+            f"sudo cat {local.REPORTS}/{reviewed}; "
+            f"else sudo cat /run/outage-api/{installed}; fi"
+        )
+    assert "--configure" in calls[-1][0]
+
+
+def test_configuration_missing_profiles_stops_before_install(calls, monkeypatch):
+    def fail(arguments, **kwargs):
+        raise subprocess.CalledProcessError(1, arguments)
+
+    monkeypatch.setattr(local, "run", fail)
+    with pytest.raises(subprocess.CalledProcessError):
+        local.execute("configure", "")
+    assert not list(local.STATE.glob("*.json"))
+
+
 def test_forward_is_loopback_and_uses_dedicated_guest(calls):
     local.execute("forward", "")
     assert calls[-1][0][-1] == "colima-outage-runtime"

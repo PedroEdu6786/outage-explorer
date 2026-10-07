@@ -183,6 +183,11 @@ The API must be stopped.
 then installs the checked-in API entry point, reviewed profiles, filtered backend
 settings and CA bundle under `/run/outage-api` in the VM. Exported environment
 variables override `.env`. Settings travel through stdin into private files.
+Profiles are read from `/var/lib/outage-runtime-validation` when present;
+otherwise, existing `/run/outage-api/runtime.json` and `parser.json` are reused.
+Both paths require valid review evidence; missing or invalid profiles fail
+configuration rather than creating a new review. Installed `/run` profiles
+alone do not survive a guest reboot.
 
 **After:** The API is configured but stopped. This does not log in to AWS, export
 credentials, migrate/seed the database or publish data. Repeat after changing

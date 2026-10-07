@@ -123,10 +123,19 @@ def execute(action, reviewer):
             f".venv/bin/python scripts/review_local_runtime.py --reviewer {shlex.quote(reviewer)} --accept-local-containment\n"
         )
     elif action == "configure":
-        for name in ("runtime-reviewed.json", "parser-reviewed.json"):
-            result = run(
-                SSH + ["sudo", "cat", f"{REPORTS}/{name}"], capture_output=True
+        for name, installed in (
+            ("runtime-reviewed.json", "runtime.json"),
+            ("parser-reviewed.json", "parser.json"),
+        ):
+            # Existing installations may retain the reviewed profiles only in
+            # the private API directory. Reuse them; configure still validates
+            # their review evidence before installing any updated settings.
+            command = (
+                f"if sudo test -f {REPORTS}/{name}; then "
+                f"sudo cat {REPORTS}/{name}; "
+                f"else sudo cat /run/outage-api/{installed}; fi"
             )
+            result = run(SSH + ["sh", "-c", command], capture_output=True)
             path = STATE / name
             with path.open("wb") as stream:
                 os.chmod(path, 0o600)
