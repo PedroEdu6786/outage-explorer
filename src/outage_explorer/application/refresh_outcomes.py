@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from datetime import date
 from json import dumps
 
-from outage_explorer.application.dto import ConnectorReport
+from outage_explorer.application.dto import ResourceReport
 from outage_explorer.application.errors import (
     ConnectorConfigurationError,
     ConnectorFailure,
@@ -35,9 +35,11 @@ def safe_failure(error: Exception) -> ConnectorFailure:
 
 
 def quality_json(
-    report: ConnectorReport, coverage: Mapping[Grain, tuple[date, date]] | None = None
+    report: ResourceReport,
+    coverage: Mapping[Grain, tuple[date, date]] | None = None,
 ) -> str:
-    models = {item.grain: item for item in report.models}
+    summaries = () if report.candidate is None else report.candidate.summaries
+    models = {item.grain: item for item in summaries}
     sources = {item.grain: item for item in report.sources}
     datasets: list[dict[str, object]] = []
     for grain in ROUTES:
@@ -47,6 +49,12 @@ def quality_json(
             quality.selected + quality.excluded + quality.duplicate + quality.superseded
         ):
             raise ArtifactError("Disposition conservation failed")
+        if (
+            quality is not None
+            and source is not None
+            and quality.received != source.received
+        ):
+            raise ArtifactError("Source and model counts differ")
         reasons: Counter[str] = Counter()
         if quality is not None:
             for reason, count in quality.reason_counts:

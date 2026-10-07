@@ -9,13 +9,13 @@ from typing import Never
 from outage_explorer.application.dto import (
     ConnectorArtifactInput,
     ConnectorInput,
-    ConnectorResult,
+    ResourceResult,
 )
 from outage_explorer.application.errors import (
     ConnectorConfigurationError,
     ConnectorDependencyError,
 )
-from outage_explorer.application.ports.connector import DurableConnectorReceipt
+from outage_explorer.application.ports.connector import DurableResourceReceipt
 from outage_explorer.application.services.connector_artifacts import (
     DurableCandidateResult,
 )
@@ -28,10 +28,10 @@ class _Parser(argparse.ArgumentParser):
 
 
 def run(
-    execute: Callable[[ConnectorInput], ConnectorResult],
+    execute: Callable[[ConnectorInput], ResourceResult],
     argv: Sequence[str] | None = None,
     *,
-    execute_artifacts: Callable[[ConnectorArtifactInput], DurableConnectorReceipt]
+    execute_artifacts: Callable[[ConnectorArtifactInput], DurableResourceReceipt]
     | None = None,
     execute_durable: Callable[[ConnectorInput], DurableCandidateResult] | None = None,
 ) -> int:
@@ -57,16 +57,17 @@ def run(
     )
     parser.add_argument(
         "--prior",
-        help="Exact prior manifest SHA256:BYTE_COUNT in the same staging store; overrides config",
+        help="Path to the prior verified local resource report in the same staging store; overrides config",
     )
     parser.add_argument(
         "--operation",
         choices=("candidate", "persist", "recover"),
         default="candidate",
-        help="Explicit local build or durable graph transfer",
+        help="Explicit local build or durable three-resource transfer",
     )
     parser.add_argument(
-        "--manifest", help="Exact manifest SHA256:BYTE_COUNT for persist/recover"
+        "--resources",
+        help="Local candidate report (persist) or exact receipt JSON (recover)",
     )
     parser.add_argument(
         "--local-only",
@@ -99,9 +100,9 @@ def run(
 
 
 def _execute(
-    execute: Callable[[ConnectorInput], ConnectorResult],
+    execute: Callable[[ConnectorInput], ResourceResult],
     args: argparse.Namespace,
-    execute_artifacts: Callable[[ConnectorArtifactInput], DurableConnectorReceipt]
+    execute_artifacts: Callable[[ConnectorArtifactInput], DurableResourceReceipt]
     | None,
     execute_durable: Callable[[ConnectorInput], DurableCandidateResult] | None,
 ) -> int:
@@ -122,16 +123,16 @@ def _execute(
                 ConnectorArtifactInput(
                     args.operation,
                     args.staging,
-                    args.manifest,
+                    args.resources,
                     args.config,
                     args.s3_workers,
                 )
             )
             print(f"{args.operation}_verified; no publication")
-            print(f"manifest={receipt.manifest.sha256}:{receipt.manifest.byte_count}")
-            print(f"objects={receipt.objects}; bytes={receipt.byte_count}")
+            print(f"generation={receipt.generation_id}; objects=3")
+            print(f"bytes={sum(ref.object.byte_count for ref in receipt.resources)}")
             return 0
-        if args.manifest is not None:
+        if args.resources is not None:
             raise ConnectorConfigurationError("Invalid candidate operation")
         inputs = ConnectorInput(
             args.start,
@@ -176,10 +177,7 @@ def _execute(
         print(f"error={durable_result.error}; report_written={result.report_written}")
         if durable_result.error == "aws_dependency":
             print("Run make setup to install AWS SDK login support.")
-        if report.manifest is not None:
-            print(
-                f"local_manifest={report.manifest.sha256}:{report.manifest.byte_count}"
-            )
+        print(f"local_resources={result.local_report}")
         return (
             130
             if durable_result.error == "interrupted"
@@ -192,14 +190,17 @@ def _execute(
         print(
             f"candidate_s3_verified run={report.run_id}; local_outcome={report.outcome}; no publication"
         )
-        print(f"manifest={receipt.manifest.sha256}:{receipt.manifest.byte_count}")
-        print(f"objects={receipt.objects}; bytes={receipt.byte_count}")
+        print(f"generation={receipt.generation_id}; objects=3")
+        if result.local_report is not None:
+            root = result.local_report.rsplit("/runs/", 1)[0]
+            print(f"receipt={root}/receipts/{receipt.generation_id}.json")
+        print(f"bytes={sum(ref.object.byte_count for ref in receipt.resources)}")
         return 0
     print(f"{report.outcome} run={report.run_id}; no publication")
     if report.error is not None:
         print(f"error={report.error}; report_written={result.report_written}")
-    if report.manifest is not None:
-        print(f"manifest={report.manifest.sha256}:{report.manifest.byte_count}")
+    if report.candidate is not None:
+        print(f"local_resources={result.local_report}")
     if report.error == "interrupted":
         return 130
     return 1 if report.outcome == "failed" else 0

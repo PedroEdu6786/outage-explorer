@@ -2,13 +2,11 @@
 
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
 from datetime import date
 from decimal import Decimal
-
-import pyarrow as pa
-import pyarrow.parquet as pq
 
 from outage_explorer.domain.datasets import PUBLIC_DATASETS
 
@@ -51,30 +49,30 @@ def test_worker_subprocess_fails_safely_without_credentials():
 
 def test_worker_preview_subprocess_checks_real_parquet(tmp_path):
     dataset = PUBLIC_DATASETS[0]
-    values = [
-        date(2026, 9, 1),
-        Decimal("100"),
-        Decimal("10"),
-        Decimal("10"),
-        Decimal("10"),
-        "1",
-        "10",
-        "10.00",
-        "10.00",
-    ]
-    fields = []
-    arrays = []
-    for column, value in zip(dataset.columns, values, strict=True):
-        if column.value_type.kind == "decimal":
-            dtype = pa.decimal128(column.value_type.precision, column.value_type.scale)
-        elif column.value_type.kind == "date":
-            dtype = pa.date32()
-        else:
-            dtype = pa.string()
-        fields.append(pa.field(column.name, dtype, nullable=False))
-        arrays.append(pa.array([value], type=dtype))
+    values = [date(2026, 9, 1), Decimal("100")]
+    from outage_explorer.infrastructure.parquet.storage import LocalParquetStore
+    from tests.integration.test_connector_parquet import ARTIFACT_BOUNDS, GRAINS
+    from tests.integration.test_connector_parquet import raw as source_row
+    from tests.integration.test_resource_candidates import build
+
+    store = LocalParquetStore(tmp_path / "source", ARTIFACT_BOUNDS)
+    candidate = build(
+        store,
+        values={
+            grain: [
+                source_row(
+                    grain,
+                    period="2026-09-01",
+                    capacity="100",
+                    outage="10",
+                    percentOutage="10",
+                )
+            ]
+            for grain in GRAINS
+        },
+    )
     original = tmp_path / "fixture.parquet"
-    pq.write_table(pa.Table.from_arrays(arrays, schema=pa.schema(fields)), original)
+    original.write_bytes(b"".join(store.read(candidate.resources[0].object)))
     raw = original.read_bytes()
     digest = hashlib.sha256(raw).hexdigest()
     original.rename(tmp_path / (digest + ".parquet"))
@@ -192,3 +190,57 @@ def test_real_engine_response_passes_strict_parent_decoder():
     from outage_explorer.infrastructure.query_results.encoding import canonical_json
 
     assert output.document == canonical_json(json.loads(result.stdout)["result"])
+
+
+def test_worker_preview_subprocess_projects_public_columns_of_resource_files(tmp_path):
+    from outage_explorer.infrastructure.parquet.storage import LocalParquetStore
+    from tests.integration.test_connector_parquet import ARTIFACT_BOUNDS
+    from tests.integration.test_resource_candidates import build
+
+    store = LocalParquetStore(tmp_path / "candidate", ARTIFACT_BOUNDS)
+    candidate = build(store)
+    inputs = tmp_path / "inputs"
+    inputs.mkdir()
+    program = """
+import sys
+from pathlib import Path
+from outage_explorer.bootstrap import build_query_worker
+from outage_explorer.entrypoints.query_worker import run
+raise SystemExit(run(build_query_worker(inputs_root=Path(sys.argv[1])), sys.stdin.buffer, sys.stdout.buffer))
+"""
+    for dataset in PUBLIC_DATASETS:
+        ref = next(r for r in candidate.resources if r.grain == dataset.grain)
+        shutil.copyfile(
+            store.root / ref.object.key, inputs / (ref.object.sha256 + ".parquet")
+        )
+        payload = {
+            "version": 1,
+            "operation": "preview",
+            "dataset": dataset.id,
+            "files": [
+                {
+                    "sha256": ref.object.sha256,
+                    "byte_count": ref.object.byte_count,
+                    "rows": ref.row_count,
+                }
+            ],
+            "start_date": None,
+            "end_date": None,
+            "after": None,
+            "page_size": 100,
+        }
+        result = subprocess.run(
+            [sys.executable, "-c", program, str(inputs)],
+            input=json.dumps(payload),
+            text=True,
+            capture_output=True,
+            timeout=30,
+            check=False,
+        )
+        assert result.returncode == 0, result.stderr
+        response = json.loads(result.stdout)["result"]
+        assert len(response["rows"]) == ref.row_count
+        assert [c["name"] for c in response["columns"]] == [
+            c.name for c in dataset.columns
+        ]
+        assert "origin" not in result.stdout

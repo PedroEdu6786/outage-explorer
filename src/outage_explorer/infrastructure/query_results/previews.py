@@ -19,7 +19,7 @@ from outage_explorer.application.ports.preview_sequences import (
     PreviewSequence,
 )
 from outage_explorer.domain.datasets import Dataset
-from outage_explorer.domain.publication import PublishedGeneration
+from outage_explorer.domain.publication import ResourcePublishedGeneration
 from outage_explorer.domain.query_results import LIFETIME_SECONDS
 
 
@@ -57,7 +57,7 @@ class BoundedPreviewSequences:
         self,
         user_id: str,
         dataset: Dataset,
-        generation: PublishedGeneration,
+        generation: ResourcePublishedGeneration,
         start: date | None,
         end: date | None,
         size: int,

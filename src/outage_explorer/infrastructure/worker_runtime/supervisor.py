@@ -12,7 +12,7 @@ from uuid import uuid4
 from outage_explorer.application.errors import RuntimeUnavailableError
 from outage_explorer.application.ports.analytical_inputs import (
     PinnedInputs,
-    PublishedInputs,
+    PublishedResourceInputs,
 )
 from outage_explorer.application.ports.execution import ExecutionReservation
 from outage_explorer.application.ports.preview_sequences import (
@@ -24,7 +24,7 @@ from outage_explorer.application.ports.query_results import (
     ResultReservation,
 )
 from outage_explorer.domain.datasets import Dataset
-from outage_explorer.domain.publication import PublishedGeneration
+from outage_explorer.domain.publication import ResourcePublishedGeneration
 from outage_explorer.infrastructure.query_results.cleanup import QueryCleanup
 from outage_explorer.infrastructure.query_results.previews import (
     BoundedPreviewSequences,
@@ -43,7 +43,7 @@ from outage_explorer.infrastructure.worker_runtime.ownership import (
 
 @dataclass(frozen=True)
 class AnalyticalResources:
-    inputs: PublishedInputs
+    inputs: PublishedResourceInputs
     execution: VerifiedLauncher
     results: BoundedQueryResults
     sequences: BoundedPreviewSequences
@@ -162,7 +162,7 @@ class ForwardInputs:
         self._supervisor = supervisor
 
     def prepare(
-        self, generation: PublishedGeneration, dataset: Dataset
+        self, generation: ResourcePublishedGeneration, dataset: Dataset
     ) -> PinnedInputs:
         return self._supervisor.ready().inputs.prepare(generation, dataset)
 
@@ -194,7 +194,7 @@ class ForwardSequences:
         self,
         user_id: str,
         dataset: Dataset,
-        generation: PublishedGeneration,
+        generation: ResourcePublishedGeneration,
         start: date | None,
         end: date | None,
         size: int,

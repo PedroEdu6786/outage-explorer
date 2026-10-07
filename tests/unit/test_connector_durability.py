@@ -5,7 +5,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from outage_explorer.application.dto import ConnectorInput, ConnectorResult
+from outage_explorer.application.dto import ConnectorInput, ResourceResult
 from outage_explorer.application.errors import (
     ConnectorConfigurationError,
     ConnectorDependencyError,
@@ -14,17 +14,17 @@ from outage_explorer.application.ports.artifacts import (
     ArtifactError,
     ArtifactLimitError,
 )
-from outage_explorer.application.ports.connector import DurableConnectorReceipt
+from outage_explorer.application.ports.connector import DurableResourceReceipt
 from outage_explorer.application.services.connector_artifacts import (
     CreateDurableConnectorCandidate,
 )
-from tests.unit.test_connector_service import REFERENCE, setup
+from tests.unit.test_connector_service import resource_setup
 
 
 def local_result(outcome="candidate_verified", written=True):
-    service, request, *_ = setup()
+    service, request, *_ = resource_setup()
     result = service.run(request)
-    return ConnectorResult(replace(result.report, outcome=outcome), written)
+    return ResourceResult(replace(result.report, outcome=outcome), written)
 
 
 def test_failed_local_candidate_never_uploads():
@@ -55,13 +55,21 @@ def test_persistence_failure_keeps_local_reference_without_durable_success(
         Mock(return_value=local), Mock(side_effect=failure)
     ).execute(ConnectorInput(None, None, "local"))
     assert result.candidate == local and result.error == code and result.receipt is None
-    assert result.candidate.report.manifest == REFERENCE
+    assert result.candidate.report.candidate == local.report.candidate
     assert "secret" not in repr(result)
 
 
 def test_inconsistent_durable_receipt_cannot_confirm_success():
-    wrong = replace(REFERENCE, key="e" * 64, sha256="e" * 64)
-    persist = Mock(return_value=DurableConnectorReceipt(wrong, 1, 10))
+    candidate = local_result().report.candidate
+    receipt = DurableResourceReceipt(
+        candidate.generation_id,
+        candidate.resources,
+        candidate.interval,
+        candidate.contract_id,
+        candidate.transformation_id,
+        candidate.base_generation_id,
+    )
+    persist = Mock(return_value=replace(receipt, generation_id="wrong"))
     result = CreateDurableConnectorCandidate(
         Mock(return_value=local_result()), persist
     ).execute(ConnectorInput(None, None, "local"))

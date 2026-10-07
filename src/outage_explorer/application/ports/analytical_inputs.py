@@ -4,7 +4,9 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from outage_explorer.domain.datasets import Dataset
-from outage_explorer.domain.publication import PublishedGeneration
+from outage_explorer.domain.publication import (
+    ResourcePublishedGeneration,
+)
 
 
 @dataclass(frozen=True)
@@ -21,7 +23,9 @@ class PinnedInputs(Protocol):
     def close(self) -> None: ...
 
 
-class PublishedInputs(Protocol):
+class PublishedResourceInputs(Protocol):
+    """Exact-descriptor inputs, prepared before the shared composition switch."""
+
     def prepare(
-        self, generation: PublishedGeneration, dataset: Dataset
+        self, generation: ResourcePublishedGeneration, dataset: Dataset
     ) -> PinnedInputs: ...

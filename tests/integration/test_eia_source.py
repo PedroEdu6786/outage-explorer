@@ -27,8 +27,7 @@ from outage_explorer.domain.refresh import Interval, RefreshBounds, model_partit
 from outage_explorer.infrastructure.eia.sanitization import Sanitizer
 from outage_explorer.infrastructure.eia.source import EiaSource
 from outage_explorer.infrastructure.parquet.evidence import (
-    replay_evidence,
-    write_evidence,
+    collect_resources,
 )
 from outage_explorer.infrastructure.parquet.storage import LocalParquetStore
 
@@ -220,8 +219,8 @@ def test_cross_page_aba_invalid_later_and_exact_parquet_replay(tmp_path, grain):
         grain,
     )
     store = LocalParquetStore(tmp_path, ARTIFACT_BOUNDS)
-    bundle = write_evidence(store, adapter.pages())
-    replay = list(replay_evidence(store, bundle))
+    bundle = collect_resources(store, adapter.pages())
+    replay = list(bundle.rows)
     assert [item.value for item in replay] == values
     assert [item.origin.source_position for item in replay] == list(range(5))
     assert [item.origin.page_index for item in replay] == [0, 0, 1, 1, 2]
@@ -418,8 +417,8 @@ def test_numeric_facility_order_across_pages_preserves_opaque_identifiers(
         grain,
     )
     store = LocalParquetStore(tmp_path, ARTIFACT_BOUNDS)
-    bundle = write_evidence(store, adapter.pages())
-    replayed = list(replay_evidence(store, bundle))
+    bundle = collect_resources(store, adapter.pages())
+    replayed = list(bundle.rows)
     assert [record.value["facility"] for record in replayed] == identifiers
     assert len(adapter.quality.observed_entities) == 5
     modeled = model_partition(grain, INTERVAL, replayed, MODEL_BOUNDS)
@@ -672,16 +671,15 @@ def test_nested_secret_keys_values_and_paths_are_safe_and_observations_excluded(
         [response(meta), response(data), response(page([], "2"))], "facility"
     )
     store = LocalParquetStore(tmp_path, ARTIFACT_BOUNDS)
-    bundle = write_evidence(store, adapter.pages())
-    replay = list(replay_evidence(store, bundle))
+    bundle = collect_resources(store, adapter.pages())
+    replay = list(bundle.rows)
     assert all("_source_redacted_paths" in item.value for item in replay)
     assert all(
         assess(SourceRecord(i, item.value), "facility").observation is None
         for i, item in enumerate(replay)
     )
-    all_records = [
-        record for ref in (*bundle.pages, *bundle.raw) for record in store.records(ref)
-    ]
+    all_records = list(bundle.rows)
+    assert not list(tmp_path.iterdir())
     for secret in (SECRET, "unknown-secret", "unknown-token"):
         assert secret not in repr(all_records)
     assert replay[0].value["capacity"] == "+3.0000e0"

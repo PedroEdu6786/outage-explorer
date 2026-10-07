@@ -4,17 +4,14 @@ from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from outage_explorer.application.dto import ConnectorReport, ResourceReport
+from outage_explorer.application.dto import ResourceReport
 from outage_explorer.application.ports.artifacts import (
     ArtifactError,
     ArtifactRef,
-    ExactArtifactStore,
     StoredObject,
 )
 from outage_explorer.application.ports.candidates import (
-    CandidateManifest,
     CandidateResult,
-    EvidenceBundle,
     ResourceBaseline,
     SanitizedPage,
     TransientInput,
@@ -32,20 +29,6 @@ class ConnectorEvents(Protocol):
 
 class ConnectorSourceFactory(Protocol):
     def __call__(self, request: SourceRequest) -> SourcePages: ...
-
-
-class ConnectorEvidence(Protocol):
-    def write(self, pages: Iterable[SanitizedPage]) -> EvidenceBundle: ...
-
-    def reopen(
-        self, reference: StoredObject, bounds: RefreshBounds
-    ) -> CandidateManifest: ...
-
-
-class ConnectorReports(Protocol):
-    def progress(self, report: ConnectorReport) -> None: ...
-
-    def finish(self, report: ConnectorReport) -> None: ...
 
 
 class ResourceInputs(Protocol):
@@ -95,31 +78,6 @@ class DurableResourceReceipt:
             or self.base_generation_id == self.generation_id
         ):
             raise ArtifactError("Missing durable generation identity")
-
-
-@dataclass(frozen=True)
-class DurableConnectorReceipt:
-    """Complete verified storage graph; confers no active publication."""
-
-    manifest: StoredObject
-    objects: int
-    byte_count: int
-
-
-class ConnectorGraph(Protocol):
-    def graph(
-        self, reference: StoredObject, bounds: RefreshBounds
-    ) -> tuple[StoredObject, ...]: ...
-
-    def read(self, reference: StoredObject) -> Iterator[bytes]: ...
-
-    def restore(
-        self, reference: StoredObject, source: ExactArtifactStore, bounds: RefreshBounds
-    ) -> CandidateManifest: ...
-
-    def verify_remote(
-        self, reference: StoredObject, source: ExactArtifactStore, bounds: RefreshBounds
-    ) -> None: ...
 
 
 class RecoveryStaging(Protocol):

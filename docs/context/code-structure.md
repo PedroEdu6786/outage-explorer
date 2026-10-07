@@ -2,27 +2,26 @@
 
 Status: **accepted structure**, [ADR-0030](../adr/0030-layered-flask-monolith.md).
 
-Refresh persistence is migrating under accepted
+Refresh persistence is implemented under accepted
 [ADR-0060](../adr/0060-persist-only-three-resource-files-per-generation.md).
 The application ports describe exactly three resource files, baseline identity,
 interval, versions and bounded transient quality; Parquet infrastructure preserves
 private provenance/source strings and exact arithmetic in the unified physical
 codec. Analytical views project only existing public columns. PostgreSQL publication
 owns exact file descriptors; S3 verifies every file by bounded full readback.
-Supporting graph writes and duplicate public files are being retired through
-[phase checkpoints](../specs/refresh-persistence/tasks.md), with cutover still gated.
+Supporting graph writes and duplicate public files have been removed through
+[phase checkpoints](../specs/refresh-persistence/tasks.md). Existing legacy bases fail closed.
 [ADR-0061](../adr/0061-generation-prefixed-resource-object-keys.md) selects exact
-generation-prefixed physical keys, distinct from local checksum identities.
-Graph-related implementation descriptions below are pre-migration
-context, not requirements to preserve that superseded architecture.
+generation-prefixed physical keys, distinct from local checksum identities;
+[ADR-0062](../adr/0062-fail-closed-legacy-publication-layout.md) fixes fail-closed
+behavior for an existing manifest-format publication.
 
 Phase 1 now supplies `CreateResourceCandidate`, `ParquetResourceBuilder` and
 `LocalConnectorEvidence.collect_resources` for explicit local composition.
 The collector validates bounded copied input and discards page/transport metadata;
 the builder reuses pure merge policies and the existing exact codec, streams prior
 resource files, writes three unified files and compares them with the transient
-merge before releasing inputs. Existing CLI/refresh/bootstrap composition switches
-in phase 4 after durable consumers are ready. No new candidate writes both layouts
+merge before releasing inputs. Shared CLI/refresh/bootstrap composition now uses this pipeline. No new candidate writes both layouts
 and no graph conversion or fallback is implemented. New behavior is covered in
 `tests/integration/test_resource_candidates.py` and pure connector service tests.
 The health scaffold and offline national/facility/generator verification are implemented; product
@@ -37,9 +36,9 @@ receipts copy admitted interval, versions and baseline identity. Conditional wri
 and full streamed readback share locked transfer bounds; recovery reserves missing
 file bytes, verifies schema/rows, joins workers and cleans only recovery-owned files
 on failure. `ResourceWorkerSettings` defaults new S3 consumers to three workers;
-shared CLI/refresh/bootstrap settings switch in Phase 4. Controlled tests live in
-`tests/integration/test_resource_artifacts.py`; publication and analytical cache
-integration remain Phase 3 obligations.
+shared CLI/refresh/bootstrap use these settings. Controlled tests live in
+`tests/integration/test_resource_artifacts.py`; publication, exact analytical cache
+reads and the composed end-to-end flow passed the phase-4 checkpoint.
 
 Under [ADR-0051](../adr/0051-configured-http-refresh-range.md), HTTP refresh
 admission resolves a configured inclusive interval and records it for background
@@ -124,7 +123,7 @@ src/outage_explorer/
     cognito/                    # trusted access-token validation
     eia/                        # upstream metadata/pages and HTTP retries
     parquet/                    # bounded read/write and model transformations
-    s3/                         # immutable objects and manifest retrieval
+    s3/                         # immutable exact resource transfers/readback
     sql_validation/             # parser-specific AST inspection
     duckdb/                     # engine setup and execution in worker only
     local_cache/                # downloads, checksums, pinning, eviction
@@ -329,34 +328,32 @@ their prior rows, wholly excluded routes retain prior data during refresh, and
 initial loading requires usable output in all three grains. It accepts sanitized input and
 performs no I/O, authorization or publication.
 
-`application/ports/artifacts.py` and `candidates.py` define artifact and candidate
-contracts without Arrow types. `infrastructure/parquet/` implements explicit
-schemas, bounded evidence replay, complete date-group modeling and history scans,
-immutable local objects, and persisted manifests. Verification replays expected
-rows/ledgers, checks cross-file uniqueness and exact values, and binds retained
-rows to inherited evidence and the pinned base manifest. No whole-history row
-collection is required; manifest metadata, day groups and batches have explicit
-caller budgets. Read-only verification trades repeated sequential scans for
-bounded memory. Local tests do not establish measured production resource limits
-or AWS guarantees. The source contract in `application/ports/source.py` and
-adapters in `infrastructure/eia/` now supply bounded sequential retrieval,
-sanitized evidence and source-quality reconciliation. HTTPX stays in
-infrastructure; an explicit injected transport enables controlled tests without
-network access or import-time construction. A context-local transport logging
-filter covers wire reads and closes without retaining secrets or suppressing
-unrelated concurrent logs. The contributor CLI now composes these adapters through
-`application/services/connector.py`, with typed default budgets and optional JSON
-file overrides through `--config` (ADR-0041), exact
-prior-manifest input, sequential terminal-quality checks and bounded separate-run
-JSON progress/final reports. `infrastructure/parquet/connector.py` reopens and
-verifies the complete bounded ancestry before retrieval and after candidate
-persistence. `bootstrap.execute_connector` validates configuration, constructs
-adapters and closes the transport; `entrypoints/cli/connector_startup.py` only
-passes that callable to the command so help performs no connector work. Its exact
-AST exception and negative fixtures preserve startup restrictions. The command
-has no publication capability or mutable active pointer. S3, authorized durable
-refresh, publication and live enablement remain work in the
-[connector tasks](../specs/data-connector/tasks.md).
+`application/ports/artifacts.py` and `candidates.py` define exact three-resource
+contracts without Arrow types. `ParquetResourceBuilder` evaluates bounded transient
+source input and merges sorted prior resource rows, writes one unified file per
+grain and compares its exact values/quality before releasing transient inputs.
+Private provenance and original numeric strings remain in the physical codec;
+DuckDB views project only the existing public columns. There is no graph-writing
+candidate or manifest serializer. Bounded source adapters and `collect_resources`
+validate canonical page/source order and lookahead without persisting supporting
+artifacts. Finding 001 and source anomaly fixtures remain in repository tests.
+
+`bootstrap.execute_connector` composes local source/candidate/report ports;
+`execute_connector_to_s3` validates S3 configuration before source work and uses
+`PersistResourceArtifacts`. Explicit retry takes a bounded local report path;
+recovery takes a bounded exact receipt and reads only the three supplied objects.
+Default S3 concurrency is 3 (configurable1–3), sharing aggregate transfer/staging
+bounds. Every admitted worker joins before cleanup. Reports/receipts are local
+transport metadata, with no publication authority.
+
+`RefreshExecution` restores the admitted resource base, validates candidate and
+receipt identity/coverage, and atomically publishes exact descriptors and quality
+through `PostgresqlResourcePublicationStore`. Its per-run composition checks the
+lease during I/O and uses separate frozen candidate/persistence deadlines.
+`VerifiedResourceCache` downloads only the approved dataset file; analytical
+workers scan public-only views over the exact staged resource. Factories/imports
+remain inert and API shutdown never owns the independent refresh worker.
+Legacy publication rows remain immutable and fail closed under ADR-0062.
 
 Facility and generator verification reuse `domain/observations.py` (national's
 API remains in `domain/national.py`) and the shared evidence service/adapters,
@@ -365,36 +362,10 @@ remain offline contributor tools. The source-total difference is reported as
 unresolved evidence; this does not establish live pagination completeness or
 product authorization. See the [detail contract](../specs/facility-generator-verification/contract.md).
 
-Phase 5 adds `application/services/connector_artifacts.py` for exact graph
-persistence/recovery and `infrastructure/s3/artifacts.py` for conditional bounded
-SDK storage. The explicit connector CLI operations reuse graph export/restoration
-in `infrastructure/parquet/connector.py`; bootstrap constructs credential
-providers for default durable candidate runs and explicit persist/recover. Controlled recovery verifies full replay
-without EIA. Active publication and PostgreSQL outcomes remain pending.
-
-[ADR-0042](../adr/0042-connector-cli-default-s3-persistence.md) makes candidate CLI
-runs durable by default. `CreateDurableConnectorCandidate` coordinates injected
-local creation and persistence use cases, retaining the local outcome/reference
-when persistence fails. `bootstrap.execute_connector_to_s3` checks S3 target
-configuration before source work and composes the existing adapters; the CLI
-selects it unless `--local-only` is explicit. Its startup wrapper has a narrow
-exact-AST exception for these dedicated composition functions. Default success
-requires a verified S3 receipt; local reports remain candidate-only records.
-
-
-Phase 6 implements injected bounded scheduling in `application/ports/connector_workers.py`
-and `infrastructure/connector_workers.py`. Canonical endpoint page consumption remains ordered;
-independent collection/evidence and S3 dependency PUT/GET operations can overlap
-with separately configurable 1–3 workers (sequential defaults). Application
-coordinators own reports, deterministic combined models/manifests and receipts.
-Source/store/SDK accounting is shared; failure stops admission and joins workers.
-Cooperative storage checks cover cancellation/deadlines during repeated replay.
-Controlled overlap/equivalence and configured-bucket inherited reconstruction
-passed. All six connector phases are complete: the full initial live candidate
-and its exact configured-S3 source-disabled reconstruction verified successfully.
-Earlier interrupted attempts remain historical evidence. Product authorization,
-activation and operational outcomes remain separate backend obligations. See [resource evidence](../specs/data-connector/resource-evidence.md).
-
+The earlier connector graph implementation and its authorized historical live
+measurements are recorded in the [resource evidence](../specs/data-connector/resource-evidence.md).
+They describe the superseded layout; current resource persistence claims rely on
+the refresh-persistence controlled checkpoints, not those earlier measurements.
 
 ADR-0049 adds independently configured1–3 page fetch workers within a route.
 Bounded speculative windows preserve every sanitized response as an immutable

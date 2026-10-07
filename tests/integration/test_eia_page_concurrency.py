@@ -1,8 +1,6 @@
-"""Parallel requests within one route, canonical replay and audited lookahead."""
+"""Parallel route pages preserve canonical selection and bounded lookahead."""
 
-import json
 import threading
-from dataclasses import replace
 
 import httpx
 import pytest
@@ -11,11 +9,8 @@ from outage_explorer.application.dto import ConnectorArtifactInput
 from outage_explorer.application.ports.artifacts import ArtifactError
 from outage_explorer.application.ports.source import ROUTES
 from outage_explorer.bootstrap import execute_connector, execute_connector_artifacts
-from outage_explorer.infrastructure.parquet.connector import LocalConnectorEvidence
-from outage_explorer.infrastructure.parquet.evidence import verify_evidence
-from tests.integration.test_connector_artifacts import ENV
+from tests.integration.test_connector_artifacts import ENV, receipt_path
 from tests.integration.test_connector_cli import (
-    MODEL,
     Wire,
     config_file,
     configuration,
@@ -24,6 +19,7 @@ from tests.integration.test_connector_cli import (
     inputs,
     models,
     reopen,
+    report_path,
     row,
 )
 from tests.integration.test_connector_concurrency import comparable
@@ -93,7 +89,7 @@ def run_parallel(root, rows, **options):
     return result, wire
 
 
-def test_same_route_overlap_reverse_completion_conflicts_and_transport_graph_recovery(
+def test_same_route_overlap_reverse_completion_conflicts_and_resource_recovery(
     tmp_path,
 ):
     rows = {g: [row(g, outage=v) for v in ["1", "2", "1", "3", "2"]] for g in ROUTES}
@@ -104,66 +100,59 @@ def test_same_route_overlap_reverse_completion_conflicts_and_transport_graph_rec
     assert parallel.report.outcome == "candidate_verified"
     assert wire.peak == 3
     assert wire.completed.index(("national", 4)) < wire.completed.index(("national", 0))
-    a_store, a = reopen(tmp_path / "seq", sequential.report.manifest)
-    b_store, b = reopen(tmp_path / "parallel", parallel.report.manifest)
+    a_store, a = reopen(tmp_path / "seq", sequential.report.candidate)
+    b_store, b = reopen(tmp_path / "parallel", parallel.report.candidate)
     assert parallel.report.sources == sequential.report.sources
-    assert parallel.report.models == sequential.report.models
+    assert parallel.report.candidate.summaries == sequential.report.candidate.summaries
     for grain in ROUTES:
         assert [comparable(v) for v in models(a_store, a, grain)] == [
             comparable(v) for v in models(b_store, b, grain)
         ]
-    assert all(bundle.transport for bundle in b.evidence)
-    graph = LocalConnectorEvidence(b_store).graph(parallel.report.manifest, MODEL)
-    assert all(ref in graph for bundle in b.evidence for ref in bundle.transport)
+    assert len(list(b_store.root.iterdir())) == 3
     client = ControlledS3()
     cfg = config_file(tmp_path / "transfer", {"workers": {"s3_workers": 1}})
+    receipt = None
     for operation, root in [
         ("persist", tmp_path / "parallel"),
         ("recover", tmp_path / "restored"),
     ]:
+        identity = (
+            report_path(tmp_path / "parallel", b)
+            if operation == "persist"
+            else receipt_path(tmp_path / "parallel", receipt)
+        )
         receipt = execute_connector_artifacts(
-            ConnectorArtifactInput(
-                operation,
-                str(root),
-                f"{parallel.report.manifest.key}:{parallel.report.manifest.byte_count}",
-                cfg,
-                3,
-            ),
+            ConnectorArtifactInput(operation, str(root), identity, cfg, 3),
             environment=ENV,
             client=client,
         )
-        assert receipt.objects == len(graph)
-    _, restored = reopen(tmp_path / "restored", parallel.report.manifest)
+        assert len(receipt.resources) == 3
+    _, restored = reopen(tmp_path / "restored", b)
     assert restored == b
+    assert len(client.objects) == 3
     assert all(body.closed for body in client.closed_bodies)
 
 
-def test_short_page_repairs_offset_and_audits_unused_successes_and_terminal(tmp_path):
+def test_short_page_repairs_offset_and_preserves_canonical_received_rows(tmp_path):
     rows = {g: [row(g, outage=v) for v in ["1", "2", "1", "3", "2"]] for g in ROUTES}
     result, wire = run_parallel(tmp_path / "short", rows, short=True)
     assert result.report.outcome == "candidate_verified"
-    store, candidate = reopen(tmp_path / "short", result.report.manifest)
-    for bundle in candidate.evidence:
-        pages = [record for ref in bundle.pages for record in store.records(ref)]
-        assert [p["offset"] for p in pages] == [0, 1, 3, 5]
-        assert sum(p["returned_count"] for p in pages) == 5
-        assert pages[-1]["returned_count"] == 0
-        audits = [json.loads(b"".join(store.read(ref))) for ref in bundle.transport]
-        assert any(
-            not item["used"] and item["envelope"]["response"]["data"] for item in audits
-        )
-        assert sum(len(item["envelope"]["response"]["data"]) for item in audits) > 5
+    store, candidate = reopen(tmp_path / "short", result.report.candidate)
+    for grain in ROUTES:
+        summary = next(item for item in candidate.summaries if item.grain == grain)
+        assert summary.quality.received == 5
         assert (
-            len(
-                [
-                    item
-                    for item in audits
-                    if item["used"] and not item["envelope"]["response"]["data"]
-                ]
-            )
-            == 1
+            next(item for item in result.report.sources if item.grain == grain).received
+            == 5
         )
-        assert bundle.transport
+        offsets = [
+            int(request.url.params["offset"])
+            for request in wire.calls
+            if request.url.path.endswith("/data/") and ROUTES[grain] in request.url.path
+        ]
+        assert all(offset in offsets for offset in (0, 1, 3, 5))
+        assert len(models(store, candidate, grain)) == 1
+    assert len(list(store.root.iterdir())) == 3
 
 
 @pytest.mark.parametrize(
@@ -174,55 +163,24 @@ def test_admitted_failed_lookahead_even_after_short_page_never_confirms_success(
 ):
     rows = {g: [row(g)] for g in ROUTES}
     result, wire = run_parallel(tmp_path / "failure", rows, fault=fault)
-    assert result.report.outcome == "failed" and result.report.manifest is None
+    assert result.report.outcome == "failed" and result.report.candidate is None
     assert result.report.error == code
     assert not list((tmp_path / "failure").rglob(".staging-*"))
 
 
-def test_supplemental_corruption_and_missing_dependency_fail_replay(tmp_path):
+def test_resource_corruption_fails_local_verification(tmp_path):
     result, _ = run_parallel(tmp_path / "audit", {g: [row(g)] for g in ROUTES})
-    store, candidate = reopen(tmp_path / "audit", result.report.manifest)
-    bundle = candidate.evidence[0]
+    store, candidate = reopen(tmp_path / "audit", result.report.candidate)
+    (store.root / candidate.resources[0].object.key).write_bytes(b"corrupt resource")
     with pytest.raises(ArtifactError):
-        verify_evidence(store, replace(bundle, transport=bundle.transport[:-1]))
-    path = store.root / bundle.transport[-1].key
-    path.write_bytes(b"corrupt audit")
-    with pytest.raises(ArtifactError):
-        LocalConnectorEvidence(store).reopen(result.report.manifest, MODEL)
+        reopen(tmp_path / "audit", candidate)
 
 
 def test_short_page_unused_rows_are_charged_to_shared_fetch_budget(tmp_path):
     rows = {g: [row(g, outage=v) for v in ["1", "2", "1", "3", "2"]] for g in ROUTES}
     result, _ = run_parallel(tmp_path / "bounds", rows, short=True, source={"rows": 5})
     assert result.report.outcome == "failed" and result.report.error == "resource"
-    assert result.report.manifest is None
-
-
-def test_rehashed_supplemental_value_cannot_replace_canonical_raw_evidence(tmp_path):
-    from dataclasses import asdict
-
-    result, _ = run_parallel(tmp_path / "forged", {g: [row(g)] for g in ROUTES})
-    store, candidate = reopen(tmp_path / "forged", result.report.manifest)
-    bundle = candidate.evidence[0]
-    original = bundle.transport[0]
-    value = json.loads(b"".join(store.read(original)))
-    value["envelope"]["response"]["data"][0]["outage"] = "3"
-    forged = store.put_immutable((json.dumps(value).encode(),))
-    first_page = bundle.pages[0]
-    record = next(store.records(first_page))
-    metadata = json.loads(record["metadata_json"])
-    metadata["transport_refs"][0] = asdict(forged)
-    record["metadata_json"] = json.dumps(metadata)
-    rewritten = store.write("pages", bundle.grain, None, [record])
-    changed = replace(
-        bundle,
-        pages=(*rewritten, *bundle.pages[1:]),
-        transport=(forged, *bundle.transport[1:]),
-    )
-    with pytest.raises(
-        ArtifactError, match="Supplemental canonical raw value mismatch"
-    ):
-        verify_evidence(store, changed)
+    assert result.report.candidate is None
 
 
 def test_parallel_pages_preserve_invalid_and_absent_prior_origins(tmp_path):
@@ -231,7 +189,7 @@ def test_parallel_pages_preserve_invalid_and_absent_prior_origins(tmp_path):
     roots = [tmp_path / "seq-retained", tmp_path / "parallel-retained"]
     prior_rows = {g: [row(g), row(g, period="2026-09-02")] for g in ROUTES}
     initial, _ = execute(roots[0], prior_rows, config=configuration())
-    prior = initial.report.manifest
+    prior = initial.report.candidate
     shutil.copytree(roots[0], roots[1])
     incoming = {
         g: [row(g, outage="2"), row(g, outage="1"), row(g, outage="3")] for g in ROUTES
@@ -247,8 +205,8 @@ def test_parallel_pages_preserve_invalid_and_absent_prior_origins(tmp_path):
         transport=wire,
     )
     assert parallel.report.outcome == sequential.report.outcome == "candidate_verified"
-    a_store, a = reopen(roots[0], sequential.report.manifest)
-    b_store, b = reopen(roots[1], parallel.report.manifest)
+    a_store, a = reopen(roots[0], sequential.report.candidate)
+    b_store, b = reopen(roots[1], parallel.report.candidate)
     prior_store, original = reopen(roots[0], prior)
     for grain in ROUTES:
         assert (
@@ -272,13 +230,13 @@ def test_nested_endpoint_page_failure_joins_every_worker(tmp_path):
         environment=environment(),
         transport=wire,
     )
-    assert result.report.outcome == "failed" and result.report.manifest is None
+    assert result.report.outcome == "failed" and result.report.candidate is None
     assert wire.closed and not any(
         t.name.startswith("connector_") for t in threading.enumerate()
     )
 
 
-def test_parallel_supplemental_and_canonical_artifacts_never_store_credentials(
+def test_parallel_resources_never_store_credentials(
     tmp_path,
 ):
     from tests.integration.test_connector_cli import SECRET

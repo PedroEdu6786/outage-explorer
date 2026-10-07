@@ -78,6 +78,10 @@ class DataUnavailableError(Exception):
     """Published data is absent or failed integrity checks."""
 
 
+class UnsupportedPublicationLayoutError(DataUnavailableError):
+    """The stored publication layout is preserved but unsupported by this reader."""
+
+
 class DatasetUnavailableError(DataUnavailableError):
     """Unknown or forbidden public dataset identity."""
 

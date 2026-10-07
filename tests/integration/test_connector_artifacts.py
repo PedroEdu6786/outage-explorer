@@ -1,8 +1,7 @@
-"""CLI graph recovery with real Parquet and controlled SDK, EIA disabled."""
+"""Three-resource CLI persistence/recovery with real Parquet and controlled SDK."""
 
-import hashlib
 import json
-from dataclasses import replace
+from pathlib import Path
 from unittest.mock import patch
 
 import boto3
@@ -14,31 +13,27 @@ from outage_explorer.application.errors import ConnectorConfigurationError
 from outage_explorer.application.ports.artifacts import (
     ArtifactError,
     ArtifactLimitError,
-    StoredObject,
-)
-from outage_explorer.application.services.connector_artifacts import (
-    PersistConnectorArtifacts,
 )
 from outage_explorer.bootstrap import (
     execute_connector_artifacts,
     execute_connector_to_s3,
 )
 from outage_explorer.entrypoints.cli.connector import run
-from outage_explorer.infrastructure.parquet.connector import LocalConnectorEvidence
-from outage_explorer.infrastructure.parquet.evidence import replay_evidence
-from outage_explorer.infrastructure.parquet.storage import LocalParquetStore
+from outage_explorer.infrastructure.resource_metadata import (
+    read_candidate,
+    read_receipt,
+)
 from tests.integration.test_connector_cli import (
-    ARTIFACT,
-    MODEL,
     SECRET,
     Wire,
     config_file,
     execute,
     models,
     reopen,
+    report_path,
     row,
 )
-from tests.integration.test_s3_artifacts import ControlledS3, adapter, failure
+from tests.integration.test_s3_artifacts import ControlledS3, failure
 
 ENV = {
     "OUTAGE_S3_BUCKET": "test-bucket",
@@ -47,12 +42,16 @@ ENV = {
 }
 
 
+def receipt_path(root, receipt):
+    return str(root / "receipts" / (receipt.generation_id + ".json"))
+
+
 def transfer(client, root, ref, operation="persist", **kwargs):
     return execute_connector_artifacts(
         ConnectorArtifactInput(
             operation,
             str(root),
-            f"{ref.key}:{ref.byte_count}",
+            str(ref),
             kwargs.pop("config_path", None),
         ),
         environment=ENV,
@@ -68,30 +67,14 @@ def candidate(root, prior=None, **changes):
     }
     result, _ = execute(root, rows, prior=prior)
     assert result.report.outcome in ("candidate_verified", "retained_all_excluded")
-    return result.report.manifest
+    return report_path(root, result.report.candidate)
 
 
-def test_cli_recovers_complete_retained_graph_exactly_with_eia_disabled(
-    tmp_path, capsys
-):
+def test_cli_recovers_exact_three_resources_with_eia_disabled(tmp_path, capsys):
     local, restored = tmp_path / "local", tmp_path / "restored"
-    rows = {
-        grain: [
-            row(grain, outage="1"),
-            row(grain, outage="2"),
-            row(grain, outage="1"),
-            row(grain, period="2026-09-02"),
-        ]
-        for grain in ("national", "facility", "generator")
-    }
-    initial, _ = execute(local, rows)
-    first = initial.report.manifest
-    # Incoming invalid values retain earlier modeled rows and evidence origins.
-    second = candidate(local, first, outage="invalid")
+    first = candidate(local)
+    second = candidate(local, first, outage="2")
     original_store, original = reopen(local, second)
-    assert original.base_manifest_object == first
-    assert original.inherited_evidence
-    graph = LocalConnectorEvidence(original_store).graph(second, MODEL)
     client, receipts = ControlledS3(), []
 
     def invoke(inputs):
@@ -102,14 +85,14 @@ def test_cli_recovers_complete_retained_graph_exactly_with_eia_disabled(
     with (
         patch(
             "outage_explorer.infrastructure.eia.source.EiaSource.__init__",
-            side_effect=AssertionError("EIA used during transfer"),
+            side_effect=AssertionError("EIA during transfer"),
         ),
-        patch(
-            "boto3.Session",
-            side_effect=AssertionError("AWS credentials used in controlled test"),
-        ),
+        patch("boto3.Session", side_effect=AssertionError("AWS credentials used")),
     ):
         for operation, root in (("persist", local), ("recover", restored)):
+            identity = (
+                second if operation == "persist" else receipt_path(local, receipts[0])
+            )
             assert (
                 run(
                     lambda _: pytest.fail("candidate invoked"),
@@ -118,200 +101,129 @@ def test_cli_recovers_complete_retained_graph_exactly_with_eia_disabled(
                         operation,
                         "--staging",
                         str(root),
-                        "--manifest",
-                        f"{second.key}:{second.byte_count}",
+                        "--resources",
+                        identity,
                     ],
                     execute_artifacts=invoke,
                 )
                 == 0
             )
-    recovered_store, recovered = reopen(restored, second)
-    assert recovered == original
-    for expected, actual in zip(
-        original.inherited_evidence, recovered.inherited_evidence, strict=True
-    ):
-        assert list(replay_evidence(original_store, expected)) == list(
-            replay_evidence(recovered_store, actual)
-        )
     assert receipts[0] == receipts[1]
-    assert receipts[0].objects == len(graph)
+    assert read_receipt(receipt_path(local, receipts[0])) == receipts[0]
+    recovered_store, _ = reopen(restored, second)
     for grain in ("national", "facility", "generator"):
         assert models(original_store, original, grain) == models(
-            recovered_store, recovered, grain
+            recovered_store, original, grain
         )
-    assert all(
-        b"synthetic-only-connector-secret" not in data
-        for data in client.objects.values()
-    )
-    puts = [key for kind, key in client.calls if kind == "put"]
-    assert puts[-1].endswith(second.key)
-    # Verification derives bounded local day partitions, outside the durable graph.
-    from outage_explorer.infrastructure.parquet.partitions import stage_dates
-
-    derived = {
-        ref.object.key
-        for bundle in (*recovered.evidence, *recovered.inherited_evidence)
-        for refs in stage_dates(recovered_store, bundle).values()
-        for ref in refs
+    assert set(client.objects) == {
+        f"connector/generations/{original.generation_id}/{name}.parquet"
+        for name in ("national", "facilities", "generators")
     }
-    assert set(ref.key for ref in graph) | derived == {
-        path.name for path in recovered_store.root.iterdir()
-    }
+    assert len(list(recovered_store.root.iterdir())) == 3
+    assert all(SECRET.encode() not in data for data in client.objects.values())
+    assert all(body.closed for body in client.closed_bodies)
     output = capsys.readouterr()
-    assert "persist_verified" in output.out
-    assert (
-        "s3_persistence_started" in output.err and "role=final_manifest" in output.err
-    )
-    assert output.err.index("durable_graph_readback_started") < output.err.index(
-        "s3_persistence_verified"
-    )
-    assert "recovery_started" in output.err and "eia=disabled" in output.err
-    assert "graph_restore_verified" in output.err and "recovery_verified" in output.err
-    assert "synthetic-only-connector-secret" not in output.err
+    assert "persist_verified" in output.out and "recover_verified" in output.out
+    assert SECRET not in output.out + output.err
 
 
-def test_repeat_persist_verifies_existing_graph_without_overwriting(tmp_path):
+def test_repeat_persist_verifies_existing_resources_without_overwriting(tmp_path):
     root = tmp_path / "local"
-    ref = candidate(root)
-    client = ControlledS3()
+    ref, client = candidate(root), ControlledS3()
     first = transfer(client, root, ref)
     before = dict(client.objects)
-    second = transfer(client, root, ref)
-    assert first == second and client.objects == before
+    assert transfer(client, root, ref) == first and client.objects == before
+    assert len(client.calls) == 12
 
 
-@pytest.mark.parametrize("target", ["dependency", "final"])
-def test_failed_upload_preserves_prior_objects_and_retry_verifies_complete_graph(
-    tmp_path, target
-):
+@pytest.mark.parametrize("target", ["national", "facilities", "generators"])
+def test_failed_upload_preserves_prior_and_retry_verifies_three_files(tmp_path, target):
     root = tmp_path / "local"
-    first = candidate(root)
-    client = ControlledS3()
+    first, client = candidate(root), ControlledS3()
     transfer(client, root, first)
     previous = dict(client.objects)
     second = candidate(root, first, outage="2")
-    store, _ = reopen(root, second)
-    graph = LocalConnectorEvidence(store).graph(second, MODEL)
-    fail_key = graph[0].key if target == "dependency" else second.key
     original_put = client.put_object
 
     def failing(**kwargs):
-        if kwargs["Key"].endswith(fail_key):
+        if kwargs["Key"].endswith("/" + target + ".parquet"):
             raise failure("AccessDenied")
         return original_put(**kwargs)
 
-    with patch.object(client, "put_object", side_effect=failing):
-        with pytest.raises(ArtifactError):
-            transfer(client, root, second)
-    assert all(client.objects[key] == value for key, value in previous.items())
-    assert "connector/objects/" + second.key not in client.objects
-    transfer(client, root, second)
-    recovered = tmp_path / "recovered"
-    transfer(client, recovered, second, "recover")
-    assert reopen(recovered, second)[1] == reopen(root, second)[1]
+    with (
+        patch.object(client, "put_object", side_effect=failing),
+        pytest.raises(ArtifactError),
+    ):
+        transfer(client, root, second)
+    assert all(client.objects[key] == data for key, data in previous.items())
+    receipt = transfer(client, root, second)
+    restored = tmp_path / "restored"
+    assert transfer(client, restored, receipt_path(root, receipt), "recover") == receipt
+    reopen(restored, second)
 
 
-@pytest.mark.parametrize("target", ["dependency", "final", "full_replay"])
+@pytest.mark.parametrize("target", ["national", "facilities", "generators"])
 def test_readback_failure_never_returns_verified_receipt(tmp_path, target):
     root = tmp_path / "local"
-    ref = candidate(root)
-    store, _ = reopen(root, ref)
-    graph = LocalConnectorEvidence(store).graph(ref, MODEL)
-    client = ControlledS3()
-    final_gets = 0
-
-    def corrupt(key, data):
-        nonlocal final_gets
-        if key.endswith(ref.key):
-            final_gets += 1
-        if (
-            (target == "dependency" and key.endswith(graph[0].key))
-            or (target == "final" and key.endswith(ref.key))
-            or (target == "full_replay" and key.endswith(ref.key) and final_gets > 1)
-        ):
-            return b"X" * len(data)
-        return data
-
-    client.read_transform = corrupt
+    ref, client = candidate(root), ControlledS3()
+    client.read_transform = lambda key, data: (
+        b"X" * len(data) if key.endswith("/" + target + ".parquet") else data
+    )
     with pytest.raises(ArtifactError):
         transfer(client, root, ref)
-    if target == "dependency":
-        assert "connector/objects/" + ref.key not in client.objects
+    assert not (root / "receipts").exists()
     client.read_transform = None
-    assert transfer(client, root, ref).manifest == ref
+    assert (
+        transfer(client, root, ref).generation_id == read_candidate(ref).generation_id
+    )
 
 
 @pytest.mark.parametrize("fault", ["missing", "corrupt", "truncated"])
-def test_recovery_incomplete_graph_fails_preserving_remote_and_prior_local(
-    tmp_path, fault
-):
+def test_recovery_failure_preserves_remote_and_prior_local(tmp_path, fault):
     root = tmp_path / "local"
-    ref = candidate(root)
-    client = ControlledS3()
-    transfer(client, root, ref)
-    store, _ = reopen(root, ref)
-    dependency = LocalConnectorEvidence(store).graph(ref, MODEL)[0]
-    key = "connector/objects/" + dependency.key
+    ref, client = candidate(root), ControlledS3()
+    receipt = transfer(client, root, ref)
+    key = receipt.resources[0].object.key
     if fault == "missing":
-        del client.objects[key]  # Test fixture fault only; adapter exposes no delete.
+        del client.objects[key]
     elif fault == "corrupt":
         client.objects[key] = b"X" * len(client.objects[key])
     else:
         client.objects[key] = client.objects[key][:-1]
     before = dict(client.objects)
     with pytest.raises(ArtifactError):
-        transfer(client, tmp_path / "recovery", ref, "recover")
+        transfer(client, tmp_path / "recovery", receipt_path(root, receipt), "recover")
     assert before == client.objects
+    assert not list((tmp_path / "recovery" / "objects").iterdir())
     reopen(root, ref)
 
 
-def test_recovery_rejects_conflicting_dependency_identity(tmp_path):
+def test_resource_limits_and_corrupt_candidate_precede_sdk_construction(tmp_path):
     root = tmp_path / "local"
-    ref = candidate(root)
-    client = ControlledS3()
-    transfer(client, root, ref)
-    value = json.loads(client.objects["connector/objects/" + ref.key])
-    repeated = json.loads(json.dumps(value["dispositions"][0]))
-    repeated["object"]["byte_count"] += 1
-    value["dispositions"].append(repeated)
-    data = json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
-    digest = hashlib.sha256(data).hexdigest()
-    bad = StoredObject(digest, digest, len(data))
-    client.objects["connector/objects/" + digest] = data
-    with pytest.raises(ArtifactError, match="Conflicting"):
-        transfer(client, tmp_path / "recovery", bad, "recover")
-
-
-def test_graph_limits_and_invalid_prior_precede_sdk_construction(tmp_path):
-    root = tmp_path / "local"
-    ref = candidate(root)
-    client = ControlledS3()
-    limited = LocalConnectorEvidence(
-        LocalParquetStore(root / "objects", replace(ARTIFACT, objects=1))
-    )
+    ref, client = candidate(root), ControlledS3()
+    config = config_file(root, {"artifact": {"objects": 1}})
     with pytest.raises(ArtifactLimitError):
-        PersistConnectorArtifacts(limited, adapter(client)).execute(ref, MODEL)
+        transfer(client, root, ref, config_path=config)
     assert not client.calls
-    (root / "objects" / ref.key).write_bytes(b"corrupt")
-    with patch(
-        "boto3.Session", side_effect=AssertionError("AWS constructed before validation")
+    metadata = read_candidate(ref)
+    (root / "objects" / metadata.resources[0].object.key).write_bytes(b"corrupt")
+    with (
+        patch("boto3.Session", side_effect=AssertionError("AWS before validation")),
+        pytest.raises(ArtifactError),
     ):
-        with pytest.raises(ArtifactError):
-            execute_connector_artifacts(
-                ConnectorArtifactInput(
-                    "persist", str(root), f"{ref.key}:{ref.byte_count}"
-                ),
-                environment=ENV,
-            )
+        execute_connector_artifacts(
+            ConnectorArtifactInput("persist", str(root), ref), environment=ENV
+        )
 
 
 def test_recovery_requires_fresh_staging_before_external_work(tmp_path):
     root = tmp_path / "local"
-    ref = candidate(root)
-    client = ControlledS3()
+    ref, client = candidate(root), ControlledS3()
+    receipt = transfer(client, root, ref)
+    before = list(client.calls)
     with pytest.raises(ConnectorConfigurationError):
-        transfer(client, root, ref, "recover")
-    assert not client.calls
+        transfer(client, root, receipt_path(root, receipt), "recover")
+    assert client.calls == before
     reopen(root, ref)
 
 
@@ -326,55 +238,47 @@ def test_recovery_requires_fresh_staging_before_external_work(tmp_path):
 )
 def test_invalid_target_configuration_does_no_work(tmp_path, change):
     root = tmp_path / "never-created"
-    with patch("boto3.Session", side_effect=AssertionError("AWS constructed")):
-        with pytest.raises(ConnectorConfigurationError):
-            execute_connector_artifacts(
-                ConnectorArtifactInput("recover", str(root), "a" * 64 + ":10"),
-                environment=ENV | change,
-            )
+    with (
+        patch("boto3.Session", side_effect=AssertionError("AWS constructed")),
+        pytest.raises(ConnectorConfigurationError),
+    ):
+        execute_connector_artifacts(
+            ConnectorArtifactInput("recover", str(root), "absent.json"),
+            environment=ENV | change,
+        )
     assert not root.exists()
 
 
 def test_cli_failure_output_omits_sdk_secret_and_verified_reference(tmp_path, capsys):
     root = tmp_path / "local"
-    ref = candidate(root)
-    client = ControlledS3()
+    ref, client = candidate(root), ControlledS3()
     client.put_faults = [failure("AccessDenied")]
     assert (
         run(
-            lambda _: pytest.fail("candidate called"),
-            [
-                "--operation",
-                "persist",
-                "--staging",
-                str(root),
-                "--manifest",
-                f"{ref.key}:{ref.byte_count}",
-            ],
+            lambda _: pytest.fail("candidate"),
+            ["--operation", "persist", "--staging", str(root), "--resources", ref],
             execute_artifacts=lambda inputs: execute_connector_artifacts(
                 inputs, environment=ENV, client=client
             ),
         )
         == 1
     )
-    output = capsys.readouterr().out
+    output = capsys.readouterr()
     assert (
-        "verified" not in output
-        and "manifest=" not in output
-        and "synthetic-sdk-secret" not in output
+        "verified" not in output.out
+        and "synthetic-sdk-secret" not in output.out + output.err
     )
 
 
 def test_injected_credential_session_uses_bounded_sdk_configuration(tmp_path):
     root = tmp_path / "local"
-    ref = candidate(root)
-    client = ControlledS3()
-    calls = []
+    ref, client, calls = candidate(root), ControlledS3(), []
 
     class Session:
         def client(self, service, *, config):
             assert service == "s3" and config.retries["total_max_attempts"] == 1
             assert config.connect_timeout == 10 and config.read_timeout == 10
+            assert config.max_pool_connections >= 3
             return client
 
     def provider(**kwargs):
@@ -383,34 +287,39 @@ def test_injected_credential_session_uses_bounded_sdk_configuration(tmp_path):
 
     client.close = lambda: calls.append("closed")
     result = execute_connector_artifacts(
-        ConnectorArtifactInput("persist", str(root), f"{ref.key}:{ref.byte_count}"),
+        ConnectorArtifactInput("persist", str(root), ref),
         environment=ENV | {"AWS_PROFILE": "synthetic-profile"},
         session_factory=provider,
     )
-    assert result.manifest == ref
+    assert result.generation_id == read_candidate(ref).generation_id
     assert calls == [
         {"profile_name": "synthetic-profile", "region_name": "us-east-1"},
         "closed",
     ]
 
 
-def test_recovery_rejects_graph_byte_caps_and_schema_descriptor_tampering(tmp_path):
+@pytest.mark.parametrize("tamper", ["rows", "key", "duplicate", "size"])
+def test_recovery_rejects_descriptor_tampering_and_byte_caps(tmp_path, tamper):
     root = tmp_path / "local"
-    ref = candidate(root)
-    client = ControlledS3()
-    transfer(client, root, ref)
-    config = tmp_path / "small.json"
-    config.write_text(json.dumps({"artifact": {"total_bytes": ref.byte_count}}))
-    with pytest.raises(ArtifactLimitError):
-        transfer(client, tmp_path / "limited", ref, "recover", config_path=str(config))
-    value = json.loads(client.objects["connector/objects/" + ref.key])
-    value["modeled"][0]["row_count"] += 1
-    data = json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
-    digest = hashlib.sha256(data).hexdigest()
-    bad = StoredObject(digest, digest, len(data))
-    client.objects["connector/objects/" + digest] = data
-    with pytest.raises(ArtifactError):
-        transfer(client, tmp_path / "tampered", bad, "recover")
+    ref, client = candidate(root), ControlledS3()
+    receipt = transfer(client, root, ref)
+    path = tmp_path / "tampered.json"
+    value = json.loads(Path(receipt_path(root, receipt)).read_text())
+    config = None
+    if tamper == "rows":
+        value["resources"][0]["row_count"] += 1
+    elif tamper == "key":
+        value["resources"][0]["object"]["key"] = "wrong/national.parquet"
+    elif tamper == "duplicate":
+        value["resources"].append(value["resources"][0])
+    else:
+        config = config_file(tmp_path / "limited", {"artifact": {"total_bytes": 1}})
+    path.write_text(json.dumps(value))
+    with pytest.raises((ArtifactError, ConnectorConfigurationError)):
+        transfer(
+            client, tmp_path / "restored", str(path), "recover", config_path=config
+        )
+    assert all(body.closed for body in client.closed_bodies)
 
 
 def test_cli_help_and_arguments_never_construct_durable_client(capsys):
@@ -437,7 +346,7 @@ def test_cli_help_and_arguments_never_construct_durable_client(capsys):
 @pytest.mark.parametrize(
     "start,end", [("2026-09-01", "2026-09-01"), ("2026-04-02", "2026-10-01")]
 )
-def test_default_candidate_cli_persists_complete_graph_to_s3(
+def test_default_candidate_cli_persists_three_resources_to_s3(
     tmp_path, capsys, file_staging, start, end
 ):
     root = tmp_path / "candidate"
@@ -480,17 +389,18 @@ def test_default_candidate_cli_persists_complete_graph_to_s3(
         for request in wire.calls
         if request.url.path.endswith("/data/")
     )
-    assert result.receipt.manifest == result.candidate.report.manifest
-    assert len(client.objects) == result.receipt.objects
+    assert (
+        result.receipt.generation_id == result.candidate.report.candidate.generation_id
+    )
+    assert len(client.objects) == 3
     receipt = transfer(
-        client, tmp_path / "restored", result.receipt.manifest, "recover"
+        client, tmp_path / "restored", receipt_path(root, result.receipt), "recover"
     )
     assert receipt == result.receipt
     output = capsys.readouterr()
     assert "candidate_s3_verified" in output.out
     assert (
-        "candidate_s3_complete" in output.err
-        and "s3_persistence_verified" in output.err
+        "candidate_s3_complete" in output.err and "s3_readback_verified" in output.err
     )
     assert SECRET not in output.out + output.err
 
@@ -536,22 +446,19 @@ def test_s3_failure_preserves_local_candidate_for_source_disabled_retry(
     assert "error=artifact_integrity" in output.out
     assert SECRET not in output.out + output.err
     text = next(
-        line.removeprefix("local_manifest=")
+        line.removeprefix("local_resources=")
         for line in output.out.splitlines()
-        if line.startswith("local_manifest=")
+        if line.startswith("local_resources=")
     )
-    digest, count = text.split(":")
-    ref = StoredObject(digest, digest, int(count))
-    _, candidate_manifest = reopen(root, ref)
-    assert candidate_manifest.manifest_object == ref
+    _, local_candidate = reopen(root, text)
     report = json.loads(next((root / "runs").glob("*/report.json")).read_text())
     assert report["outcome"] == "candidate_verified" and not report["published"]
     with patch(
         "outage_explorer.infrastructure.eia.source.EiaSource.__init__",
         side_effect=AssertionError("EIA used during retry"),
     ):
-        receipt = transfer(client, root, ref)
-    assert receipt.manifest == ref
+        receipt = transfer(client, root, text)
+    assert receipt.generation_id == local_candidate.generation_id
 
 
 def test_local_only_rejects_explicit_artifact_operation_before_io(capsys):
@@ -581,8 +488,8 @@ def test_missing_sdk_login_dependency_has_safe_actionable_error(tmp_path, capsys
                 "persist",
                 "--staging",
                 str(root),
-                "--manifest",
-                f"{ref.key}:{ref.byte_count}",
+                "--resources",
+                ref,
             ],
             execute_artifacts=lambda inputs: execute_connector_artifacts(
                 inputs, environment=ENV, session_factory=provider
@@ -641,5 +548,36 @@ def test_default_candidate_cli_uses_independent_parallel_transfer_setting(tmp_pa
         client=client,
     )
     assert result.error is None
-    assert result.receipt.manifest == result.candidate.report.manifest
+    assert (
+        result.receipt.generation_id == result.candidate.report.candidate.generation_id
+    )
     assert all(body.closed for body in client.closed_bodies)
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        b'{"candidate":{},"candidate":{}}',
+        b"[]",
+        b"not json",
+        b" " * 65537,
+    ],
+)
+def test_bounded_local_metadata_rejects_bad_documents_before_sdk(tmp_path, payload):
+    root = tmp_path / "local"
+    metadata = tmp_path / "invalid.json"
+    metadata.write_bytes(payload)
+    client = ControlledS3()
+    with (
+        patch(
+            "boto3.Session",
+            side_effect=AssertionError("AWS before metadata validation"),
+        ),
+        pytest.raises((ArtifactError, ConnectorConfigurationError)),
+    ):
+        execute_connector_artifacts(
+            ConnectorArtifactInput("persist", str(root), str(metadata)),
+            environment=ENV,
+            client=client,
+        )
+    assert not client.calls and not root.exists()

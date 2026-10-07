@@ -19,9 +19,7 @@ from outage_explorer.application.ports.candidates import SanitizedPage
 from outage_explorer.domain.observations import SourceRecord, assess, calculate
 from outage_explorer.domain.refresh import Interval, ModeledRow, Origin
 from outage_explorer.infrastructure.parquet.evidence import (
-    replay_evidence,
-    verify_evidence,
-    write_evidence,
+    collect_resources,
 )
 from outage_explorer.infrastructure.parquet.schemas import (
     modeled_from_record,
@@ -101,16 +99,13 @@ def test_evidence_preserves_invalid_json_types_empty_page_and_source_order(tmp_p
         42,
     ]
     store = LocalParquetStore(tmp_path, BOUNDS)
-    bundle = write_evidence(store, [page(values), page([], 1, len(values))])
-    assert len(bundle.raw) == 3
-    replay = list(replay_evidence(store, bundle))
+    bundle = collect_resources(store, [page(values), page([], 1, len(values))])
+    replay = list(bundle.rows)
     assert [item.value for item in replay] == values
     assert [item.origin.source_position for item in replay] == list(range(len(values)))
     assert [item.origin.row_index for item in replay] == list(range(len(values)))
-    pages = [record for ref in bundle.pages for record in store.records(ref)]
-    assert pages[1]["returned_count"] == 0
-    assert pages[1]["source_total"] == "2850"
-    assert pages[1]["raw_refs_json"] == "[]"
+    assert bundle.page_count == 2
+    assert not list(tmp_path.iterdir())
 
 
 @pytest.mark.parametrize("grain", ["national", "facility", "generator"])
@@ -119,10 +114,8 @@ def test_exact_model_roundtrip_even_under_low_decimal_context(tmp_path, grain):
         context.prec = 6
         row = modeled(grain)
         store = LocalParquetStore(tmp_path, BOUNDS)
-        records = store.write(
-            "modeled", grain, row.observation.day, [modeled_record(row)]
-        )
-        record = next(store.records(records[0]))
+        ref = store.write_file("resource", grain, [modeled_record(row)])
+        record = next(store.records(ref))
         replay = modeled_from_record(record, grain)
         assert replay == row
         assert replay.observation.original == row.observation.original
@@ -177,43 +170,16 @@ def test_decode_preflights_large_exponent_before_arithmetic():
 )
 def test_evidence_requires_finite_json_types(tmp_path, value):
     with pytest.raises(ArtifactError):
-        write_evidence(LocalParquetStore(tmp_path, BOUNDS), [page([value])])
-
-
-@pytest.mark.parametrize(
-    "change",
-    [
-        {"field_bytes": 10},
-        {"file_bytes": 100},
-        {"total_bytes": 100},
-        {"objects": 1},
-        {"row_group_bytes": 100},
-        {"json_depth": 1},
-    ],
-)
-def test_each_storage_budget_fails_explicitly(tmp_path, change):
-    with pytest.raises(ArtifactLimitError):
-        write_evidence(
-            LocalParquetStore(tmp_path, replace(BOUNDS, **change)), [page([source()])]
-        )
-
-
-def test_bundle_linkage_verified_before_first_replay_yield(tmp_path):
-    store = LocalParquetStore(tmp_path, BOUNDS)
-    bundle = write_evidence(store, [page([source()]), page([source(outage="2")], 1, 1)])
-    corrupt = replace(bundle, raw=tuple(reversed(bundle.raw)))
-    with pytest.raises(ArtifactError, match="linkage"):
-        next(replay_evidence(store, corrupt))
+        collect_resources(LocalParquetStore(tmp_path, BOUNDS), [page([value])])
 
 
 def test_corruption_count_schema_and_missing_file_fail_before_yield(tmp_path):
     store = LocalParquetStore(tmp_path, BOUNDS)
-    bundle = write_evidence(store, [page([source()])])
-    ref = bundle.raw[0]
+    ref = store.write_file("resource", "national", [modeled_record(modeled())])
     with pytest.raises(ArtifactError, match="row count"):
         next(store.records(replace(ref, row_count=2)))
     with pytest.raises(ArtifactError, match="schema"):
-        next(store.records(replace(ref, kind="modeled")))
+        next(store.records(replace(ref, kind="public")))
     with pytest.raises(ArtifactError, match="byte count"):
         next(
             store.records(
@@ -231,7 +197,7 @@ def test_corruption_count_schema_and_missing_file_fail_before_yield(tmp_path):
         next(store.records(ref))
     path.unlink()
     with pytest.raises(ArtifactError, match="unavailable"):
-        verify_evidence(store, bundle)
+        store.verify(ref)
 
 
 def test_wrong_physical_schema_with_valid_checksum_fails(tmp_path):
@@ -240,7 +206,7 @@ def test_wrong_physical_schema_with_valid_checksum_fails(tmp_path):
     pq.write_table(pa.table({"value": ["not raw"]}), sink)
     obj = store.put_immutable([sink.getvalue().to_pybytes()])
     with pytest.raises(ArtifactError, match="schema"):
-        store.verify(ArtifactRef(obj, "raw", "national", None, 1))
+        store.verify(ArtifactRef(obj, "resource", "national", None, 1))
 
 
 def test_object_identity_is_immutable_and_path_safe(tmp_path):
@@ -254,7 +220,7 @@ def test_object_identity_is_immutable_and_path_safe(tmp_path):
 
 def test_schema_metadata_is_explicit_for_all_artifacts():
     for grain in ("national", "facility", "generator"):
-        for kind in ("raw", "pages", "dispositions", "modeled", "ledger"):
+        for kind in ("resource",):
             assert schema_for(kind, grain).metadata == {
                 b"kind": kind.encode(),
                 b"grain": grain.encode(),
@@ -291,17 +257,16 @@ def test_failed_atomic_install_leaves_no_final_or_staging_object(tmp_path, monke
 
 def test_oversized_row_groups_from_foreign_artifact_are_rejected(tmp_path):
     store = LocalParquetStore(tmp_path, BOUNDS)
-    bundle = write_evidence(store, [page([source(), source(), source()])])
-    rows = [record for ref in bundle.raw for record in store.records(ref)]
+    rows = [modeled_record(modeled())] * 3
     sink = pa.BufferOutputStream()
     pq.write_table(
-        pa.Table.from_pylist(rows, schema=schema_for("raw", "national")),
+        pa.Table.from_pylist(rows, schema=schema_for("resource", "national")),
         sink,
         row_group_size=3,
     )
     obj = store.put_immutable([sink.getvalue().to_pybytes()])
     with pytest.raises(ArtifactLimitError, match="row group"):
-        next(store.records(ArtifactRef(obj, "raw", "national", None, 3)))
+        next(store.records(ArtifactRef(obj, "resource", "national", None, 3)))
 
 
 def test_page_origin_and_sequence_tampering_fail(tmp_path):
@@ -309,11 +274,11 @@ def test_page_origin_and_sequence_tampering_fail(tmp_path):
     first = page([source()])
     second = page([source()], 1, 1)
     with pytest.raises(ArtifactError, match="ordering"):
-        write_evidence(
+        collect_resources(
             store, [first, replace(second, origin=replace(second.origin, row_index=1))]
         )
     with pytest.raises(ArtifactError, match="Mixed"):
-        write_evidence(
+        collect_resources(
             store,
             [
                 first,
@@ -321,7 +286,7 @@ def test_page_origin_and_sequence_tampering_fail(tmp_path):
             ],
         )
     with pytest.raises(ArtifactError, match="terminal"):
-        write_evidence(store, [page([]), second])
+        collect_resources(store, [page([]), second])
 
 
 def test_decode_trims_insignificant_zeros_before_fraction_expansion(monkeypatch):
@@ -344,3 +309,23 @@ def test_decode_trims_insignificant_zeros_before_fraction_expansion(monkeypatch)
     restored = schemas.modeled_from_record(record, "national")
     assert dict(restored.observation.original)["capacity"] == original
     assert calls == [0, 0]
+
+
+@pytest.mark.parametrize(
+    "change", [{"field_bytes": 10}, {"total_bytes": 100}, {"json_depth": 1}]
+)
+def test_transient_collection_budget_fails_without_supporting_files(tmp_path, change):
+    store = LocalParquetStore(tmp_path, replace(BOUNDS, **change))
+    with pytest.raises(ArtifactLimitError):
+        collect_resources(store, [page([source()]), page([], 1, 1)])
+    assert not list(tmp_path.iterdir())
+
+
+@pytest.mark.parametrize(
+    "change", [{"file_bytes": 100}, {"total_bytes": 100}, {"row_group_bytes": 100}]
+)
+def test_resource_storage_budget_fails_without_partial_file(tmp_path, change):
+    store = LocalParquetStore(tmp_path, replace(BOUNDS, **change))
+    with pytest.raises(ArtifactLimitError):
+        store.write_file("resource", "national", [modeled_record(modeled())])
+    assert not list(tmp_path.iterdir())

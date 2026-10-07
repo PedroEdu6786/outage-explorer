@@ -17,7 +17,22 @@ from tests.integration.test_connector_cli import Wire, row
 from tests.integration.test_s3_artifacts import ControlledS3, failure
 
 database = coordination.database
-system = coordination.system
+
+
+@pytest.fixture
+def system(database):
+    from outage_explorer.application.services.refresh import RefreshService
+    from outage_explorer.infrastructure.postgresql.publication import (
+        PostgresqlResourcePublicationStore,
+    )
+
+    for legacy_system in coordination.system.__wrapped__(database):
+        _, service, tokens, users, pool = legacy_system
+        store = PostgresqlResourcePublicationStore(pool)
+        refresh = RefreshService(
+            service._access, store, lambda: coordination.CONFIG, service._security
+        )
+        yield store, refresh, tokens, users, pool
 
 
 class RefreshS3(ControlledS3):
@@ -306,7 +321,7 @@ def test_failed_refresh_preserves_prior_and_missing_base_fails_before_source(
         assert system[0].generation_for_run(run.id) is None
     finally:
         process.close()
-    del client.objects["connector/objects/" + active.manifest_key]
+    del client.objects[active.datasets[0].object_key]
     wire = Wire()
     admit(system, "c" * 16)
     process = composition(database, tmp_path, wire, client)
@@ -360,3 +375,135 @@ def test_worker_construction_starts_no_io_or_jobs(tmp_path):
             "host=127.0.0.1 port=5432 dbname=postgres user=controlled", tmp_path
         )
         process.close()
+
+
+@pytest.mark.parametrize("workers", [1, 2, 3])
+def test_frozen_transfer_workers_exact_descriptors_and_joined_staging_cleanup(
+    system, database, tmp_path, workers
+):
+    import hashlib
+    from dataclasses import replace
+    from threading import enumerate as threads
+
+    import psycopg
+
+    system[1]._configuration = lambda: replace(coordination.CONFIG, s3_workers=workers)
+    client = RefreshS3()
+    result = execute(system, database, tmp_path, client=client)
+    assert result.status is RunStatus.SUCCEEDED
+    assert result.configuration.s3_workers == workers
+    active = system[0].active_generation()
+    expected = {
+        f"connector/generations/{result.id}/{name}.parquet"
+        for name in ("national", "facilities", "generators")
+    }
+    assert set(client.objects) == expected
+    assert sorted(op for op, _ in client.calls) == ["get"] * 3 + ["put"] * 3
+    for dataset in active.datasets:
+        payload = client.objects[dataset.object_key]
+        assert dataset.sha256 == hashlib.sha256(payload).hexdigest()
+        assert dataset.byte_count == len(payload)
+        assert dataset.rows == 1
+    assert not (tmp_path / result.id).exists()
+    assert not any(thread.name.startswith("connector_") for thread in threads())
+    with psycopg.connect(database) as connection:
+        record = connection.execute(
+            "SELECT manifest_key, manifest_digest, datasets FROM published_generations WHERE id=%s",
+            (result.id,),
+        ).fetchone()
+        quality = connection.execute(
+            "SELECT quality_json FROM refresh_runs WHERE id=%s", (result.id,)
+        ).fetchone()[0]
+    assert record[:2] == (None, None)
+    assert {dataset["object_key"] for dataset in record[2]} == expected
+    assert quality == json.loads(result.quality_json)
+    for summary in quality["datasets"]:
+        assert (
+            summary["received"],
+            summary["selected"],
+            summary["excluded"],
+            summary["output"],
+        ) == (1, 1, 0, 1)
+        assert summary["exclusion_reasons"] == {}
+
+
+@pytest.mark.parametrize(
+    "fault", ["upload", "checksum", "deadline", "cancellation", "bounds"]
+)
+def test_transfer_failure_keeps_exact_previous_publication_and_all_workers_join(
+    system, database, tmp_path, fault
+):
+    from threading import enumerate as threads
+
+    from outage_explorer.infrastructure.s3.resources import S3ResourceStore
+
+    client = RefreshS3()
+    first = execute(system, database, tmp_path, client=client)
+    before = system[0].active_generation()
+    original = S3ResourceStore.put_verified
+
+    def transfer(adapter, reference, chunks):
+        if fault == "upload":
+            raise failure("AccessDenied")
+        if fault in ("deadline", "bounds"):
+            raise ArtifactLimitError("controlled cap")
+        if fault == "cancellation":
+            adapter.cancelled.set()
+        return original(adapter, reference, chunks)
+
+    if fault == "checksum":
+        client.read_transform = lambda key, data: (
+            (b"x" + data[1:])
+            if key.startswith("connector/generations/") and first.id not in key
+            else data
+        )
+    with patch.object(S3ResourceStore, "put_verified", transfer):
+        result = execute(system, database, tmp_path, client=client, key="d" * 16)
+    assert result.status is RunStatus.FAILED
+    assert system[0].active_generation() == before
+    assert system[0].generation_for_run(result.id) is None
+    assert not (tmp_path / result.id).exists()
+    assert not any(thread.name.startswith("connector_") for thread in threads())
+
+
+def test_narrow_refresh_carries_outside_interval_and_replaces_valid_values(
+    system, database, tmp_path
+):
+    from dataclasses import replace
+    from datetime import date
+    from fractions import Fraction
+    from io import BytesIO
+
+    import pyarrow.parquet as pq
+
+    from outage_explorer.infrastructure.parquet.schemas import modeled_from_record
+
+    client = RefreshS3()
+    values = {
+        grain: [row(grain, period=f"2026-09-0{day}") for day in (1, 2, 3)]
+        for grain in ("national", "facility", "generator")
+    }
+    execute(system, database, tmp_path, values, client)
+    original = system[0].active_generation()
+    system[1]._configuration = lambda: replace(
+        coordination.CONFIG, start=date(2026, 9, 2), end=date(2026, 9, 2)
+    )
+    update = {grain: [row(grain, period="2026-09-02", outage="2")] for grain in values}
+    result = execute(system, database, tmp_path, update, client, key="e" * 16)
+    assert result.status is RunStatus.SUCCEEDED
+    assert system[0].active_generation().base_generation_id == original.id
+    for dataset in system[0].active_generation().datasets:
+        rows = [
+            modeled_from_record(record, dataset.grain.value)
+            for record in pq.read_table(
+                BytesIO(client.objects[dataset.object_key])
+            ).to_pylist()
+        ]
+        assert [entry.result.percentage for entry in rows] == [
+            Fraction(100, 3),
+            Fraction(200, 3),
+            Fraction(100, 3),
+        ]
+    for summary in json.loads(result.quality_json)["datasets"]:
+        assert summary["carried_outside_interval"] == 2
+        assert summary["output"] == 3

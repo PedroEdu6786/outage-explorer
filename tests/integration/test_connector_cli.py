@@ -17,12 +17,11 @@ from outage_explorer.bootstrap import execute_connector
 from outage_explorer.domain.refresh import RefreshBounds
 from outage_explorer.entrypoints.cli.connector import run
 from outage_explorer.infrastructure.parquet.connector import LocalConnectorEvidence
-from outage_explorer.infrastructure.parquet.evidence import replay_evidence
 from outage_explorer.infrastructure.parquet.schemas import (
     modeled_from_record,
-    public_record,
 )
 from outage_explorer.infrastructure.parquet.storage import LocalParquetStore
+from outage_explorer.infrastructure.resource_metadata import read_candidate
 
 SECRET = "synthetic-only-connector-secret"
 SOURCE = SourceBounds(
@@ -88,7 +87,7 @@ def inputs(root, prior=None, start="2026-09-01", end="2026-09-02", config_path=N
         start,
         end,
         str(root),
-        None if prior is None else f"{prior.key}:{prior.byte_count}",
+        None if prior is None else report_path(root, prior),
         config_path,
     )
 
@@ -168,25 +167,39 @@ def execute(root, rows=None, *, prior=None, config=None, **wire_options):
     return result, wire
 
 
+def report_path(root, candidate):
+    if isinstance(candidate, (str, type(root))):
+        return str(candidate)
+    return str(
+        next(
+            path
+            for path in (root / "runs").glob("*/report.json")
+            if json.loads(path.read_text())["generation_id"] == candidate.generation_id
+        )
+    )
+
+
 def reopen(root, reference):
     store = LocalParquetStore(root / "objects", ARTIFACT)
+    candidate = read_candidate(reference) if isinstance(reference, str) else reference
     with patch(
         "outage_explorer.infrastructure.eia.source.EiaSource.__init__",
         side_effect=AssertionError("Reopen accessed EIA"),
     ):
-        return store, LocalConnectorEvidence(store).reopen(reference, MODEL)
+        LocalConnectorEvidence(store).verify_candidate(candidate, MODEL)
+    return store, candidate
 
 
 def models(store, candidate, grain):
     return [
         modeled_from_record(value, grain)
-        for ref in candidate.modeled
+        for ref in candidate.resources
         if ref.grain == grain
         for value in store.records(ref)
     ]
 
 
-def test_cli_multipage_replay_exact_values_and_quality(tmp_path, capsys, caplog):
+def test_cli_multipage_preserves_exact_values_and_quality(tmp_path, capsys, caplog):
     caplog.set_level(logging.DEBUG)
     rows = {}
     for grain in ROUTES:
@@ -229,18 +242,14 @@ def test_cli_multipage_replay_exact_values_and_quality(tmp_path, capsys, caplog)
     assert result.report_written and wire.closed
     assert not result.report.published
     # Reopening has no source factory or HTTP dependency.
-    store, candidate = reopen(tmp_path, result.report.manifest)
-    for bundle in candidate.evidence:
-        raw = list(replay_evidence(store, bundle))
-        assert [value.value for value in raw] == rows[bundle.grain]
-        assert [value.origin.source_position for value in raw] == list(range(5))
-        assert [value.origin.page_index for value in raw] == [0, 0, 1, 1, 2]
-        assert len({value.origin.request_id for value in raw}) == 3
-        assert all(value.origin.run_id == result.report.run_id for value in raw)
-        modeled = models(store, candidate, bundle.grain)
+    store, candidate = reopen(tmp_path, result.report.candidate)
+    for grain in ROUTES:
+        modeled = models(store, candidate, grain)
         assert modeled[0].result.percentage == Fraction(100, 3)
         assert modeled[1].result.percentage == 0
         assert modeled[0].origin.source_position == 2
+        assert modeled[0].origin.page_index == 1
+        assert modeled[0].origin.run_id == result.report.run_id
         assert dict(modeled[0].observation.original)["capacity"] == "+3.0000e0"
     for quality in candidate.summaries:
         q = quality.quality
@@ -270,23 +279,15 @@ def test_cli_multipage_replay_exact_values_and_quality(tmp_path, capsys, caplog)
     assert SECRET not in caplog.text + output.out + output.err
     assert "api_key" not in output.err and "Exact name" not in output.err
     steps = [
-        "candidate_started",
-        "prior_ready",
-        "collection_started",
+        "resource_candidate_started",
         "eia_metadata_verified",
         "eia_page_collected",
-        "collection_complete",
-        "comparison_started",
-        "comparison_complete",
-        "candidate_verification_started",
-        "candidate_complete",
+        "resource_candidate_complete",
     ]
     assert [output.err.index(step) for step in steps] == sorted(
         output.err.index(step) for step in steps
     )
     assert "route=facility-nuclear-outages" in output.err
-    assert "skipped_invalid=1 skipped_duplicates=1 conflicts_superseded=1" in output.err
-    assert "rows_skipped" in output.err
 
 
 @pytest.mark.parametrize("total", ["2850", "2"])
@@ -298,7 +299,7 @@ def test_facility_mismatch_nonblocking_but_failed_page_fails(tmp_path, total):
         tmp_path / "bad", rows, totals={"facility": total}, failure=("facility", 2)
     )
     assert failed.report.error == "retrieval"
-    assert failed.report.models == () and failed.report.manifest is None
+    assert failed.report.candidate is None
 
 
 def test_grains_calculate_independently(tmp_path):
@@ -311,34 +312,30 @@ def test_grains_calculate_independently(tmp_path):
         )
     }
     result, _ = execute(tmp_path, rows)
-    store, candidate = reopen(tmp_path, result.report.manifest)
+    store, candidate = reopen(tmp_path, result.report.candidate)
     assert [
         models(store, candidate, grain)[0].result.percentage for grain in ROUTES
     ] == [Fraction(100, 3), Fraction(50), Fraction(0)]
 
 
-def test_cli_candidate_stores_one_modeled_and_one_public_file_per_dataset(tmp_path):
+def test_cli_candidate_stores_exactly_three_unified_resource_files(tmp_path):
     rows = {
         grain: [row(grain, period="2026-09-01"), row(grain, period="2026-09-02")]
         for grain in ROUTES
     }
     result, _ = execute(tmp_path, rows)
-    store, candidate = reopen(tmp_path, result.report.manifest)
-    for refs, kind in ((candidate.modeled, "modeled"), (candidate.public, "public")):
-        assert [(ref.kind, ref.grain, ref.partition) for ref in refs] == [
-            (kind, grain, None) for grain in ROUTES
-        ]
-        assert all(ref.row_count == 2 for ref in refs)
-    assert candidate.schema_version == "2" and not candidate.base_modeled
+    store, candidate = reopen(tmp_path, result.report.candidate)
+    assert [(ref.kind, ref.grain, ref.partition) for ref in candidate.resources] == [
+        ("resource", grain, None) for grain in ROUTES
+    ]
+    assert all(ref.row_count == 2 for ref in candidate.resources)
+    assert candidate.schema_version == "1" and candidate.base_generation_id is None
     assert [(item.first_period, item.last_period) for item in candidate.summaries] == [
         (date(2026, 9, 1), date(2026, 9, 2))
     ] * 3
-    for modeled_ref, public_ref in zip(
-        candidate.modeled, candidate.public, strict=True
-    ):
-        assert [public_record(r) for r in store.records(modeled_ref)] == list(
-            store.records(public_ref)
-        )
+    assert {path.name for path in store.root.iterdir()} == {
+        ref.object.key for ref in candidate.resources
+    }
 
 
 def test_cli_failure_and_configuration_exit_codes(tmp_path, capsys):
@@ -406,7 +403,9 @@ def test_recorded_facility_total_discrepancy_is_visible_without_inventing_rows(
     assert source.received == 1650 and source.count_mismatch
     assert (
         next(
-            item for item in result.report.models if item.grain == "facility"
+            item
+            for item in result.report.candidate.summaries
+            if item.grain == "facility"
         ).candidate_count
         == 1650
     )
@@ -465,7 +464,7 @@ def test_cli_file_configuration_and_run_flag_precedence(tmp_path, override_flags
         request for request in wire.calls if request.url.path.endswith("/data/")
     ]
     assert all(request.url.params["length"] == "1" for request in requests)
-    _, candidate = reopen(root, result.report.manifest)
+    _, candidate = reopen(root, result.report.candidate)
     assert all(quality.quality.received == 2 for quality in candidate.summaries)
 
 
@@ -592,9 +591,10 @@ def test_make_forwards_page_and_s3_overrides_without_json():
 
 
 def test_cli_worker_override_dtos_for_candidate_and_recovery(tmp_path):
+    from dataclasses import replace
+
     from outage_explorer.application.dto import ConnectorArtifactInput
-    from outage_explorer.application.ports.artifacts import StoredObject
-    from outage_explorer.application.ports.connector import DurableConnectorReceipt
+    from outage_explorer.application.ports.connector import DurableResourceReceipt
 
     seen = []
     result, _ = execute(tmp_path / "candidate-input")
@@ -608,11 +608,32 @@ def test_cli_worker_override_dtos_for_candidate_and_recovery(tmp_path):
         == 0
     )
     assert seen[0].fetch_workers == 3 and seen[0].s3_workers == 2
-    reference = StoredObject("a" * 64, "a" * 64, 1)
+    candidate_result = result.report.candidate
+    reference = "receipt.json"
 
     def recover(request):
         seen.append(request)
-        return DurableConnectorReceipt(reference, 1, 1)
+        return DurableResourceReceipt(
+            generation_id=candidate_result.generation_id,
+            resources=tuple(
+                replace(
+                    ref,
+                    object=replace(
+                        ref.object,
+                        key=f"generations/{candidate_result.generation_id}/{name}.parquet",
+                    ),
+                )
+                for ref, name in zip(
+                    candidate_result.resources,
+                    ("national", "facilities", "generators"),
+                    strict=True,
+                )
+            ),
+            interval=candidate_result.interval,
+            contract_id=candidate_result.contract_id,
+            transformation_id=candidate_result.transformation_id,
+            base_generation_id=None,
+        )
 
     assert (
         run(
@@ -620,8 +641,8 @@ def test_cli_worker_override_dtos_for_candidate_and_recovery(tmp_path):
             [
                 "--operation",
                 "recover",
-                "--manifest",
-                f"{reference.key}:1",
+                "--resources",
+                reference,
                 "--s3-workers",
                 "3",
             ],

@@ -1,5 +1,5 @@
 # Plan: Three-file refresh persistence optimization
-> Status: phases 1–2 implemented and verified; G4 resolved; phases 3–4 and G3 pending · Slug: refresh-persistence · Spec: ./spec.md
+> Status: phases 1–4 implemented and controlled checkpoint verified; G1–G4 resolved · Slug: refresh-persistence · Spec: ./spec.md
 
 ## Approach
 Replace the 1,442-object graph persistence with a clean 3-file Parquet architecture.

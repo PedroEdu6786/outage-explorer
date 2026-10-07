@@ -278,7 +278,7 @@ make connector-help
 ```
 
 The default run retrieves EIA, verifies a local candidate, then uploads and
-fully verifies its complete graph in S3 ([ADR-0042](docs/adr/0042-connector-cli-default-s3-persistence.md)).
+uploads exactly three resource Parquet files and verifies their complete byte/hash readback ([ADR-0060](docs/adr/0060-persist-only-three-resource-files-per-generation.md)).
 Export `EIA_API_KEY`, `OUTAGE_S3_BUCKET`, `OUTAGE_S3_PREFIX`, `AWS_REGION`, and
 AWS credentials/profile into the process environment first. `make setup` installs
 Boto3 with CRT support for profiles created with `aws login`. For local profile use:
@@ -345,7 +345,7 @@ make connector CONFIG=connector-smoke.json
 # Rerun against an explicit eligible prior from the SAME staging store:
 .venv/bin/build-connector-candidate \
   --start 2026-09-01 --end 2026-09-02 --staging data/connector-local \
-  --prior '<manifest-sha256>:<byte-count>'
+  --prior 'data/connector-local/runs/RUN_ID/report.json'
 ```
 
 `make connector` forwards to the same CLI and persists to S3 by default. The
@@ -353,7 +353,7 @@ CLI default is also durable; `--local-only` opts out, while `LOCAL_ONLY=1` suppl
 that flag through Make. Without `CONFIG`, staging defaults to
 `data/connector-local`; with `CONFIG`, the file's staging value is preserved unless
 you pass `STAGING=...`. Dates remain explicit through `START`/`END` or the file.
-Use `PRIOR='<manifest-sha256>:<byte-count>'` for a rerun. Export `EIA_API_KEY`
+Use `PRIOR='data/connector-local/runs/RUN_ID/report.json'` for a rerun. Export `EIA_API_KEY`
 before invoking Make; neither entry point loads `.env` automatically.
 
 The optional [smoke profile](connector-smoke.json) uses 100 rows/page, a 10-second
@@ -376,7 +376,7 @@ reference, or provide only the fields to override:
 
 The optional top-level keys are `start`, `end`, `staging`, `prior`, `source`,
 `artifact`, `model`, `workers`, and `report_bytes`. The first four are strings; `prior` uses
-the same exact reference format as the flag. Omit it for an initial candidate.
+the path to the same bounded local resource report as the flag. Omit it for an initial candidate.
 `source`, `artifact`, `model` and `workers` are objects whose fields override individual
 typed defaults; `report_bytes` caps combined progress/final report bytes.
 Dates and staging must be supplied by the file or flags. Relative file/staging
@@ -391,7 +391,7 @@ outside the file. `--help` does not open it or require credentials.
 Connector commands now print timestamped step-by-step logs to **stderr** by
 default: EIA routes/pages/retries, local collection, comparison and skip/retention
 counts, verification, and S3 transfer/readback for default runs and explicit persist/recover.
-Final status and manifest references stay on stdout. To save both streams:
+Final status and local resource report/receipt paths stay on stdout. To save both streams:
 
 ```sh
 make connector CONFIG=connector-smoke.json 2>&1 | tee connector-run.log
@@ -403,17 +403,17 @@ S3 objects are skipped only after identical bytes are verified; conflicting byte
 abort without overwriting. Logs omit credentials, request URLs and raw records.
 See [execution logging](docs/specs/data-connector/logging.md).
 
-Successful output prints the exact manifest reference. Content-addressed immutable
-objects live under `STAGING/objects/`; each generated run has separate
-`STAGING/runs/RUN_ID/progress-NN.json` and `report.json`. There is no mutable active
-pointer. Preserve the entire store for inherited evidence and manifest ancestors;
-copying only the newest manifest is insufficient. Reopening uses exact references
-and verifies the bounded graph without EIA. Very long histories may require larger
-explicit graph budgets; budget exhaustion fails rather than deleting old output.
-No automatic pruning is performed.
+Successful output prints the exact local resource report path and, after durable
+success, `STAGING/receipts/GENERATION_ID.json`. Exactly three content-addressed
+resource files live under `STAGING/objects/`; progress and final reports live under
+`STAGING/runs/RUN_ID/`. Reports and receipts remain local transport metadata and
+are never uploaded. Preserve the three referenced local files and their report for
+source-disabled persistence retry or local `--prior` input. Recovery takes the
+saved durable receipt's exact keys, hashes, bytes and row counts. No ancestry or
+remote manifest discovery is performed. No automatic pruning is performed.
 
 Reports include interval, run/generation identity, stage, safe failure code,
-verified manifest reference, source totals/received/observed coverage, and model
+verified three-file candidate identity, source totals/received/observed coverage, and model
 selected/excluded/duplicate/superseded/reason counts. Retained-invalid,
 retained-absent and carried-outside-interval counts stay separate. Source totals
 and observed rosters do not prove upstream completeness. A facility-total mismatch
@@ -421,19 +421,19 @@ alone is diagnostic; a known failed page is a failure. Progress files are snapsh
 not durable backend refresh outcomes; only the final report records completion.
 
 Default CLI success prints `candidate_s3_verified` only after complete durable
-readback/replay; its `local_outcome` identifies `candidate_verified` or
-`retained_all_excluded`. Local JSON reports and `--local-only` outcomes are:
+readback; its `local_outcome` is `candidate_verified`. All-excluded reruns retain
+the prior files and return `retained_all_excluded` without creating another durable generation. Local JSON reports and `--local-only` outcomes are:
 
 | Outcome / exit | Meaning |
 | --- | --- |
-| `candidate_verified` / 0 | Persisted and reopened local candidate, plus written final report. |
-| `retained_all_excluded` / 0 | Every incoming route excluded; prior modeled rows retained. Continue using the last eligible candidate as `--prior`. |
+| `candidate_verified` / 0 | Locally verified three-file candidate, plus written final report. |
+| `retained_all_excluded` / 0 | Every incoming route excluded; prior resource rows retained. Continue using the last eligible candidate as `--prior`. |
 | `failed` / 1 | Retrieval, resource, representation, integrity, input or report failure; no confirmed completed candidate. |
 | Configuration/arguments / 2 | Invalid input rejected before connector I/O. |
 | Interrupted / 130 | Cooperative interruption; no publication. Abrupt process termination may leave only progress or orphan immutable objects. |
 
 A persistence failure returns a nonzero exit, prints `failed persistence` and
-`local_manifest=SHA256:BYTE_COUNT` for source-disabled retry with
+`local_resources=PATH/TO/report.json` for source-disabled retry with
 `--operation persist`, and preserves the verified local candidate/report. A
 successful local report alone does not confirm S3 durability. Missing S3 target
 configuration fails before EIA work; credential resolution/storage errors may
@@ -445,13 +445,14 @@ even when artifacts were already written; it never confirms success. Earlier
 objects and reports remain intact. Without a prior candidate, every grain must
 have usable output. Later runs replace valid revisions, preserve invalid/absent
 keys with their original provenance, and retain wholly excluded routes. Equal
-inputs may have different identities/timestamps and manifest bytes.
+inputs may have different identities/timestamps and resource bytes.
 
 The command is a contributor operation, not an authorized refresh endpoint or
 initial live publication. The accepted product initial interval remains April 2–
 October 1, 2026 inclusive. Configured-bucket durability checks, authorization,
-atomic activation and reader pinning remain later work; no PostgreSQL, Cognito, S3 or EC2 connection is
-required by the controlled tests. Run all checks with `make check`, or the focused
+atomic publication and reader pinning are covered by controlled tests using
+disposable PostgreSQL, local Parquet, fake HTTP/S3 and separate DuckDB fixture processes.
+Those tests require no Cognito, live S3 or EC2 connection and do not certify host isolation. Run all checks with `make check`, or the focused
 local connector tests with:
 
 ```sh
@@ -505,52 +506,47 @@ both hooks through `/hooks`; new notes pause the commit for review and staging. 
 
 ### Persist and recover connector artifacts
 
-Default candidate CLI runs automatically perform persistence after local
-verification. Explicit `--local-only` creation remains AWS-independent. Default
-and explicit durable operations require configured `OUTAGE_S3_BUCKET`, `OUTAGE_S3_PREFIX` and `AWS_REGION`, plus
-an SDK credential provider (`AWS_PROFILE` for local profiles, or a workload
-role). `.env` is not automatically loaded. Save the exact manifest reference
-printed by a verified candidate, together with its bucket/prefix configuration.
+Default candidate runs persist the three verified resources. Explicit `--local-only`
+remains AWS-independent. Durable operations require `OUTAGE_S3_BUCKET`,
+`OUTAGE_S3_PREFIX`, `AWS_REGION` and SDK credentials. `.env` is not loaded.
+Save the local final report and durable receipt together with the bucket/prefix
+configuration. Explicit operations never retrieve EIA or publish a generation:
 
 ```sh
 .venv/bin/python -m outage_explorer.entrypoints.cli.connector_startup \
   --operation persist --staging data/connector-local \
-  --manifest SHA256:BYTE_COUNT
+  --resources data/connector-local/runs/RUN_ID/report.json
 
 # A new empty staging location; EIA_API_KEY is unnecessary.
 .venv/bin/python -m outage_explorer.entrypoints.cli.connector_startup \
   --operation recover --staging data/connector-recovered \
-  --manifest SHA256:BYTE_COUNT
+  --resources data/connector-local/receipts/GENERATION_ID.json
 ```
 
-Replace `SHA256:BYTE_COUNT` with the exact saved lowercase digest and byte count.
-Optional `--config PATH` applies existing artifact/model bounds and staging;
-`--staging` overrides the file. Persist/recover need no dates and do not retrieve
-EIA. Recovery requires absent or empty staging; use a fresh location after a
-failed recovery. Exit codes remain 0 verified, 1 failed, 2 invalid configuration
-or arguments, and 130 interrupted. Failures print sanitized messages and never
-print a verified receipt. Successful output says `persist_verified` or
-`recover_verified`, with the exact manifest and graph object/byte counts.
+Persist accepts a bounded local candidate report; recover accepts a bounded exact
+durable receipt. `--config` supplies artifact/model/worker limits and staging;
+explicit flags take precedence. Recovery requires absent or empty staging.
+Exit codes remain 0 verified, 1 failed, 2 invalid configuration/arguments and
+130 interrupted. Failures preserve local candidates for an explicit retry.
 
-Persistence verifies all exact dependencies (including ancestor manifests,
-inherited raw/page evidence and unchanged modeled files) before the final
-manifest, then restores and fully replays the durable graph in fresh staging.
-Writes use conditional creation and compare SHA-256/bytes; identical retries
-verify existing objects and conflicting bytes fail without overwriting them.
-A manifest may exist after an interrupted final verification, but its existence
-alone is not a verified receipt or an active-generation pointer. No deletion,
-bucket listing, PostgreSQL refresh-outcome persistence or publication is added.
+Each generation has exactly these immutable physical keys:
+`<prefix>generations/<generation-id>/{national,facilities,generators}.parquet`.
+Conditional PUTs use checksums and complete readback. Identical retries verify
+existing bytes; conflicts fail without overwriting. There is no fourth manifest,
+HEAD/list discovery, historical deletion, PostgreSQL publication or reset command
+in this contributor path. A durable receipt is not publication authority.
 
-The automated suites use controlled SDK behavior, including default one-command candidate-to-S3 execution and local-preserving persistence failures. See
-[recovery verification](docs/specs/data-connector/recovery-verification.md) for
-coverage and [configured-bucket checks](docs/specs/data-connector/aws-setup.md)
-for separately authorized Phase 6 work. No automated local checkpoint establishes
-live AWS, deployed-role or full backend recovery guarantees.
+Product refresh uses the frozen admitted interval and independently supervised
+worker. `OUTAGE_REFRESH_S3_WORKERS` accepts 1–3 (default 3), frozen at admission;
+candidate and persistence deadlines remain separate. Exact descriptors and quality
+commit atomically in PostgreSQL under the live owner/epoch/base fences. A legacy
+manifest-format active base fails closed under ADR-0062; moving past it needs
+separate explicit user direction.
 
 ### Bounded connector concurrency and measured scope
 
 Optional JSON `workers` settings independently choose `endpoint_workers` and
-`s3_workers` from 1–3 (both default to 1). For example:
+`s3_workers` from 1–3 (endpoint default 1, S3 default 3). For example:
 
 ```json
 {"workers": {"endpoint_workers": 3, "s3_workers": 3}}
@@ -558,9 +554,8 @@ Optional JSON `workers` settings independently choose `endpoint_workers` and
 
 Pages stay sequential within each route. Aggregate retrieval, object, byte,
 request, staging and logical buffer limits are shared across workers; errors and
-interruptions cancel new admission and join workers before returning. Modeling,
-combined manifests and final receipt verification remain coordinated. S3 final
-root creation follows successful dependency transfers, then full durable replay.
+interruptions cancel new admission and join workers before returning. Modeling and final receipt verification remain coordinated. Each of the three
+resource transfers includes complete readback before the final receipt is returned.
 The same transfer setting applies to default candidate runs and explicit
 persist/recover. `workers.memory_bytes` and `temporary_bytes` may explicitly
 override logical admission envelopes; these are not OS process RSS/disk limits.
@@ -588,21 +583,21 @@ make connector START=2026-04-02 END=2026-10-01 FETCH_WORKERS=3 S3_WORKERS=3
 endpoint workers remain1 by default. `S3_WORKERS` runs up to three independent
 artifact uploads/readbacks concurrently. The CLI equivalents are `--fetch-workers`
 and `--s3-workers`, which override JSON `workers.page_workers`/`workers.s3_workers`.
-Both default to1; existing `workers.endpoint_workers` remains independently
+Page fetch defaults to1 and S3 transfers to3; `workers.endpoint_workers` remains independently
 configurable. Explicit local-only operation still uses `LOCAL_ONLY=1`.
 
 Persist/recover also accept the transfer override:
 
 ```sh
-make connector OPERATION=persist STAGING=path/to/staging MANIFEST=SHA256:BYTES S3_WORKERS=3
-make connector OPERATION=recover STAGING=path/to/empty-staging MANIFEST=SHA256:BYTES S3_WORKERS=3
+make connector OPERATION=persist STAGING=path/to/staging RESOURCES=path/to/report-or-receipt.json S3_WORKERS=3
+make connector OPERATION=recover STAGING=path/to/empty-staging RESOURCES=path/to/report-or-receipt.json S3_WORKERS=3
 ```
 
 Pages are consumed in canonical offset/row order regardless of completion.
 Short pages repair offsets using received counts; advertised totals do not end
 retrieval. Every admitted request must succeed. Unused successful lookahead is
-retained as sanitized, hashed transport evidence in the complete S3 graph, with
-explicit fetched/unused counts; it does not become additional modeled rows.
+validated transiently with explicit fetched/unused counts; it never becomes
+additional resource rows or durable supporting objects.
 Parallel lookahead can spend extra requests/rows/bytes, subject to the same
 aggregate limits. Details: [ADR-0049](docs/adr/0049-bounded-page-prefetch-and-worker-flags.md).
 These knobs do not parallelize synchronous modeling/replay or establish a speedup,

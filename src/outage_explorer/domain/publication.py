@@ -51,6 +51,7 @@ class RefreshConfiguration:
     candidate_seconds: int
     persistence_seconds: int
     contract_version: str = "v1"
+    s3_workers: int = 3
 
     def validate(self, *, initial: bool) -> None:
         limits = (
@@ -66,6 +67,8 @@ class RefreshConfiguration:
             or (self.end - self.start).days + 1 > min(limits[:3])
             or self.max_interval_days > 183
             or self.contract_version != "v1"
+            or type(self.s3_workers) is not int
+            or not 1 <= self.s3_workers <= 3
             or initial
             and (self.start, self.end) != (INITIAL_START, INITIAL_END)
         ):
@@ -79,6 +82,41 @@ class DatasetSummary:
     rows: int
     start: date
     end: date
+    object_key: str | None = None
+    sha256: str | None = None
+    byte_count: int | None = None
+
+    def validate(self, *, resource: bool = False) -> None:
+        if (
+            not isinstance(self.grain, AnalyticalGrain)
+            or type(self.rows) is not int
+            or self.rows <= 0
+            or type(self.start) is not date
+            or type(self.end) is not date
+            or self.start > self.end
+            or self.schema_version != "v1"
+        ):
+            raise ValueError("Invalid dataset summary")
+        descriptor = (self.object_key, self.sha256, self.byte_count)
+        if not resource and all(value is None for value in descriptor):
+            return
+        if (
+            not isinstance(self.object_key, str)
+            or not self.object_key
+            or len(self.object_key.encode("utf-8")) > 1024
+            or self.object_key.startswith("/")
+            or any(part in ("", ".", "..") for part in self.object_key.split("/"))
+            or any(
+                not (char.isascii() and (char.isalnum() or char in "_-/."))
+                for char in self.object_key
+            )
+            or not isinstance(self.sha256, str)
+            or len(self.sha256) != 64
+            or any(char not in "0123456789abcdef" for char in self.sha256)
+            or type(self.byte_count) is not int
+            or self.byte_count <= 0
+        ):
+            raise ValueError("Invalid exact dataset resource descriptor")
 
 
 @dataclass(frozen=True)
@@ -93,6 +131,13 @@ class PublishedGeneration:
     datasets: tuple[DatasetSummary, ...]
 
     def validate(self) -> None:
+        for item in self.datasets:
+            item.validate()
+            if any(
+                value is not None
+                for value in (item.object_key, item.sha256, item.byte_count)
+            ):
+                raise ValueError("Legacy publication cannot carry resource descriptors")
         if (
             {item.grain for item in self.datasets} != set(AnalyticalGrain)
             or len(self.datasets) != 3
@@ -108,6 +153,59 @@ class PublishedGeneration:
             or self.verified_at.tzinfo is None
         ):
             raise ValueError("Invalid verified generation")
+
+
+@dataclass(frozen=True)
+class ResourcePublishedGeneration:
+    """Exact three-file publication metadata; no manifest or durability claim.
+
+    Constructed from an admitted run and verified durable receipt by the refresh
+    coordinator. This pure value contract does not prove storage verification or
+    grant authority to change an active publication pointer.
+    """
+
+    id: str
+    run_id: str
+    base_generation_id: str | None
+    verification_version: str
+    verified_at: datetime
+    datasets: tuple[DatasetSummary, ...]
+
+    def validate(self) -> None:
+        if (
+            not isinstance(self.id, str)
+            or not self.id
+            or not isinstance(self.run_id, str)
+            or not self.run_id
+            or (
+                self.base_generation_id is not None
+                and (
+                    not isinstance(self.base_generation_id, str)
+                    or not self.base_generation_id
+                )
+            )
+            or self.base_generation_id == self.id
+            or self.verification_version != "v1"
+            or not isinstance(self.verified_at, datetime)
+            or self.verified_at.tzinfo is None
+            or self.verified_at.utcoffset() is None
+            or len(self.datasets) != 3
+            or {item.grain for item in self.datasets} != set(AnalyticalGrain)
+        ):
+            raise ValueError("Invalid verified resource generation")
+        for item in self.datasets:
+            item.validate(resource=True)
+        filenames = {
+            AnalyticalGrain.NATIONAL: "national",
+            AnalyticalGrain.FACILITY: "facilities",
+            AnalyticalGrain.GENERATOR: "generators",
+        }
+        for item in self.datasets:
+            suffix = f"generations/{self.id}/{filenames[item.grain]}.parquet"
+            if item.object_key is None or not item.object_key.endswith("/" + suffix):
+                raise ValueError("Resource generation/grain address mismatch")
+        if len({item.object_key for item in self.datasets}) != 3:
+            raise ValueError("Resource generation requires three distinct exact keys")
 
 
 @dataclass(frozen=True)

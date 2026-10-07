@@ -1,4 +1,4 @@
-"""Bounded publication reads that pin each dataset's verified public Parquet file."""
+"""Bounded publication reads that pin each dataset's exact resource Parquet file."""
 
 import hashlib
 import os
@@ -7,13 +7,15 @@ import shutil
 import stat
 import tempfile
 from collections.abc import Callable, Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from threading import RLock
 from time import monotonic
 from typing import Protocol
 
 import pyarrow as pa  # type: ignore[import-untyped]
+import pyarrow.compute as pc  # type: ignore[import-untyped]
+import pyarrow.parquet as pq  # type: ignore[import-untyped]
 
 from outage_explorer.application.errors import (
     AnalyticalResourceError,
@@ -24,16 +26,20 @@ from outage_explorer.application.ports.artifacts import (
     ArtifactBounds,
     ArtifactError,
     ArtifactLimitError,
+    ArtifactRef,
     StoredObject,
 )
 from outage_explorer.domain.datasets import Dataset
-from outage_explorer.domain.publication import PublishedGeneration
-from outage_explorer.infrastructure.parquet.manifests import load_manifest
+from outage_explorer.domain.publication import (
+    DatasetSummary,
+    ResourcePublishedGeneration,
+)
 from outage_explorer.infrastructure.parquet.storage import LocalParquetStore
 
 
-class PublishedObjects(Protocol):
-    def reference(self, key: str, digest: str) -> StoredObject: ...
+class ResourceObjects(Protocol):
+    """Exact-descriptor reads only: no metadata lookup, listing or manifest."""
+
     def read(self, reference: StoredObject) -> Iterator[bytes]: ...
 
 
@@ -51,16 +57,19 @@ class CacheBounds:
 
 @dataclass
 class _Entry:
-    generation: PublishedGeneration
+    generation: DatasetSummary
     dataset: Dataset
     files: tuple[ApprovedFile, ...]
     pins: int = 0
 
 
+_FILES = {"national": "national", "facility": "facilities", "generator": "generators"}
+
+
 class _Pin:
     def __init__(
         self,
-        cache: "VerifiedModeledCache",
+        cache: "_PrivateCache",
         identity: tuple[str, str],
         files: tuple[ApprovedFile, ...],
     ) -> None:
@@ -78,20 +87,16 @@ class _Pin:
                 self._closed = True
 
 
-class VerifiedModeledCache:
+class _PrivateCache:
+    """Pinned, bounded, private disposable unified resource files."""
+
     def __init__(
         self,
         root: Path,
-        objects: PublishedObjects,
         artifacts: ArtifactBounds,
         bounds: CacheBounds,
     ) -> None:
-        self._root, self._objects, self._artifacts, self._bounds = (
-            root,
-            objects,
-            artifacts,
-            bounds,
-        )
+        self._root, self._artifacts, self._bounds = root, artifacts, bounds
         self._entries: dict[tuple[str, str], _Entry] = {}
         self._lock = RLock()
         self._closed = False
@@ -110,134 +115,6 @@ class VerifiedModeledCache:
                 digest.update(chunk)
         if digest.hexdigest() != file.sha256:
             raise ArtifactError("Cached modeled checksum mismatch")
-
-    def prepare(self, generation: PublishedGeneration, dataset: Dataset) -> _Pin:
-        with self._lock:
-            if self._closed:
-                raise DataUnavailableError("Modeled cache closed")
-            identity = (generation.manifest_digest, dataset.id)
-            started = monotonic()
-
-            def check() -> None:
-                if monotonic() - started >= self._bounds.preparation_seconds:
-                    raise ArtifactLimitError("Modeled preparation deadline exceeded")
-
-            try:
-                generation.validate()
-                if identity not in self._entries:
-                    self._load(generation, dataset, identity, check)
-                entry = self._entries[identity]
-                if entry.generation != generation or entry.dataset != dataset:
-                    raise ArtifactError("Cached publication identity mismatch")
-                for file in entry.files:
-                    check()
-                    self._verify(file)
-                entry.pins += 1
-                return _Pin(self, identity, entry.files)
-            except ArtifactLimitError:
-                raise AnalyticalResourceError("Modeled input resource limit") from None
-            except (
-                ArtifactError,
-                OSError,
-                ValueError,
-                StopIteration,
-                pa.ArrowException,
-            ):
-                raise DataUnavailableError(
-                    "Published modeled input unavailable"
-                ) from None
-
-    def _load(
-        self,
-        generation: PublishedGeneration,
-        dataset: Dataset,
-        identity: tuple[str, str],
-        check: Callable[[], None],
-    ) -> None:
-        # A staging session downloads only the manifest and the selected public file.
-        # Raw/provenance dependencies are neither fetched nor granted to a worker.
-        guard = check
-        with tempfile.TemporaryDirectory(
-            dir=self._root, prefix=".preparing-"
-        ) as directory:
-            staging = LocalParquetStore(
-                Path(directory) / "objects", self._artifacts, guard
-            )
-
-            def download(reference: StoredObject) -> None:
-                if staging.put_immutable(self._objects.read(reference)) != reference:
-                    raise ArtifactError("Published object identity mismatch")
-
-            manifest_ref = self._objects.reference(
-                generation.manifest_key, generation.manifest_digest
-            )
-            if (
-                manifest_ref.key != generation.manifest_key
-                or manifest_ref.sha256 != generation.manifest_digest
-            ):
-                raise ArtifactError("Published manifest reference mismatch")
-            download(manifest_ref)
-            manifest = load_manifest(staging, manifest_ref)
-            if (
-                manifest.generation_id != generation.id
-                or manifest.base_generation_id != generation.base_generation_id
-                or manifest.outcome != "candidate"
-            ):
-                raise ArtifactError("Publication manifest identity mismatch")
-            summary = next(
-                item
-                for item in generation.datasets
-                if item.grain.value == dataset.grain
-            )
-            refs = tuple(ref for ref in manifest.public if ref.grain == dataset.grain)
-            if (
-                len(refs) != 1
-                or refs[0].row_count != summary.rows
-                or summary.rows > self._bounds.rows
-            ):
-                raise ArtifactLimitError(
-                    "Published public row count unavailable or over budget"
-                )
-            ref = refs[0]
-            if (
-                ref.kind != "public"
-                or ref.partition is not None
-                or ref.schema_version != dataset.schema_version
-            ):
-                raise ArtifactError("Invalid public reference")
-            coverage = next(
-                item for item in manifest.summaries if item.grain == dataset.grain
-            )
-            if (coverage.first_period, coverage.last_period) != (
-                summary.start,
-                summary.end,
-            ):
-                raise ArtifactError("Published coverage mismatch")
-            # The connector already verified this file as an exact projection of
-            # the modeled file; readers only check identity, schema and rows.
-            download(ref.object)
-            staging.verify(ref)
-            guard()
-            size = ref.object.byte_count
-            if size > self._bounds.bytes:
-                raise ArtifactLimitError("Public file budget exceeded")
-            self._evict(size, 1)
-            target = self._root / f"{generation.manifest_digest}-{dataset.id}.parquet"
-            os.replace(staging.root / ref.object.key, target)
-            try:
-                target.chmod(0o400)
-                self._entries[identity] = _Entry(
-                    generation,
-                    dataset,
-                    (
-                        ApprovedFile(
-                            str(target), ref.object.sha256, size, ref.row_count
-                        ),
-                    ),
-                )
-            except BaseException:
-                target.unlink(missing_ok=True)
-                raise
 
     def _evict(self, incoming: int, files: int) -> None:
         def fits() -> bool:
@@ -271,21 +148,156 @@ class VerifiedModeledCache:
             self._closed = True
 
 
-class PublishedReadSessions:
-    """The serialized cache opens a fresh transfer budget per manifest load."""
+class VerifiedResourceCache(_PrivateCache):
+    """Pins one exact resource file per dataset from its publication descriptor.
 
-    def __init__(self, factory: Callable[[], PublishedObjects]) -> None:
+    A cold read fetches only the described object: no manifest, metadata lookup
+    or listing. The unified file is verified for bytes, SHA-256, schema, rows and
+    coverage, then scanned in place; analytical views project public columns.
+    """
+
+    def __init__(
+        self,
+        root: Path,
+        objects: ResourceObjects,
+        artifacts: ArtifactBounds,
+        bounds: CacheBounds,
+    ) -> None:
+        super().__init__(root, artifacts, bounds)
+        self._objects = objects
+
+    def prepare(
+        self, generation: ResourcePublishedGeneration, dataset: Dataset
+    ) -> _Pin:
+        with self._lock:
+            if self._closed:
+                raise DataUnavailableError("Modeled cache closed")
+            started = monotonic()
+
+            def check() -> None:
+                if monotonic() - started >= self._bounds.preparation_seconds:
+                    raise ArtifactLimitError("Modeled preparation deadline exceeded")
+
+            try:
+                generation.validate()
+                summary = next(
+                    item
+                    for item in generation.datasets
+                    if item.grain.value == dataset.grain
+                )
+                if dataset.id != _FILES[dataset.grain] or dataset.schema_version != "1":
+                    raise ArtifactError("Dataset does not match its resource grain")
+                if (
+                    summary.rows > self._bounds.rows
+                    or (summary.byte_count or 0) > self._bounds.bytes
+                ):
+                    raise ArtifactLimitError("Resource descriptor exceeds cache budget")
+                # Identical verified bytes are one cache object across generations.
+                identity = (str(summary.sha256), dataset.id)
+                retained = replace(summary, object_key=None)
+                if identity not in self._entries:
+                    self._load(summary, dataset, identity, check)
+                entry = self._entries[identity]
+                if entry.generation != retained or entry.dataset != dataset:
+                    raise ArtifactError("Cached publication identity mismatch")
+                for file in entry.files:
+                    check()
+                    self._verify(file)
+                entry.pins += 1
+                return _Pin(self, identity, entry.files)
+            except ArtifactLimitError:
+                raise AnalyticalResourceError("Modeled input resource limit") from None
+            except (
+                ArtifactError,
+                OSError,
+                ValueError,
+                StopIteration,
+                pa.ArrowException,
+            ):
+                raise DataUnavailableError(
+                    "Published modeled input unavailable"
+                ) from None
+
+    def _load(
+        self,
+        summary: DatasetSummary,
+        dataset: Dataset,
+        identity: tuple[str, str],
+        check: Callable[[], None],
+    ) -> None:
+        if (
+            summary.object_key is None
+            or summary.sha256 is None
+            or summary.byte_count is None
+        ):
+            raise ArtifactError("Resource descriptor incomplete")
+        exact = StoredObject(summary.object_key, summary.sha256, summary.byte_count)
+        # Local content identity is the SHA-256; the physical key is only used to
+        # read. The staged copy must reproduce the exact descriptor bytes.
+        local = StoredObject(summary.sha256, summary.sha256, summary.byte_count)
+        with tempfile.TemporaryDirectory(
+            dir=self._root, prefix=".preparing-"
+        ) as directory:
+            staging = LocalParquetStore(
+                Path(directory) / "objects", self._artifacts, check
+            )
+            stored = staging.put_immutable(self._objects.read(exact), expected=local)
+            if stored != local:
+                raise ArtifactError("Published object identity mismatch")
+            staging.verify(
+                ArtifactRef(local, "resource", dataset.grain, None, summary.rows, "1")
+            )
+            self._verify_coverage(staging.root / local.key, summary, check)
+            check()
+            self._evict(summary.byte_count, 1)
+            target = self._root / f"{summary.sha256}-{dataset.id}.parquet"
+            os.replace(staging.root / local.key, target)
+            try:
+                target.chmod(0o400)
+                self._entries[identity] = _Entry(
+                    replace(summary, object_key=None),
+                    dataset,
+                    (
+                        ApprovedFile(
+                            str(target),
+                            summary.sha256,
+                            summary.byte_count,
+                            summary.rows,
+                        ),
+                    ),
+                )
+            except BaseException:
+                target.unlink(missing_ok=True)
+                raise
+
+    def _verify_coverage(
+        self, path: Path, summary: DatasetSummary, check: Callable[[], None]
+    ) -> None:
+        low = high = None
+        with pq.ParquetFile(path) as source:
+            for batch in source.iter_batches(
+                batch_size=self._artifacts.batch_rows,
+                columns=["period"],
+                use_threads=False,
+            ):
+                check()
+                found = pc.min_max(batch.column("period")).as_py()
+                if found["min"] is None:
+                    continue
+                low = found["min"] if low is None else min(low, found["min"])
+                high = found["max"] if high is None else max(high, found["max"])
+        if (low, high) != (summary.start, summary.end):
+            raise ArtifactError("Published coverage mismatch")
+
+
+class ResourceReadSessions:
+    """Each exact descriptor read opens a fresh bounded transfer session."""
+
+    def __init__(self, factory: Callable[[], ResourceObjects]) -> None:
         self._factory = factory
-        self._current: PublishedObjects | None = None
-
-    def reference(self, key: str, digest: str) -> StoredObject:
-        self._current = self._factory()
-        return self._current.reference(key, digest)
 
     def read(self, reference: StoredObject) -> Iterator[bytes]:
-        if self._current is None:
-            raise ArtifactError("Published read session unavailable")
-        return self._current.read(reference)
+        return self._factory().read(reference)
 
 
 def reclaim_private_cache(root: Path, *, file_limit: int) -> None:

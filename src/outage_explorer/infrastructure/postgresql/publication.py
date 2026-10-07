@@ -2,7 +2,7 @@
 
 import json
 from dataclasses import asdict
-from datetime import date
+from datetime import date, datetime
 from uuid import uuid4
 
 from psycopg import Connection
@@ -14,6 +14,7 @@ from outage_explorer.application.errors import (
     IdempotencyConflictError,
     RefreshBusyError,
     StaleRefreshOwnerError,
+    UnsupportedPublicationLayoutError,
 )
 from outage_explorer.domain.access import AnalyticalGrain
 from outage_explorer.domain.publication import (
@@ -24,6 +25,7 @@ from outage_explorer.domain.publication import (
     RefreshOwner,
     RefreshRun,
     RefreshStage,
+    ResourcePublishedGeneration,
     RunStatus,
 )
 from outage_explorer.infrastructure.postgresql.pool import BoundedPostgresqlPool
@@ -71,7 +73,30 @@ def _run(row: DictRow) -> RefreshRun:
     )
 
 
+def _summaries(row: DictRow, *, resource: bool) -> tuple[DatasetSummary, ...]:
+    return tuple(
+        DatasetSummary(
+            AnalyticalGrain(item["grain"]),
+            item["schema_version"],
+            item["rows"],
+            date.fromisoformat(item["start"]),
+            date.fromisoformat(item["end"]),
+            *(
+                (item["object_key"], item["sha256"], item["byte_count"])
+                if resource
+                else ()
+            ),
+        )
+        for item in row["datasets"]
+    )
+
+
 def _generation(row: DictRow) -> PublishedGeneration:
+    if row["manifest_key"] is None or row["manifest_digest"] is None:
+        # G3/ADR-0062: manifest consumers never interpret resource-format rows.
+        raise UnsupportedPublicationLayoutError(
+            "Active publication layout is unsupported"
+        )
     return PublishedGeneration(
         str(row["id"]),
         str(row["run_id"]),
@@ -80,17 +105,46 @@ def _generation(row: DictRow) -> PublishedGeneration:
         row["manifest_digest"],
         row["verification_version"],
         row["verified_at"],
-        tuple(
-            DatasetSummary(
-                AnalyticalGrain(item["grain"]),
-                item["schema_version"],
-                item["rows"],
-                date.fromisoformat(item["start"]),
-                date.fromisoformat(item["end"]),
-            )
-            for item in row["datasets"]
-        ),
+        _summaries(row, resource=False),
     )
+
+
+def _resource_generation(row: DictRow) -> ResourcePublishedGeneration:
+    if row["manifest_key"] is not None or row["manifest_digest"] is not None:
+        # G3/ADR-0062: old rows are preserved, never converted or backfilled.
+        raise UnsupportedPublicationLayoutError(
+            "Active publication layout is unsupported"
+        )
+    generation = ResourcePublishedGeneration(
+        str(row["id"]),
+        str(row["run_id"]),
+        str(row["base_generation_id"]) if row["base_generation_id"] else None,
+        row["verification_version"],
+        row["verified_at"],
+        _summaries(row, resource=True),
+    )
+    try:
+        generation.validate()
+    except ValueError:
+        raise UnsupportedPublicationLayoutError(
+            "Stored publication descriptors are invalid"
+        ) from None
+    return generation
+
+
+def _datasets(summaries: tuple[DatasetSummary, ...], *, resource: bool) -> Jsonb:
+    names = ("object_key", "sha256", "byte_count")
+    documents = []
+    for item in summaries:
+        document = asdict(item) | {
+            "start": item.start.isoformat(),
+            "end": item.end.isoformat(),
+        }
+        if not resource:
+            for name in names:
+                document.pop(name)
+        documents.append(document)
+    return Jsonb(documents)
 
 
 def _quality(value: str | None) -> Jsonb | None:
@@ -104,7 +158,9 @@ def _quality(value: str | None) -> Jsonb | None:
     return Jsonb(parsed)
 
 
-class PostgresqlPublicationStore:
+class _RefreshStore:
+    """Shared fenced run/coordination transactions for both publication layouts."""
+
     def __init__(self, pool: BoundedPostgresqlPool) -> None:
         self._pool = pool
 
@@ -174,6 +230,7 @@ class PostgresqlPublicationStore:
                 return replay
             if coordination["active_run_id"] is not None:
                 raise RefreshBusyError("Refresh already admitted")
+            self._check_base(connection, coordination["active_generation_id"])
             configuration.validate(initial=coordination["active_generation_id"] is None)
             run_id = str(uuid4())
             connection.execute(
@@ -208,19 +265,22 @@ class PostgresqlPublicationStore:
             ).fetchone()
             return _run(row) if row else None
 
-    def active_generation(self) -> PublishedGeneration | None:
-        with self._pool.connection() as connection:
-            row = connection.execute(
-                "SELECT g.* FROM published_generations g JOIN refresh_coordination c ON c.active_generation_id = g.id"
-            ).fetchone()
-            return _generation(row) if row else None
+    _RESOURCE_LAYOUT: bool
 
-    def generation_for_run(self, run_id: str) -> PublishedGeneration | None:
-        with self._pool.connection() as connection:
-            row = connection.execute(
-                "SELECT * FROM published_generations WHERE run_id = %s", (run_id,)
-            ).fetchone()
-            return _generation(row) if row else None
+    def _check_base(
+        self, connection: Connection[DictRow], generation_id: object | None
+    ) -> None:
+        """Fail closed unless an existing active base uses this store's layout."""
+        if generation_id is None:
+            return
+        row = connection.execute(
+            "SELECT manifest_key IS NULL AND manifest_digest IS NULL AS resource FROM published_generations WHERE id = %s",
+            (generation_id,),
+        ).fetchone()
+        if row is None or row["resource"] is not self._RESOURCE_LAYOUT:
+            raise UnsupportedPublicationLayoutError(
+                "Active publication layout is unsupported"
+            )
 
     @staticmethod
     def _lease(identity: str, seconds: int) -> None:
@@ -311,14 +371,19 @@ class PostgresqlPublicationStore:
             "UPDATE refresh_coordination SET active_run_id = NULL, owner_identity = NULL, lease_until = NULL, epoch = epoch + 1 WHERE singleton"
         )
 
-    def publish(
+    def _publish(
         self,
         owner: RefreshOwner,
-        generation: PublishedGeneration,
-        quality_json: str | None = None,
+        generation_id: str,
+        run_id: str,
+        base_generation_id: str | None,
+        manifest: tuple[str, str] | None,
+        verification_version: str,
+        verified_at: datetime,
+        datasets: Jsonb,
+        quality_json: str | None,
     ) -> RefreshRun:
-        generation.validate()
-        if generation.run_id != owner.run_id:
+        if run_id != owner.run_id:
             raise ValueError("Generation run mismatch")
         quality = _quality(quality_json)
         try:
@@ -330,37 +395,30 @@ class PostgresqlPublicationStore:
                     if coordination["active_generation_id"]
                     else None
                 )
-                if (
-                    active != run.base_generation_id
-                    or active != generation.base_generation_id
-                ):
+                if active != run.base_generation_id or active != base_generation_id:
                     raise StaleRefreshOwnerError("Publication base changed")
+                self._check_base(connection, active)
                 run.configuration.validate(initial=active is None)
-                datasets = [
-                    asdict(item)
-                    | {"start": item.start.isoformat(), "end": item.end.isoformat()}
-                    for item in generation.datasets
-                ]
                 connection.execute(
                     "INSERT INTO published_generations(id, run_id, base_generation_id, manifest_key, manifest_digest, verification_version, verified_at, datasets) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
                     (
-                        generation.id,
-                        generation.run_id,
-                        generation.base_generation_id,
-                        generation.manifest_key,
-                        generation.manifest_digest,
-                        generation.verification_version,
-                        generation.verified_at,
-                        Jsonb(datasets),
+                        generation_id,
+                        run_id,
+                        base_generation_id,
+                        manifest[0] if manifest else None,
+                        manifest[1] if manifest else None,
+                        verification_version,
+                        verified_at,
+                        datasets,
                     ),
                 )
                 connection.execute(
                     "UPDATE refresh_coordination SET active_generation_id = %s WHERE singleton",
-                    (generation.id,),
+                    (generation_id,),
                 )
                 connection.execute(
                     "UPDATE refresh_runs SET status = 'succeeded', publication = 'published', generation_id = %s, stage = 'finished', finished_at = clock_timestamp(), quality_json = COALESCE(%s, quality_json), updated_at = clock_timestamp() WHERE id = %s",
-                    (generation.id, quality, owner.run_id),
+                    (generation_id, quality, owner.run_id),
                 )
                 self._release(connection)
                 result = self._read(connection, owner.run_id)
@@ -400,3 +458,86 @@ class PostgresqlPublicationStore:
                 self._release(connection)
             result = self._read(connection, run_id)
         return result
+
+
+class PostgresqlPublicationStore(_RefreshStore):
+    """Manifest-format publication; resource-format rows fail closed."""
+
+    _RESOURCE_LAYOUT = False
+
+    def active_generation(self) -> PublishedGeneration | None:
+        with self._pool.connection() as connection:
+            row = connection.execute(
+                "SELECT g.* FROM published_generations g JOIN refresh_coordination c ON c.active_generation_id = g.id"
+            ).fetchone()
+            return _generation(row) if row else None
+
+    def generation_for_run(self, run_id: str) -> PublishedGeneration | None:
+        with self._pool.connection() as connection:
+            row = connection.execute(
+                "SELECT * FROM published_generations WHERE run_id = %s", (run_id,)
+            ).fetchone()
+            return _generation(row) if row else None
+
+    def publish(
+        self,
+        owner: RefreshOwner,
+        generation: PublishedGeneration,
+        quality_json: str | None = None,
+    ) -> RefreshRun:
+        generation.validate()
+        return self._publish(
+            owner,
+            generation.id,
+            generation.run_id,
+            generation.base_generation_id,
+            (generation.manifest_key, generation.manifest_digest),
+            generation.verification_version,
+            generation.verified_at,
+            _datasets(generation.datasets, resource=False),
+            quality_json,
+        )
+
+
+class PostgresqlResourcePublicationStore(_RefreshStore):
+    """Exact three-descriptor publication (ADR-0060/0061/0062).
+
+    A manifest-format active base is preserved untouched but never read,
+    extended or published over: admission, reads and publication fail closed
+    until a separately user-directed reset. Nothing here converts or backfills it.
+    """
+
+    _RESOURCE_LAYOUT = True
+
+    def active_generation(self) -> ResourcePublishedGeneration | None:
+        with self._pool.connection() as connection:
+            row = connection.execute(
+                "SELECT g.* FROM published_generations g JOIN refresh_coordination c ON c.active_generation_id = g.id"
+            ).fetchone()
+            return _resource_generation(row) if row else None
+
+    def generation_for_run(self, run_id: str) -> ResourcePublishedGeneration | None:
+        with self._pool.connection() as connection:
+            row = connection.execute(
+                "SELECT * FROM published_generations WHERE run_id = %s", (run_id,)
+            ).fetchone()
+            return _resource_generation(row) if row else None
+
+    def publish(
+        self,
+        owner: RefreshOwner,
+        generation: ResourcePublishedGeneration,
+        quality_json: str | None = None,
+    ) -> RefreshRun:
+        generation.validate()
+        return self._publish(
+            owner,
+            generation.id,
+            generation.run_id,
+            generation.base_generation_id,
+            None,
+            generation.verification_version,
+            generation.verified_at,
+            _datasets(generation.datasets, resource=True),
+            quality_json,
+        )

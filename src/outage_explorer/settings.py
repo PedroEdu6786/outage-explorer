@@ -92,8 +92,7 @@ class ConnectorSettings:
     artifact: ArtifactSettings = field(default_factory=ArtifactSettings)
     model: ModelSettings = field(default_factory=ModelSettings)
     report_bytes: int = 1_000_000
-    prior_digest: str | None = None
-    prior_bytes: int | None = None
+    prior_resources: str | None = None
     workers: WorkerSettings = field(default_factory=WorkerSettings)
 
 
@@ -195,16 +194,10 @@ def connector_settings(
         report_bytes = document.get("report_bytes", defaults.report_bytes)
         if type(report_bytes) is not int or report_bytes <= 0:
             raise ValueError
-        digest = None
-        size = None
         if prior is None and "prior" in document:
             prior = _argument(None, document, "prior")
-        if prior is not None:
-            match = re.fullmatch(r"([0-9a-f]{64}):([1-9][0-9]*)", prior)
-            if match is None:
-                raise ValueError
-            digest, count = match.groups()
-            size = int(count)
+        if prior is not None and (not prior.strip() or "\x00" in prior):
+            raise ValueError
         return ConnectorSettings(
             first,
             last,
@@ -214,9 +207,8 @@ def connector_settings(
             artifact,
             model,
             report_bytes,
-            digest,
-            size,
-            worker_settings(document, fetch_workers, s3_workers),
+            prior,
+            resource_worker_settings(document, fetch_workers, s3_workers),
         )
     except (ValueError, TypeError, KeyError, OverflowError, OSError, RecursionError):
         raise ValueError("Invalid connector configuration") from None
@@ -257,39 +249,30 @@ def s3_settings(environment: Mapping[str, str]) -> S3Settings:
 
 def artifact_settings(
     staging: str | None,
-    manifest: str | None,
+    resources: str | None,
     environment: Mapping[str, str],
     config_path: str | None = None,
     s3_workers: int | None = None,
-) -> tuple[str, str, int, ArtifactSettings, ModelSettings, S3Settings, WorkerSettings]:
-    """Recovery needs no EIA key or dates. Validate before constructing clients."""
+) -> tuple[
+    str, str, ArtifactSettings, ModelSettings, S3Settings, ResourceWorkerSettings
+]:
+    """Exact local identity input; recovery requires no EIA key or source dates."""
     try:
         document = _document(config_path)
         root = _argument(staging, document, "staging")
-        if "\x00" in root or manifest is None:
+        if "\x00" in root or not resources or "\x00" in resources:
             raise ValueError
-        match = re.fullmatch(r"([0-9a-f]{64}):([1-9][0-9]*)", manifest)
-        if match is None:
-            raise ValueError
-        digest, size_text = match.groups()
-        size = int(size_text)
-        artifact = ArtifactSettings(
-            **_budgets(document.get("artifact", {}), asdict(ArtifactSettings()))
-        )
-        model = ModelSettings(
-            **_budgets(document.get("model", {}), asdict(ModelSettings()))
-        )
-        if size > artifact.file_bytes:
-            raise ValueError
-        s3 = s3_settings(environment)
         return (
             root,
-            digest,
-            size,
-            artifact,
-            model,
-            s3,
-            worker_settings(document, None, s3_workers),
+            resources,
+            ArtifactSettings(
+                **_budgets(document.get("artifact", {}), asdict(ArtifactSettings()))
+            ),
+            ModelSettings(
+                **_budgets(document.get("model", {}), asdict(ModelSettings()))
+            ),
+            s3_settings(environment),
+            resource_worker_settings(document, None, s3_workers),
         )
     except (KeyError, ValueError, TypeError, OSError, UnicodeError, RecursionError):
         raise ValueError("Invalid connector artifact configuration") from None
@@ -553,6 +536,7 @@ class RefreshSettings:
     model_interval_days: int = 183
     candidate_seconds: int = 1800
     persistence_seconds: int = 1800
+    s3_workers: int = 3
 
     def __post_init__(self) -> None:
         limits = (
@@ -567,6 +551,8 @@ class RefreshSettings:
             or self.start_date > self.end_date
             or (self.end_date - self.start_date).days + 1 > min(limits[:3])
             or self.max_interval_days > 183
+            or type(self.s3_workers) is not int
+            or not 1 <= self.s3_workers <= 3
         ):
             raise ValueError("Invalid refresh configuration")
 
@@ -587,6 +573,7 @@ def refresh_settings(environment: Mapping[str, str]) -> RefreshSettings:
                 ("OUTAGE_REFRESH_MODEL_INTERVAL_DAYS", 183),
                 ("OUTAGE_REFRESH_CANDIDATE_SECONDS", 1800),
                 ("OUTAGE_REFRESH_PERSISTENCE_SECONDS", 1800),
+                ("OUTAGE_REFRESH_S3_WORKERS", 3),
             )
         ]
         result = RefreshSettings(first, last, *values)

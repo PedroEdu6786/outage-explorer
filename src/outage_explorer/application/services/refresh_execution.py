@@ -1,12 +1,20 @@
-"""Execute only committed claims using frozen inputs and verified durable graphs."""
+"""Execute only committed claims using frozen inputs and verified durable resource files."""
 
 from datetime import date
 
-from outage_explorer.application.dto import ConnectorReport, ConnectorRequest
+from outage_explorer.application.dto import ResourceReport, ResourceRequest
 from outage_explorer.application.errors import AccessStoreError, StaleRefreshOwnerError
-from outage_explorer.application.ports.artifacts import ArtifactError
-from outage_explorer.application.ports.candidates import CandidateManifest
-from outage_explorer.application.ports.publication import PublicationStore
+from outage_explorer.application.ports.artifacts import (
+    ArtifactError,
+    ArtifactRef,
+    StoredObject,
+)
+from outage_explorer.application.ports.candidates import (
+    CandidateResult,
+    validate_resources,
+)
+from outage_explorer.application.ports.connector import DurableResourceReceipt
+from outage_explorer.application.ports.publication import ResourcePublicationStore
 from outage_explorer.application.ports.refresh import RefreshStore
 from outage_explorer.application.ports.refresh_execution import (
     RefreshConnectorFactory,
@@ -18,10 +26,10 @@ from outage_explorer.domain.access import AnalyticalGrain
 from outage_explorer.domain.observations import Grain
 from outage_explorer.domain.publication import (
     DatasetSummary,
-    PublishedGeneration,
     RefreshOwner,
     RefreshRun,
     RefreshStage,
+    ResourcePublishedGeneration,
     RunStatus,
 )
 from outage_explorer.domain.refresh import Interval
@@ -33,7 +41,7 @@ class RefreshReports:
     def __init__(self, store: RefreshStore, owner: RefreshOwner) -> None:
         self.store, self.owner = store, owner
 
-    def progress(self, report: ConnectorReport) -> None:
+    def progress(self, report: ResourceReport) -> None:
         stage = {
             "prior": RefreshStage.RETRIEVING,
             "retrieval": RefreshStage.RETRIEVING,
@@ -43,25 +51,21 @@ class RefreshReports:
         }[report.stage]
         self.store.progress(self.owner, stage, quality_json(report))
 
-    def finish(self, report: ConnectorReport) -> None:
+    def finish(self, report: ResourceReport) -> None:
         self.store.progress(self.owner, RefreshStage.VERIFYING, quality_json(report))
 
 
-def _coverage(verified: CandidateManifest) -> dict[Grain, tuple[date, date]]:
-    """Per-grain period coverage from verified summaries and single dataset files.
-
-    Publication needs exactly one modeled and one public file per grain whose
-    row counts equal the verified candidate count; anything else is refused.
-    """
+def _coverage(verified: CandidateResult) -> dict[Grain, tuple[date, date]]:
+    """Check each resource against its verified row count and coverage."""
+    validate_resources(verified.resources)
+    if len(verified.summaries) != 3:
+        raise ArtifactError("Invalid candidate summary set")
     coverage: dict[Grain, tuple[date, date]] = {}
     for summary in verified.summaries:
-        modeled = [ref for ref in verified.modeled if ref.grain == summary.grain]
-        public = [ref for ref in verified.public if ref.grain == summary.grain]
+        resources = [ref for ref in verified.resources if ref.grain == summary.grain]
         if (
-            len(modeled) != 1
-            or len(public) != 1
-            or modeled[0].row_count != summary.candidate_count
-            or public[0].row_count != summary.candidate_count
+            len(resources) != 1
+            or resources[0].row_count != summary.candidate_count
             or summary.first_period is None
             or summary.last_period is None
         ):
@@ -76,7 +80,7 @@ class RefreshExecution:
     def __init__(
         self,
         store: RefreshStore,
-        publication: PublicationStore,
+        publication: ResourcePublicationStore,
         factory: RefreshConnectorFactory,
     ) -> None:
         self.store, self.publication, self.factory = store, publication, factory
@@ -101,14 +105,51 @@ class RefreshExecution:
                     raise StaleRefreshOwnerError("Pinned base changed")
                 prior = None
                 if base is not None:
-                    prior = connector.reference(base.manifest_key, base.manifest_digest)
-                    pinned = connector.restore(prior, connector.bounds)
-                    if pinned.generation_id != base.id or pinned.outcome != "candidate":
+                    base_run = self.store.get_run(base.run_id)
+                    if base_run is None or base_run.generation_id != base.id:
+                        raise ArtifactError("Pinned base run identity mismatch")
+                    descriptors = tuple(
+                        ArtifactRef(
+                            StoredObject(
+                                item.object_key or "",
+                                item.sha256 or "",
+                                item.byte_count or 0,
+                            ),
+                            "resource",
+                            item.grain.value,
+                            None,
+                            item.rows,
+                        )
+                        for item in base.datasets
+                    )
+                    prior = connector.restore(
+                        DurableResourceReceipt(
+                            base.id,
+                            descriptors,
+                            Interval(
+                                base_run.configuration.start, base_run.configuration.end
+                            ),
+                            "eia-nuclear-observations-v1",
+                            "outage-share-exact-v1",
+                            base.base_generation_id,
+                        ),
+                        connector.bounds,
+                    )
+                    if (
+                        prior.generation_id != base.id
+                        or prior.contract_id != "eia-nuclear-observations-v1"
+                        or prior.transformation_id != "outage-share-exact-v1"
+                        or tuple(
+                            (r.grain, r.object.sha256, r.object.byte_count, r.row_count)
+                            for r in prior.resources
+                        )
+                        != tuple(
+                            (r.grain, r.object.sha256, r.object.byte_count, r.row_count)
+                            for r in descriptors
+                        )
+                    ):
                         raise ArtifactError("Pinned base identity mismatch")
-                    restored = connector.graph.graph(prior, connector.bounds)
-                    if not restored or restored[-1] != prior:
-                        raise ArtifactError("Invalid restored graph")
-                request = ConnectorRequest(
+                request = ResourceRequest(
                     Interval(run.configuration.start, run.configuration.end),
                     run.id,
                     run.id,
@@ -122,19 +163,21 @@ class RefreshExecution:
                     return self.store.finish(
                         owner, RunStatus.FAILED, report_json, report.error or "report"
                     )
-                reference = report.manifest
-                if reference is None:
-                    raise ArtifactError("Missing verified manifest")
-                # Full graph replay, not a caller-supplied candidate or arbitrary receipt.
-                connector.graph.graph(reference, connector.bounds)
-                verified = connector.reopen(reference, connector.bounds)
+                verified = report.candidate
+                if verified is None:
+                    raise ArtifactError("Missing verified resource candidate")
+                connector.verify(verified, connector.bounds)
                 if (
-                    verified.generation_id != run.id
+                    verified.outcome
+                    != (
+                        "retained_all_excluded"
+                        if report.outcome == "retained_all_excluded"
+                        else "candidate"
+                    )
+                    or verified.generation_id != run.id
                     or verified.base_generation_id != run.base_generation_id
                     or verified.interval != request.interval
-                    or verified.summaries != report.models
-                    or verified.base_manifest_object != prior
-                    or verified.schema_version != "2"
+                    or verified.schema_version != "1"
                     or verified.contract_id != request.contract_id
                     or verified.transformation_id != request.transformation_id
                 ):
@@ -150,34 +193,41 @@ class RefreshExecution:
                 if report.outcome == "retained_all_excluded":
                     if (
                         base is None
-                        or len(report.models) != 3
+                        or len(verified.summaries) != 3
                         or any(
                             item.quality.received <= 0
                             or item.quality.excluded != item.quality.received
-                            for item in report.models
+                            for item in verified.summaries
                         )
                     ):
                         raise ArtifactError("Invalid retained outcome")
                     return self.store.finish(owner, RunStatus.RETAINED, report_json)
                 if (
                     report.outcome != "candidate_verified"
-                    or len(report.models) != 3
-                    or {item.grain for item in report.models}
+                    or len(verified.summaries) != 3
+                    or {item.grain for item in verified.summaries}
                     != {grain.value for grain in AnalyticalGrain}
-                    or any(item.candidate_count <= 0 for item in report.models)
+                    or any(item.candidate_count <= 0 for item in verified.summaries)
                 ):
                     raise ArtifactError("Incomplete publishable candidate")
                 self.store.progress(owner, RefreshStage.PERSISTING, report_json)
-                receipt = connector.persist(reference, connector.bounds)
-                if receipt.manifest != reference:
+                expected = DurableResourceReceipt(
+                    verified.generation_id,
+                    connector.addresses(verified.generation_id, verified.resources),
+                    verified.interval,
+                    verified.contract_id,
+                    verified.transformation_id,
+                    verified.base_generation_id,
+                    verified.schema_version,
+                )
+                receipt = connector.persist(verified, connector.bounds)
+                if receipt != expected:
                     raise ArtifactError("Durable receipt mismatch")
                 self.store.progress(owner, RefreshStage.PUBLISHING, report_json)
-                generation = PublishedGeneration(
+                generation = ResourcePublishedGeneration(
                     run.id,
                     run.id,
                     run.base_generation_id,
-                    reference.key,
-                    reference.sha256,
                     "v1",
                     connector.clock.now(),
                     tuple(
@@ -186,8 +236,23 @@ class RefreshExecution:
                             "v1",
                             item.candidate_count,
                             *coverage[item.grain],
+                            next(
+                                ref.object.key
+                                for ref in receipt.resources
+                                if ref.grain == item.grain
+                            ),
+                            next(
+                                ref.object.sha256
+                                for ref in receipt.resources
+                                if ref.grain == item.grain
+                            ),
+                            next(
+                                ref.object.byte_count
+                                for ref in receipt.resources
+                                if ref.grain == item.grain
+                            ),
                         )
-                        for item in report.models
+                        for item in verified.summaries
                     ),
                 )
                 publishing = True

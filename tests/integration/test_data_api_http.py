@@ -215,12 +215,12 @@ def test_out_of_range_expiry_loss_and_no_rerun(app, system, browsing, queries):
 def supervised_http(system, browsing, tmp_path):
     """Use the delivered forwarding ports with real Parquet/controlled workers."""
     from outage_explorer.bootstrap import DataHttpResources, build_data_services
-    from outage_explorer.infrastructure.local_cache.modeled import VerifiedModeledCache
+    from outage_explorer.infrastructure.local_cache.modeled import VerifiedResourceCache
     from outage_explorer.infrastructure.query_results.previews import (
         BoundedPreviewSequences,
     )
     from outage_explorer.infrastructure.query_results.store import BoundedQueryResults
-    from outage_explorer.infrastructure.s3.artifacts import S3ArtifactStore
+    from outage_explorer.infrastructure.s3.resources import S3ResourceStore
     from outage_explorer.infrastructure.security import RandomSecurityMaterial
     from outage_explorer.infrastructure.worker_runtime.launcher import VerifiedLauncher
     from outage_explorer.infrastructure.worker_runtime.ownership import RecoveryOwner
@@ -236,9 +236,9 @@ def supervised_http(system, browsing, tmp_path):
     states = []
 
     def construct(ledger, key):
-        objects = S3ArtifactStore(browsing[5], "test-bucket", "connector/", ARTIFACT)
+        objects = S3ResourceStore(browsing[5], "test-bucket", "connector/", ARTIFACT)
         # Fresh private cache/output/key on each explicit start.
-        cache = VerifiedModeledCache(
+        cache = VerifiedResourceCache(
             tmp_path / f"supervised-cache-{len(states)}", objects, ARTIFACT, CACHE
         )
         runtime = retained.QueryRuntime()

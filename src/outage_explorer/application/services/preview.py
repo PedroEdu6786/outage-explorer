@@ -9,13 +9,13 @@ from outage_explorer.application.errors import (
     DataUnavailableError,
     InvalidRequestError,
 )
-from outage_explorer.application.ports.analytical_inputs import PublishedInputs
+from outage_explorer.application.ports.analytical_inputs import PublishedResourceInputs
 from outage_explorer.application.ports.execution import IsolatedExecution, PreviewRead
 from outage_explorer.application.ports.preview_sequences import (
     PreviewSequence,
     PreviewSequences,
 )
-from outage_explorer.application.ports.publication import PublicationStore
+from outage_explorer.application.ports.publication import ResourcePublicationStore
 from outage_explorer.application.ports.tabular_encoding import TabularEncoding
 from outage_explorer.application.services.access import AccessService
 from outage_explorer.domain.access import AccessOperation, AnalyticalGrain
@@ -38,8 +38,8 @@ class PreviewService:
     def __init__(
         self,
         access: AccessService,
-        publications: PublicationStore,
-        inputs: PublishedInputs,
+        publications: ResourcePublicationStore,
+        inputs: PublishedResourceInputs,
         execution: IsolatedExecution,
         sequences: PreviewSequences,
         encoding: TabularEncoding,

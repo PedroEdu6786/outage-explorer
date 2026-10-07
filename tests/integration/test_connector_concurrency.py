@@ -25,6 +25,7 @@ class OverlappingWire(Wire):
     def __init__(self, rows, *, fault=None):
         self.barrier = threading.Barrier(3, timeout=5)
         self.generator_done = threading.Event()
+        self.facility_done = threading.Event()
         self.active = self.peak = 0
         self.lock = threading.Lock()
         self.fault = fault
@@ -50,6 +51,7 @@ class OverlappingWire(Wire):
 
                     raise SourceError("Controlled route failure")
                 assert self.generator_done.wait(5)
+                assert self.facility_done.wait(5)
             result = super().handle(request)
             if (
                 request.url.path.endswith("/data/")
@@ -58,6 +60,8 @@ class OverlappingWire(Wire):
                 self.end_order.append(grain)
                 if grain == "generator":
                     self.generator_done.set()
+                if grain == "facility":
+                    self.facility_done.set()
             return result
         finally:
             with self.lock:
@@ -107,7 +111,7 @@ def test_endpoint_overlap_reverse_completion_cross_page_conflicts_and_prior(
         {g: [row(g), row(g, period="2026-09-02")] for g in ROUTES},
         config=configuration(),
     )
-    prior = prior_result.report.manifest
+    prior = prior_result.report.candidate
     shutil.copytree(first_root, second_root)
     rows = {
         grain: [
@@ -128,9 +132,11 @@ def test_endpoint_overlap_reverse_completion_cross_page_conflicts_and_prior(
     )
     assert wire.peak == 3 and wire.end_order[-1] == "national"
     assert concurrent.report.sources == sequential.report.sources
-    assert concurrent.report.models == sequential.report.models
-    a_store, a = reopen(first_root, sequential.report.manifest)
-    b_store, b = reopen(second_root, concurrent.report.manifest)
+    assert (
+        concurrent.report.candidate.summaries == sequential.report.candidate.summaries
+    )
+    a_store, a = reopen(first_root, sequential.report.candidate)
+    b_store, b = reopen(second_root, concurrent.report.candidate)
     for grain in ROUTES:
         assert [comparable(v) for v in models(a_store, a, grain)] == [
             comparable(v) for v in models(b_store, b, grain)
@@ -157,7 +163,7 @@ def test_failed_or_interrupted_route_joins_workers_and_never_confirms_success(
         tmp_path / "local", {g: [row(g)] for g in ROUTES}, fault=fault
     )
     assert result.report.error == code
-    assert result.report.outcome == "failed" and result.report.manifest is None
+    assert result.report.outcome == "failed" and result.report.candidate is None
     assert wire.peak == 3
     assert not list((tmp_path / "local" / "objects").glob(".staging-*"))
 
@@ -168,7 +174,7 @@ def test_source_requests_are_shared_not_multiplied_by_endpoint_workers(tmp_path)
     result, wire = parallel(
         tmp_path / "local", {g: [row(g)] for g in ROUTES}, source={"requests": 3}
     )
-    assert result.report.error == "resource" and result.report.manifest is None
+    assert result.report.error == "resource" and result.report.candidate is None
     assert len(wire.calls) <= 3
 
 
@@ -176,10 +182,10 @@ def test_pipeline_deadline_is_checked_during_modeling_before_late_success(tmp_pa
     from unittest.mock import patch
 
     from outage_explorer.infrastructure.parquet.candidates import (
-        ParquetCandidateBuilder,
+        ParquetResourceBuilder,
     )
 
-    original = ParquetCandidateBuilder.build
+    original = ParquetResourceBuilder.build_resources
     clock = [0.0]
 
     def expire_then_build(self, *args):
@@ -191,9 +197,9 @@ def test_pipeline_deadline_is_checked_during_modeling_before_late_success(tmp_pa
             "outage_explorer.infrastructure.connector_workers.time.monotonic",
             side_effect=lambda: clock[0],
         ),
-        patch.object(ParquetCandidateBuilder, "build", expire_then_build),
+        patch.object(ParquetResourceBuilder, "build_resources", expire_then_build),
     ):
         result, wire = execute(tmp_path / "expired", config=configuration())
     assert wire.closed
-    assert result.report.error == "resource" and result.report.manifest is None
+    assert result.report.error == "resource" and result.report.candidate is None
     assert result.report.stage == "modeling"

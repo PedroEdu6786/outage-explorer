@@ -1,4 +1,4 @@
-"""Readers pin verified public files and scan them through restricted views."""
+"""Readers pin exact unified resource files and expose restricted public views."""
 
 import json
 import pickle
@@ -22,9 +22,12 @@ from outage_explorer.application.ports.artifacts import ArtifactError
 from outage_explorer.application.ports.execution import ExecutionBounds, QueryRead
 from outage_explorer.domain.access import AnalyticalGrain
 from outage_explorer.domain.datasets import PUBLIC_DATASETS
-from outage_explorer.domain.publication import DatasetSummary, PublishedGeneration
+from outage_explorer.domain.publication import (
+    DatasetSummary,
+    ResourcePublishedGeneration,
+)
 from outage_explorer.infrastructure.local_cache import modeled as cache_module
-from outage_explorer.infrastructure.local_cache.modeled import VerifiedModeledCache
+from outage_explorer.infrastructure.local_cache.modeled import VerifiedResourceCache
 from tests.integration import test_connector_cli as connector
 from tests.integration.test_catalog_preview import CACHE, ENCODING, EXECUTION
 from tests.integration.test_connector_cli import ARTIFACT, row
@@ -48,7 +51,7 @@ def published(tmp_path):
         ],
     }
     result, _ = connector.execute(tmp_path / "connector", rows)
-    store, manifest = connector.reopen(tmp_path / "connector", result.report.manifest)
+    store, manifest = connector.reopen(tmp_path / "connector", result.report.candidate)
     counts = {item.grain: item.candidate_count for item in manifest.summaries}
     return store, manifest, counts
 
@@ -57,29 +60,21 @@ class Objects:
     def __init__(self, store, manifest, tamper=None):
         self.store, self.manifest, self.tamper = store, manifest, tamper or {}
 
-    def reference(self, key, digest):
-        assert (key, digest) == (
-            self.manifest.manifest_object.key,
-            self.manifest.manifest_object.sha256,
-        )
-        return self.manifest.manifest_object
-
     def read(self, reference):
         change = self.tamper.get(reference.key)
         if change == "missing":
             raise ArtifactError("Object unavailable")
-        for chunk in self.store.read(reference):
+        local = replace(reference, key=reference.sha256)
+        for chunk in self.store.read(local):
             yield chunk if change is None else b"X" * len(chunk)
 
 
 def generation(manifest, counts, **changes):
     summaries = {item.grain: item for item in manifest.summaries}
-    return PublishedGeneration(
+    return ResourcePublishedGeneration(
         manifest.generation_id,
         "synthetic-run",
         None,
-        manifest.manifest_object.key,
-        manifest.manifest_object.sha256,
         "v1",
         datetime.now(UTC),
         tuple(
@@ -89,22 +84,33 @@ def generation(manifest, counts, **changes):
                 counts[grain.value],
                 summaries[grain.value].first_period,
                 summaries[grain.value].last_period,
+                f"connector/generations/{manifest.generation_id}/{name}.parquet",
+                next(
+                    ref.object.sha256
+                    for ref in manifest.resources
+                    if ref.grain == grain.value
+                ),
+                next(
+                    ref.object.byte_count
+                    for ref in manifest.resources
+                    if ref.grain == grain.value
+                ),
             )
-            for grain in AnalyticalGrain
+            for grain, name in zip(
+                AnalyticalGrain, ("national", "facilities", "generators"), strict=True
+            )
         ),
     )
 
 
 def cache(tmp_path, published, tamper=None, bounds=CACHE):
     store, manifest, _ = published
-    return VerifiedModeledCache(
+    return VerifiedResourceCache(
         tmp_path / "cache", Objects(store, manifest, tamper), ARTIFACT, bounds
     )
 
 
-def test_cache_pins_exactly_the_manifest_public_file_without_projecting(
-    tmp_path, published
-):
+def test_cache_pins_exact_resource_file_without_rewriting(tmp_path, published):
     _, manifest, counts = published
     reader = cache(tmp_path, published)
     published_generation = generation(manifest, counts)
@@ -118,7 +124,7 @@ def test_cache_pins_exactly_the_manifest_public_file_without_projecting(
         }
     for dataset in PUBLIC_DATASETS:
         (file,) = pins[dataset.id].files
-        ref = next(r for r in manifest.public if r.grain == dataset.grain)
+        ref = next(r for r in manifest.resources if r.grain == dataset.grain)
         assert (file.sha256, file.byte_count, file.rows) == (
             ref.object.sha256,
             ref.object.byte_count,
@@ -126,9 +132,9 @@ def test_cache_pins_exactly_the_manifest_public_file_without_projecting(
         )
         assert file.rows == counts[dataset.grain]
         path = Path(file.path)
-        assert path.name == f"{manifest.manifest_object.sha256}-{dataset.id}.parquet"
+        assert path.name == f"{ref.object.sha256}-{dataset.id}.parquet"
         assert stat.S_IMODE(path.stat().st_mode) == 0o400
-        assert pq.read_schema(path).names == [c.name for c in dataset.columns]
+        assert set(c.name for c in dataset.columns) < set(pq.read_schema(path).names)
     assert "modeled_from_record" not in Path(cache_module.__file__).read_text()
     assert len(list((tmp_path / "cache").glob("*.parquet"))) == 3
     for pin in pins.values():
@@ -136,12 +142,15 @@ def test_cache_pins_exactly_the_manifest_public_file_without_projecting(
 
 
 @pytest.mark.parametrize("fault", ["corrupt", "missing"])
-def test_unverifiable_public_file_is_unavailable_without_fallback(
+def test_unverifiable_resource_file_is_unavailable_without_fallback(
     tmp_path, published, fault
 ):
     _, manifest, counts = published
-    ref = next(r for r in manifest.public if r.grain == "facility")
-    reader = cache(tmp_path, published, {ref.object.key: fault})
+    reader = cache(
+        tmp_path,
+        published,
+        {f"connector/generations/{manifest.generation_id}/facilities.parquet": fault},
+    )
     dataset = next(d for d in PUBLIC_DATASETS if d.grain == "facility")
     with pytest.raises(DataUnavailableError):
         reader.prepare(generation(manifest, counts), dataset)
@@ -149,7 +158,7 @@ def test_unverifiable_public_file_is_unavailable_without_fallback(
     assert not reader._entries
 
 
-def test_publication_summary_must_match_the_manifest_files_and_coverage(
+def test_publication_summary_must_match_exact_resource_files_and_coverage(
     tmp_path, published
 ):
     _, manifest, counts = published
@@ -172,7 +181,7 @@ def test_publication_summary_must_match_the_manifest_files_and_coverage(
             *published_generation.datasets[1:],
         ),
     )
-    with pytest.raises(AnalyticalResourceError):
+    with pytest.raises(DataUnavailableError):
         reader.prepare(wrong_rows, PUBLIC_DATASETS[0])
     assert not list((tmp_path / "cache").glob("*.parquet"))
 
@@ -205,7 +214,7 @@ def relations(tmp_path, published):
                     ref.object.byte_count,
                     ref.row_count,
                 )
-                for ref in manifest.public
+                for ref in manifest.resources
                 if ref.grain == dataset.grain
             ),
         )
@@ -287,7 +296,8 @@ def test_user_sql_cannot_reach_other_files_or_change_the_engine(
     relations, tmp_path, published, template
 ):
     store, manifest, _ = published
-    other = store.root / manifest.modeled[0].object.key
+    other = tmp_path / "unapproved.parquet"
+    other.write_bytes((store.root / manifest.resources[0].object.key).read_bytes())
     sql = template.format(other=other, out=tmp_path / "out")
     output = run_query(sql, relations)
     assert isinstance(output, Exception), output

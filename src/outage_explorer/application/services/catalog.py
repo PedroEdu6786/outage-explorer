@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 
 from outage_explorer.application.errors import DataUnavailableError
-from outage_explorer.application.ports.publication import PublicationStore
+from outage_explorer.application.ports.publication import ResourcePublicationStore
 from outage_explorer.application.ports.tabular_encoding import TabularEncoding
 from outage_explorer.application.services.access import AccessService
 from outage_explorer.domain.access import AccessOperation, AnalyticalGrain, Role
@@ -19,7 +19,9 @@ class CatalogEntry:
 
 
 class CatalogService:
-    def __init__(self, access: AccessService, publications: PublicationStore) -> None:
+    def __init__(
+        self, access: AccessService, publications: ResourcePublicationStore
+    ) -> None:
         self._access = access
         self._publications = publications
 

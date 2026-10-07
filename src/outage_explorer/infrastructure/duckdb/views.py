@@ -1,8 +1,10 @@
 """Restricted DuckDB connections whose datasets are views over exact staged files.
 
 No base table is created: each dataset is a view over ``read_parquet`` on the
-approved files, so reads scan them directly. After setup the engine may read only
-those exact paths, external access is off and its configuration is locked.
+approved files, so reads scan them directly. A unified resource file keeps private
+provenance columns; the view projects exactly the dataset's public columns, so no
+private physical column is nameable. After setup the engine may read only those
+exact paths, external access is off and its configuration is locked.
 Container mounts remain the primary isolation boundary.
 """
 
@@ -17,6 +19,7 @@ from outage_explorer.application.errors import DataUnavailableError
 from outage_explorer.application.ports.analytical_inputs import ApprovedFile
 from outage_explorer.application.ports.execution import ExecutionBounds
 from outage_explorer.domain.datasets import Dataset
+from outage_explorer.infrastructure.parquet.schemas import schema_for
 
 
 def verify_approved_file(file: ApprovedFile, dataset: Dataset) -> None:
@@ -25,7 +28,10 @@ def verify_approved_file(file: ApprovedFile, dataset: Dataset) -> None:
         path.is_symlink()
         or path.stat().st_size != file.byte_count
         or hashlib.sha256(path.read_bytes()).hexdigest() != file.sha256
-        or pq.read_schema(path).names != [column.name for column in dataset.columns]
+    ):
+        raise DataUnavailableError("Approved input file integrity mismatch")
+    if not pq.read_schema(path).equals(
+        schema_for("resource", dataset.grain), check_metadata=True
     ):
         raise DataUnavailableError("Approved input file integrity mismatch")
 
@@ -61,8 +67,10 @@ def open_restricted(
         connection.execute(
             "SET allowed_paths = [" + ",".join(_literal(p) for p in paths) + "]"
         )
-        for name, _, approved in relations:
-            connection.read_parquet([file.path for file in approved]).create_view(name)
+        for name, dataset, approved in relations:
+            connection.read_parquet([file.path for file in approved]).project(
+                ", ".join(f'"{column.name}"' for column in dataset.columns)
+            ).create_view(name)
         connection.execute("SET enable_external_access = false")
         connection.execute("SET lock_configuration = true")
     except BaseException:

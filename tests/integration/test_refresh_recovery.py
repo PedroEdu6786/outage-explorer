@@ -14,10 +14,11 @@ from outage_explorer.application.errors import (
 from outage_explorer.application.services.refresh_recovery import RefreshRecovery
 from outage_explorer.domain.publication import RunStatus
 from outage_explorer.infrastructure.postgresql.publication import (
-    PostgresqlPublicationStore,
+    PostgresqlResourcePublicationStore,
 )
 from outage_explorer.infrastructure.refresh_worker import RenewableRefreshLease
 from tests.integration import test_data_api_postgresql as coordination
+from tests.integration import test_refresh_execution as resource_refresh
 from tests.integration.test_refresh_execution import (
     RefreshS3,
     admit,
@@ -26,7 +27,8 @@ from tests.integration.test_refresh_execution import (
 )
 
 database = coordination.database
-system = coordination.system
+
+system = resource_refresh.system
 
 
 def test_claim_loss_before_first_fetch_is_interrupted_without_retry(
@@ -91,9 +93,9 @@ def test_verified_publication_commit_loss_reconciles_without_source_repeat(
     run = admit(system)
     process = composition(database, tmp_path)
     worker = process.tick.__self__
-    faulty = PostgresqlPublicationStore(coordination.FaultPool(system[4], mode))
+    faulty = PostgresqlResourcePublicationStore(coordination.FaultPool(system[4], mode))
     worker.execution.publication = faulty
-    # Use the good read port; fault occurs at publish, after verified S3 graph.
+    # Use the good read port; fault occurs at publish, after verified three-file readback.
     faulty.active_generation = system[0].active_generation
     try:
         if mode == "unavailable":

@@ -1,8 +1,8 @@
 # Spec: Three-file refresh persistence optimization
-> Status: phases 1–2 implemented and verified; G4 resolved; phases 3–4 and G3 pending · Slug: refresh-persistence
+> Status: phases 1–4 implemented; AC1–AC6 verified by controlled checkpoint · Slug: refresh-persistence
 
 ## Problem
-Admins wait too long for refresh persistence. The current implementation persists
+Admins wait too long for refresh persistence. The previous implementation persisted
 1,442 S3 objects (~57.5 MB) per generation—including raw batches, page descriptors,
 dispositions, and daily ledgers—which are never consumed by API users, DuckDB queries,
 or challenge deliverables. This creates avoidable upload, readback, and storage overhead.
@@ -83,17 +83,17 @@ queries, Admin quality summaries, and exact durable integrity.
   separate S3 manifest object.
 
 ## Acceptance Criteria
-- [ ] **AC1:** A completed refresh persists exactly 3 Parquet files to S3 and zero
+- [x] **AC1:** A completed refresh persists exactly 3 Parquet files to S3 and zero
   supporting evidence, page, ledger, or disposition files. (verifies FR1, FR2, TR1)
-- [ ] **AC2:** DuckDB preview and SQL queries against all three grains execute correctly
+- [x] **AC2:** DuckDB preview and SQL queries against all three grains execute correctly
   against views over the persisted resource files. (verifies TR2)
-- [ ] **AC3:** A subsequent refresh successfully reads the prior generation's 3 files,
+- [x] **AC3:** A subsequent refresh successfully reads the prior generation's 3 files,
   correctly applying absence retention, invalid retention, and replacement rules. (verifies FR6)
-- [ ] **AC4:** PostgreSQL `published_generations` records the 3 file keys, checksums,
+- [x] **AC4:** PostgreSQL `published_generations` records the 3 file keys, checksums,
   byte counts, and row counts atomically upon publication. (verifies FR5, TR1)
-- [ ] **AC5:** Data quality summary is saved in `refresh_runs.quality_json` matching
+- [x] **AC5:** Data quality summary is saved in `refresh_runs.quality_json` matching
   expected row counts and exclusion reason tallies. (verifies FR7)
-- [ ] **AC6:** S3 upload and readback use bounded concurrency (1–3), and any upload or
+- [x] **AC6:** S3 upload and readback use bounded concurrency (1–3), and any upload or
   checksum failure cleanly aborts without publishing or displacing the prior active
   generation. (verifies FR3, FR4, FR8, TR3, TR5)
 
@@ -103,5 +103,7 @@ verification, PostgreSQL metadata storage. ADR-0060 and the private-field codec 
 explicitly approved October 6, 2026 (task gates G1/G2). The user resolved physical
 S3 object identity (G4) by selecting generation-prefixed resource keys in
 [ADR-0061](../../adr/0061-generation-prefixed-resource-object-keys.md).
-History-preserving current-generation cutover/rollback (G3) remains required
-before its corresponding tasks and runtime use; see the task manifest.
+G3 is resolved by ADR-0062: historical rows/pointer remain immutable, legacy active
+bases fail closed, and moving past one needs separate explicit user direction.
+The phase-4 checkpoint uses controlled HTTP/S3, disposable PostgreSQL and fixture
+DuckDB workers; live rollout and measured runtime evidence remain separate.

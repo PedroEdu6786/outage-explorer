@@ -6,7 +6,7 @@ from typing import Protocol
 
 from outage_explorer.application.ports.analytical_inputs import PinnedInputs
 from outage_explorer.domain.datasets import Dataset
-from outage_explorer.domain.publication import PublishedGeneration
+from outage_explorer.domain.publication import ResourcePublishedGeneration
 
 
 @dataclass(frozen=True)
@@ -14,7 +14,7 @@ class PreviewSequence:
     id: str
     user_id: str
     dataset: Dataset
-    generation: PublishedGeneration
+    generation: ResourcePublishedGeneration
     start: date | None
     end: date | None
     size: int
@@ -33,7 +33,7 @@ class PreviewSequences(Protocol):
         self,
         user_id: str,
         dataset: Dataset,
-        generation: PublishedGeneration,
+        generation: ResourcePublishedGeneration,
         start: date | None,
         end: date | None,
         size: int,

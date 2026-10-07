@@ -3,10 +3,12 @@
 import atexit
 import logging
 import os
+import shutil
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
+from threading import Event
 from typing import Any
 from uuid import uuid4
 
@@ -22,8 +24,8 @@ from outage_explorer.application.dto import (
     AccessSetupInput,
     ConnectorArtifactInput,
     ConnectorInput,
-    ConnectorRequest,
-    ConnectorResult,
+    ResourceRequest,
+    ResourceResult,
 )
 from outage_explorer.application.errors import (
     AccessConfigurationError,
@@ -31,13 +33,13 @@ from outage_explorer.application.errors import (
     ConnectorDependencyError,
     RuntimeUnavailableError,
 )
-from outage_explorer.application.ports.analytical_inputs import PublishedInputs
+from outage_explorer.application.ports.analytical_inputs import PublishedResourceInputs
 from outage_explorer.application.ports.artifacts import (
     ArtifactBounds,
-    StoredObject,
     TransferBounds,
 )
-from outage_explorer.application.ports.connector import DurableConnectorReceipt
+from outage_explorer.application.ports.candidates import CandidateResult
+from outage_explorer.application.ports.connector import DurableResourceReceipt
 from outage_explorer.application.ports.execution import (
     IsolatedExecution,
 )
@@ -49,12 +51,10 @@ from outage_explorer.application.ports.sql_inspection import SqlInspector
 from outage_explorer.application.ports.tabular_encoding import TabularEncoding
 from outage_explorer.application.services.access import AccessService
 from outage_explorer.application.services.catalog import CatalogService
-from outage_explorer.application.services.connector import CreateConnectorCandidate
+from outage_explorer.application.services.connector import CreateResourceCandidate
 from outage_explorer.application.services.connector_artifacts import (
     CreateDurableConnectorCandidate,
     DurableCandidateResult,
-    PersistConnectorArtifacts,
-    RecoverConnectorArtifacts,
 )
 from outage_explorer.application.services.evidence import (
     VerifyBaseline,
@@ -69,6 +69,10 @@ from outage_explorer.application.services.refresh_execution import (
     RefreshExecution,
     RefreshReports,
     RefreshWorker,
+)
+from outage_explorer.application.services.resource_artifacts import (
+    PersistResourceArtifacts,
+    RecoverResourceArtifacts,
 )
 from outage_explorer.application.services.seed_users import (
     SeedUsers,
@@ -97,7 +101,7 @@ from outage_explorer.infrastructure.connector_report import LocalConnectorReport
 from outage_explorer.infrastructure.connector_workers import BoundedConnectorWorkers
 from outage_explorer.infrastructure.eia.budget import SourceRunBudget
 from outage_explorer.infrastructure.eia.source import EiaSource
-from outage_explorer.infrastructure.parquet.candidates import ParquetCandidateBuilder
+from outage_explorer.infrastructure.parquet.candidates import ParquetResourceBuilder
 from outage_explorer.infrastructure.parquet.connector import LocalConnectorEvidence
 from outage_explorer.infrastructure.parquet.storage import LocalParquetStore
 from outage_explorer.infrastructure.postgresql.access import PostgresqlAccessStore
@@ -108,7 +112,7 @@ from outage_explorer.infrastructure.postgresql.credentials import (
 from outage_explorer.infrastructure.postgresql.migrations import run_migrations
 from outage_explorer.infrastructure.postgresql.pool import BoundedPostgresqlPool
 from outage_explorer.infrastructure.postgresql.publication import (
-    PostgresqlPublicationStore,
+    PostgresqlResourcePublicationStore,
 )
 from outage_explorer.infrastructure.query_results.cleanup import QueryCleanup
 from outage_explorer.infrastructure.query_results.encoding import EncodingBounds
@@ -124,7 +128,12 @@ from outage_explorer.infrastructure.refresh_worker import (
     RenewableRefreshLease,
     SupervisedRefreshProcess,
 )
-from outage_explorer.infrastructure.s3.artifacts import S3ArtifactStore
+from outage_explorer.infrastructure.resource_metadata import (
+    read_candidate,
+    read_receipt,
+    write_receipt,
+)
+from outage_explorer.infrastructure.s3.resources import S3ResourceStore
 from outage_explorer.infrastructure.security import RandomSecurityMaterial
 from outage_explorer.infrastructure.sql_validation.subprocess_inspection import (
     SubprocessSqlInspector,
@@ -153,6 +162,7 @@ from outage_explorer.settings import (
     data_http_settings,
     database_settings,
     refresh_settings,
+    resource_worker_settings,
     s3_settings,
 )
 
@@ -165,7 +175,7 @@ class DataHttpResources:
     establishing process ownership; close is idempotent and process-bound.
     """
 
-    inputs: PublishedInputs
+    inputs: PublishedResourceInputs
     execution: IsolatedExecution
     results: QueryResults
     sequences: PreviewSequences
@@ -187,7 +197,7 @@ class DataHttpResources:
 
 def build_data_services(
     access: AccessService,
-    store: PostgresqlPublicationStore,
+    store: PostgresqlResourcePublicationStore,
     security: RandomSecurityMaterial,
     environment: Mapping[str, str],
     resources: DataHttpResources | None = None,
@@ -204,6 +214,7 @@ def build_data_services(
             configuration.model_interval_days,
             configuration.candidate_seconds,
             configuration.persistence_seconds,
+            s3_workers=configuration.s3_workers,
         ),
         security,
     )
@@ -212,7 +223,7 @@ def build_data_services(
         encoding: TabularEncoding = PreviewEncoding(
             EncodingBounds(1048576, 16, 10000, 100, 65536)
         )
-        inputs: PublishedInputs = UnavailableInputs()
+        inputs: PublishedResourceInputs = UnavailableInputs()
         execution: IsolatedExecution = UnavailableExecution()
         results: QueryResults = UnavailableResults()
         sequences: PreviewSequences = UnavailableSequences()
@@ -333,7 +344,7 @@ def build_http_app(*, data_resources: DataHttpResources | None = None) -> Flask:
             auth_transport=transport,
             data_services=build_data_services(
                 access,
-                PostgresqlPublicationStore(pool),
+                PostgresqlResourcePublicationStore(pool),
                 security,
                 os.environ,
                 data_resources,
@@ -374,7 +385,7 @@ def execute_connector(
     *,
     environment: Mapping[str, str] | None = None,
     transport: httpx.BaseTransport | None = None,
-) -> ConnectorResult:
+) -> ResourceResult:
     """Validate before construction; own and close even an injected transport."""
     try:
         config = connector_settings(
@@ -409,15 +420,12 @@ def execute_connector(
             or artifact_bounds.total_bytes > config.workers.temporary_bytes
         ):
             raise ValueError
-        prior = (
+        prior_candidate = (
             None
-            if config.prior_digest is None or config.prior_bytes is None
-            else StoredObject(
-                config.prior_digest, config.prior_digest, config.prior_bytes
-            )
+            if config.prior_resources is None
+            else read_candidate(config.prior_resources)
         )
-        if prior is not None and prior.byte_count > artifact_bounds.file_bytes:
-            raise ValueError
+        prior = None if prior_candidate is None else prior_candidate.baseline
         # Fixed/generated identities must fit before storage or transport exists.
         if model_bounds.field_chars < 64 or source_bounds.field_bytes < 64:
             raise ValueError
@@ -426,7 +434,7 @@ def execute_connector(
             transport.close()
         raise ConnectorConfigurationError("Invalid connector configuration") from None
     run_id, generation_id = uuid4().hex, uuid4().hex
-    request = ConnectorRequest(interval, run_id, generation_id, model_bounds, prior)
+    request = ResourceRequest(interval, run_id, generation_id, model_bounds, prior)
     wire = transport
     workers = BoundedConnectorWorkers(
         config.workers.endpoint_workers, elapsed_seconds=source_bounds.elapsed_seconds
@@ -453,7 +461,7 @@ def execute_connector(
             if endpoint_transports
             else dict.fromkeys(ROUTES, source_transport)
         )
-        service = CreateConnectorCandidate(
+        service = CreateResourceCandidate(
             lambda source_request: EiaSource(
                 source_request,
                 source_bounds,
@@ -463,12 +471,15 @@ def execute_connector(
                 page_workers=config.workers.page_workers,
             ),
             LocalConnectorEvidence(store),
-            ParquetCandidateBuilder(store),
+            ParquetResourceBuilder(store),
             reports,
             LoggingConnectorEvents(),
             workers,
         )
-        return service.run(request)
+        return replace(
+            service.run(request),
+            local_report=str(root / "runs" / run_id / "report.json"),
+        )
     finally:
         for endpoint_transport in endpoint_transports[1:]:
             endpoint_transport.close()
@@ -482,13 +493,13 @@ def execute_connector_artifacts(
     environment: Mapping[str, str] | None = None,
     session_factory: Callable[..., Any] | None = None,
     client: Any = None,
-) -> DurableConnectorReceipt:
+) -> DurableResourceReceipt:
     """Explicit AWS operation; an injected session owns credential resolution."""
     try:
-        root_text, digest, size, artifacts, model, s3, worker_config = (
+        root_text, identity_path, artifacts, model, s3, worker_config = (
             artifact_settings(
                 inputs.staging,
-                inputs.manifest,
+                inputs.resources,
                 os.environ if environment is None else environment,
                 inputs.config_path,
                 inputs.s3_workers,
@@ -496,7 +507,11 @@ def execute_connector_artifacts(
         )
         artifact_bounds = ArtifactBounds(**asdict(artifacts))
         model_bounds = RefreshBounds(**asdict(model))
-        reference = StoredObject(digest, digest, size)
+        identity = (
+            read_candidate(identity_path)
+            if inputs.operation == "persist"
+            else read_receipt(identity_path)
+        )
         if inputs.operation not in ("persist", "recover"):
             raise ValueError
         root = Path(root_text)
@@ -528,7 +543,8 @@ def execute_connector_artifacts(
     )
     # Verify the complete local candidate before constructing an AWS client.
     if inputs.operation == "persist":
-        local.graph(reference, model_bounds)
+        assert isinstance(identity, CandidateResult)
+        local.verify_candidate(identity, model_bounds)
     wire = client
     owned = wire is None
     try:
@@ -544,7 +560,7 @@ def execute_connector_artifacts(
                     max_pool_connections=worker_config.s3_workers,
                 ),
             )
-        durable = S3ArtifactStore(
+        durable = S3ResourceStore(
             wire,
             s3.bucket,
             s3.prefix,
@@ -553,16 +569,22 @@ def execute_connector_artifacts(
             cancelled=workers.cancelled,
         )
         if inputs.operation == "persist":
-            return PersistConnectorArtifacts(
-                local, durable, LoggingConnectorEvents(), workers
-            ).execute(reference, model_bounds)
-        RecoverConnectorArtifacts(local, durable, LoggingConnectorEvents()).execute(
-            reference, model_bounds
-        )
-        graph = local.graph(reference, model_bounds)
-        return DurableConnectorReceipt(
-            reference, len(graph), sum(item.byte_count for item in graph)
-        )
+            assert isinstance(identity, CandidateResult)
+            receipt = PersistResourceArtifacts(local, durable, workers).execute(
+                identity, model_bounds
+            )
+            receipt_path = root / "receipts" / (identity.generation_id + ".json")
+            if receipt_path.exists():
+                if read_receipt(str(receipt_path)) != receipt:
+                    raise ConnectorConfigurationError(
+                        "Conflicting local resource receipt"
+                    )
+            else:
+                write_receipt(receipt_path, receipt)
+            return receipt
+        assert isinstance(identity, DurableResourceReceipt)
+        RecoverResourceArtifacts(local, durable).execute(identity, model_bounds)
+        return identity
     except MissingDependencyException:
         raise ConnectorDependencyError("AWS SDK login dependency unavailable") from None
     finally:
@@ -671,7 +693,7 @@ def build_refresh_worker(
             "Invalid refresh worker configuration"
         ) from None
     pool = _access_pool(database)
-    store = PostgresqlPublicationStore(pool)
+    store = PostgresqlResourcePublicationStore(pool)
     lease = RenewableRefreshLease(store)
 
     @contextmanager
@@ -695,6 +717,16 @@ def build_refresh_worker(
             )
         )
         artifacts = ArtifactBounds(**asdict(ArtifactSettings()))
+        worker_config = resource_worker_settings({}, s3=config.s3_workers)
+        if (
+            worker_config.s3_workers
+            * (2 * artifacts.file_bytes + artifacts.row_group_bytes)
+            > worker_config.memory_bytes
+            or 2 * artifacts.total_bytes
+            + worker_config.s3_workers * artifacts.file_bytes
+            > worker_config.temporary_bytes
+        ):
+            raise ConnectorConfigurationError("Invalid refresh worker limits")
         workers = BoundedConnectorWorkers(1, elapsed_seconds=config.candidate_seconds)
 
         active_workers = workers
@@ -703,14 +735,29 @@ def build_refresh_worker(
             lease.check()
             active_workers.check()
 
+        run_root = Path(staging) / run.id
+        run_root.mkdir(parents=True, exist_ok=False)
         local = LocalConnectorEvidence(
             LocalParquetStore(
-                Path(staging) / run.id / "objects",
+                run_root / "objects",
                 artifacts,
                 check,
-            )
+            ),
+            workers,
         )
-        source_budget = SourceRunBudget(source_bounds, workers.cancelled)
+
+        def cancelled() -> bool:
+            lease.check()
+            return active_workers.cancelled.is_set()
+
+        class Cancellation(Event):
+            def is_set(self) -> bool:
+                return cancelled()
+
+            def set(self) -> None:
+                active_workers.cancelled.set()
+
+        source_budget = SourceRunBudget(source_bounds, Cancellation())
         wire = transport
         sdk = client
         owned_wire, owned_sdk = wire is None, sdk is None
@@ -726,64 +773,77 @@ def build_refresh_worker(
                         connect_timeout=10,
                         read_timeout=10,
                         retries={"mode": "standard", "total_max_attempts": 1},
+                        max_pool_connections=worker_config.s3_workers,
                     ),
                 )
-            durable = S3ArtifactStore(
+            durable = S3ResourceStore(
                 sdk,
                 target.bucket,
                 target.prefix,
                 artifacts,
-                replace(TransferBounds(), elapsed_seconds=config.candidate_seconds),
+                replace(
+                    TransferBounds(),
+                    elapsed_seconds=config.candidate_seconds,
+                    temporary_bytes=worker_config.temporary_bytes,
+                ),
+                cancelled=Cancellation(),
             )
             reports = RefreshReports(store, owner)
-            candidate = CreateConnectorCandidate(
+            candidate = CreateResourceCandidate(
                 lambda request: EiaSource(
                     request, source_bounds, wire, api_key, budget=source_budget
                 ),
                 local,
-                ParquetCandidateBuilder(local.store),
+                ParquetResourceBuilder(local.store),
                 reports,
                 workers=workers,
             )
 
             def persist(
-                reference: StoredObject, bounds: RefreshBounds
-            ) -> DurableConnectorReceipt:
+                verified: CandidateResult, bounds: RefreshBounds
+            ) -> DurableResourceReceipt:
                 nonlocal active_workers
-                # Persistence has its own frozen deadline and full readback session.
                 lease.check()
-                remote = S3ArtifactStore(
+                persistence_workers = BoundedConnectorWorkers(
+                    worker_config.s3_workers, elapsed_seconds=config.persistence_seconds
+                )
+                active_workers = persistence_workers
+                local.workers = persistence_workers
+                remote = S3ResourceStore(
                     sdk,
                     target.bucket,
                     target.prefix,
                     artifacts,
                     replace(
-                        TransferBounds(), elapsed_seconds=config.persistence_seconds
+                        TransferBounds(),
+                        elapsed_seconds=config.persistence_seconds,
+                        temporary_bytes=worker_config.temporary_bytes,
                     ),
+                    cancelled=Cancellation(),
                 )
-                persistence_workers = BoundedConnectorWorkers(
-                    1, elapsed_seconds=config.persistence_seconds
-                )
-                active_workers = persistence_workers
-                return PersistConnectorArtifacts(
+                return PersistResourceArtifacts(
                     local, remote, workers=persistence_workers
-                ).execute(reference, bounds)
+                ).execute(verified, bounds)
 
             yield RefreshConnector(
                 candidate,
-                local,
                 model_bounds,
-                RecoverConnectorArtifacts(local, durable).execute,
-                local.reopen,
+                RecoverResourceArtifacts(local, durable).execute,
+                local.verify_candidate,
+                durable.addresses,
                 persist,
-                durable.reference,
                 SystemClock(),
             )
         finally:
-            if owned_wire and wire is not None:
-                wire.close()
-            if owned_sdk and sdk is not None:
-                sdk.close()
+            try:
+                shutil.rmtree(run_root)
+            finally:
+                try:
+                    if owned_wire and wire is not None:
+                        wire.close()
+                finally:
+                    if owned_sdk and sdk is not None:
+                        sdk.close()
 
     execution = RefreshExecution(store, store, connector)
     worker = RefreshWorker(store, execution, lease, str(uuid4()))
@@ -852,8 +912,8 @@ def build_analytical_resources(
     """Build inert forwarding ports; only explicit start may own filesystem/S3."""
     from outage_explorer.infrastructure.local_cache.modeled import (
         CacheBounds,
-        PublishedReadSessions,
-        VerifiedModeledCache,
+        ResourceReadSessions,
+        VerifiedResourceCache,
         reclaim_private_cache,
     )
     from outage_explorer.infrastructure.query_results.previews import (
@@ -902,13 +962,13 @@ def build_analytical_resources(
         )
         try:
             # Fresh bounded transfer session for each cache load, no lifetime budget.
-            objects = PublishedReadSessions(
-                lambda: S3ArtifactStore(wire, s3.bucket, s3.prefix, artifacts, transfer)
+            objects = ResourceReadSessions(
+                lambda: S3ResourceStore(wire, s3.bucket, s3.prefix, artifacts, transfer)
             )
             reclaim_private_cache(
                 Path(profile.cache_root), file_limit=profile.input_files
             )
-            cache = VerifiedModeledCache(
+            cache = VerifiedResourceCache(
                 Path(profile.cache_root),
                 objects,
                 artifacts,

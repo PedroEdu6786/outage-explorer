@@ -28,10 +28,13 @@ from outage_explorer.application.services.catalog import CatalogService
 from outage_explorer.application.services.preview import PreviewService
 from outage_explorer.domain.access import AnalyticalGrain, Role
 from outage_explorer.domain.datasets import PUBLIC_DATASETS
-from outage_explorer.domain.publication import DatasetSummary, PublishedGeneration
+from outage_explorer.domain.publication import (
+    DatasetSummary,
+    ResourcePublishedGeneration,
+)
 from outage_explorer.infrastructure.local_cache.modeled import (
     CacheBounds,
-    VerifiedModeledCache,
+    VerifiedResourceCache,
 )
 from outage_explorer.infrastructure.query_results.encoding import (
     EncodingBounds,
@@ -44,15 +47,18 @@ from outage_explorer.infrastructure.query_results.previews import (
     BoundedPreviewSequences,
     PreviewBounds,
 )
-from outage_explorer.infrastructure.s3.artifacts import S3ArtifactStore
+from outage_explorer.infrastructure.s3.resources import S3ResourceStore
 from outage_explorer.infrastructure.worker_runtime.launcher import VerifiedLauncher
 from tests.integration import test_connector_cli as connector
 from tests.integration import test_data_api_postgresql as coordination
+from tests.integration import test_refresh_execution as resource_refresh
 from tests.integration.test_connector_cli import ARTIFACT, row
 from tests.integration.test_refresh_execution import RefreshS3, execute
 
 database = coordination.database
-system = coordination.system
+
+system = resource_refresh.system
+
 EXECUTION = ExecutionBounds(20, 30, 128 * 1024**2, 32 * 1024**2, 1024**2)
 ENCODING = EncodingBounds(1024**2, 16, 10000, 100, 65536)
 CACHE = CacheBounds(64 * 1024**2, 1000, 10000, 20)
@@ -108,8 +114,8 @@ def browsing(system, database, tmp_path):
     }
     result = execute(system, database, tmp_path / "refresh", values, client)
     assert result.status.value == "succeeded", (result.failure, result.quality_json)
-    objects = S3ArtifactStore(client, "test-bucket", "connector/", ARTIFACT)
-    cache = VerifiedModeledCache(tmp_path / "cache", objects, ARTIFACT, CACHE)
+    objects = S3ResourceStore(client, "test-bucket", "connector/", ARTIFACT)
+    cache = VerifiedResourceCache(tmp_path / "cache", objects, ARTIFACT, CACHE)
     runtime = ControlledRuntime()
     launcher = VerifiedLauncher(
         EXECUTION,
@@ -205,13 +211,13 @@ def test_binary_identifier_ties_revisit_and_no_raw_graph_download(system, browsi
         ["001", "01", "1", "A", "Z", "a", "é", "😀"], key=lambda s: s.encode("utf-8")
     )
     assert service.page(token, "facilities", cursor=first["page_cursor"]) == first
-    # Exactly the manifest + the one selected public file, never raw/pages/ledger.
-    assert len([call for call in client.calls if call[0] == "get"]) == 2
+    # One exact resource file, without manifest/metadata discovery.
+    assert len([call for call in client.calls if call[0] == "get"]) == 1
     assert len(runtime.calls[0].files) == 1
     for file in runtime.calls[0].files:
-        assert pq.read_schema(file.path).names == [
-            col.name for col in PUBLIC_DATASETS[1].columns
-        ]
+        assert "source_json" in pq.read_schema(file.path).names or len(
+            pq.read_schema(file.path).names
+        ) > len(PUBLIC_DATASETS[1].columns)
     assert all(entry.pins == 1 for entry in cache._entries.values())
 
 
@@ -411,33 +417,49 @@ def test_local_modeled_projection_and_controlled_worker_without_cloud_or_databas
     }
     result, _ = connector.execute(tmp_path / "connector", rows)
     assert result.report.outcome == "candidate_verified"
-    store, manifest = connector.reopen(tmp_path / "connector", result.report.manifest)
+    candidate = result.report.candidate
+    store = connector.LocalParquetStore(tmp_path / "connector" / "objects", ARTIFACT)
+    filenames = {
+        "national": "national",
+        "facility": "facilities",
+        "generator": "generators",
+    }
+    descriptors = tuple(
+        replace(
+            ref,
+            object=replace(
+                ref.object,
+                key=f"connector/generations/{candidate.generation_id}/{filenames[ref.grain]}.parquet",
+            ),
+        )
+        for ref in candidate.resources
+    )
 
     class Objects:
-        def reference(self, key, digest):
-            assert (key, digest) == (
-                manifest.manifest_object.key,
-                manifest.manifest_object.sha256,
-            )
-            return manifest.manifest_object
-
         def read(self, reference):
-            return store.read(reference)
+            return store.read(replace(reference, key=reference.sha256))
 
-    generation = PublishedGeneration(
-        manifest.generation_id,
+    generation = ResourcePublishedGeneration(
+        candidate.generation_id,
         "synthetic-run",
         None,
-        manifest.manifest_object.key,
-        manifest.manifest_object.sha256,
         "v1",
         datetime.now(UTC),
         tuple(
-            DatasetSummary(grain, "v1", 2, date(2026, 9, 1), date(2026, 9, 2))
-            for grain in AnalyticalGrain
+            DatasetSummary(
+                AnalyticalGrain(ref.grain),
+                "v1",
+                ref.row_count,
+                date(2026, 9, 1),
+                date(2026, 9, 2),
+                ref.object.key,
+                ref.object.sha256,
+                ref.object.byte_count,
+            )
+            for ref in descriptors
         ),
     )
-    cache = VerifiedModeledCache(tmp_path / "cache", Objects(), ARTIFACT, CACHE)
+    cache = VerifiedResourceCache(tmp_path / "cache", Objects(), ARTIFACT, CACHE)
     runtime = ControlledRuntime()
     launcher = VerifiedLauncher(
         EXECUTION, runtime, evidence="controlled test fixture only"
@@ -476,7 +498,7 @@ def test_local_modeled_projection_and_controlled_worker_without_cloud_or_databas
         cache.prepare(
             replace(generation, id="different-generation"), PUBLIC_DATASETS[0]
         )
-    limited = VerifiedModeledCache(
+    limited = VerifiedResourceCache(
         tmp_path / "limited-cache", Objects(), ARTIFACT, replace(CACHE, files=1)
     )
     pin = limited.prepare(generation, PUBLIC_DATASETS[0])

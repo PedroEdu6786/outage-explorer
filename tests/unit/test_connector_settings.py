@@ -97,7 +97,7 @@ def test_file_run_arguments_and_explicit_flag_precedence(config_path):
                 "start": "2026-09-03",
                 "end": "2026-09-04",
                 "staging": "from-file",
-                "prior": "a" * 64 + ":123",
+                "prior": "prior-report.json",
             }
         )
     )
@@ -105,12 +105,12 @@ def test_file_run_arguments_and_explicit_flag_precedence(config_path):
     assert value.start.isoformat() == "2026-09-03"
     assert value.end.isoformat() == "2026-09-04"
     assert value.staging == "from-file"
-    assert value.prior_digest == "a" * 64 and value.prior_bytes == 123
-    explicit = settings(config_path, prior="b" * 64 + ":456")
+    assert value.prior_resources == "prior-report.json"
+    explicit = settings(config_path, prior="explicit-report.json")
     assert explicit.start.isoformat() == "2026-09-01"
     assert explicit.end.isoformat() == "2026-09-02"
     assert explicit.staging == "local"
-    assert explicit.prior_digest == "b" * 64 and explicit.prior_bytes == 456
+    assert explicit.prior_resources == "explicit-report.json"
 
 
 @pytest.mark.parametrize("name", ["start", "end", "staging"])
@@ -133,10 +133,8 @@ def test_dates_are_explicit_canonical_and_ordered(start, end):
         settings(start=start, end=end)
 
 
-@pytest.mark.parametrize(
-    "prior", ["../secret", "f" * 64, "f" * 64 + ":0", "f" * 64 + ":-1", "F" * 64 + ":1"]
-)
-def test_exact_reference_required(prior):
+@pytest.mark.parametrize("prior", ["", " ", "bad\x00path"])
+def test_nonempty_local_metadata_path_required(prior):
     with pytest.raises(ValueError, match="Invalid connector configuration"):
         settings(prior=prior)
 
@@ -304,7 +302,8 @@ def test_worker_counts_fail_closed(config_path, field, value):
 
 def test_sequential_defaults_and_independent_worker_overrides(config_path):
     default = settings()
-    assert default.workers.endpoint_workers == default.workers.s3_workers == 1
+    assert default.workers.endpoint_workers == 1
+    assert default.workers.s3_workers == 3
     config_path.write_text(
         json.dumps({"workers": {"endpoint_workers": 3, "s3_workers": 2}})
     )

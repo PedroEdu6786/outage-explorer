@@ -12,7 +12,6 @@ from typing import Literal, Protocol
 from outage_explorer.application.ports.artifacts import (
     ArtifactError,
     ArtifactRef,
-    StoredObject,
 )
 from outage_explorer.domain.observations import Grain
 from outage_explorer.domain.refresh import (
@@ -47,15 +46,6 @@ class SanitizedPage:
 
 
 @dataclass(frozen=True)
-class EvidenceBundle:
-    grain: Grain
-    interval: Interval
-    raw: tuple[ArtifactRef, ...]
-    pages: tuple[ArtifactRef, ...]
-    transport: tuple[StoredObject, ...] = ()
-
-
-@dataclass(frozen=True)
 class GrainSummary:
     grain: Grain
     quality: Quality
@@ -69,39 +59,6 @@ class GrainSummary:
     usable_dates: int
     first_period: date | None = None
     last_period: date | None = None
-
-
-@dataclass(frozen=True)
-class CandidateManifest:
-    generation_id: str
-    base_generation_id: str | None
-    interval: Interval
-    evidence: tuple[EvidenceBundle, ...]
-    inherited_evidence: tuple[EvidenceBundle, ...]
-    base_modeled: tuple[ArtifactRef, ...]
-    modeled: tuple[ArtifactRef, ...]
-    public: tuple[ArtifactRef, ...]
-    dispositions: tuple[ArtifactRef, ...]
-    ledger: tuple[ArtifactRef, ...]
-    summaries: tuple[GrainSummary, ...]
-    outcome: Literal["candidate", "retained_all_excluded"]
-    contract_id: str
-    transformation_id: str
-    schema_version: str = "2"
-    manifest_object: StoredObject | None = None
-    base_manifest_object: StoredObject | None = None
-
-
-class CandidateBuilder(Protocol):
-    def build(
-        self,
-        generation_id: str,
-        evidence: Iterable[EvidenceBundle],
-        bounds: RefreshBounds,
-        prior: CandidateManifest | None = None,
-    ) -> CandidateManifest: ...
-
-    def verify(self, candidate: CandidateManifest, bounds: RefreshBounds) -> None: ...
 
 
 @dataclass(frozen=True)

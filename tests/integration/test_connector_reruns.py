@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
+from outage_explorer.application.errors import ConnectorConfigurationError
 from outage_explorer.application.ports.source import ROUTES
 from outage_explorer.bootstrap import execute_connector
 from outage_explorer.infrastructure.connector_report import LocalConnectorReports
@@ -37,7 +38,7 @@ def test_rerun_retains_original_invalid_absent_outside_and_excluded_route(tmp_pa
     }
     original["facility"].insert(2, row("facility", period="2026-09-02", facility="002"))
     initial = run_at(tmp_path, original, "2026-09-01", "2026-09-03")
-    reference = initial.report.manifest
+    reference = initial.report.candidate
     assert reference is not None
     store, prior = reopen(tmp_path, reference)
     old = {
@@ -57,7 +58,7 @@ def test_rerun_retains_original_invalid_absent_outside_and_excluded_route(tmp_pa
     }
     changed = run_at(tmp_path, incoming, "2026-09-02", "2026-09-03", reference)
     assert changed.report.outcome == "candidate_verified"
-    store, candidate = reopen(tmp_path, changed.report.manifest)
+    store, candidate = reopen(tmp_path, changed.report.candidate)
     for grain in ROUTES:
         current = models(store, candidate, grain)
         assert len(current) == len(old[grain])
@@ -94,9 +95,9 @@ def test_rerun_retains_original_invalid_absent_outside_and_excluded_route(tmp_pa
             + summary.carried_outside_interval
         )
     repeated = run_at(
-        tmp_path, incoming, "2026-09-02", "2026-09-03", changed.report.manifest
+        tmp_path, incoming, "2026-09-02", "2026-09-03", changed.report.candidate
     )
-    store, repeated_candidate = reopen(tmp_path, repeated.report.manifest)
+    store, repeated_candidate = reopen(tmp_path, repeated.report.candidate)
     for grain in ROUTES:
         values = models(store, repeated_candidate, grain)
         assert len(values) == len({item.key for item in values}) == len(old[grain])
@@ -106,21 +107,27 @@ def test_rerun_retains_original_invalid_absent_outside_and_excluded_route(tmp_pa
 
 def test_all_excluded_preserves_prior_and_reports_reasons(tmp_path):
     initial, _ = execute(tmp_path)
-    reference = initial.report.manifest
+    reference = initial.report.candidate
     _, prior = reopen(tmp_path, reference)
     rows = {grain: [row(grain, capacity="bad", outage="bad")] for grain in ROUTES}
     result, _ = execute(tmp_path, rows, prior=reference)
     assert (
         result.report.outcome == "retained_all_excluded" and not result.report.published
     )
-    _, candidate = reopen(tmp_path, result.report.manifest)
-    assert candidate.modeled == prior.modeled
+    _, candidate = reopen(tmp_path, result.report.candidate)
+    assert candidate.resources == prior.resources
     for summary in candidate.summaries:
         assert summary.retained_invalid == 1 and summary.quality.excluded == 1
         assert sum(count for _, count in summary.quality.reason_counts) == 2
     # Retained outcomes are reports, not eligible new bases. Keep the last candidate.
-    invalid, wire = execute(tmp_path, prior=result.report.manifest)
-    assert invalid.report.error == "prior_integrity" and not wire.calls
+    wire = Wire()
+    with pytest.raises(ConnectorConfigurationError):
+        execute_connector(
+            inputs(tmp_path, result.local_report),
+            environment=environment(),
+            transport=wire,
+        )
+    assert not wire.calls and wire.closed
     assert reopen(tmp_path, reference)[1] == prior
 
 
@@ -134,7 +141,7 @@ def test_initial_requires_usable_output_for_every_grain(tmp_path, grain, unusabl
     assert result.report.error == (
         "retrieval" if unusable == "empty" else "unusable_input"
     )
-    assert result.report.manifest is None and not result.report.published
+    assert result.report.candidate is None and not result.report.published
 
 
 @pytest.mark.parametrize(
@@ -146,7 +153,7 @@ def test_initial_requires_usable_output_for_every_grain(tmp_path, grain, unusabl
         ("model_budget", "resource"),
         ("representation", "representation"),
         ("interrupted", "interrupted"),
-        ("write", "prior_integrity"),
+        ("write", "artifact_integrity"),
         ("report", "report"),
     ],
 )
@@ -154,7 +161,7 @@ def test_failures_never_damage_prior_or_report_unconfirmed_success(
     tmp_path, fault, code
 ):
     initial, _ = execute(tmp_path)
-    reference = initial.report.manifest
+    reference = initial.report.candidate
     store, prior = reopen(tmp_path, reference)
     prior_bytes = {
         path.name: path.read_bytes() for path in (tmp_path / "objects").iterdir()
@@ -203,7 +210,7 @@ def test_failures_never_damage_prior_or_report_unconfirmed_success(
         )
     assert result.report.outcome == "failed" and result.report.error == code
     assert (
-        result.report.manifest is None and not result.report.published and wire.closed
+        result.report.candidate is None and not result.report.published and wire.closed
     )
     assert SECRET not in repr(result)
     assert reopen(tmp_path, reference)[1] == prior
@@ -216,17 +223,17 @@ def test_failures_never_damage_prior_or_report_unconfirmed_success(
         assert not (tmp_path / "runs" / result.report.run_id / "report.json").exists()
 
 
-def test_corrupt_prior_graph_is_rejected_before_retrieval(tmp_path):
+def test_corrupt_prior_resource_is_rejected_before_retrieval(tmp_path):
     # Corrupt a disposable copy, keeping the earlier staging directory intact.
     import shutil
 
     original = tmp_path / "original"
     damaged = tmp_path / "damaged"
     initial, _ = execute(original)
-    reference = initial.report.manifest
+    reference = initial.report.candidate
     _, prior = reopen(original, reference)
     shutil.copytree(original, damaged)
-    child = prior.evidence[0].raw[0].object
+    child = prior.resources[0].object
     (damaged / "objects" / child.key).write_bytes(b"corrupt")
     result, wire = execute(damaged, prior=reference)
     assert result.report.error == "prior_integrity" and not wire.calls
@@ -245,7 +252,7 @@ def test_interrupted_immutable_link_leaves_prior_readable_and_no_final_success(
     import os
 
     initial, _ = execute(tmp_path)
-    reference = initial.report.manifest
+    reference = initial.report.candidate
     _, prior = reopen(tmp_path, reference)
     link = os.link
 
@@ -260,7 +267,8 @@ def test_interrupted_immutable_link_leaves_prior_readable_and_no_final_success(
     ):
         result, _ = execute(tmp_path, prior=reference)
     assert (
-        result.report.error == "prior_integrity" and result.report.outcome == "failed"
+        result.report.error == "artifact_integrity"
+        and result.report.outcome == "failed"
     )
     assert result.report_written
     assert not list((tmp_path / "objects").glob(".staging-*"))

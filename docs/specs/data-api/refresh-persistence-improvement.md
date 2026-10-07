@@ -3,6 +3,14 @@
 Status: **proposed follow-up; no runtime change approved or implemented**.
 Date: 2026-10-05.
 
+**October 6 planning update:** The user requested code-level optimizations before
+a baseline measurement study. The canonical [spec](../refresh-persistence/spec.md)
+and [plan](../refresh-persistence/plan.md) now define optimization-first sequencing,
+bounded concurrency for both transfers and final recovery downloads, and a narrow
+independent replay-reduction checkpoint. The measurement-first ordering and
+default-selection prerequisite below are historical; the observed evidence remains
+unchanged. Proposed defaults are not implemented or measured runtime capacity.
+
 ## Problem and observed evidence
 
 During a user-initiated live refresh, the Admin status remained `running` /

@@ -18,12 +18,12 @@ from outage_explorer.application.ports.query_results import (
     ResultReservation,
 )
 from outage_explorer.domain.datasets import Dataset
-from outage_explorer.domain.publication import PublishedGeneration
+from outage_explorer.domain.publication import ResourcePublishedGeneration
 
 
 class UnavailableInputs:
     def prepare(
-        self, generation: PublishedGeneration, dataset: Dataset
+        self, generation: ResourcePublishedGeneration, dataset: Dataset
     ) -> PinnedInputs:
         raise RuntimeUnavailableError("Analytical resources unavailable")
 
@@ -46,7 +46,7 @@ class UnavailableSequences:
         self,
         user_id: str,
         dataset: Dataset,
-        generation: PublishedGeneration,
+        generation: ResourcePublishedGeneration,
         start: date | None,
         end: date | None,
         size: int,

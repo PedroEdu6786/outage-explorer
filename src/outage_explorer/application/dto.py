@@ -9,10 +9,8 @@ from outage_explorer.application.errors import (
     ConnectorConfigurationError,
     ConnectorFailure,
 )
-from outage_explorer.application.ports.artifacts import StoredObject
 from outage_explorer.application.ports.candidates import (
     CandidateResult,
-    GrainSummary,
     ResourceBaseline,
 )
 from outage_explorer.application.ports.source import SourceQuality
@@ -91,60 +89,10 @@ class ConnectorInput:
 
 
 @dataclass(frozen=True)
-class ConnectorRequest:
-    interval: Interval
-    run_id: str
-    generation_id: str
-    bounds: RefreshBounds
-    prior: StoredObject | None = None
-    contract_id: str = "eia-nuclear-observations-v1"
-    transformation_id: str = "outage-share-exact-v1"
-
-    def __post_init__(self) -> None:
-        if (
-            self.interval.end - self.interval.start
-        ).days + 1 > self.bounds.interval_days or any(
-            not value or len(value) > self.bounds.field_chars
-            for value in (
-                self.run_id,
-                self.generation_id,
-                self.contract_id,
-                self.transformation_id,
-            )
-        ):
-            raise ConnectorConfigurationError("Invalid connector request")
-
-
-@dataclass(frozen=True)
-class ConnectorReport:
-    run_id: str
-    generation_id: str
-    interval: Interval
-    stage: ConnectorStage
-    outcome: ConnectorOutcome | None = None
-    error: ConnectorFailure | None = None
-    manifest: StoredObject | None = None
-    sources: tuple[SourceQuality, ...] = ()
-    models: tuple[GrainSummary, ...] = ()
-    published: Literal[False] = False
-    limitations: tuple[str, ...] = (
-        "Contributor candidate only; no active generation or publication.",
-        "Observed order and coverage do not establish upstream completeness or revision recency.",
-        "Caller budgets are not measured production limits; live and cloud guarantees remain unverified.",
-    )
-
-
-@dataclass(frozen=True)
-class ConnectorResult:
-    report: ConnectorReport
-    report_written: bool
-
-
-@dataclass(frozen=True)
 class ConnectorArtifactInput:
     operation: Literal["persist", "recover"]
     staging: str | None
-    manifest: str | None
+    resources: str | None
     config_path: str | None = None
     s3_workers: int | None = None
 
@@ -202,14 +150,18 @@ class ResourceRequest:
     transformation_id: str = "outage-share-exact-v1"
 
     def __post_init__(self) -> None:
-        ConnectorRequest(
-            self.interval,
-            self.run_id,
-            self.generation_id,
-            self.bounds,
-            contract_id=self.contract_id,
-            transformation_id=self.transformation_id,
-        )
+        if (
+            self.interval.end - self.interval.start
+        ).days + 1 > self.bounds.interval_days or any(
+            not value or len(value) > self.bounds.field_chars
+            for value in (
+                self.run_id,
+                self.generation_id,
+                self.contract_id,
+                self.transformation_id,
+            )
+        ):
+            raise ConnectorConfigurationError("Invalid resource request")
         if self.prior is not None and (
             self.prior.generation_id == self.generation_id
             or self.prior.contract_id != self.contract_id
@@ -235,3 +187,4 @@ class ResourceReport:
 class ResourceResult:
     report: ResourceReport
     report_written: bool
+    local_report: str | None = None

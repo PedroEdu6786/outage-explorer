@@ -7,10 +7,10 @@ from outage_explorer.application.errors import (
 )
 from outage_explorer.application.ports.analytical_inputs import (
     PinnedInputs,
-    PublishedInputs,
+    PublishedResourceInputs,
 )
 from outage_explorer.application.ports.execution import IsolatedExecution, QueryRead
-from outage_explorer.application.ports.publication import PublicationStore
+from outage_explorer.application.ports.publication import ResourcePublicationStore
 from outage_explorer.application.ports.query_results import QueryResults
 from outage_explorer.application.ports.sql_inspection import SqlInspector
 from outage_explorer.application.services.access import AccessService
@@ -24,8 +24,8 @@ class QueryService:
         self,
         access: AccessService,
         inspector: SqlInspector,
-        publications: PublicationStore,
-        inputs: PublishedInputs,
+        publications: ResourcePublicationStore,
+        inputs: PublishedResourceInputs,
         execution: IsolatedExecution,
         results: QueryResults,
     ) -> None:

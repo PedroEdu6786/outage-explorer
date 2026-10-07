@@ -7,41 +7,34 @@ from unittest.mock import Mock
 
 import pytest
 
-from outage_explorer.application.dto import ConnectorReport, ConnectorRequest
-from outage_explorer.application.ports.artifacts import StoredObject
+from outage_explorer.application.dto import ResourceReport, ResourceRequest
+from outage_explorer.application.ports.connector import DurableResourceReceipt
 from outage_explorer.application.services.refresh_execution import RefreshExecution
 from outage_explorer.domain.access import AnalyticalGrain
 from outage_explorer.domain.publication import RefreshOwner, RunStatus
 from outage_explorer.domain.refresh import RefreshBounds
 from outage_explorer.infrastructure.parquet.storage import LocalParquetStore
+from tests.integration.test_connector_parquet import WINDOW as INTERVAL
+from tests.integration.test_resource_candidates import build
 from tests.integration.test_single_file_datasets import (
     BOUNDS as ARTIFACT_BOUNDS,
 )
-from tests.integration.test_single_file_datasets import INTERVAL, build_manifest
 
 RUN = "11111111-1111-4111-8111-111111111111"
-REFERENCE = StoredObject("a" * 64, "a" * 64, 100)
 MODEL = RefreshBounds(1000, 1000, 1000, 15, 1000, 100, 100, 100000, 366, 100000)
 
 
 def execution(tmp_path, change=None):
     verified = replace(
-        build_manifest(LocalParquetStore(tmp_path, ARTIFACT_BOUNDS)),
+        build(LocalParquetStore(tmp_path, ARTIFACT_BOUNDS)),
         generation_id=RUN,
-        contract_id=ConnectorRequest.contract_id,
-        transformation_id=ConnectorRequest.transformation_id,
-        manifest_object=REFERENCE,
+        contract_id=ResourceRequest.contract_id,
+        transformation_id=ResourceRequest.transformation_id,
     )
     if change is not None:
         verified = change(verified)
-    report = ConnectorReport(
-        RUN,
-        RUN,
-        INTERVAL,
-        "complete",
-        "candidate_verified",
-        manifest=REFERENCE,
-        models=build_manifest(LocalParquetStore(tmp_path, ARTIFACT_BOUNDS)).summaries,
+    report = ResourceReport(
+        RUN, RUN, INTERVAL, "complete", "candidate_verified", candidate=verified
     )
     run = Mock(
         status=RunStatus.RUNNING,
@@ -58,8 +51,25 @@ def execution(tmp_path, change=None):
         clock=Mock(now=lambda: datetime(2026, 10, 6, tzinfo=UTC)),
     )
     connector.candidate.run.return_value = Mock(report=report, report_written=True)
-    connector.reopen.return_value = verified
-    connector.persist.return_value = Mock(manifest=REFERENCE)
+    filenames = {
+        "national": "national",
+        "facility": "facilities",
+        "generator": "generators",
+    }
+    addresses = tuple(
+        replace(
+            ref,
+            object=replace(
+                ref.object,
+                key=f"connector/generations/{RUN}/{filenames[ref.grain]}.parquet",
+            ),
+        )
+        for ref in verified.resources
+    )
+    connector.addresses.return_value = addresses
+    connector.persist.side_effect = lambda *_: DurableResourceReceipt(
+        RUN, addresses, INTERVAL, verified.contract_id, verified.transformation_id, None
+    )
 
     @contextmanager
     def factory(_run, _owner):
@@ -83,7 +93,7 @@ def test_coverage_and_rows_come_from_verified_summaries_of_single_files(tmp_path
     generation = publication.publish.call_args.args[1]
     assert {item.grain for item in generation.datasets} == set(AnalyticalGrain)
     assert all(
-        (item.rows, item.start, item.end) == (5, date(2026, 9, 1), date(2026, 9, 5))
+        (item.rows, item.start, item.end) == (1, date(2026, 9, 2), date(2026, 9, 2))
         for item in generation.datasets
     )
     store.finish.assert_not_called()
@@ -91,16 +101,20 @@ def test_coverage_and_rows_come_from_verified_summaries_of_single_files(tmp_path
 
 def faults():
     def public_dropped(m):
-        return replace(m, public=m.public[:2])
+        return replace(m, resources=m.resources[:2])
 
     def public_foreign_grain(m):
-        return replace(m, public=(m.public[0], m.public[0], m.public[2]))
+        return replace(m, resources=(m.resources[0], m.resources[0], m.resources[2]))
 
     def public_count(m):
-        return replace(m, public=(replace(m.public[0], row_count=4), *m.public[1:]))
+        return replace(
+            m, resources=(replace(m.resources[0], row_count=4), *m.resources[1:])
+        )
 
     def modeled_count(m):
-        return replace(m, modeled=(replace(m.modeled[1], row_count=4), *m.modeled[1:]))
+        return replace(
+            m, resources=(replace(m.resources[1], row_count=4), *m.resources[1:])
+        )
 
     def no_coverage(m):
         first = replace(m.summaries[0], first_period=None, last_period=None)

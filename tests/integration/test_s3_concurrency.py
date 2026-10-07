@@ -1,4 +1,4 @@
-"""Bounded overlapping SDK operations and exact graph replay, without AWS."""
+"""Bounded overlapping SDK operations and exact resource recovery, without AWS."""
 
 import threading
 from dataclasses import replace
@@ -11,14 +11,10 @@ from outage_explorer.application.ports.artifacts import (
     ArtifactLimitError,
     TransferBounds,
 )
-from outage_explorer.application.services.connector_artifacts import (
-    PersistConnectorArtifacts,
-)
 from outage_explorer.bootstrap import execute_connector_artifacts
 from outage_explorer.infrastructure.connector_workers import BoundedConnectorWorkers
-from outage_explorer.infrastructure.parquet.connector import LocalConnectorEvidence
-from tests.integration.test_connector_artifacts import ENV, candidate
-from tests.integration.test_connector_cli import MODEL, config_file, reopen
+from tests.integration.test_connector_artifacts import ENV, candidate, receipt_path
+from tests.integration.test_connector_cli import config_file, reopen
 from tests.integration.test_s3_artifacts import (
     ControlledS3,
     adapter,
@@ -80,7 +76,7 @@ def transfer(client, root, ref, operation="persist"):
         ConnectorArtifactInput(
             operation,
             str(root),
-            f"{ref.key}:{ref.byte_count}",
+            str(ref),
             config_file(root, {"workers": {"s3_workers": 3}}),
         ),
         environment=ENV,
@@ -94,34 +90,31 @@ def clean(client):
     assert not any(t.name.startswith("connector_") for t in threading.enumerate())
 
 
-def test_parallel_put_and_get_exact_inherited_graph_and_receipts(tmp_path):
+def test_parallel_put_get_exact_resources_and_receipts(tmp_path):
     root = tmp_path / "original"
     first = candidate(root)
-    ref = candidate(root, first, outage="invalid")
-    store, original = reopen(root, ref)
-    graph = LocalConnectorEvidence(store).graph(ref, MODEL)
+    ref = candidate(root, first, outage="2")
+    _, original = reopen(root, ref)
     concurrent = OverlappingS3()
     receipt = transfer(concurrent, root, ref)
     clean(concurrent)
     assert concurrent.peak == 3
     assert concurrent.put_completions.index(2) < concurrent.put_completions.index(0)
-    assert [key for kind, key in concurrent.calls if kind == "put"][-1].endswith(
-        ref.key
-    )
-    assert receipt.objects == len(graph)
+    assert len(receipt.resources) == len(concurrent.objects) == 3
     from tests.integration.test_connector_artifacts import (
         transfer as sequential_transfer,
     )
 
     assert sequential_transfer(concurrent, root, ref) == receipt
-    # Conditional identical retries are verified with bytes, never overwritten.
     snapshot = dict(concurrent.objects)
     assert transfer(concurrent, root, ref) == receipt
     assert concurrent.objects == snapshot
     recovered = tmp_path / "recovered"
-    # Manifest GET discovery is sequential. Enable barrier only for known deps.
     concurrent.get_started = 3
-    assert transfer(concurrent, recovered, ref, "recover") == receipt
+    assert (
+        transfer(concurrent, recovered, receipt_path(root, receipt), "recover")
+        == receipt
+    )
     _, restored = reopen(recovered, ref)
     assert restored == original
     clean(concurrent)
@@ -130,19 +123,16 @@ def test_parallel_put_and_get_exact_inherited_graph_and_receipts(tmp_path):
 @pytest.mark.parametrize(
     "fault,error", [("dependency", ArtifactError), ("interrupt", KeyboardInterrupt)]
 )
-def test_dependency_failure_or_interruption_prevents_root_and_joins(
+def test_resource_failure_or_interruption_prevents_receipt_and_joins(
     tmp_path, fault, error
 ):
     root = tmp_path / "original"
     ref = candidate(root)
     client = OverlappingS3(fault=fault)
-    # No first-readback barrier on a failed upload wave.
     client.get_started = 3
     with pytest.raises(error):
         transfer(client, root, ref)
-    assert not any(
-        kind == "put" and key.endswith(ref.key) for kind, key in client.calls
-    )
+    assert not (root / "receipts").exists()
     clean(client)
     assert not list(root.rglob(".staging-*"))
 
@@ -191,60 +181,40 @@ def test_atomic_object_budget_does_not_multiply_with_workers():
     assert all(body.closed for body in client.closed_bodies)
 
 
-def test_concurrent_conflicting_existing_dependency_prevents_root(tmp_path):
+def test_concurrent_conflicting_existing_resource_has_no_receipt(tmp_path):
     root = tmp_path / "original"
     ref = candidate(root)
-    store, _ = reopen(root, ref)
-    graph = LocalConnectorEvidence(store).graph(ref, MODEL)
+    _, original = reopen(root, ref)
     client = ControlledS3()
-    client.objects["connector/objects/" + graph[0].key] = b"conflicting existing bytes"
-    before = dict(client.objects)
-    worker = BoundedConnectorWorkers(3)
-    durable = adapter(client, cancelled=worker.cancelled)
+    key = f"connector/generations/{original.generation_id}/national.parquet"
+    client.objects[key] = b"conflicting existing bytes"
     with pytest.raises(ArtifactError):
-        PersistConnectorArtifacts(
-            LocalConnectorEvidence(store, worker), durable, workers=worker
-        ).execute(ref, MODEL)
-    assert client.objects["connector/objects/" + graph[0].key] == next(
-        iter(before.values())
-    )
-    assert not any(
-        kind == "put" and key.endswith(ref.key) for kind, key in client.calls
-    )
+        transfer(client, root, ref)
+    assert client.objects[key] == b"conflicting existing bytes"
+    assert not (root / "receipts").exists()
     assert all(body.closed for body in client.closed_bodies)
 
 
-@pytest.mark.parametrize("stage", ["root", "readback"])
-def test_parallel_final_manifest_or_full_readback_failure_has_no_receipt(
-    tmp_path, stage
-):
+@pytest.mark.parametrize("stage", ["upload", "readback"])
+def test_parallel_resource_upload_or_readback_failure_has_no_receipt(tmp_path, stage):
     root = tmp_path / "local"
     ref = candidate(root)
     client = ControlledS3()
     original_put, original_get = client.put_object, client.get_object
-    root_seen = False
 
     def put(**kwargs):
-        nonlocal root_seen
-        if kwargs["Key"].endswith(ref.key):
-            root_seen = True
-            if stage == "root":
-                raise failure("AccessDenied")
+        if kwargs["Key"].endswith("/generators.parquet") and stage == "upload":
+            raise failure("AccessDenied")
         return original_put(**kwargs)
 
-    root_reads = 0
-
     def get(**kwargs):
-        nonlocal root_reads
-        if kwargs["Key"].endswith(ref.key):
-            root_reads += 1
-            if stage == "readback" and root_reads == 2:
-                raise failure("AccessDenied")
+        if kwargs["Key"].endswith("/generators.parquet") and stage == "readback":
+            raise failure("AccessDenied")
         return original_get(**kwargs)
 
     client.put_object, client.get_object = put, get
     with pytest.raises(ArtifactError):
         transfer(client, root, ref)
-    assert root_seen
+    assert not (root / "receipts").exists()
     assert all(body.closed for body in client.closed_bodies)
     assert not any(t.name.startswith("connector_") for t in threading.enumerate())

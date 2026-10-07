@@ -5,31 +5,32 @@ from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from typing import Protocol
 
-from outage_explorer.application.dto import ConnectorRequest, ConnectorResult
-from outage_explorer.application.ports.artifacts import StoredObject
-from outage_explorer.application.ports.candidates import CandidateManifest
+from outage_explorer.application.dto import ResourceRequest, ResourceResult
+from outage_explorer.application.ports.artifacts import ArtifactRef
+from outage_explorer.application.ports.candidates import (
+    CandidateResult,
+    ResourceBaseline,
+)
 from outage_explorer.application.ports.clock import Clock
 from outage_explorer.application.ports.connector import (
-    ConnectorGraph,
-    DurableConnectorReceipt,
+    DurableResourceReceipt,
 )
 from outage_explorer.domain.publication import RefreshOwner, RefreshRun
 from outage_explorer.domain.refresh import RefreshBounds
 
 
 class AdmittedCandidate(Protocol):
-    def run(self, request: ConnectorRequest) -> ConnectorResult: ...
+    def run(self, request: ResourceRequest) -> ResourceResult: ...
 
 
 @dataclass(frozen=True)
 class RefreshConnector:
     candidate: AdmittedCandidate
-    graph: ConnectorGraph
     bounds: RefreshBounds
-    restore: Callable[[StoredObject, RefreshBounds], CandidateManifest]
-    reopen: Callable[[StoredObject, RefreshBounds], CandidateManifest]
-    persist: Callable[[StoredObject, RefreshBounds], DurableConnectorReceipt]
-    reference: Callable[[str, str], StoredObject]
+    restore: Callable[[DurableResourceReceipt, RefreshBounds], ResourceBaseline]
+    verify: Callable[[CandidateResult, RefreshBounds], None]
+    addresses: Callable[[str, tuple[ArtifactRef, ...]], tuple[ArtifactRef, ...]]
+    persist: Callable[[CandidateResult, RefreshBounds], DurableResourceReceipt]
     clock: Clock
 
 

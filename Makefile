@@ -12,7 +12,7 @@ LOCAL_ONLY ?= 0
 FETCH_WORKERS ?=
 S3_WORKERS ?=
 OPERATION ?=
-MANIFEST ?=
+RESOURCES ?=
 PRIOR ?=
 # With a config file, preserve its staging value unless explicitly overridden.
 STAGING ?= $(if $(strip $(CONFIG)),,data/connector-local)
@@ -30,8 +30,8 @@ help:
 	  'make health  Call GET /health on the running API' \
 	  'make connector START=YYYY-MM-DD END=YYYY-MM-DD   Build and verify a candidate in S3' \
 	  'make connector CONFIG=path.json   Run with optional JSON configuration' \
-	  'Connector overrides: STAGING=path PRIOR=sha256:bytes FETCH_WORKERS=3 S3_WORKERS=3' \
-	  'make connector OPERATION=persist MANIFEST=sha256:bytes STAGING=path S3_WORKERS=3' \
+	  'Connector overrides: STAGING=path PRIOR=path/to/report.json FETCH_WORKERS=3 S3_WORKERS=3' \
+	  'make connector OPERATION=persist RESOURCES=path/to/report.json STAGING=path S3_WORKERS=3' \
 	  'make connector LOCAL_ONLY=1 START=YYYY-MM-DD END=YYYY-MM-DD   Local only' \
 	  'make connector-help   Show connector CLI options without running it' \
 	  'make test    Run all tests' \
@@ -80,7 +80,7 @@ connector: check-env
 	  $(if $(FETCH_WORKERS),--fetch-workers $(call shell_quote,$(FETCH_WORKERS))) \
 	  $(if $(S3_WORKERS),--s3-workers $(call shell_quote,$(S3_WORKERS))) \
 	  $(if $(OPERATION),--operation $(call shell_quote,$(OPERATION))) \
-	  $(if $(MANIFEST),--manifest $(call shell_quote,$(MANIFEST))) \
+	  $(if $(RESOURCES),--resources $(call shell_quote,$(RESOURCES))) \
 	  $(if $(filter 1,$(LOCAL_ONLY)),--local-only)
 
 connector-help: check-env
