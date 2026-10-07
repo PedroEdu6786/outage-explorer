@@ -8,7 +8,7 @@ diagrams in GitHub and compatible Markdown previews.
 | Area | Diagram | Main question |
 | --- | --- | --- |
 | [Data connector](diagrams/data-connector.md) | Retrieval, candidate construction, persistence and publication | How does EIA data become a published generation? |
-| [API endpoints](diagrams/endpoints.md) | HTTP capabilities, application authorization and execution/storage boundaries | How does a request reach the right use case safely? |
+| [API endpoints](diagrams/endpoints.md) | One flow diagram per HTTP operation, with authorization, processing and response | What happens inside each endpoint? |
 | [Model and verification](diagrams/model-verification.md) | Shared domain rules, typed resources, offline replay and reconciliation | How do we establish identity, correctness and evidence? |
 
 Reviewed against current workspace source on October 7, 2026. These diagrams
