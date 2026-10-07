@@ -120,7 +120,7 @@ refresh idle; a connector candidate or S3 receipt alone is not publication.
 
 ### Verification and limitations
 
-Run the backend checks using the disposable PostgreSQL/Chromium instructions in the [README](../../README.md#tests). In the web checkout, run `npm run typecheck`, `npm run lint`, `npm test`
+Run the backend checks using the disposable PostgreSQL/Chromium instructions in the [testing guide](testing.md). In the web checkout, run `npm run typecheck`, `npm run lint`, `npm test`
 and `npm run build`; its README documents additional boundary and browser checks.
 Reproduce the three findings with the commands linked from [FINDINGS.md](../../FINDINGS.md).
 
