@@ -91,7 +91,8 @@ S3 Parquet for durable data · isolated DuckDB workers for SQL · Cognito for id
 The [web repository](https://github.com/PedroEdu6786/outage-explorer-web) contains
 the React, Next.js, TypeScript and Tailwind CSS client and its setup instructions.
 
-See [architecture](docs/context/architecture.md) and the
+See the [architecture overview](docs/context/architecture.md),
+[high-level module and endpoint diagrams](docs/context/module-diagrams.md), and
 [schema/ER diagrams](docs/context/data-model.md). The fleet metric is
 `100 × national outage MW / national capacity MW`.
 

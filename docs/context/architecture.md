@@ -5,6 +5,9 @@ acceptance remain separate**. This page describes current code and accepted
 boundaries. Dated task checkpoints and evidence records describe what was
 verified at that time; they are not interchangeable with production readiness.
 
+For visual flows, see the [high-level module and endpoint diagrams](module-diagrams.md),
+covering the connector, HTTP operations, and model verification.
+
 ## Product and application structure
 
 One backend replica serves shared EIA data to authorized clients. Amazon S3 owns
