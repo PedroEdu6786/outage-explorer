@@ -11,6 +11,9 @@ See the [data model and ER diagrams](docs/context/data-model.md) for all three
 analytical datasets and seven operational entities, including keys, relationships,
 types, private provenance and duplicate/invalid-row handling.
 
+Explore the [high-level module diagrams](docs/context/module-diagrams.md) for
+the data connector, API endpoints, and model/verification flows.
+
 “Local data” means the application's own ingested data, served by a shared
 backend to authorized users. Development runs locally; deployment must retain
 data independently of disposable application containers. The current scope is
@@ -211,7 +214,7 @@ and [verification findings](docs/specs/facility-generator-verification/verificat
 ### Data connector implementation design
 
 See the [connector flow diagrams](docs/specs/data-connector/diagrams.md) for the
-planned workflow, implemented components, and implementation sequence.
+current retrieval, three-file persistence and separate publication flow.
 
 The [connector specification](docs/specs/data-connector/spec.md) and
 [implementation plan](docs/specs/data-connector/plan.md) develop the next slice:
