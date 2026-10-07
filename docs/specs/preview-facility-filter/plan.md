@@ -7,9 +7,9 @@ Extend the existing preview path with one optional exact facility identifier,
 carried from HTTP through application-owned sequence metadata to the isolated
 worker. Reuse authorization, snapshot pins, keyset pagination and public views;
 add a parameter-bound equality predicate rather than a separate filtering
-abstraction. Implement the corresponding capability and input in the separate
-web client, with client compatibility preceding expanded catalog output.
-(FR1–FR6, TR1–TR3)
+abstraction. Scope is this backend repository only, including its published
+contracts and consumer handoff. Web implementation and verification are excluded.
+(FR1–FR5, TR1–TR3)
 
 ## Components affected
 
@@ -32,11 +32,6 @@ web client, with client compatibility preceding expanded catalog output.
   from the approved selection in the parent response decoder. (FR1, FR2, TR1–TR3)
 - **Catalog service** — advertise the additional capability by grain, with the
   current authorization-based dataset visibility unchanged. (FR4, FR5)
-- **Separate web client** — extend catalog validation/mapping, filter contracts,
-  preview adapter/service validation, explorer controls and browsing state.
-  Existing `facilityId` selection support is a starting point; current adapter
-  rejection and date-only `PreviewFilters` presentation must also change.
-  (FR6, TR3)
 - **Verification and runtime identity records** — extend behavioral suites and
   documentation fixtures; coordinate the pinned worker image and reviewed
   runtime identity after protocol changes without activating resources in this
@@ -48,9 +43,6 @@ web client, with client compatibility preceding expanded catalog output.
   in-memory sequence; absence means no facility predicate. The existing opaque
   cursor identifies that stored selection and does not accept replacements.
   (FR1, FR3)
-- Add an explicit web facility-filter capability boolean, separate from any
-  existing facility option list. An empty option list must not imply filtering
-  is unsupported. The text field needs no discovery data. (FR5, FR6)
 - No PostgreSQL migration, Parquet schema change, durable query metadata or
   publication changes. Three unified resources and public views remain intact.
   (TR1, TR2)
@@ -81,53 +73,49 @@ web client, with client compatibility preceding expanded catalog output.
   Parent response validation checks facility equality alongside existing date,
   column, row/key and ordering checks. (FR1–FR3, TR1–TR3)
 - **Catalog:** national `supported_filters` remains `start_date`, `end_date`;
-  facilities/generators additionally advertise `facility`. Web accepts both the
-  old two-date catalog and the expanded per-grain catalog, maps the capability
-  explicitly, and encodes the selected ID with the existing URL parameter API.
-  Empty UI input omits the parameter; whitespace-only input is invalid rather
-  than silently normalized. (FR2, FR5, FR6, TR3)
-- **Web browsing:** retain selection in page state while continuation transport
-  sends only the cursor. Applying a changed facility or dates starts a new
-  sequence; switching to national clears/hides facility. Existing empty,
-  validation, expiry and unavailable states remain visible. (FR3, FR6)
+  facilities/generators additionally advertise `facility`. Publish this capability
+  expansion in the backend OpenAPI, fixtures and consumer handoff. A client that
+  strictly expects the two-date array may reject the expanded catalog; document
+  that compatibility impact without prescribing or performing client changes.
+  Backend acceptance covers the API behavior, not a consumer UI. (FR5, TR3)
 
 ## Implementation phases
 
-1. **Compatible contracts and client capability foundation** — synchronize the
-   proposed wire contracts and prepare the web decoder/mapping to accept both
-   catalog shapes while keeping controls capability-driven. An old date-only
-   backend still works; this client compatibility must precede expanded catalog
-   output. (FR5, FR6, TR3)
-2. **Bounded backend selection and execution** — carry validated facility through
-   initial admission, sequence storage, strict worker transport, bound query and
-   response validation; advertise support only with the complete paired backend
-   implementation. Existing unfiltered paths retain their behavior and controls.
-   (FR1–FR5, TR1, TR2)
-3. **Web browsing integration** — wire the facility-ID text field, initial request,
-   cursor navigation and restart/dataset-switch behavior through the real adapter
-   and application service. No facility discovery endpoint is needed. (FR3, FR6)
-4. **Behavioral verification and release compatibility** — complete acceptance
-   coverage, synchronize living documentation and identify the updated pinned
-   worker image/protocol/runtime review prerequisites. Report portable,
-   PostgreSQL and actual-host evidence separately; deployment or activation
-   requires its own authorization. (TR1–TR3, AC1–AC6)
+1. **Backend contracts and validation** — specify the optional field, identifier
+   validation, per-grain capabilities and error cases in both OpenAPI copies and
+   fixtures. Record catalog compatibility impact in the consumer handoff.
+   (FR1, FR2, FR5, TR1, TR3)
+2. **Application selection and cursor lifecycle** — carry the authorized filter
+   through initial admission and immutable bounded sequence metadata. Preserve
+   cursor-only continuations, expiry, ownership and snapshot behavior.
+   (FR1–FR4, TR1, TR2)
+3. **Isolated worker filtering** — extend strict paired transport, bind equality
+   in the trusted preview query and validate returned facility identity in the
+   parent. Advertise support with the complete backend implementation.
+   (FR1, FR2, FR5, TR1–TR3)
+4. **Backend verification and documentation** — complete acceptance coverage,
+   synchronize living docs and consumer contract examples, and identify updated
+   pinned worker image/protocol/runtime prerequisites. Report portable,
+   PostgreSQL and actual-host evidence separately. No web work is required to
+   complete these phases. (FR1–FR5, TR1–TR3, AC1–AC6)
 
 ## Dependencies & integrations
 
 - Existing Flask/application preview service, bounded sequence store and isolated
   DuckDB worker; no additional library or external service. (TR1, TR2)
-- Coordinated changes in `outage-explorer-web`, whose current catalog Zod schema
-  requires exactly two date filters and whose adapter rejects `facilityId`.
-  Planning here describes that client work; implementation must have write
-  authorization in that separate workspace. (FR6, TR3)
+- No implementation dependency on the separate web project. Consumer handoff
+  records that the existing client's strict two-date catalog decoder may require
+  separate adaptation before it consumes expanded metadata. That work is outside
+  this plan and does not block backend development or acceptance. (FR5, TR3)
 - Worker/image digest and reviewed runtime identity must match the new strict
   protocol before use. This plan grants no service start, image activation,
   source retrieval, publication or deployment permission. (TR3)
 
 ## Risks & tradeoffs
 
-- **Web catalog compatibility** — prepare the tolerant client decoder first;
-  retain per-grain capability validation and test both catalog shapes. (FR5, TR3)
+- **Catalog consumer compatibility** — expanded capability metadata can break
+  strict consumers. Document the impact in the API handoff and verify the new
+  backend contract; client adaptation belongs to its own project. (FR5, TR3)
 - **API/worker mismatch** — release the strict protocol change with its pinned
   image and refresh the applicable review identity; reject mismatches with no
   weaker execution fallback. (TR3)
@@ -141,8 +129,8 @@ web client, with client compatibility preceding expanded catalog output.
 
 ### Alternatives considered
 
-- Facility dropdown/discovery — rejected for this scope because a complete,
-  bounded option source would require additional product and API design. (FR6)
+- Facility discovery endpoint — excluded because exact-ID filtering needs no
+  existence lookup or new data-access path. (FR1, FR2, TR1)
 - Filtering only in the client or after worker pagination — rejected because
   it produces incomplete pages and incorrect continuation/empty behavior. (FR1, FR3)
 
@@ -165,14 +153,14 @@ web client, with client compatibility preceding expanded catalog output.
 - **AC4** — direct use-case and HTTP denial-before-preparation/execution tests
   cover Viewer, absent/expired/revoked sessions, foreign cursors and changed
   roles. Use explicit call observation so a denial cannot pass after data access.
-- **AC5** — web adapter/service/component tests cover old/new catalogs, capability
-  mapping, encoded initial facility, cursor-only continuation, selection changes,
-  national switching, empty/error/expiry states and absence of discovery calls.
-- **AC6** — run documented architecture, Ruff, mypy and relevant backend pytest;
-  run web documented lint/type/test/build checks in its workspace. Run disposable
-  PostgreSQL cases only with an explicit test DSN and report unavailable checks.
-  Protocol/image validation and controlled tests do not close outstanding Linux
-  actual-host isolation or capacity acceptance evidence.
+- **AC5** — backend contract tests cover unchanged unfiltered/date-only preview
+  requests, per-grain capability metadata, synchronized OpenAPI/fixtures and
+  consumer examples. Strict paired worker protocol mismatches fail closed;
+  no web tests are part of acceptance.
+- **AC6** — run documented architecture, Ruff, mypy and relevant backend pytest.
+  Run disposable PostgreSQL cases only with an explicit test DSN and report
+  unavailable checks. Protocol/image validation and controlled tests do not
+  close outstanding Linux actual-host isolation or capacity acceptance evidence.
 
 ## Assumptions
 
@@ -181,9 +169,9 @@ web client, with client compatibility preceding expanded catalog output.
   No new architectural boundary is selected, so this product expansion requires
   synchronized living contracts rather than a superseding architectural ADR.
   (FR2, TR1)
-- The initial UI is a labeled facility-ID text input. Unknown well-formed IDs
-  remain valid empty queries rather than requiring a facility-existence lookup.
-  (FR1, FR2, FR6)
+- Unknown well-formed IDs return empty results without a facility-existence
+  lookup. Client control design, implementation and verification are owned by
+  the separate web project. (FR1, FR2)
 
 ## Open decisions
 

@@ -21,7 +21,8 @@ The user subsequently requested single-facility preview filtering for facility
 and generator datasets. The [feature spec](../preview-facility-filter/spec.md)
 and [implementation plan](../preview-facility-filter/plan.md) describe that planned
 extension. It is not implemented yet; the current date-only contract below
-remains accurate until the coordinated backend/worker/web change ships.
+remains accurate until the backend/worker change ships. The feature plan is
+backend-only; web implementation and verification belong to their own project.
 
 ## Agreed behavior and selected routes
 
