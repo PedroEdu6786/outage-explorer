@@ -20,7 +20,7 @@
     "timeout_seconds": 3,
     "backoff_seconds": 1,
     "backoff_base_seconds": 1,
-    "request_interval_milliseconds": 1000
+    "request_interval_milliseconds": 500
   },
   "artifact": {
     "batch_rows": 100,

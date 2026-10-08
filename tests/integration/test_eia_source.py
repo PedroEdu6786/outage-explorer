@@ -603,7 +603,7 @@ def test_default_retries_recover_after_four_read_timeouts_at_same_offset():
     assert pages[0].attempt == 5
     assert adapter.quality.received == 1
     assert all(wire.url == calls[1].url for wire in calls[1:6])
-    assert clock.admissions == pytest.approx([0, 1, 6, 16, 36, 76, 77])
+    assert clock.admissions == pytest.approx([0, 0.5, 5.5, 15.5, 35.5, 75.5, 76])
     assert calls[1].extensions["timeout"] == {
         phase: 30 for phase in ("connect", "read", "write", "pool")
     }
@@ -1179,7 +1179,7 @@ def test_shared_budget_paces_routes_and_retries_and_defers_other_routes(
         "generator",
     ]
     assert [when for _, when in calls] == pytest.approx(
-        [0, cooldown, cooldown + 1, cooldown + 2]
+        [0, cooldown, cooldown + 0.5, cooldown + 1]
     )
     assert budget.counts["requests"] == 4
 
@@ -1207,9 +1207,9 @@ def test_cancellation_during_long_backoff_prevents_retry():
     assert clock() <= 0.1
 
 
-def test_pacing_deadline_prevents_a_second_wire_request():
+def test_pacing_deadline_prevents_a_third_wire_request():
     bounds = replace(SourceBounds(**asdict(SourceSettings())), elapsed_seconds=1)
     adapter, calls, _ = source(standard(), bounds=bounds)
     with pytest.raises(SourceLimitError, match="deadline"):
         list(adapter.pages())
-    assert len(calls) == 1
+    assert len(calls) == 2

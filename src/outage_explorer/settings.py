@@ -33,7 +33,7 @@ class SourceSettings:
     timeout_seconds: int = 30
     backoff_seconds: int = 120
     backoff_base_seconds: int = 10
-    request_interval_milliseconds: int = 1_000
+    request_interval_milliseconds: int = 500
 
 
 @dataclass(frozen=True)

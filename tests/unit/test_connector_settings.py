@@ -376,7 +376,7 @@ def test_eia_backoff_and_pacing_defaults_and_json_overrides(config_path):
     defaults = settings().source
     assert (defaults.attempts, defaults.timeout_seconds) == (5, 30)
     assert (defaults.backoff_base_seconds, defaults.backoff_seconds) == (10, 120)
-    assert defaults.request_interval_milliseconds == 1000
+    assert defaults.request_interval_milliseconds == 500
     config_path.write_text(
         json.dumps(
             {

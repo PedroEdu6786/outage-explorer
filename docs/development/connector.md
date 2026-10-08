@@ -49,8 +49,8 @@ failures back off the affected request. Logs include the chosen delay and
 whether the cooldown is shared, without retaining response headers.
 
 All metadata, page and retry attempts share a limiter that spaces admissions
-at least 1,000 milliseconds apart (about 3,600/hour). Idle time does not accumulate
-burst credit. Endpoint/page concurrency can overlap in-flight requests but does
+at least 500 milliseconds apart (two requests/second, about 7,200/hour). Idle time
+does not accumulate burst credit. Endpoint/page concurrency can overlap in-flight requests but does
 not multiply this allowance. Both pacing and retries check cancellation at most
 every 100 milliseconds while sleeping and count against the retrieval deadline.
 The default overall retrieval allowance remains 1,800 seconds; its remaining
@@ -76,7 +76,7 @@ independently; all must be positive integers. For example:
   "source": {
     "backoff_base_seconds": 10,
     "backoff_seconds": 120,
-    "request_interval_milliseconds": 1000
+    "request_interval_milliseconds": 500
   }
 }
 ```
