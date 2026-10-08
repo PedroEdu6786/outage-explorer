@@ -18,9 +18,9 @@ CONFIG_MAX_BYTES = 64 * 1024
 class SourceSettings:
     interval_days: int = 183
     page_rows: int = 500
-    rows: int = 30_000
-    pages: int = 100
-    requests: int = 200
+    rows: int = 100_000
+    pages: int = 250
+    requests: int = 500
     attempts: int = 5
     request_bytes: int = 4_000
     response_bytes: int = 1_000_000
@@ -50,9 +50,9 @@ class ArtifactSettings:
 
 @dataclass(frozen=True)
 class ModelSettings:
-    incoming_rows: int = 30_000
-    prior_rows: int = 30_000
-    output_rows: int = 30_000
+    incoming_rows: int = 100_000
+    prior_rows: int = 100_000
+    output_rows: int = 100_000
     fields_per_row: int = 30
     field_chars: int = 10_000
     coefficient_digits: int = 100

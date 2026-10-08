@@ -36,8 +36,12 @@ def test_only_credentials_required_for_typed_defaults():
     value = settings()
     assert value.source.interval_days == 183
     assert value.source.page_rows == 500
+    assert value.source.rows == 100_000
+    assert value.source.pages == 250
+    assert value.source.requests == 500
+    assert value.model.incoming_rows == value.model.prior_rows == 100_000
     assert value.artifact.total_bytes == 256_000_000
-    assert value.model.output_rows == 30_000
+    assert value.model.output_rows == 100_000
     assert value.report_bytes == 1_000_000
     with pytest.raises(FrozenInstanceError):
         value.source.rows = 1
@@ -65,9 +69,9 @@ def test_partial_file_overrides_keep_other_defaults_and_do_not_mutate_them(confi
         )
     )
     value = settings(config_path)
-    assert value.source.page_rows == 10 and value.source.rows == 30_000
+    assert value.source.page_rows == 10 and value.source.rows == 100_000
     assert value.artifact.batch_rows == 5 and value.artifact.objects == 10_000
-    assert value.model.interval_days == 7 and value.model.output_rows == 30_000
+    assert value.model.interval_days == 7 and value.model.output_rows == 100_000
     assert value.report_bytes == 2_000_000
     assert settings().source.page_rows == 500
 

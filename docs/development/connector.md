@@ -81,6 +81,19 @@ independently; all must be positive integers. For example:
 }
 ```
 
+The shared source defaults allow **100,000 total rows**, **250 pages** and
+**500 request attempts** across all three routes. Modeling allows 100,000
+incoming, prior and output rows per grain, including retained older observations.
+Page size remains 500; existing byte, file, memory, disk and elapsed limits remain
+active. These defaults apply to CLI and product refresh; explicit CLI JSON limits
+still override them. Restart the refresh worker after changing code defaults.
+
+The November 1, 2025–October 8, 2026 interval is 342 days. A controlled fixture
+using the historically observed 1/55/95 daily rows contains 51,642 rows, exceeding
+the former 30,000-row/100-page profile. This is a sizing fixture, not a guaranteed
+live roster or arbitrary-history capacity. See the
+[capacity specification](../specs/refresh-capacity/spec.md).
+
 ## Safe reruns, persistence and recovery
 
 Use a prior verified local report from the same staging store for merge/retention:
@@ -147,7 +160,9 @@ resolved and frozen at each new admission; callers cannot override dates. There
 is no 183-day ceiling for subsequent HTTP refreshes. Source/model interval budgets
 use that saved inclusive span, while finite row, page, request, byte, memory and
 time budgets still apply. Large ranges can fail those budgets without publication.
-Update the start and restart the API to narrow the range if needed. Remove obsolete
+For the configured local Colima API, stop the API, run `make local-configure`
+and then `make run-analytical` to apply an edited `.env` start date. Existing
+admitted runs retain their saved dates; submit a new refresh for the new interval. Remove obsolete
 `OUTAGE_REFRESH_END_DATE`, `OUTAGE_REFRESH_MAX_INTERVAL_DAYS`,
 `OUTAGE_REFRESH_SOURCE_INTERVAL_DAYS` and `OUTAGE_REFRESH_MODEL_INTERVAL_DAYS`
 settings; HTTP refresh ignores them. Today's observations may not yet be published
