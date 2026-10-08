@@ -70,6 +70,10 @@ to operational PostgreSQL.
 3. **The cache retains prepared files.** Its identity is the resource SHA-256
    plus dataset ID; matching bytes can be reused across generations after exact
    publication metadata is rechecked. A sequence pins its file against eviction.
+   The reviewed runtime profile's `cache_rows` bounds the whole resource before
+   downloading it (default 30,000), independently of the 100/500 preview page size.
+   Raising that limit requires a matching profile review; see the
+   [generator row-cap diagnosis](generator-cache-rows.md).
 4. **DuckDB builds the page.** The worker exposes the staged Parquet as an
    `approved` view in a fresh DuckDB connection, readable only from the exact
    staged path, with external access disabled and configuration locked; no table is

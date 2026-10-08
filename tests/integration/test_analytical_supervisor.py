@@ -283,6 +283,42 @@ def test_production_builder_inert_and_quota_prerequisites_closed(tmp_path, monke
     assert not Path(candidate.result_root).exists()
 
 
+@pytest.mark.parametrize("row_limit", [1, 2])
+def test_production_builder_enforces_configured_cache_rows(
+    tmp_path, monkeypatch, row_limit
+):
+    from outage_explorer import bootstrap
+    from outage_explorer.application.errors import AnalyticalResourceError
+    from outage_explorer.infrastructure.worker_runtime import docker
+    from tests.integration.test_resource_readers import Published
+
+    published = Published(tmp_path / "published")
+    monkeypatch.setenv("OUTAGE_S3_BUCKET", "test-bucket")
+    monkeypatch.setenv("OUTAGE_S3_PREFIX", "connector/")
+    monkeypatch.setenv("AWS_REGION", "us-east-1")
+    session = Mock()
+    session.client.return_value = published.client
+    monkeypatch.setattr(bootstrap.boto3, "Session", Mock(return_value=session))
+    monkeypatch.setattr(docker.DockerRuntime, "recover_owned", Mock())
+    monkeypatch.setattr(docker.DockerRuntime, "validate_temporary_backend", Mock())
+    monkeypatch.setattr(docker.DockerRuntime, "terminate_and_reap", Mock())
+    published.client.close = Mock()
+    candidate = replace(profile(tmp_path / "runtime"), cache_rows=row_limit)
+    resources = build_analytical_resources(candidate, evidence(candidate))
+    try:
+        resources.start()
+        if row_limit == 1:
+            with pytest.raises(AnalyticalResourceError):
+                resources.inputs.prepare(published.generation, PUBLIC_DATASETS[2])
+            assert published.client.calls == []
+        else:
+            pin = resources.inputs.prepare(published.generation, PUBLIC_DATASETS[2])
+            assert pin.files[0].rows == 2
+            pin.close()
+    finally:
+        resources.close()
+
+
 def test_config_round_trip_missing_evidence_and_strict_rejection(tmp_path):
     candidate = profile(tmp_path)
     record = asdict(evidence(candidate))

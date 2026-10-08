@@ -63,6 +63,7 @@ class RuntimeProfile:
     input_bytes: int = 2_147_483_647
     staging_bytes: int = 2_147_483_647
     cache_bytes: int = 2_147_483_647
+    cache_rows: int = 30_000
     result_bytes: int = 10_485_760
     result_count: int = 100
     results_per_user: int = 100
@@ -151,6 +152,7 @@ class RuntimeProfile:
             "input_bytes",
             "staging_bytes",
             "cache_bytes",
+            "cache_rows",
             "result_bytes",
             "result_count",
             "results_per_user",

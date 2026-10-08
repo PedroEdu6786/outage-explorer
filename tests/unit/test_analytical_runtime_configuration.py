@@ -44,6 +44,10 @@ def profile(**changes):
         {"process_limit": True},
         {"control_seconds": float("inf")},
         {"cache_bytes": "1"},
+        {"cache_rows": 0},
+        {"cache_rows": True},
+        {"cache_rows": "100000"},
+        {"cache_rows": 2**40 + 1},
         {"swap_bytes": 1},
         {"worker": WorkerImageLimits(memory_bytes=100)},
     ],
@@ -75,6 +79,7 @@ def test_readiness_and_invalidation():
         (reviewed, False),
         (candidate, True),
         (replace(reviewed, process_limit=16), True),
+        (replace(reviewed, cache_rows=100_000), True),
         (replace(reviewed, image_id="sha256:" + "c" * 64), True),
     ]:
         with pytest.raises(RuntimeUnavailableError):

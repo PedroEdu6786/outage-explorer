@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import duckdb
+import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
@@ -17,7 +18,7 @@ from outage_explorer.application.errors import (
     AnalyticalResourceError,
     DataUnavailableError,
 )
-from outage_explorer.application.ports.execution import ExecutionBounds
+from outage_explorer.application.ports.execution import ExecutionBounds, PreviewRead
 from outage_explorer.application.services.resource_artifacts import (
     PersistResourceArtifacts,
 )
@@ -28,6 +29,7 @@ from outage_explorer.domain.publication import (
     ResourcePublishedGeneration,
 )
 from outage_explorer.infrastructure.connector_workers import BoundedConnectorWorkers
+from outage_explorer.infrastructure.duckdb.previews import execute_preview
 from outage_explorer.infrastructure.duckdb.views import open_restricted
 from outage_explorer.infrastructure.local_cache.modeled import (
     ResourceReadSessions,
@@ -280,6 +282,66 @@ def test_cache_budgets_are_enforced_before_download(tmp_path, published):
     with pytest.raises(AnalyticalResourceError):
         small.prepare(published.generation, dataset_for(AnalyticalGrain.NATIONAL))
     assert published.client.calls == []
+
+
+def test_generator_preview_above_old_row_cap_with_bounded_pagination(
+    tmp_path, published
+):
+    """Reproduce the 32,395-row publication rejected before preview pagination."""
+    dataset = dataset_for(AnalyticalGrain.GENERATOR)
+    item = next(
+        i for i in published.generation.datasets if i.grain is AnalyticalGrain.GENERATOR
+    )
+    table = pq.read_table(io.BytesIO(published.client.objects[item.object_key]))
+    row = table.to_pylist()[0]
+    count = 32_395
+    rows = [{**row, "generator": f"{index:05d}"} for index in range(count)]
+    sink = io.BytesIO()
+    pq.write_table(
+        pa.Table.from_pylist(rows, schema=table.schema), sink, row_group_size=100
+    )
+    data = sink.getvalue()
+    published.client.objects[item.object_key] = data
+    generation = published.changed(
+        AnalyticalGrain.GENERATOR,
+        rows=count,
+        start=row["period"],
+        end=row["period"],
+        sha256=hashlib.sha256(data).hexdigest(),
+        byte_count=len(data),
+    )
+    old = published.cache(tmp_path / "old", replace(CACHE, rows=30_000))
+    with pytest.raises(AnalyticalResourceError):
+        old.prepare(generation, dataset)
+    assert published.client.calls == []
+    old.close()
+
+    reader = published.cache(tmp_path, replace(CACHE, rows=100_000))
+    pin = reader.prepare(generation, dataset)
+    try:
+        request = PreviewRead(dataset, pin.files, None, None, None, 100)
+        first = execute_preview(request, EXECUTION)
+        second = execute_preview(replace(request, after=first.keys[-1]), EXECUTION)
+        assert len(first.rows) == len(second.rows) == 100
+        assert first.has_more and second.has_more
+        assert [r[-1] for r in first.rows + second.rows] == [
+            f"{index:05d}" for index in range(200)
+        ]
+        assert len(published.client.calls) == 1
+        # A configurable ceiling remains enforced before any new source read.
+        oversized = replace(
+            generation,
+            datasets=tuple(
+                replace(d, rows=100_001) if d.grain is AnalyticalGrain.GENERATOR else d
+                for d in generation.datasets
+            ),
+        )
+        with pytest.raises(AnalyticalResourceError):
+            reader.prepare(oversized, dataset)
+        assert len(published.client.calls) == 1
+    finally:
+        pin.close()
+        reader.close()
 
 
 def test_dataset_and_generation_identity_are_checked_before_download(
