@@ -1,7 +1,8 @@
 # Generator preview row-cap correction
 
-Date: 2026-10-08. Source fix verified; local runtime candidate awaits review and
-activation. No running API/package/profile or publication was changed.
+Date: 2026-10-08. **Activated locally after explicit user approval.** The
+candidate preparation below records the pre-activation state; the activation
+record at the end describes the current runtime.
 
 The running API repeatedly returned HTTP 422 for generator previews. Read-only
 publication metadata showed 32,395 generator rows (18,203,015 bytes), versus
@@ -68,3 +69,31 @@ the local API. Back up the installed package and profile first; restore both on
 startup failure. The worker image needs no code change. Keep refresh idle and
 publication history intact. The runtime uses its installed guest package, so
 restarting it alone does not install this source fix.
+
+## Activation record
+
+The user explicitly replied “approve” to applying this candidate and restarting
+the local API. Installed the exact wheel above and the matching reviewed
+100,000-row profile, then restarted `outage-api-local`. Acceptance remains
+`local-preview-sql`; the immutable worker image and other containment limits
+remain unchanged.
+
+The activation verified the installed `site-packages` bootstrap uses
+`profile.cache_rows`, the configured value is 100,000, and the profile identity
+matches the approved candidate. The restarted service returned the local HTTP
+OpenAPI contract successfully. The saved `.local-runtime/runtime-reviewed.json`
+also carries the new matching profile so a later local configuration does not
+restore the old limit. No authenticated preview was performed; the previously
+observed cold-download deadline variability remains applicable.
+
+The pre-activation report was archived as `review-report.md` alongside the
+reviewed profile, exact wheel and activation result in
+`/var/lib/outage-runtime-validation/generator-cap-de1cced/`. The review explicitly
+accepts this report's stated limits and historical unchanged-worker evidence;
+it does not claim new native isolation or complete capacity measurements.
+
+The previous installed package and runtime profile remain in that directory's
+`rollback/`. The prior macOS configuration is retained at
+`/private/tmp/outage-generator-cap-candidate/rollback-local-runtime-reviewed.json`.
+Activation had automatic rollback protection; startup passed, so rollback was
+not needed. No refresh or publication mutation was performed.
