@@ -11,7 +11,15 @@ from outage_explorer.application.dto import ResourceReport, ResourceRequest
 from outage_explorer.application.errors import AccessStoreError, StaleRefreshOwnerError
 from outage_explorer.application.ports.candidates import ResourceBaseline
 from outage_explorer.application.ports.connector import DurableResourceReceipt
+from outage_explorer.application.ports.refresh_execution import RefreshPipeline
+from outage_explorer.application.services.refresh_baseline import RestoreRefreshBaseline
+from outage_explorer.application.services.refresh_candidate import (
+    PrepareRefreshCandidate,
+)
 from outage_explorer.application.services.refresh_execution import RefreshExecution
+from outage_explorer.application.services.refresh_publication import (
+    PrepareRefreshPublication,
+)
 from outage_explorer.domain.access import AnalyticalGrain
 from outage_explorer.domain.publication import RefreshOwner, RunStatus
 from outage_explorer.domain.refresh import RefreshBounds
@@ -75,7 +83,20 @@ def execution(tmp_path, change=None):
 
     @contextmanager
     def factory(_run, _owner):
-        yield connector
+        yield RefreshPipeline(
+            RestoreRefreshBaseline(
+                store, publication, connector.restore, connector.bounds
+            ),
+            PrepareRefreshCandidate(
+                connector.candidate, connector.verify, connector.bounds
+            ),
+            PrepareRefreshPublication(
+                connector.addresses,
+                connector.persist,
+                connector.bounds,
+                connector.clock,
+            ),
+        )
 
     return (
         RefreshExecution(store, publication, factory),

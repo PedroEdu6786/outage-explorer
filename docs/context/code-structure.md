@@ -45,7 +45,10 @@ src/outage_explorer/
       preview.py               # snapshot-bound browsing
       queries.py               # inspect, authorize, execute and page SQL
       refresh.py               # refresh admission
-      refresh_execution.py     # execute admitted work and publish
+      refresh_execution.py     # coordinate run lifecycle and final publication
+      refresh_baseline.py      # restore and verify the pinned generation
+      refresh_candidate.py     # build candidates and validate their outcomes
+      refresh_publication.py   # persist resources and prepare publication metadata
       refresh_recovery.py      # reconcile interrupted work
     ports/                     # application-owned interfaces
   infrastructure/

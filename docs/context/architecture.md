@@ -150,6 +150,13 @@ Each new request resolves fresh access. Non-HTTP refresh callers obtain it throu
 `RefreshService.authorize(token)` first. See
 [ADR-0066](../adr/0066-request-scoped-refresh-access-context.md).
 
+Worker execution coordinates three per-run application services:
+`RestoreRefreshBaseline`, `PrepareRefreshCandidate`, and
+`PrepareRefreshPublication`. Bootstrap injects their narrow dependencies in one
+`RefreshPipeline` resource context. `RefreshExecution` owns run lifecycle and the
+final atomic publish call; each service owns its resource work and validation.
+See [ADR-0067](../adr/0067-separate-refresh-execution-services.md).
+
 Failures preserve the previous valid generation; existing readers retain their
 selected snapshot. All-excluded refreshes keep the active generation. Fence stale
 owners and reconcile publication after worker loss. Interrupted unpublished work

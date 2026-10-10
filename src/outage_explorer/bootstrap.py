@@ -47,7 +47,7 @@ from outage_explorer.application.ports.execution import (
 )
 from outage_explorer.application.ports.preview_sequences import PreviewSequences
 from outage_explorer.application.ports.query_results import QueryResults
-from outage_explorer.application.ports.refresh_execution import RefreshConnector
+from outage_explorer.application.ports.refresh_execution import RefreshPipeline
 from outage_explorer.application.ports.source import ROUTES, SourceBounds
 from outage_explorer.application.ports.sql_inspection import SqlInspector
 from outage_explorer.application.ports.tabular_encoding import TabularEncoding
@@ -67,10 +67,17 @@ from outage_explorer.application.services.login import LoginService
 from outage_explorer.application.services.preview import PreviewService
 from outage_explorer.application.services.queries import QueryService
 from outage_explorer.application.services.refresh import RefreshService
+from outage_explorer.application.services.refresh_baseline import RestoreRefreshBaseline
+from outage_explorer.application.services.refresh_candidate import (
+    PrepareRefreshCandidate,
+)
 from outage_explorer.application.services.refresh_execution import (
     RefreshExecution,
     RefreshReports,
     RefreshWorker,
+)
+from outage_explorer.application.services.refresh_publication import (
+    PrepareRefreshPublication,
 )
 from outage_explorer.application.services.resource_artifacts import (
     PersistResourceArtifacts,
@@ -707,7 +714,7 @@ def build_refresh_worker(
     lease = RenewableRefreshLease(store)
 
     @contextmanager
-    def connector(run: RefreshRun, owner: RefreshOwner) -> Iterator[RefreshConnector]:
+    def pipeline(run: RefreshRun, owner: RefreshOwner) -> Iterator[RefreshPipeline]:
         config = run.configuration
         source_bounds = SourceBounds(
             **asdict(
@@ -835,14 +842,24 @@ def build_refresh_worker(
                     local, remote, workers=persistence_workers
                 ).execute(verified, bounds)
 
-            yield RefreshConnector(
-                candidate,
-                model_bounds,
-                RecoverResourceArtifacts(local, durable).execute,
-                local.verify_candidate,
-                durable.addresses,
-                persist,
-                SystemClock(),
+            yield RefreshPipeline(
+                baseline=RestoreRefreshBaseline(
+                    store,
+                    store,
+                    RecoverResourceArtifacts(local, durable).execute,
+                    model_bounds,
+                ),
+                candidate=PrepareRefreshCandidate(
+                    candidate,
+                    local.verify_candidate,
+                    model_bounds,
+                ),
+                publication=PrepareRefreshPublication(
+                    durable.addresses,
+                    persist,
+                    model_bounds,
+                    SystemClock(),
+                ),
             )
         finally:
             try:
@@ -855,7 +872,7 @@ def build_refresh_worker(
                     if owned_sdk and sdk is not None:
                         sdk.close()
 
-    execution = RefreshExecution(store, store, connector)
+    execution = RefreshExecution(store, store, pipeline)
     worker = RefreshWorker(store, execution, lease, str(uuid4()))
     return SupervisedRefreshProcess(worker.tick, pool.close)
 
