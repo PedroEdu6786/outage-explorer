@@ -8,6 +8,8 @@ from unittest.mock import Mock
 import pytest
 
 from outage_explorer.application.dto import ResourceReport, ResourceRequest
+from outage_explorer.application.errors import AccessStoreError, StaleRefreshOwnerError
+from outage_explorer.application.ports.candidates import ResourceBaseline
 from outage_explorer.application.ports.connector import DurableResourceReceipt
 from outage_explorer.application.services.refresh_execution import RefreshExecution
 from outage_explorer.domain.access import AnalyticalGrain
@@ -138,3 +140,157 @@ def test_missing_mutated_or_foreign_dataset_files_are_never_persisted_or_publish
     connector.persist.assert_not_called()
     publication.publish.assert_not_called()
     assert store.finish.call_args.args[1] is RunStatus.FAILED
+
+
+@pytest.mark.parametrize("error", [AccessStoreError, StaleRefreshOwnerError])
+def test_ownership_check_failure_stops_before_baseline_or_source_access(
+    tmp_path, error
+):
+    service, store, publication, connector = execution(tmp_path)
+    store.progress.side_effect = error("Ownership unavailable")
+
+    with pytest.raises(error):
+        service.execute(OWNER)
+
+    publication.active_generation.assert_not_called()
+    connector.candidate.run.assert_not_called()
+    connector.persist.assert_not_called()
+    publication.publish.assert_not_called()
+    store.finish.assert_not_called()
+
+
+def test_persistence_failure_records_failure_without_publishing(tmp_path):
+    service, store, publication, connector = execution(tmp_path)
+    connector.persist.side_effect = RuntimeError("Upload failed")
+
+    service.execute(OWNER)
+
+    publication.publish.assert_not_called()
+    store.finish.assert_called_once()
+    assert store.finish.call_args.args[1] is RunStatus.FAILED
+    assert store.finish.call_args.args[2] is not None
+
+
+def test_mismatched_durable_receipt_cannot_publish(tmp_path):
+    service, store, publication, connector = execution(tmp_path)
+    original_receipt = connector.persist.side_effect
+    connector.persist.side_effect = lambda *args: replace(
+        original_receipt(*args), generation_id="foreign-generation"
+    )
+
+    service.execute(OWNER)
+
+    publication.publish.assert_not_called()
+    assert store.finish.call_args.args[1] is RunStatus.FAILED
+
+
+@pytest.mark.parametrize(
+    "error", [RuntimeError, AccessStoreError, StaleRefreshOwnerError]
+)
+def test_publication_error_propagates_without_overwriting_uncertain_outcome(
+    tmp_path, error
+):
+    service, store, publication, connector = execution(tmp_path)
+    publication.publish.side_effect = error("Publication response unavailable")
+
+    with pytest.raises(error):
+        service.execute(OWNER)
+
+    connector.persist.assert_called_once()
+    publication.publish.assert_called_once()
+    store.finish.assert_not_called()
+
+
+def test_cleanup_error_after_publication_cannot_mark_run_failed(tmp_path):
+    service, store, publication, connector = execution(tmp_path)
+    original_factory = service.factory
+
+    @contextmanager
+    def cleanup_failure(run, owner):
+        with original_factory(run, owner) as composed_connector:
+            yield composed_connector
+        raise RuntimeError("Cleanup failed after publication")
+
+    service.factory = cleanup_failure
+
+    with pytest.raises(RuntimeError, match="Cleanup failed"):
+        service.execute(OWNER)
+
+    connector.persist.assert_called_once()
+    publication.publish.assert_called_once()
+    store.finish.assert_not_called()
+
+
+def test_changed_baseline_stops_before_source_work(tmp_path):
+    service, store, publication, connector = execution(tmp_path)
+    publication.active_generation.return_value = Mock(id="unexpected-generation")
+
+    with pytest.raises(StaleRefreshOwnerError, match="Pinned base changed"):
+        service.execute(OWNER)
+
+    connector.restore.assert_not_called()
+    connector.candidate.run.assert_not_called()
+    connector.persist.assert_not_called()
+    publication.publish.assert_not_called()
+    store.finish.assert_not_called()
+
+
+def test_all_excluded_refresh_restores_baseline_without_persisting_or_publishing(
+    tmp_path,
+):
+    service, store, publication, connector = execution(tmp_path)
+    service.execute(OWNER)
+    base = replace(
+        publication.publish.call_args.args[1],
+        id="previous-generation",
+        run_id="previous-run",
+    )
+    publication.reset_mock()
+    connector.reset_mock()
+    publication.active_generation.return_value = base
+    run = store.get_run.return_value
+    run.base_generation_id = base.id
+    base_run = Mock(generation_id=base.id, configuration=run.configuration)
+    store.get_run.side_effect = lambda run_id: (
+        base_run if run_id == base.run_id else run
+    )
+    connector.restore.side_effect = lambda receipt, _bounds: ResourceBaseline(
+        receipt.generation_id,
+        receipt.resources,
+        receipt.contract_id,
+        receipt.transformation_id,
+    )
+    report = connector.candidate.run.return_value.report
+    retained = replace(
+        report.candidate,
+        base_generation_id=base.id,
+        outcome="retained_all_excluded",
+        summaries=tuple(
+            replace(
+                summary,
+                quality=replace(
+                    summary.quality,
+                    selected=0,
+                    excluded=summary.quality.received,
+                    duplicate=0,
+                    superseded=0,
+                ),
+            )
+            for summary in report.candidate.summaries
+        ),
+    )
+    connector.candidate.run.return_value.report = replace(
+        report, outcome="retained_all_excluded", candidate=retained
+    )
+
+    service.execute(OWNER)
+
+    connector.restore.assert_called_once()
+    request = connector.candidate.run.call_args.args[0]
+    assert request.prior.generation_id == base.id
+    assert request.interval == INTERVAL
+    connector.verify.assert_called_once()
+    connector.persist.assert_not_called()
+    publication.publish.assert_not_called()
+    store.finish.assert_called_once()
+    assert store.finish.call_args.args[1] is RunStatus.RETAINED
