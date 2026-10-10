@@ -110,15 +110,32 @@ class RefreshWorker:
         identity: str,
         lease_seconds: int = 60,
     ) -> None:
-        self.store, self.execution, self.lease = store, execution, lease
-        self.identity, self.lease_seconds = identity, lease_seconds
+        self.store = store
+        self.execution = execution
+        self.lease = lease
+        self.identity = identity
+        self.lease_seconds = lease_seconds
 
     def tick(self) -> RefreshRun | None:
-        latest = self.store.latest()
-        if latest is not None and not latest.status.terminal:
-            RefreshRecovery(self.store).execute(latest.id)
-        owner = self.store.claim(self.identity, self.lease_seconds)
-        if owner is None:
+        """Recover unfinished work, then claim and execute at most one queued run."""
+        self._recover_unfinished_run()
+
+        claimed_owner = self.store.claim(self.identity, self.lease_seconds)
+        if claimed_owner is None:
             return None
+
+        return self._execute_claimed_run(claimed_owner)
+
+    def _recover_unfinished_run(self) -> None:
+        latest_run = self.store.latest()
+        if latest_run is None:
+            return
+        if latest_run.status.terminal:
+            return
+
+        RefreshRecovery(self.store).execute(latest_run.id)
+
+    def _execute_claimed_run(self, owner: RefreshOwner) -> RefreshRun:
+        """Keep renewing ownership until execution returns or raises an error."""
         with self.lease(owner):
             return self.execution.execute(owner)
