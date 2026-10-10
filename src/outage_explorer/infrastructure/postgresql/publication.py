@@ -425,32 +425,78 @@ class PostgresqlResourcePublicationStore:
         return self._reconcile(run_id, force=False)
 
     def _reconcile(self, run_id: str, *, force: bool) -> RefreshRun:
+        """Resolve publication first; force permits interruption before lease expiry."""
         with self._pool.connection() as connection:
             coordination = self._lock(connection)
             run = self._read(connection, run_id)
-            history = connection.execute(
+            publication = connection.execute(
                 "SELECT * FROM published_generations WHERE run_id = %s", (run_id,)
             ).fetchone()
-            if history is not None:
-                if run.status is not RunStatus.SUCCEEDED:
-                    connection.execute(
-                        "UPDATE refresh_runs SET status = 'succeeded', publication = 'published', generation_id = %s, stage = 'finished', finished_at = clock_timestamp() WHERE id = %s",
-                        (history["id"], run_id),
-                    )
-                if str(coordination["active_run_id"]) == run_id:
+            is_active_run = str(coordination["active_run_id"]) == run_id
+
+            if publication is not None:
+                self._confirm_published_run(connection, run, publication["id"])
+                if is_active_run:
                     self._release(connection)
-            elif (
-                str(coordination["active_run_id"]) == run_id
-                and run.status in {RunStatus.RUNNING, RunStatus.PUBLICATION_UNKNOWN}
-                and (force or not coordination["healthy"])
-            ):
-                connection.execute(
-                    "UPDATE refresh_runs SET status = 'interrupted', publication = 'not_published', stage = 'finished', finished_at = clock_timestamp(), failure = 'interrupted' WHERE id = %s",
-                    (run_id,),
+            else:
+                self._interrupt_unpublished_run(
+                    connection,
+                    run,
+                    is_active_run=is_active_run,
+                    lease_is_healthy=coordination["healthy"],
+                    force=force,
                 )
-                self._release(connection)
-            result = self._read(connection, run_id)
-        return result
+
+            reconciled_run = self._read(connection, run_id)
+        return reconciled_run
+
+    def _confirm_published_run(
+        self,
+        connection: Connection[DictRow],
+        run: RefreshRun,
+        generation_id: object,
+    ) -> None:
+        if run.status is RunStatus.SUCCEEDED:
+            return
+
+        connection.execute(
+            """
+            UPDATE refresh_runs
+            SET status = 'succeeded', publication = 'published',
+                generation_id = %s, stage = 'finished',
+                finished_at = clock_timestamp()
+            WHERE id = %s
+            """,
+            (generation_id, run.id),
+        )
+
+    def _interrupt_unpublished_run(
+        self,
+        connection: Connection[DictRow],
+        run: RefreshRun,
+        *,
+        is_active_run: bool,
+        lease_is_healthy: bool | None,
+        force: bool,
+    ) -> None:
+        if not is_active_run:
+            return
+        if run.status not in {RunStatus.RUNNING, RunStatus.PUBLICATION_UNKNOWN}:
+            return
+        if lease_is_healthy and not force:
+            return
+
+        connection.execute(
+            """
+            UPDATE refresh_runs
+            SET status = 'interrupted', publication = 'not_published',
+                stage = 'finished', finished_at = clock_timestamp(),
+                failure = 'interrupted'
+            WHERE id = %s
+            """,
+            (run.id,),
+        )
+        self._release(connection)
 
     def active_generation(self) -> ResourcePublishedGeneration | None:
         with self._pool.connection() as connection:
