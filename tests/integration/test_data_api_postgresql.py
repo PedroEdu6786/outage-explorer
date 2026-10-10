@@ -167,15 +167,19 @@ def test_authorize_before_reads_and_configuration(system, monkeypatch):
     monkeypatch.setattr(store, "latest", forbidden_lookup)
     for role in (Role.VIEWER, Role.ANALYST):
         with pytest.raises(ForbiddenError):
-            service.latest(tokens[role])
+            service.latest(service.authorize(tokens[role]))
         with pytest.raises(ForbiddenError):
-            service.admit(tokens[role], RefreshAdmissionRequest("k" * 16))
+            service.admit(
+                service.authorize(tokens[role]), RefreshAdmissionRequest("k" * 16)
+            )
 
 
 def test_admission_freezes_interval_and_replays_before_config(system):
     store, service, tokens, users, pool = system
-    assert service.latest(tokens[Role.ADMIN]) is None
-    run = service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest("k" * 16))
+    assert service.latest(service.authorize(tokens[Role.ADMIN])) is None
+    run = service.admit(
+        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("k" * 16)
+    )
     assert run.status is RunStatus.ACCEPTED
     assert set(run.grains) == set(AnalyticalGrain)
 
@@ -183,9 +187,17 @@ def test_admission_freezes_interval_and_replays_before_config(system):
         raise ValueError("Changed invalid configuration")
 
     service._configuration = invalid_configuration
-    assert service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest("k" * 16)) == run
-    assert service.status(tokens[Role.ADMIN], run.id).configuration == CONFIG
-    assert service.latest(tokens[Role.ADMIN]).id == run.id
+    assert (
+        service.admit(
+            service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("k" * 16)
+        )
+        == run
+    )
+    assert (
+        service.status(service.authorize(tokens[Role.ADMIN]), run.id).configuration
+        == CONFIG
+    )
+    assert service.latest(service.authorize(tokens[Role.ADMIN])).id == run.id
     assert store.replay(users[Role.ADMIN].id, run.key_digest) == run
     assert store.replay(users[Role.ANALYST].id, run.key_digest) is None
 
@@ -196,14 +208,17 @@ def test_scoped_idempotency_races_and_busy(system):
         runs = list(
             executor.map(
                 lambda _: service.admit(
-                    tokens[Role.ADMIN], RefreshAdmissionRequest("r" * 16)
+                    service.authorize(tokens[Role.ADMIN]),
+                    RefreshAdmissionRequest("r" * 16),
                 ),
                 range(4),
             )
         )
     assert len({run.id for run in runs}) == 1
     with pytest.raises(RefreshBusyError):
-        service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest("s" * 16))
+        service.admit(
+            service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("s" * 16)
+        )
 
 
 def test_initial_interval_and_all_grains(system):
@@ -215,7 +230,9 @@ def test_initial_interval_and_all_grains(system):
             replace(CONFIG, start=INITIAL_END),
         )
     assert store.latest() is None
-    run = service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest("g" * 16))
+    run = service.admit(
+        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("g" * 16)
+    )
     owner = store.claim("worker", 60)
     with pytest.raises(ValueError):
         store.publish(
@@ -226,7 +243,9 @@ def test_initial_interval_and_all_grains(system):
 
 def test_atomic_publication_history_and_prior_survives_failure(system):
     store, service, tokens, users, pool = system
-    run = service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest("a" * 16))
+    run = service.admit(
+        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("a" * 16)
+    )
     owner = store.claim("worker", 60)
     generation = candidate(run)
     succeeded = store.publish(
@@ -236,13 +255,17 @@ def test_atomic_publication_history_and_prior_survives_failure(system):
     )
     assert succeeded.status is RunStatus.SUCCEEDED
     assert store.active_generation() == generation
-    second = service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest("b" * 16))
+    second = service.admit(
+        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("b" * 16)
+    )
     assert second.base_generation_id == generation.id
     assert store.active_generation() == generation
     second_owner = store.claim("worker", 60)
     store.finish(second_owner, RunStatus.FAILED, failure="retrieval")
     assert store.active_generation() == generation
-    third = service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest("c" * 16))
+    third = service.admit(
+        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("c" * 16)
+    )
     store.publish(store.claim("worker", 60), candidate(third, generation.id))
     assert store.recover(run.id).generation_id == generation.id
     assert store.generation_for_run(run.id) == generation
@@ -250,7 +273,9 @@ def test_atomic_publication_history_and_prior_survives_failure(system):
 
 def test_healthy_lease_recovery_expiration_and_stale_owner(system, database):
     store, service, tokens, users, pool = system
-    run = service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest("l" * 16))
+    run = service.admit(
+        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("l" * 16)
+    )
     owner = store.claim("worker", 60)
     assert store.claim("other", 60) is None
     assert store.recover(run.id).status is RunStatus.RUNNING
@@ -268,11 +293,15 @@ def test_healthy_lease_recovery_expiration_and_stale_owner(system, database):
         with pytest.raises(StaleRefreshOwnerError):
             action()
     assert (
-        service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest("l" * 16)).status
+        service.admit(
+            service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("l" * 16)
+        ).status
         is RunStatus.INTERRUPTED
     )
     assert (
-        service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest("m" * 16)).id
+        service.admit(
+            service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("m" * 16)
+        ).id
         != run.id
     )
 
@@ -300,7 +329,9 @@ class FaultPool:
 @pytest.mark.parametrize("mode", ["committed", "rollback", "unavailable"])
 def test_commit_loss_uses_fresh_serialized_history(system, mode):
     store, service, tokens, users, pool = system
-    run = service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest("f" * 16))
+    run = service.admit(
+        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("f" * 16)
+    )
     owner = store.claim("worker", 60)
     faulty = PostgresqlResourcePublicationStore(FaultPool(pool, mode))
     if mode == "unavailable":
@@ -317,15 +348,17 @@ def test_commit_loss_uses_fresh_serialized_history(system, mode):
 
 def test_no_runs_differs_from_unavailable(system):
     store, service, tokens, users, pool = system
-    assert service.latest(tokens[Role.ADMIN]) is None
+    assert service.latest(service.authorize(tokens[Role.ADMIN])) is None
     pool.close()
     with pytest.raises(AccessStoreError):
-        service.latest(tokens[Role.ADMIN])
+        service.latest(service.authorize(tokens[Role.ADMIN]))
 
 
 def test_admission_and_publication_history_immutable(system, database):
     store, service, tokens, users, pool = system
-    run = service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest("h" * 16))
+    run = service.admit(
+        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("h" * 16)
+    )
     with psycopg.connect(database) as connection:
         with pytest.raises(psycopg.Error):
             connection.execute(
@@ -357,7 +390,9 @@ def test_refresh_settings_validate_together():
 
 def test_compare_and_swap_rejects_wrong_base_and_duplicate_publication(system):
     store, service, tokens, users, pool = system
-    run = service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest("p" * 16))
+    run = service.admit(
+        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("p" * 16)
+    )
     owner = store.claim("worker", 60)
     with pytest.raises(StaleRefreshOwnerError):
         store.publish(owner, candidate(run, str(uuid4())))
@@ -379,7 +414,9 @@ def test_accepted_restart_and_revoked_admin_before_lookup(
     system, database, monkeypatch
 ):
     store, service, tokens, users, pool = system
-    run = service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest("q" * 16))
+    run = service.admit(
+        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("q" * 16)
+    )
     restarted = PostgresqlResourcePublicationStore(pool)
     assert restarted.recover(run.id).status is RunStatus.ACCEPTED
     assert restarted.claim("new-process", 60).run_id == run.id
@@ -392,7 +429,7 @@ def test_accepted_restart_and_revoked_admin_before_lookup(
         store, "latest", lambda: pytest.fail("Revoked admin reached lookup")
     )
     with pytest.raises(ForbiddenError):
-        service.latest(tokens[Role.ADMIN])
+        service.latest(service.authorize(tokens[Role.ADMIN]))
 
 
 FILES = {
@@ -438,7 +475,9 @@ def resources(system):
 
 def test_resource_publication_is_atomic_exact_and_manifest_free(resources, database):
     store, service, tokens, pool = resources
-    run = service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest("r1" * 8))
+    run = service.admit(
+        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("r1" * 8)
+    )
     owner = store.claim("worker", 60)
     generation = resource_candidate(run)
     quality = '{"national":{"received_rows":4,"selected_rows":1,"excluded_rows":1,"duplicate_rows":1,"superseded_rows":1}}'
@@ -462,7 +501,9 @@ def test_resource_publication_is_atomic_exact_and_manifest_free(resources, datab
     assert manifest == (3,)
     assert pointer == (generation.id, None)
     # Subsequent publications retain immutable prior history and the base chain.
-    second = service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest("r2" * 8))
+    second = service.admit(
+        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("r2" * 8)
+    )
     assert second.base_generation_id == generation.id
     store.publish(store.claim("worker", 60), resource_candidate(second, generation.id))
     assert store.generation_for_run(run.id) == generation
@@ -471,7 +512,9 @@ def test_resource_publication_is_atomic_exact_and_manifest_free(resources, datab
 
 def test_resource_publication_fences_and_failure_preserve_prior_state(resources):
     store, service, tokens, pool = resources
-    run = service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest("f1" * 8))
+    run = service.admit(
+        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("f1" * 8)
+    )
     owner = store.claim("worker", 60)
     with pytest.raises(StaleRefreshOwnerError):
         store.publish(owner, resource_candidate(run, str(uuid4())))
@@ -491,7 +534,9 @@ def test_resource_publication_fences_and_failure_preserve_prior_state(resources)
             except StaleRefreshOwnerError:
                 results.append(None)
     assert len([result for result in results if result is not None]) == 1
-    second = service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest("f2" * 8))
+    second = service.admit(
+        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("f2" * 8)
+    )
     failed = store.claim("worker", 60)
     store.finish(failed, RunStatus.FAILED, failure="retrieval")
     assert store.active_generation() == generation
@@ -503,7 +548,9 @@ def test_resource_publication_fences_and_failure_preserve_prior_state(resources)
 
 def test_resource_stale_owner_after_lease_expiry(resources, database):
     store, service, tokens, pool = resources
-    run = service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest("e1" * 8))
+    run = service.admit(
+        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("e1" * 8)
+    )
     owner = store.claim("worker", 60)
     expire(database)
     with pytest.raises(StaleRefreshOwnerError):
@@ -515,7 +562,9 @@ def test_resource_stale_owner_after_lease_expiry(resources, database):
 @pytest.mark.parametrize("mode", ["committed", "rollback", "unavailable"])
 def test_resource_commit_loss_uses_fresh_serialized_history(resources, mode):
     store, service, tokens, pool = resources
-    run = service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest("c1" * 8))
+    run = service.admit(
+        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("c1" * 8)
+    )
     owner = store.claim("worker", 60)
     faulty = PostgresqlResourcePublicationStore(FaultPool(pool, mode))
     if mode == "unavailable":
@@ -533,7 +582,9 @@ def test_resource_commit_loss_uses_fresh_serialized_history(resources, mode):
 
 def test_resource_history_is_immutable(resources, database):
     store, service, tokens, pool = resources
-    run = service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest("h1" * 8))
+    run = service.admit(
+        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("h1" * 8)
+    )
     generation = resource_candidate(run)
     store.publish(store.claim("worker", 60), generation)
     with psycopg.connect(database) as connection:
@@ -623,7 +674,9 @@ def _mutations():
 @pytest.mark.parametrize("name", list(_mutations()))
 def test_database_rejects_malformed_resource_descriptors(resources, database, name):
     store, service, tokens, pool = resources
-    run = service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest("d1" * 8))
+    run = service.admit(
+        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("d1" * 8)
+    )
     generation = resource_candidate(run)
     datasets = _datasets(generation)
     mutate = _mutations()[name]
@@ -641,7 +694,9 @@ def test_database_rejects_malformed_resource_descriptors(resources, database, na
 
 def test_database_rejects_summaries_without_exact_descriptors(resources, database):
     store, service, tokens, pool = resources
-    run = service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest("m1" * 8))
+    run = service.admit(
+        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("m1" * 8)
+    )
     generation = resource_candidate(run)
     summaries = [
         {
@@ -793,7 +848,9 @@ def test_remove_columns_preserves_resource_publication(empty_database):
 
 def test_removed_manifest_values_cannot_be_recreated_by_downgrade(resources, database):
     store, service, tokens, pool = resources
-    run = service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest("dg1" * 6))
+    run = service.admit(
+        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("dg1" * 6)
+    )
     store.publish(store.claim("worker", 60), resource_candidate(run))
     before = _state(database)
     with pytest.raises(RuntimeError, match="Cannot downgrade"):
@@ -847,7 +904,9 @@ def test_refresh_cleanup_preserves_admitted_retry_and_fenced_publication(
             pytest.fail("Replay must not resolve changed configuration")
 
         service._configuration = changed_configuration
-        run = service.admit(tokens[Role.ADMIN], RefreshAdmissionRequest(key))
+        run = service.admit(
+            service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest(key)
+        )
         assert run.id == run_id
         assert run.configuration == CONFIG
         assert store.replay(users[Role.ANALYST].id, digest) is None
@@ -858,7 +917,7 @@ def test_refresh_cleanup_preserves_admitted_retry_and_fenced_publication(
         assert store.active_generation() == generation
         assert (
             service.admit(
-                tokens[Role.ADMIN], RefreshAdmissionRequest(key)
+                service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest(key)
             ).generation_id
             == generation.id
         )

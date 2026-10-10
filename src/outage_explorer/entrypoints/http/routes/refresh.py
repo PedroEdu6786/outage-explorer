@@ -3,6 +3,7 @@
 from flask import Blueprint, Response, jsonify, request
 
 from outage_explorer.application.data_payloads import refresh_payload
+from outage_explorer.application.dto import RequestAccess
 from outage_explorer.application.services.access import AccessService
 from outage_explorer.entrypoints.http.auth_helpers import csrf_protected, roles_required
 from outage_explorer.entrypoints.http.auth_transport import AuthTransport
@@ -36,9 +37,9 @@ def create_refresh_blueprint(
     @blueprint.post("/api/refresh")
     @csrf_protected(access, transport)
     @roles_required(access, transport, "admin")
-    def admit(*, credential: str, csrf_validated: bool) -> Response:
+    def admit(*, request_access: RequestAccess, **_: object) -> Response:
         admission = refresh_admission_request()
-        run = services.refresh.admit(credential, admission)
+        run = services.refresh.admit(request_access, admission)
         url = "/api/refresh/" + run.id
         response = jsonify(
             run_id=run.id,
@@ -53,16 +54,16 @@ def create_refresh_blueprint(
 
     @blueprint.get("/api/refresh/latest")
     @roles_required(access, transport, "admin")
-    def latest(*, credential: str) -> Response:
+    def latest(*, request_access: RequestAccess) -> Response:
         parameters(set())
-        run = services.refresh.latest(credential)
+        run = services.refresh.latest(request_access)
         return jsonify(run=None if run is None else refresh_payload(run))
 
     @blueprint.get("/api/refresh/<run_id>")
     @roles_required(access, transport, "admin")
-    def status(run_id: str, *, credential: str) -> Response:
+    def status(run_id: str, *, request_access: RequestAccess) -> Response:
         parameters(set())
-        run = services.refresh.status(credential, identifier(run_id))
+        run = services.refresh.status(request_access, identifier(run_id))
         if run is None:
             response = jsonify(
                 error={"code": "refresh_unavailable", "message": "Refresh unavailable"}

@@ -32,6 +32,13 @@ ALLOWED_IDEMPOTENCY_KEY_CHARACTERS = (
 
 
 @dataclass(frozen=True)
+class RequestAccess:
+    """Server-resolved identity for one request; never parsed from caller input."""
+
+    principal: SeededUser
+
+
+@dataclass(frozen=True)
 class RefreshAdmissionRequest:
     idempotency_key: str
 

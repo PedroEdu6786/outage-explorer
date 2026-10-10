@@ -124,7 +124,9 @@ class Durable:
             lambda: coordination.CONFIG,
             service._security,
         )
-        run = refresh.admit(tokens[Role.ADMIN], RefreshAdmissionRequest(key))
+        run = refresh.admit(
+            refresh.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest(key)
+        )
         base = publications.active_generation()
         published = ResourcePublishedGeneration(
             generation_id,

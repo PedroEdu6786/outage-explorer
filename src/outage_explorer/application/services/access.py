@@ -1,6 +1,6 @@
 """Resolve fresh local identity and invalidate only the supplied session."""
 
-from outage_explorer.application.dto import CurrentIdentity
+from outage_explorer.application.dto import CurrentIdentity, RequestAccess
 from outage_explorer.application.errors import ForbiddenError, UnauthenticatedError
 from outage_explorer.application.ports.access import SecurityMaterial, SessionStore
 from outage_explorer.application.ports.clock import Clock
@@ -75,12 +75,18 @@ class AccessService:
             raise ForbiddenError("Access denied")
         return AuthorizedAccess(session.user, grains)
 
-    def require_roles(self, token: str, roles: tuple[str, ...]) -> None:
-        session = self.resolve(token)
-        if session.user.role.value not in roles:
-            raise ForbiddenError("Access denied")
+    def authenticate(self, token: str) -> RequestAccess:
+        return RequestAccess(self.resolve(token).user)
 
-    def validate_csrf(self, token: str, supplied: str) -> None:
-        self.resolve(token)
+    def require_roles(
+        self, request_access: RequestAccess, roles: tuple[str, ...]
+    ) -> RequestAccess:
+        if request_access.principal.role.value not in roles:
+            raise ForbiddenError("Access denied")
+        return request_access
+
+    def validate_csrf(self, token: str, supplied: str) -> RequestAccess:
+        request_access = self.authenticate(token)
         if not self._security.verify_csrf(token, supplied):
             raise ForbiddenError("Access denied")
+        return request_access

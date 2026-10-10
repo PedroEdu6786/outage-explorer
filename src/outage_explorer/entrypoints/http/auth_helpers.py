@@ -1,4 +1,4 @@
-"""Injected HTTP guards; protected use cases must still authorize freshly.
+"""Injected HTTP guards with request-scoped verified identity.
 
 Guards pass named values explicitly, never via Flask globals. Compose guards
 outside request validation when authentication/origin must precede parsing.
@@ -9,6 +9,7 @@ from functools import wraps
 
 from flask import Response
 
+from outage_explorer.application.dto import RequestAccess
 from outage_explorer.application.errors import UnauthenticatedError
 from outage_explorer.application.services.access import AccessService
 from outage_explorer.entrypoints.http.auth_transport import AuthTransport
@@ -44,9 +45,10 @@ def roles_required(
     def decorate(handler: Handler) -> Handler:
         @wraps(handler)
         def guarded(*args: object, **kwargs: object) -> Response:
-            credential = transport.credential()
-            access.require_roles(credential, roles)
-            kwargs["credential"] = credential
+            request_access = kwargs.get("request_access")
+            if not isinstance(request_access, RequestAccess):
+                request_access = access.authenticate(transport.credential())
+            kwargs["request_access"] = access.require_roles(request_access, roles)
             return handler(*args, **kwargs)
 
         return guarded
@@ -72,13 +74,18 @@ def csrf_protected(
             csrf = transport.mutation_csrf()
             credential = transport.credential()
             validated = True
+            request_access = None
             try:
-                access.validate_csrf(credential, csrf)
+                request_access = access.validate_csrf(credential, csrf)
             except UnauthenticatedError:
                 if not allow_invalid_session:
                     raise
                 validated = False
-            kwargs.update(credential=credential, csrf_validated=validated)
+            kwargs.update(
+                credential=credential,
+                csrf_validated=validated,
+                request_access=request_access,
+            )
             return handler(*args, **kwargs)
 
         return guarded

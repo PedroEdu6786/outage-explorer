@@ -74,7 +74,7 @@ def create_access_blueprint(
 
     @blueprint.post("/logout")
     @csrf_protected(access_service, transport, allow_invalid_session=True)
-    def logout(*, credential: str, csrf_validated: bool) -> Response:
+    def logout(*, credential: str, csrf_validated: bool, **_: object) -> Response:
         if csrf_validated:
             access_service.logout(credential)
         response = Response(status=204)

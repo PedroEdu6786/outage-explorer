@@ -3,12 +3,11 @@
 import re
 from collections.abc import Callable
 
-from outage_explorer.application.dto import RefreshAdmissionRequest
+from outage_explorer.application.dto import RefreshAdmissionRequest, RequestAccess
 from outage_explorer.application.errors import InvalidRequestError
 from outage_explorer.application.ports.access import SecurityMaterial
 from outage_explorer.application.ports.refresh import RefreshStore
 from outage_explorer.application.services.access import AccessService
-from outage_explorer.domain.access import AccessOperation
 from outage_explorer.domain.publication import RefreshConfiguration, RefreshRun
 
 
@@ -25,10 +24,15 @@ class RefreshService:
         self._configuration = configuration
         self._security = security
 
-    def admit(self, token: str, request: RefreshAdmissionRequest) -> RefreshRun:
-        principal = self._access.authorize(
-            token, AccessOperation.REFRESH_INITIATE
-        ).principal
+    def authorize(self, token: str) -> RequestAccess:
+        """Resolve fresh Admin access for non-HTTP callers before invoking a use case."""
+        request_access = self._access.authenticate(token)
+        return self._access.require_roles(request_access, ("admin",))
+
+    def admit(
+        self, request_access: RequestAccess, request: RefreshAdmissionRequest
+    ) -> RefreshRun:
+        principal = request_access.principal
         key_digest = self._security.digest(request.idempotency_key)
         existing_run = self._store.replay(principal.id, key_digest)
         if existing_run is not None:
@@ -37,8 +41,7 @@ class RefreshService:
         configuration = self._configuration()
         return self._store.admit(principal.id, key_digest, configuration)
 
-    def status(self, token: str, run_id: str) -> RefreshRun | None:
-        self._access.authorize(token, AccessOperation.REFRESH_OUTCOME)
+    def status(self, request_access: RequestAccess, run_id: str) -> RefreshRun | None:
         if (
             not isinstance(run_id, str)
             or re.fullmatch(
@@ -49,6 +52,5 @@ class RefreshService:
             raise InvalidRequestError("Invalid refresh identity")
         return self._store.get_run(run_id)
 
-    def latest(self, token: str) -> RefreshRun | None:
-        self._access.authorize(token, AccessOperation.REFRESH_OUTCOME)
+    def latest(self, request_access: RequestAccess) -> RefreshRun | None:
         return self._store.latest()

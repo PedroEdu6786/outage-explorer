@@ -143,9 +143,12 @@ See the [endpoint diagrams](diagrams/endpoints.md),
 HTTP refresh admission uses `csrf_protected` and `roles_required(..., "admin")`
 guards before parsing. Status routes also require Admin. The HTTP parser enforces
 the empty JSON body and constructs a `RefreshAdmissionRequest`; the immutable
-DTO validates the idempotency key. `RefreshService.admit()` consumes that DTO
-without revalidating transport input. Application use cases still authorize
-their operation before storage access, including when called outside HTTP.
+DTO validates the idempotency key. Refresh decorators share one server-resolved
+`RequestAccess`: CSRF and role checks use the same identity, then refresh use cases
+consume it without revalidating transport input or looking up the session again.
+Each new request resolves fresh access. Non-HTTP refresh callers obtain it through
+`RefreshService.authorize(token)` first. See
+[ADR-0066](../adr/0066-request-scoped-refresh-access-context.md).
 
 Failures preserve the previous valid generation; existing readers retain their
 selected snapshot. All-excluded refreshes keep the active generation. Fence stale

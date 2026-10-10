@@ -129,7 +129,12 @@ reruns. Recovery must prevent stale owners from publishing.
 1. No storage/SDK/engine calls or business rules in Flask routes. No Flask
    context (`request`, `g`, `current_app`) in domain or application code.
 2. Enforce permissions in application use cases before analytical data access;
-   route decorators alone are insufficient. Cognito supplies identity;
+   route decorators alone are insufficient except for the explicitly accepted
+   request-scoped refresh contract in ADR-0066: application-owned `AccessService`
+   resolves fresh identity and checks roles in the guards, which pass approved
+   access into refresh use cases without a second lookup. Non-HTTP refresh callers
+   must obtain fresh access through `RefreshService.authorize(token)` first.
+   Cognito supplies identity;
    application-owned PostgreSQL users and role assignments determine access.
    Under ADR-0043, users and roles are seeded; registration and Admin user
    management are excluded throughout implementation. Each user has exactly

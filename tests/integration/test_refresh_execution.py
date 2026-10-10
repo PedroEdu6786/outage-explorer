@@ -61,7 +61,9 @@ def composition(database, root, wire=None, client=None):
 
 
 def admit(system, key="a" * 16):
-    return system[1].admit(system[2][Role.ADMIN], RefreshAdmissionRequest(key))
+    return system[1].admit(
+        system[1].authorize(system[2][Role.ADMIN]), RefreshAdmissionRequest(key)
+    )
 
 
 def execute(system, database, root, rows=None, client=None, key="a" * 16, **options):
@@ -159,7 +161,8 @@ def test_subsequent_refresh_beyond_183_days_uses_frozen_source_model_span(
         {"OUTAGE_REFRESH_START_DATE": "2026-04-02"},
     ).refresh
     run = refresh.admit(
-        tokens[Role.ADMIN], RefreshAdmissionRequest("long-interval-key")
+        refresh.authorize(tokens[Role.ADMIN]),
+        RefreshAdmissionRequest("long-interval-key"),
     )
     assert run.configuration.max_interval_days == 189
     wire = Wire(

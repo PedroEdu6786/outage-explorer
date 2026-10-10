@@ -1,18 +1,24 @@
 """Adversarial transport boundaries; no database or analytical adapters."""
 
 import json
+from dataclasses import replace
+from datetime import UTC, date, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
 
 from outage_explorer.application import errors
-from outage_explorer.application.dto import RefreshAdmissionRequest
+from outage_explorer.application.dto import RefreshAdmissionRequest, RequestAccess
 from outage_explorer.application.ports.sql_inspection import SqlRejected
-from outage_explorer.domain.access import Role
+from outage_explorer.application.services.access import AccessService
+from outage_explorer.application.services.refresh import RefreshService
+from outage_explorer.domain.access import Role, SeededUser, Session
+from outage_explorer.domain.publication import RefreshConfiguration
 from outage_explorer.entrypoints.http.app import create_app
 from outage_explorer.entrypoints.http.auth_transport import AuthTransport
 from outage_explorer.entrypoints.http.data_services import DataServices
+from outage_explorer.infrastructure.security import RandomSecurityMaterial
 from tests.integration.test_data_api_http import ORIGIN
 
 
@@ -20,6 +26,10 @@ from tests.integration.test_data_api_http import ORIGIN
 def transport():
     access = Mock()
     access.resolve.return_value = SimpleNamespace(user=SimpleNamespace(role=Role.ADMIN))
+    context = RequestAccess(SimpleNamespace(id="admin", role=Role.ADMIN))
+    access.authenticate.return_value = context
+    access.validate_csrf.return_value = context
+    access.require_roles.side_effect = lambda context, roles: context
     services = DataServices(Mock(), Mock(), Mock(), Mock(), Mock())
     app = create_app(
         Mock(),
@@ -308,8 +318,8 @@ def test_refresh_rejects_invalid_keys_before_service(transport, key):
     services.refresh.admit.assert_not_called()
 
 
-def test_refresh_passes_validated_dto_and_cookie_credential(transport):
-    client, _, services = transport
+def test_refresh_passes_validated_dto_and_verified_access(transport):
+    client, access, services = transport
     client.set_cookie("outage_session", "session-token")
     services.refresh.admit.side_effect = errors.RefreshBusyError()
     key = "request-key-00001"
@@ -318,7 +328,11 @@ def test_refresh_passes_validated_dto_and_cookie_credential(transport):
     )
     assert response.status_code == 409
     services.refresh.admit.assert_called_once_with(
-        "session-token", RefreshAdmissionRequest(key)
+        access.validate_csrf.return_value, RefreshAdmissionRequest(key)
+    )
+    access.authenticate.assert_not_called()
+    access.require_roles.assert_called_once_with(
+        access.validate_csrf.return_value, ("admin",)
     )
 
 
@@ -342,7 +356,7 @@ def test_refresh_role_guard_rejects_before_parsing_and_service(transport, role, 
 )
 def test_refresh_requires_authentication_before_parsing(transport, path):
     client, access, services = transport
-    access.require_roles.side_effect = errors.UnauthenticatedError()
+    access.authenticate.side_effect = errors.UnauthenticatedError()
     access.validate_csrf.side_effect = errors.UnauthenticatedError()
     if path == "/api/refresh":
         response = client.post(path, data="invalid json", headers={"Origin": ORIGIN})
@@ -359,6 +373,66 @@ def test_refresh_csrf_guard_rejects_before_role_guard_and_service(transport):
     assert response.status_code == 403
     access.require_roles.assert_not_called()
     assert not services.refresh.mock_calls
+
+
+def test_refresh_resolves_session_once_and_does_not_reuse_access_on_later_requests():
+    now = datetime(2026, 10, 10, tzinfo=UTC)
+    token = "a" * 43
+    security = RandomSecurityMaterial()
+    user = SeededUser("admin-id", "issuer", "subject", "admin@test", Role.ADMIN)
+    session = Session(security.digest(token), user, now, now + timedelta(hours=1))
+    sessions = Mock()
+    sessions.resolve_session.return_value = session
+    clock = Mock()
+    clock.now.return_value = now
+    access = AccessService(sessions, security, clock)
+    store = Mock()
+    store.replay.return_value = None
+    store.admit.side_effect = errors.RefreshBusyError()
+    store.latest.return_value = None
+    configuration = RefreshConfiguration(
+        date(2026, 4, 2), date(2026, 10, 10), 192, 192, 192, 1800, 1800
+    )
+    refresh = RefreshService(access, store, lambda: configuration, security)
+    app = create_app(
+        Mock(),
+        login_service=Mock(),
+        access_service=access,
+        auth_transport=AuthTransport(ORIGIN, frozenset({ORIGIN}), True),
+        data_services=DataServices(Mock(), Mock(), Mock(), refresh, Mock()),
+    )
+    client = app.test_client()
+    client.set_cookie("outage_session", token)
+    key = "single-resolution-key"
+    headers = {
+        "Origin": ORIGIN,
+        "X-CSRF-Token": security.csrf_token(token),
+        "Idempotency-Key": key,
+    }
+
+    assert client.post("/api/refresh", json={}, headers=headers).status_code == 409
+    assert sessions.resolve_session.call_count == 1
+    store.replay.assert_called_once_with(user.id, security.digest(key))
+    store.admit.assert_called_once_with(user.id, security.digest(key), configuration)
+
+    assert client.get("/api/refresh/latest").status_code == 200
+    assert sessions.resolve_session.call_count == 2
+    store.get_run.return_value = None
+    assert (
+        client.get("/api/refresh/00000000-0000-0000-0000-000000000001").status_code
+        == 404
+    )
+    assert sessions.resolve_session.call_count == 3
+    sessions.resolve_session.return_value = replace(
+        session, user=replace(user, role=Role.VIEWER)
+    )
+    assert client.post("/api/refresh", json={}, headers=headers).status_code == 403
+    assert sessions.resolve_session.call_count == 4
+    assert store.admit.call_count == 1
+    sessions.resolve_session.return_value = None
+    assert client.get("/api/refresh/latest").status_code == 401
+    assert sessions.resolve_session.call_count == 5
+    store.latest.assert_called_once()
 
 
 def test_inert_enabled_bootstrap_and_runtime_gate(monkeypatch):
