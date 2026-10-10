@@ -185,32 +185,67 @@ class PostgresqlResourcePublicationStore:
         key_digest: str,
         configuration: RefreshConfiguration,
     ) -> RefreshRun:
+        """Create a queued run and reserve the refresh slot in one transaction."""
         with self._pool.connection() as connection:
             coordination = self._lock(connection)
-            replay = self._replay(connection, requester_id, key_digest)
-            if replay is not None:
-                return replay
+
+            # Recheck after locking: another request may have admitted this key.
+            existing_run = self._replay(connection, requester_id, key_digest)
+            if existing_run is not None:
+                return existing_run
+
             if coordination["active_run_id"] is not None:
                 raise RefreshBusyError("Refresh already admitted")
-            self._check_base(connection, coordination["active_generation_id"])
-            configuration.validate(initial=coordination["active_generation_id"] is None)
-            run_id = str(uuid4())
-            connection.execute(
-                "INSERT INTO refresh_runs(id, requester_id, key_digest, configuration, base_generation_id, status, stage, publication) VALUES (%s,%s,%s,%s,%s,'accepted','queued','pending')",
-                (
-                    run_id,
-                    requester_id,
-                    key_digest,
-                    Jsonb(_configuration(configuration)),
-                    coordination["active_generation_id"],
-                ),
+
+            base_generation_id = coordination["active_generation_id"]
+            self._check_base(connection, base_generation_id)
+            configuration.validate(initial=base_generation_id is None)
+
+            run_id = self._create_queued_run(
+                connection, requester_id, key_digest, configuration, base_generation_id
             )
-            connection.execute(
-                "UPDATE refresh_coordination SET active_run_id = %s WHERE singleton",
-                (run_id,),
+            self._reserve_refresh_slot(connection, run_id)
+            admitted_run = self._read(connection, run_id)
+        return admitted_run
+
+    def _create_queued_run(
+        self,
+        connection: Connection[DictRow],
+        requester_id: str,
+        key_digest: str,
+        configuration: RefreshConfiguration,
+        base_generation_id: object | None,
+    ) -> str:
+        run_id = str(uuid4())
+        connection.execute(
+            """
+            INSERT INTO refresh_runs (
+                id, requester_id, key_digest, configuration, base_generation_id,
+                status, stage, publication
             )
-            result = self._read(connection, run_id)
-        return result
+            VALUES (%s, %s, %s, %s, %s, 'accepted', 'queued', 'pending')
+            """,
+            (
+                run_id,
+                requester_id,
+                key_digest,
+                Jsonb(_configuration(configuration)),
+                base_generation_id,
+            ),
+        )
+        return run_id
+
+    def _reserve_refresh_slot(
+        self, connection: Connection[DictRow], run_id: str
+    ) -> None:
+        connection.execute(
+            """
+            UPDATE refresh_coordination
+            SET active_run_id = %s
+            WHERE singleton
+            """,
+            (run_id,),
+        )
 
     def get_run(self, run_id: str) -> RefreshRun | None:
         with self._pool.connection() as connection:
