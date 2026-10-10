@@ -88,6 +88,40 @@ def test_denial_and_caller_overrides_do_not_resolve_clock(monkeypatch):
     store.admit.assert_not_called()
 
 
+@pytest.mark.parametrize(
+    ("key", "body"),
+    [
+        ("a" * 16, []),
+        ("a" * 16, {"start_date": "2026-04-02"}),
+        (None, {}),
+        ("a" * 15, {}),
+        ("a" * 129, {}),
+        ("a" * 15 + " ", {}),
+        ("a" * 15 + "é", {}),
+    ],
+)
+def test_invalid_admission_does_not_replay_or_resolve_configuration(
+    monkeypatch, key, body
+):
+    refresh, _, reads, access, store = service(monkeypatch)
+    with pytest.raises(InvalidRequestError, match="Invalid refresh request"):
+        refresh.admit("token", key, body)
+    access.authorize.assert_called_once()
+    store.replay.assert_not_called()
+    store.admit.assert_not_called()
+    assert not reads
+
+
+def test_admission_authorizes_before_validating_invalid_input(monkeypatch):
+    refresh, _, reads, access, store = service(monkeypatch)
+    access.authorize.side_effect = ForbiddenError("denied")
+    with pytest.raises(ForbiddenError, match="denied"):
+        refresh.admit("token", "short", {"start_date": "2026-04-02"})
+    store.replay.assert_not_called()
+    store.admit.assert_not_called()
+    assert not reads
+
+
 def test_long_intervals_preserve_initial_policy_and_frozen_caps():
     config = RefreshConfiguration(
         date(2024, 1, 1), date(2026, 10, 7), 1011, 1011, 1011, 1800, 1800

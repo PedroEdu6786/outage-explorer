@@ -28,18 +28,24 @@ class RefreshService:
         principal = self._access.authorize(
             token, AccessOperation.REFRESH_INITIATE
         ).principal
-        if (
-            not isinstance(request, Mapping)
-            or not isinstance(key, str)
-            or re.fullmatch(r"[A-Za-z0-9_-]{16,128}", key, flags=re.ASCII) is None
-            or request
-        ):
+        self._validate_admission_request(key, request)
+
+        key_digest = self._security.digest(key)
+        existing_run = self._store.replay(principal.id, key_digest)
+        if existing_run is not None:
+            return existing_run
+
+        configuration = self._configuration()
+        return self._store.admit(principal.id, key_digest, configuration)
+
+    @staticmethod
+    def _validate_admission_request(key: str, request: Mapping[str, object]) -> None:
+        if not isinstance(request, Mapping) or request:
             raise InvalidRequestError("Invalid refresh request")
-        digest = self._security.digest(key)
-        replay = self._store.replay(principal.id, digest)
-        if replay is not None:
-            return replay
-        return self._store.admit(principal.id, digest, self._configuration())
+        if not isinstance(key, str):
+            raise InvalidRequestError("Invalid refresh request")
+        if re.fullmatch(r"[A-Za-z0-9_-]{16,128}", key, flags=re.ASCII) is None:
+            raise InvalidRequestError("Invalid refresh request")
 
     def status(self, token: str, run_id: str) -> RefreshRun | None:
         self._access.authorize(token, AccessOperation.REFRESH_OUTCOME)
