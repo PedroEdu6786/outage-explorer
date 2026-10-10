@@ -10,6 +10,12 @@ from outage_explorer.application.services.access import AccessService
 from outage_explorer.domain.access import AccessOperation
 from outage_explorer.domain.publication import RefreshConfiguration, RefreshRun
 
+MIN_IDEMPOTENCY_KEY_LENGTH = 16
+MAX_IDEMPOTENCY_KEY_LENGTH = 128
+ALLOWED_IDEMPOTENCY_KEY_CHARACTERS = (
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"
+)
+
 
 class RefreshService:
     def __init__(
@@ -39,13 +45,25 @@ class RefreshService:
         return self._store.admit(principal.id, key_digest, configuration)
 
     @staticmethod
-    def _validate_admission_request(key: str, request: Mapping[str, object]) -> None:
-        if not isinstance(request, Mapping) or request:
+    def _validate_admission_request(
+        idempotency_key: str, request_body: Mapping[str, object]
+    ) -> None:
+        # Refresh accepts an empty JSON object: callers cannot supply options.
+        if not isinstance(request_body, Mapping):
             raise InvalidRequestError("Invalid refresh request")
-        if not isinstance(key, str):
+        if len(request_body) != 0:
             raise InvalidRequestError("Invalid refresh request")
-        if re.fullmatch(r"[A-Za-z0-9_-]{16,128}", key, flags=re.ASCII) is None:
+
+        if not isinstance(idempotency_key, str):
             raise InvalidRequestError("Invalid refresh request")
+        if len(idempotency_key) < MIN_IDEMPOTENCY_KEY_LENGTH:
+            raise InvalidRequestError("Invalid refresh request")
+        if len(idempotency_key) > MAX_IDEMPOTENCY_KEY_LENGTH:
+            raise InvalidRequestError("Invalid refresh request")
+
+        for character in idempotency_key:
+            if character not in ALLOWED_IDEMPOTENCY_KEY_CHARACTERS:
+                raise InvalidRequestError("Invalid refresh request")
 
     def status(self, token: str, run_id: str) -> RefreshRun | None:
         self._access.authorize(token, AccessOperation.REFRESH_OUTCOME)

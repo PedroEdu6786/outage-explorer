@@ -112,6 +112,15 @@ def test_invalid_admission_does_not_replay_or_resolve_configuration(
     assert not reads
 
 
+@pytest.mark.parametrize("key", ["a" * 16, "Z" * 128, "Ab09_-" * 3])
+def test_valid_idempotency_keys_are_admitted(monkeypatch, key):
+    refresh, _, reads, _, store = service(monkeypatch)
+    run = refresh.admit("token", key, {})
+    assert run.configuration.end == date(2026, 10, 7)
+    store.admit.assert_called_once()
+    assert len(reads) == 1
+
+
 def test_admission_authorizes_before_validating_invalid_input(monkeypatch):
     refresh, _, reads, access, store = service(monkeypatch)
     access.authorize.side_effect = ForbiddenError("denied")
