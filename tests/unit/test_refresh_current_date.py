@@ -7,6 +7,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from outage_explorer.application.dto import RefreshAdmissionRequest
 from outage_explorer.application.errors import ForbiddenError, InvalidRequestError
 from outage_explorer.bootstrap import build_data_services
 from outage_explorer.domain.publication import RefreshConfiguration
@@ -48,16 +49,16 @@ def service(monkeypatch, start="2026-04-02"):
 def test_midnight_updates_new_run_but_replay_keeps_original(monkeypatch):
     refresh, now, reads, _, store = service(monkeypatch)
     assert not reads  # Startup must not freeze today's date.
-    original = refresh.admit("token", "a" * 16, {})
+    original = refresh.admit("token", RefreshAdmissionRequest("a" * 16))
     assert original.configuration.start == date(2026, 4, 2)
     assert original.configuration.end == date(2026, 10, 7)
     assert original.configuration.max_interval_days == 189
     assert original.configuration.source_interval_days == 189
     assert original.configuration.model_interval_days == 189
     now[0] += timedelta(days=1)
-    assert refresh.admit("token", "a" * 16, {}) is original
+    assert refresh.admit("token", RefreshAdmissionRequest("a" * 16)) is original
     assert len(reads) == 1
-    later = refresh.admit("token", "b" * 16, {})
+    later = refresh.admit("token", RefreshAdmissionRequest("b" * 16))
     assert later.configuration.end == date(2026, 10, 8)
     assert later.configuration.max_interval_days == 190
     assert original.configuration.end == date(2026, 10, 7)
@@ -67,65 +68,56 @@ def test_midnight_updates_new_run_but_replay_keeps_original(monkeypatch):
 def test_today_uses_utc_independent_of_host_timezone(monkeypatch):
     refresh, now, _, _, _ = service(monkeypatch)
     now[0] = datetime(2026, 10, 7, 23, 30, tzinfo=timezone(timedelta(hours=-6)))
-    assert refresh.admit("token", "c" * 16, {}).configuration.end == date(2026, 10, 8)
+    assert refresh.admit(
+        "token", RefreshAdmissionRequest("c" * 16)
+    ).configuration.end == date(2026, 10, 8)
 
 
 def test_future_start_fails_before_storage_admission(monkeypatch):
     refresh, _, _, _, store = service(monkeypatch, "2026-10-08")
     with pytest.raises(InvalidRequestError, match="after today"):
-        refresh.admit("token", "d" * 16, {})
+        refresh.admit("token", RefreshAdmissionRequest("d" * 16))
     store.admit.assert_not_called()
 
 
-def test_denial_and_caller_overrides_do_not_resolve_clock(monkeypatch):
+def test_denial_does_not_resolve_clock(monkeypatch):
     refresh, _, reads, access, store = service(monkeypatch)
-    with pytest.raises(InvalidRequestError):
-        refresh.admit("token", "e" * 16, {"end": "2026-10-01"})
     access.authorize.side_effect = ForbiddenError("denied")
     with pytest.raises(ForbiddenError):
-        refresh.admit("token", "f" * 16, {})
+        refresh.admit("token", RefreshAdmissionRequest("f" * 16))
     assert not reads
     store.admit.assert_not_called()
 
 
 @pytest.mark.parametrize(
-    ("key", "body"),
+    "key",
     [
-        ("a" * 16, []),
-        ("a" * 16, {"start_date": "2026-04-02"}),
-        (None, {}),
-        ("a" * 15, {}),
-        ("a" * 129, {}),
-        ("a" * 15 + " ", {}),
-        ("a" * 15 + "é", {}),
+        None,
+        "a" * 15,
+        "a" * 129,
+        "a" * 15 + " ",
+        "a" * 15 + "é",
     ],
 )
-def test_invalid_admission_does_not_replay_or_resolve_configuration(
-    monkeypatch, key, body
-):
-    refresh, _, reads, access, store = service(monkeypatch)
+def test_request_dto_rejects_invalid_idempotency_keys(key):
     with pytest.raises(InvalidRequestError, match="Invalid refresh request"):
-        refresh.admit("token", key, body)
-    access.authorize.assert_called_once()
-    store.replay.assert_not_called()
-    store.admit.assert_not_called()
-    assert not reads
+        RefreshAdmissionRequest(key)
 
 
 @pytest.mark.parametrize("key", ["a" * 16, "Z" * 128, "Ab09_-" * 3])
 def test_valid_idempotency_keys_are_admitted(monkeypatch, key):
     refresh, _, reads, _, store = service(monkeypatch)
-    run = refresh.admit("token", key, {})
+    run = refresh.admit("token", RefreshAdmissionRequest(key))
     assert run.configuration.end == date(2026, 10, 7)
     store.admit.assert_called_once()
     assert len(reads) == 1
 
 
-def test_admission_authorizes_before_validating_invalid_input(monkeypatch):
+def test_admission_authorizes_before_replay_or_configuration(monkeypatch):
     refresh, _, reads, access, store = service(monkeypatch)
     access.authorize.side_effect = ForbiddenError("denied")
     with pytest.raises(ForbiddenError, match="denied"):
-        refresh.admit("token", "short", {"start_date": "2026-04-02"})
+        refresh.admit("token", RefreshAdmissionRequest("a" * 16))
     store.replay.assert_not_called()
     store.admit.assert_not_called()
     assert not reads

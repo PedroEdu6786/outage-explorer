@@ -9,6 +9,7 @@ from uuid import uuid4
 import pyarrow.parquet as pq
 import pytest
 
+from outage_explorer.application.dto import RefreshAdmissionRequest
 from outage_explorer.application.errors import (
     AnalyticalBusyError,
     DataUnavailableError,
@@ -123,7 +124,7 @@ class Durable:
             lambda: coordination.CONFIG,
             service._security,
         )
-        run = refresh.admit(tokens[Role.ADMIN], key, {})
+        run = refresh.admit(tokens[Role.ADMIN], RefreshAdmissionRequest(key))
         base = publications.active_generation()
         published = ResourcePublishedGeneration(
             generation_id,

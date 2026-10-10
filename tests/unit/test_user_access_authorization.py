@@ -216,6 +216,39 @@ def test_later_result_page_rechecks_current_state(harness, change):
     assert spy.data_calls == spy.execution_calls == 1
 
 
+@pytest.mark.parametrize("role", list(Role))
+def test_required_roles_use_current_authenticated_role(harness, role):
+    spy, store, _ = harness(role)
+    if role is Role.ADMIN:
+        spy.access.require_roles(TOKEN, ("admin",))
+    else:
+        with pytest.raises(ForbiddenError):
+            spy.access.require_roles(TOKEN, ("admin",))
+    assert store.calls == 1
+
+
+@pytest.mark.parametrize("change", ["role", "revoked", "expired", "unavailable"])
+def test_required_roles_rechecks_session_state(harness, change):
+    spy, store, clock = harness(Role.ADMIN)
+    spy.access.require_roles(TOKEN, ("admin",))
+    if change == "role":
+        store.session = replace(
+            store.session, user=replace(store.session.user, role=Role.VIEWER)
+        )
+        expected = ForbiddenError
+    elif change == "revoked":
+        store.session = None
+        expected = UnauthenticatedError
+    elif change == "expired":
+        clock.time = store.session.expires_at
+        expected = UnauthenticatedError
+    else:
+        store.failure = True
+        expected = AccessStoreError
+    with pytest.raises(expected):
+        spy.access.require_roles(TOKEN, ("admin",))
+
+
 def test_broad_scope_and_role_cannot_be_supplied_by_caller(harness):
     spy, store, _ = harness(
         Role.VIEWER,

@@ -140,6 +140,13 @@ See the [endpoint diagrams](diagrams/endpoints.md),
 5. Recheck ownership/lease/baseline and atomically commit exact descriptors,
    quality, successful outcome and the active pointer in PostgreSQL.
 
+HTTP refresh admission uses `csrf_protected` and `roles_required(..., "admin")`
+guards before parsing. Status routes also require Admin. The HTTP parser enforces
+the empty JSON body and constructs a `RefreshAdmissionRequest`; the immutable
+DTO validates the idempotency key. `RefreshService.admit()` consumes that DTO
+without revalidating transport input. Application use cases still authorize
+their operation before storage access, including when called outside HTTP.
+
 Failures preserve the previous valid generation; existing readers retain their
 selected snapshot. All-excluded refreshes keep the active generation. Fence stale
 owners and reconcile publication after worker loss. Interrupted unpublished work

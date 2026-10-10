@@ -8,6 +8,7 @@ from urllib.parse import unquote_to_bytes
 
 from flask import request
 
+from outage_explorer.application.dto import RefreshAdmissionRequest
 from outage_explorer.application.errors import InvalidRequestError
 
 MAX_BODY_BYTES = 131072
@@ -80,6 +81,12 @@ def json_object(fields: set[str]) -> dict[str, object]:
     if not isinstance(value, dict) or set(value) != fields:
         raise InvalidRequestError("Invalid request")
     return value
+
+
+def refresh_admission_request() -> RefreshAdmissionRequest:
+    parameters(set(), body=True)
+    json_object(set())
+    return RefreshAdmissionRequest(request.headers.get("Idempotency-Key", ""))
 
 
 @dataclass(frozen=True)

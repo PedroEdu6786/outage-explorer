@@ -1,12 +1,15 @@
 """Adversarial transport boundaries; no database or analytical adapters."""
 
 import json
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
 
 from outage_explorer.application import errors
+from outage_explorer.application.dto import RefreshAdmissionRequest
 from outage_explorer.application.ports.sql_inspection import SqlRejected
+from outage_explorer.domain.access import Role
 from outage_explorer.entrypoints.http.app import create_app
 from outage_explorer.entrypoints.http.auth_transport import AuthTransport
 from outage_explorer.entrypoints.http.data_services import DataServices
@@ -16,6 +19,7 @@ from tests.integration.test_data_api_http import ORIGIN
 @pytest.fixture
 def transport():
     access = Mock()
+    access.resolve.return_value = SimpleNamespace(user=SimpleNamespace(role=Role.ADMIN))
     services = DataServices(Mock(), Mock(), Mock(), Mock(), Mock())
     app = create_app(
         Mock(),
@@ -289,6 +293,72 @@ def test_refresh_busy_conflict_and_unsupported_bodies(transport):
         services.refresh.admit.side_effect = failure
         response = client.post("/api/refresh", json={}, headers=headers)
         assert response.status_code == 409 and response.json["error"]["code"] == code
+
+
+@pytest.mark.parametrize(
+    "key", [None, "", "a" * 15, "a" * 129, "a" * 15 + " ", "a" * 15 + "é"]
+)
+def test_refresh_rejects_invalid_keys_before_service(transport, key):
+    client, _, services = transport
+    headers = {"Origin": ORIGIN}
+    if key is not None:
+        headers["Idempotency-Key"] = key
+    response = client.post("/api/refresh", json={}, headers=headers)
+    assert response.status_code == 400
+    services.refresh.admit.assert_not_called()
+
+
+def test_refresh_passes_validated_dto_and_cookie_credential(transport):
+    client, _, services = transport
+    client.set_cookie("outage_session", "session-token")
+    services.refresh.admit.side_effect = errors.RefreshBusyError()
+    key = "request-key-00001"
+    response = client.post(
+        "/api/refresh", json={}, headers={"Origin": ORIGIN, "Idempotency-Key": key}
+    )
+    assert response.status_code == 409
+    services.refresh.admit.assert_called_once_with(
+        "session-token", RefreshAdmissionRequest(key)
+    )
+
+
+@pytest.mark.parametrize("role", [Role.VIEWER, Role.ANALYST])
+@pytest.mark.parametrize(
+    "path", ["/api/refresh", "/api/refresh/latest", "/api/refresh/unknown"]
+)
+def test_refresh_role_guard_rejects_before_parsing_and_service(transport, role, path):
+    client, access, services = transport
+    access.require_roles.side_effect = errors.ForbiddenError()
+    if path == "/api/refresh":
+        response = client.post(path, data="invalid json", headers={"Origin": ORIGIN})
+    else:
+        response = client.get(path + "?unexpected=1")
+    assert response.status_code == 403
+    assert not services.refresh.mock_calls
+
+
+@pytest.mark.parametrize(
+    "path", ["/api/refresh", "/api/refresh/latest", "/api/refresh/unknown"]
+)
+def test_refresh_requires_authentication_before_parsing(transport, path):
+    client, access, services = transport
+    access.require_roles.side_effect = errors.UnauthenticatedError()
+    access.validate_csrf.side_effect = errors.UnauthenticatedError()
+    if path == "/api/refresh":
+        response = client.post(path, data="invalid json", headers={"Origin": ORIGIN})
+    else:
+        response = client.get(path + "?unexpected=1")
+    assert response.status_code == 401
+    assert not services.refresh.mock_calls
+
+
+def test_refresh_csrf_guard_rejects_before_role_guard_and_service(transport):
+    client, access, services = transport
+    access.validate_csrf.side_effect = errors.ForbiddenError()
+    response = client.post("/api/refresh", json={}, headers={"Origin": ORIGIN})
+    assert response.status_code == 403
+    access.require_roles.assert_not_called()
+    assert not services.refresh.mock_calls
 
 
 def test_inert_enabled_bootstrap_and_runtime_gate(monkeypatch):

@@ -4,11 +4,12 @@ from flask import Blueprint, Response, jsonify, request
 
 from outage_explorer.application.data_payloads import refresh_payload
 from outage_explorer.application.services.access import AccessService
+from outage_explorer.entrypoints.http.auth_helpers import csrf_protected, roles_required
 from outage_explorer.entrypoints.http.auth_transport import AuthTransport
 from outage_explorer.entrypoints.http.data_schemas import (
     identifier,
-    json_object,
     parameters,
+    refresh_admission_request,
 )
 from outage_explorer.entrypoints.http.data_services import DataServices
 from outage_explorer.entrypoints.http.errors import data_error_response
@@ -33,14 +34,11 @@ def create_refresh_blueprint(
         )
 
     @blueprint.post("/api/refresh")
-    def admit() -> Response:
-        credential = transport.credential()
-        access.validate_csrf(credential, transport.mutation_csrf())
-        parameters(set(), body=True)
-        body = json_object(set())
-        run = services.refresh.admit(
-            credential, request.headers.get("Idempotency-Key", ""), body
-        )
+    @csrf_protected(access, transport)
+    @roles_required(access, transport, "admin")
+    def admit(*, credential: str, csrf_validated: bool) -> Response:
+        admission = refresh_admission_request()
+        run = services.refresh.admit(credential, admission)
         url = "/api/refresh/" + run.id
         response = jsonify(
             run_id=run.id,
@@ -54,15 +52,17 @@ def create_refresh_blueprint(
         return response
 
     @blueprint.get("/api/refresh/latest")
-    def latest() -> Response:
+    @roles_required(access, transport, "admin")
+    def latest(*, credential: str) -> Response:
         parameters(set())
-        run = services.refresh.latest(transport.credential())
+        run = services.refresh.latest(credential)
         return jsonify(run=None if run is None else refresh_payload(run))
 
     @blueprint.get("/api/refresh/<run_id>")
-    def status(run_id: str) -> Response:
+    @roles_required(access, transport, "admin")
+    def status(run_id: str, *, credential: str) -> Response:
         parameters(set())
-        run = services.refresh.status(transport.credential(), identifier(run_id))
+        run = services.refresh.status(credential, identifier(run_id))
         if run is None:
             response = jsonify(
                 error={"code": "refresh_unavailable", "message": "Refresh unavailable"}

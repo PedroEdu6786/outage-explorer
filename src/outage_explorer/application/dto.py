@@ -8,6 +8,7 @@ from typing import Literal
 from outage_explorer.application.errors import (
     ConnectorConfigurationError,
     ConnectorFailure,
+    InvalidRequestError,
 )
 from outage_explorer.application.ports.candidates import (
     CandidateResult,
@@ -22,6 +23,28 @@ from outage_explorer.domain.observations import (
     SourceRecord,
 )
 from outage_explorer.domain.refresh import Interval, RefreshBounds
+
+MIN_IDEMPOTENCY_KEY_LENGTH = 16
+MAX_IDEMPOTENCY_KEY_LENGTH = 128
+ALLOWED_IDEMPOTENCY_KEY_CHARACTERS = (
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"
+)
+
+
+@dataclass(frozen=True)
+class RefreshAdmissionRequest:
+    idempotency_key: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.idempotency_key, str):
+            raise InvalidRequestError("Invalid refresh request")
+        if len(self.idempotency_key) < MIN_IDEMPOTENCY_KEY_LENGTH:
+            raise InvalidRequestError("Invalid refresh request")
+        if len(self.idempotency_key) > MAX_IDEMPOTENCY_KEY_LENGTH:
+            raise InvalidRequestError("Invalid refresh request")
+        for character in self.idempotency_key:
+            if character not in ALLOWED_IDEMPOTENCY_KEY_CHARACTERS:
+                raise InvalidRequestError("Invalid refresh request")
 
 
 @dataclass(frozen=True)

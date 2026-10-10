@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
+from outage_explorer.application.dto import RefreshAdmissionRequest
 from outage_explorer.application.ports.artifacts import ArtifactLimitError
 from outage_explorer.application.services.refresh_recovery import RefreshRecovery
 from outage_explorer.bootstrap import build_http_app, build_refresh_worker
@@ -60,7 +61,7 @@ def composition(database, root, wire=None, client=None):
 
 
 def admit(system, key="a" * 16):
-    return system[1].admit(system[2][Role.ADMIN], key, {})
+    return system[1].admit(system[2][Role.ADMIN], RefreshAdmissionRequest(key))
 
 
 def execute(system, database, root, rows=None, client=None, key="a" * 16, **options):
@@ -157,7 +158,9 @@ def test_subsequent_refresh_beyond_183_days_uses_frozen_source_model_span(
         service._security,
         {"OUTAGE_REFRESH_START_DATE": "2026-04-02"},
     ).refresh
-    run = refresh.admit(tokens[Role.ADMIN], "long-interval-key", {})
+    run = refresh.admit(
+        tokens[Role.ADMIN], RefreshAdmissionRequest("long-interval-key")
+    )
     assert run.configuration.max_interval_days == 189
     wire = Wire(
         {

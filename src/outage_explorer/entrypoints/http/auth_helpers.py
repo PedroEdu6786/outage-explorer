@@ -34,6 +34,26 @@ def authenticated(
     return decorate
 
 
+def roles_required(
+    access: AccessService, transport: AuthTransport, *roles: str
+) -> Callable[[Handler], Handler]:
+    """Authenticate and require an explicit role before handler input parsing."""
+    if not roles:
+        raise ValueError("At least one recognized role is required")
+
+    def decorate(handler: Handler) -> Handler:
+        @wraps(handler)
+        def guarded(*args: object, **kwargs: object) -> Response:
+            credential = transport.credential()
+            access.require_roles(credential, roles)
+            kwargs["credential"] = credential
+            return handler(*args, **kwargs)
+
+        return guarded
+
+    return decorate
+
+
 def csrf_protected(
     access: AccessService,
     transport: AuthTransport,

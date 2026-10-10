@@ -75,6 +75,11 @@ class AccessService:
             raise ForbiddenError("Access denied")
         return AuthorizedAccess(session.user, grains)
 
+    def require_roles(self, token: str, roles: tuple[str, ...]) -> None:
+        session = self.resolve(token)
+        if session.user.role.value not in roles:
+            raise ForbiddenError("Access denied")
+
     def validate_csrf(self, token: str, supplied: str) -> None:
         self.resolve(token)
         if not self._security.verify_csrf(token, supplied):
