@@ -55,7 +55,7 @@ class RefreshExecution:
         try:
             # Validate complete ownership and the live lease before baseline/source I/O.
             self.store.progress(owner, RefreshStage.RETRIEVING)
-            run.configuration.validate(initial=run.base_generation_id is None)
+            run.configuration.validate_for_run(initial=run.base_generation_id is None)
             with self.factory(run, owner) as pipeline:
                 baseline = pipeline.baseline.restore(run)
                 result = pipeline.candidate.build(run, baseline)

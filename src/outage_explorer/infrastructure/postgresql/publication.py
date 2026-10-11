@@ -30,10 +30,7 @@ from outage_explorer.infrastructure.postgresql.pool import BoundedPostgresqlPool
 
 
 def _configuration(value: RefreshConfiguration) -> dict[str, object]:
-    return asdict(value) | {
-        "start": value.start.isoformat(),
-        "end": value.end.isoformat(),
-    }
+    return value.model_dump(mode="json")
 
 
 def _run(row: DictRow) -> RefreshRun:
@@ -199,7 +196,7 @@ class PostgresqlResourcePublicationStore:
 
             base_generation_id = coordination["active_generation_id"]
             self._check_base(connection, base_generation_id)
-            configuration.validate(initial=base_generation_id is None)
+            configuration.validate_for_run(initial=base_generation_id is None)
 
             run_id = self._create_queued_run(
                 connection, requester_id, key_digest, configuration, base_generation_id
@@ -393,7 +390,7 @@ class PostgresqlResourcePublicationStore:
                 if active != run.base_generation_id or active != base_generation_id:
                     raise StaleRefreshOwnerError("Publication base changed")
                 self._check_base(connection, active)
-                run.configuration.validate(initial=active is None)
+                run.configuration.validate_for_run(initial=active is None)
                 connection.execute(
                     "INSERT INTO published_generations(id, run_id, base_generation_id, verification_version, verified_at, datasets) VALUES (%s,%s,%s,%s,%s,%s)",
                     (

@@ -5,9 +5,15 @@ from datetime import date, datetime
 from enum import StrEnum
 
 from outage_explorer.domain.access import AnalyticalGrain
-
-INITIAL_START = date(2026, 4, 2)
-INITIAL_END = date(2026, 10, 1)
+from outage_explorer.domain.refresh_configuration import (
+    INITIAL_END as INITIAL_END,
+)
+from outage_explorer.domain.refresh_configuration import (
+    INITIAL_START as INITIAL_START,
+)
+from outage_explorer.domain.refresh_configuration import (
+    RefreshConfiguration as RefreshConfiguration,
+)
 
 
 class RunStatus(StrEnum):
@@ -39,69 +45,6 @@ class RefreshStage(StrEnum):
     VERIFYING = "verifying"
     PUBLISHING = "publishing"
     FINISHED = "finished"
-
-
-@dataclass(frozen=True)
-class RefreshConfiguration:
-    start: date
-    end: date
-    max_interval_days: int
-    source_interval_days: int
-    model_interval_days: int
-    candidate_seconds: int
-    persistence_seconds: int
-    contract_version: str = "v1"
-    s3_workers: int = 3
-
-    def validate(self, *, initial: bool) -> None:
-        self._validate_positive_limits()
-        self._validate_date_range()
-        self._validate_contract_version()
-        self._validate_s3_workers()
-        if initial:
-            self._validate_initial_load_dates()
-
-    def _validate_positive_limits(self) -> None:
-        limits = {
-            "max_interval_days": self.max_interval_days,
-            "source_interval_days": self.source_interval_days,
-            "model_interval_days": self.model_interval_days,
-            "candidate_seconds": self.candidate_seconds,
-            "persistence_seconds": self.persistence_seconds,
-        }
-        for name, value in limits.items():
-            if type(value) is not int or value <= 0:
-                raise ValueError(f"{name} must be a positive integer")
-
-    def _validate_date_range(self) -> None:
-        if self.start > self.end:
-            raise ValueError("Refresh start date must not be after end date")
-
-        inclusive_days = (self.end - self.start).days + 1
-        day_limits = {
-            "max_interval_days": self.max_interval_days,
-            "source_interval_days": self.source_interval_days,
-            "model_interval_days": self.model_interval_days,
-        }
-        for name, limit in day_limits.items():
-            if inclusive_days > limit:
-                raise ValueError(f"Refresh date range exceeds {name}")
-
-    def _validate_contract_version(self) -> None:
-        if self.contract_version != "v1":
-            raise ValueError("Refresh contract_version must be v1")
-
-    def _validate_s3_workers(self) -> None:
-        if type(self.s3_workers) is not int:
-            raise ValueError("s3_workers must be an integer")
-        if not 1 <= self.s3_workers <= 3:
-            raise ValueError("s3_workers must be between 1 and 3")
-
-    def _validate_initial_load_dates(self) -> None:
-        if self.start != INITIAL_START or self.end != INITIAL_END:
-            raise ValueError(
-                f"Initial refresh must cover {INITIAL_START} through {INITIAL_END}"
-            )
 
 
 @dataclass(frozen=True)

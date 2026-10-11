@@ -21,6 +21,30 @@ def test_application_obeys_import_boundaries():
 
 
 @pytest.mark.parametrize(
+    "symbol", ["BaseModel", "ConfigDict", "Field", "model_validator"]
+)
+def test_refresh_configuration_allows_reviewed_pydantic_apis(tmp_path, symbol):
+    root = source_tree(
+        tmp_path,
+        {"domain/refresh_configuration.py": f"from pydantic import {symbol}"},
+    )
+    assert violations(root) == []
+
+
+@pytest.mark.parametrize(
+    ("path", "source"),
+    [
+        ("domain/policy.py", "from pydantic import BaseModel"),
+        ("application/services/bad.py", "from pydantic import BaseModel"),
+        ("domain/refresh_configuration.py", "from pydantic import TypeAdapter"),
+        ("domain/refresh_configuration.py", "import pydantic"),
+    ],
+)
+def test_refresh_configuration_exception_remains_narrow(tmp_path, path, source):
+    assert violations(source_tree(tmp_path, {path: source}))
+
+
+@pytest.mark.parametrize(
     "addition",
     ["\nimport boto3\n", "\nprint('side effect')\n", "\ndef route():\n    pass\n"],
 )

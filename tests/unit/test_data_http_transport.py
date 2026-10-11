@@ -391,7 +391,13 @@ def test_refresh_resolves_session_once_and_does_not_reuse_access_on_later_reques
     store.admit.side_effect = errors.RefreshBusyError()
     store.latest.return_value = None
     configuration = RefreshConfiguration(
-        date(2026, 4, 2), date(2026, 10, 10), 192, 192, 192, 1800, 1800
+        start=date(2026, 4, 2),
+        end=date(2026, 10, 10),
+        max_interval_days=192,
+        source_interval_days=192,
+        model_interval_days=192,
+        candidate_seconds=1800,
+        persistence_seconds=1800,
     )
     refresh = RefreshService(access, store, lambda: configuration, security)
     app = create_app(

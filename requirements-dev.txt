@@ -73,3 +73,9 @@ greenlet==3.5.6
 
 # Locally served OpenAPI 3.1 documentation UI.
 flask-swagger-ui==5.33.0
+
+# Declarative refresh configuration validation (ADR-0068).
+annotated-types==0.8.0
+pydantic==2.14.0
+pydantic_core==2.50.0
+typing-inspection==0.4.4

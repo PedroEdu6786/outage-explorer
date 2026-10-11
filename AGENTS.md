@@ -70,6 +70,8 @@ one-time pointer reset was user-directed SQL. Do not clear the active generation
 pointer or alter publication history without explicit user direction.
 
 - `domain/`: pure policies and types; no framework, engine, SDK, database, or I/O.
+  ADR-0068 permits only the reviewed Pydantic validation APIs in
+  `domain/refresh_configuration.py`; this does not permit other framework imports.
 - `application/`: use cases, authorization, transaction orchestration, DTOs,
   and ports; depends on domain, not concrete infrastructure or Flask.
 - `infrastructure/`: PostgreSQL, Cognito, EIA, S3, Parquet, SQL inspection, cache,

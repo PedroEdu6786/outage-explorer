@@ -219,13 +219,13 @@ def build_data_services(
         if days <= 0:
             raise InvalidRequestError("Refresh start date is after today")
         return RefreshConfiguration(
-            configuration.start_date,
-            end,
-            days,
-            days,
-            days,
-            configuration.candidate_seconds,
-            configuration.persistence_seconds,
+            start=configuration.start_date,
+            end=end,
+            max_interval_days=days,
+            source_interval_days=days,
+            model_interval_days=days,
+            candidate_seconds=configuration.candidate_seconds,
+            persistence_seconds=configuration.persistence_seconds,
             s3_workers=configuration.s3_workers,
         )
 

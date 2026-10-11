@@ -95,6 +95,10 @@ Runtime calls through a port do not permit importing its concrete implementation
 | `bootstrap` | All layers and settings, for construction and injection. | Business rules and request orchestration. |
 
 Database drivers, SDKs, engine calls and file/network I/O belong in infrastructure.
+Under [ADR-0068](../adr/0068-declarative-refresh-configuration-validation.md),
+`domain/refresh_configuration.py` alone may import Pydantic's model, configuration,
+field and model-validator APIs for pure declarative validation. Other domain and
+application dependencies retain the standard-library rule above.
 Flask request context (`request`, `g`, `current_app`) stays out of domain and
 application code. Relative imports, dynamic imports and re-exports must not bypass
 the matrix. An allowed import alone does not prove the code is pure.

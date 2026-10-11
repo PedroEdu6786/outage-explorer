@@ -214,6 +214,13 @@ def allowed_dependency(source: str, target: str) -> bool:
         and target == "urllib.parse.unquote_to_bytes"
     ):
         return True  # Pure bounded query decoding; no urllib network capability.
+    if source == f"{ROOT}.domain.refresh_configuration" and target in {
+        "pydantic.BaseModel",
+        "pydantic.ConfigDict",
+        "pydantic.Field",
+        "pydantic.model_validator",
+    }:
+        return True  # ADR-0068: pure configuration validation only.
     external = target.split(".")[0]
     if source == f"{ROOT}.entrypoints.http.routes.documentation" and target in {
         "json",

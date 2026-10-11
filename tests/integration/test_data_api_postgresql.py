@@ -4,7 +4,7 @@ import json
 import os
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
-from dataclasses import asdict, replace
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
@@ -46,7 +46,15 @@ from outage_explorer.infrastructure.postgresql.publication import (
 from outage_explorer.infrastructure.security import RandomSecurityMaterial
 from outage_explorer.settings import refresh_settings
 
-CONFIG = RefreshConfiguration(INITIAL_START, INITIAL_END, 183, 183, 183, 1800, 1800)
+CONFIG = RefreshConfiguration(
+    start=INITIAL_START,
+    end=INITIAL_END,
+    max_interval_days=183,
+    source_interval_days=183,
+    model_interval_days=183,
+    candidate_seconds=1800,
+    persistence_seconds=1800,
+)
 
 
 @contextmanager
@@ -227,7 +235,9 @@ def test_initial_interval_and_all_grains(system):
         store.admit(
             users[Role.ADMIN].id,
             "a" * 64,
-            replace(CONFIG, start=INITIAL_END),
+            RefreshConfiguration.model_validate(
+                CONFIG.model_dump() | {"start": INITIAL_END}
+            ),
         )
     assert store.latest() is None
     run = service.admit(
@@ -872,7 +882,7 @@ def test_refresh_cleanup_preserves_admitted_retry_and_fenced_publication(
         run_id = str(uuid4())
         key = "migration-key-001"
         digest = service._security.digest(key)
-        configuration = asdict(CONFIG) | {
+        configuration = CONFIG.model_dump() | {
             "start": CONFIG.start.isoformat(),
             "end": CONFIG.end.isoformat(),
         }
