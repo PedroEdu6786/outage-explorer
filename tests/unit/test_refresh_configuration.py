@@ -61,16 +61,15 @@ def test_s3_workers_must_be_an_integer_between_one_and_three(configuration, work
 def test_supported_workers_and_initial_dates_are_valid(configuration, workers):
     RefreshConfiguration.model_validate(
         configuration.model_dump() | {"s3_workers": workers}
-    ).validate_for_run(initial=True)
+    ).validate_initial_load_dates()
 
 
 def test_initial_policy_does_not_restrict_subsequent_refresh_dates(configuration):
     subsequent = RefreshConfiguration.model_validate(
         configuration.model_dump() | {"start": INITIAL_START + timedelta(days=1)}
     )
-    subsequent.validate_for_run(initial=False)
     with pytest.raises(ValueError):
-        subsequent.validate_for_run(initial=True)
+        subsequent.validate_initial_load_dates()
 
 
 def test_reversed_dates_and_unknown_contract_are_rejected(configuration):
@@ -86,7 +85,7 @@ def test_reversed_dates_and_unknown_contract_are_rejected(configuration):
 
 def test_validation_preserves_the_serializable_snapshot(configuration):
     before = configuration.model_dump()
-    configuration.validate_for_run(initial=True)
+    configuration.validate_initial_load_dates()
     assert configuration.model_dump() == before
 
 

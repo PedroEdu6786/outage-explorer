@@ -39,10 +39,8 @@ class RefreshConfiguration(BaseModel):
             raise ValueError("Refresh date range exceeds model_interval_days")
         return self
 
-    def validate_for_run(self, *, initial: bool) -> None:
-        """Apply the initial-load policy once the publication state is known."""
-        if not initial:
-            return
+    def validate_initial_load_dates(self) -> None:
+        """Require the agreed date range for a first publication."""
         if self.start != INITIAL_START or self.end != INITIAL_END:
             raise ValueError(
                 f"Initial refresh must cover {INITIAL_START} through {INITIAL_END}"

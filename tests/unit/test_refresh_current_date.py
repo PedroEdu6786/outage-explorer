@@ -32,7 +32,6 @@ def service(monkeypatch, start="2026-04-02"):
     store.replay.side_effect = lambda user, key: saved.get(key)
 
     def admit(user, key, config):
-        config.validate_for_run(initial=False)
         run = SimpleNamespace(configuration=config)
         saved[key] = run
         return run
@@ -145,13 +144,12 @@ def test_long_intervals_preserve_initial_policy_and_frozen_caps():
         candidate_seconds=1800,
         persistence_seconds=1800,
     )
-    config.validate_for_run(initial=False)
     with pytest.raises(ValueError):
-        config.validate_for_run(initial=True)
+        config.validate_initial_load_dates()
     with pytest.raises(ValueError):
         RefreshConfiguration.model_validate(
             config.model_dump() | {"source_interval_days": 183}
-        ).validate_for_run(initial=False)
+        )
 
 
 @pytest.mark.parametrize("value", ["20260402", "2026-4-2", "2026-02-30", ""])
