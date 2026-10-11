@@ -69,5 +69,4 @@ class RecoverResourceArtifacts:
     def execute(
         self, receipt: DurableResourceReceipt, bounds: RefreshBounds
     ) -> ResourceBaseline:
-        self.durable.validate_receipt(receipt)
         return self.local.restore_resources(receipt, self.durable, bounds)

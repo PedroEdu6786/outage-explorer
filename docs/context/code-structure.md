@@ -81,6 +81,13 @@ features can be grouped inside each layer. Create files only when behavior needs
 them; do not add a parallel `modules/<feature>/{domain,application}` hierarchy,
 generic CRUD framework or repository for every analytical row type.
 
+For local Parquet restoration, `LocalConnectorEvidence` delegates to
+`ResourceRestorer` in `infrastructure/parquet/resource_restoration.py`.
+`ResourceDownload` owns one transfer's stream lifetime; `LocalParquetStore`
+owns file lookup, capacity accounting and atomic installation. Baseline content
+verification remains in `ParquetResourceBuilder`, supplied to restoration as a
+callable. Restoration does not access the store's private locks or counters.
+
 ## Dependency matrix
 
 Read each row as: “code in this location may import these internal modules.”

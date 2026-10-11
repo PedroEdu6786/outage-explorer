@@ -90,17 +90,15 @@ class S3ArtifactStore:
         ):
             raise ArtifactLimitError("Artifact file bound exceeded")
         with self.lock:
-            previous = self.objects.get(reference.key)
-            if previous is not None and previous != reference:
-                raise ArtifactError("Conflicting exact artifact reference")
-            if previous is None:
-                if len(self.objects) >= self.bounds.objects or (
-                    sum(item.byte_count for item in self.objects.values())
-                    + reference.byte_count
-                    > self.bounds.total_bytes
-                ):
-                    raise ArtifactLimitError("Artifact graph bound exceeded")
-                self.objects[reference.key] = reference
+            if reference.key in self.objects:
+                return
+            if len(self.objects) >= self.bounds.objects or (
+                sum(item.byte_count for item in self.objects.values())
+                + reference.byte_count
+                > self.bounds.total_bytes
+            ):
+                raise ArtifactLimitError("Artifact graph bound exceeded")
+            self.objects[reference.key] = reference
 
     def _charge(self, size: int) -> None:
         with self.lock:
