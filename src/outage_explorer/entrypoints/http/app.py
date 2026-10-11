@@ -53,7 +53,7 @@ def create_app(
 
         if data_services is not None:
             app.register_blueprint(
-                create_datasets_blueprint(data_services, auth_transport)
+                create_datasets_blueprint(data_services, access_service, auth_transport)
             )
             app.register_blueprint(
                 create_queries_blueprint(data_services, access_service, auth_transport)

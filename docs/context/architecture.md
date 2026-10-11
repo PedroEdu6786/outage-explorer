@@ -72,7 +72,7 @@ threads. See [daily development](../development/local-setup.md) for commands.
    and verifies the identity.
 3. The application resolves that identity to a seeded PostgreSQL user with
    exactly one role and creates a fixed-expiry session.
-4. Every protected use case resolves the current session/role before data access,
+4. Every protected operation resolves the current session/role before data access,
    including preview continuations and SQL result pages.
 
 | Role | Access |
@@ -211,3 +211,10 @@ For dated results and remaining evidence, use the
 [refresh checkpoints](../specs/refresh-persistence/tasks.md).
 Historical tests and documentation edits do not grant new service startup,
 external validation, refresh, publication reset or deployment authorization.
+
+Preview now uses controller `roles_required`, `dataset_required` and
+`validated_request` guards. They resolve identity once per request and pass the
+approved principal/dataset plus a Pydantic request into `PreviewService.read`.
+Application-owned access policy remains in `AccessService`; preview does not
+repeat authorization. Shared `application/pagination/` assembles cursor responses
+from preview's bounded read. See ADR-0070 and ADR-0071.

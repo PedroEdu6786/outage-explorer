@@ -2,7 +2,6 @@
 
 import json
 import re
-from dataclasses import dataclass
 from datetime import date
 from urllib.parse import unquote_to_bytes
 
@@ -10,6 +9,7 @@ from flask import request
 
 from outage_explorer.application.dto import RefreshAdmissionRequest
 from outage_explorer.application.errors import InvalidRequestError
+from outage_explorer.application.preview_request import PreviewRequest
 
 MAX_BODY_BYTES = 131072
 MAX_QUERY_BYTES = 8192
@@ -89,16 +89,7 @@ def refresh_admission_request() -> RefreshAdmissionRequest:
     return RefreshAdmissionRequest(request.headers.get("Idempotency-Key", ""))
 
 
-@dataclass(frozen=True)
-class PreviewParameters:
-    start: date | None = None
-    end: date | None = None
-    size: int | None = None
-    cursor: str | None = None
-    facility: str | None = None
-
-
-def preview_parameters() -> PreviewParameters:
+def preview_parameters() -> PreviewRequest:
     values = parameters({"start_date", "end_date", "page_size", "cursor", "facility"})
     # Werkzeug preserves malformed UTF-8 as percent escapes. Validate the
     # bounded transport bytes so an invalid encoding cannot become an ID.
@@ -109,14 +100,12 @@ def preview_parameters() -> PreviewParameters:
     if "cursor" in values:
         if len(values) != 1:
             raise InvalidRequestError("Invalid request")
-        return PreviewParameters(cursor=identifier(values["cursor"]))
+        return PreviewRequest.parse(cursor=identifier(values["cursor"]))
     start, end = day(values.get("start_date")), day(values.get("end_date"))
-    if start is not None and end is not None and start > end:
-        raise InvalidRequestError("Invalid request")
-    return PreviewParameters(
-        start,
-        end,
-        positive(values.get("page_size"), 100, maximum=500),
+    return PreviewRequest.parse(
+        start=start,
+        end=end,
+        size=positive(values.get("page_size"), 100, maximum=500),
         facility=values.get("facility"),
     )
 

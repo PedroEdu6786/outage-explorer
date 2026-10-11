@@ -1,29 +1,27 @@
-"""Fresh authorization, snapshot-bound keyset reads and complete-row byte bounds."""
+"""Read approved preview snapshots and preserve worker/input lifetimes."""
 
 from dataclasses import dataclass
-from datetime import date
 
+from outage_explorer.application.dto import PreviewAccess
 from outage_explorer.application.errors import (
-    AnalyticalResourceError,
-    DatasetUnavailableError,
     DataUnavailableError,
-    InvalidRequestError,
 )
+from outage_explorer.application.pagination.cursor import CursorPage, CursorPaginator
 from outage_explorer.application.ports.analytical_inputs import PublishedResourceInputs
-from outage_explorer.application.ports.execution import IsolatedExecution, PreviewRead
+from outage_explorer.application.ports.execution import (
+    ExecutionReservation,
+    IsolatedExecution,
+    PreviewRead,
+    PreviewRows,
+)
 from outage_explorer.application.ports.preview_sequences import (
     PreviewSequence,
     PreviewSequences,
 )
 from outage_explorer.application.ports.publication import ResourcePublicationStore
 from outage_explorer.application.ports.tabular_encoding import TabularEncoding
-from outage_explorer.application.services.access import AccessService
-from outage_explorer.domain.access import AccessOperation, AnalyticalGrain
-from outage_explorer.domain.datasets import PUBLIC_DATASETS
-from outage_explorer.domain.preview_filters import (
-    InvalidFacilityIdentifier,
-    validate_facility_identifier,
-)
+from outage_explorer.application.preview_request import PreviewRequest
+from outage_explorer.domain.datasets import Dataset
 
 
 @dataclass
@@ -41,101 +39,42 @@ class _ActivePreviewLease:
 class PreviewService:
     def __init__(
         self,
-        access: AccessService,
         publications: ResourcePublicationStore,
         inputs: PublishedResourceInputs,
         execution: IsolatedExecution,
         sequences: PreviewSequences,
         encoding: TabularEncoding,
-        *,
-        response_bytes: int,
+        paginator: CursorPaginator,
     ) -> None:
-        if type(response_bytes) is not int or response_bytes <= 0:
-            raise ValueError("Positive preview response byte bound required")
-        self._access, self._publications, self._inputs = access, publications, inputs
+        self._publications, self._inputs = publications, inputs
         self._execution, self._sequences, self._encoding = (
             execution,
             sequences,
             encoding,
         )
-        self._response_bytes = response_bytes
+        self._paginator = paginator
 
-    def page(
+    def read(
         self,
-        token: str,
-        dataset_id: str,
-        *,
-        start: date | None = None,
-        end: date | None = None,
-        size: int | None = None,
-        cursor: str | None = None,
-        facility: str | None = None,
+        access: PreviewAccess,
+        request: PreviewRequest,
     ) -> dict[str, object]:
-        # Invalid/unknown IDs still resolve identity before returning an error.
-        self._access.resolve(token)
-        dataset = next(
-            (item for item in PUBLIC_DATASETS if item.id == dataset_id), None
-        )
-        if dataset is None:
-            raise DatasetUnavailableError("Dataset unavailable")
-        authorization = self._access.authorize(
-            token,
-            AccessOperation.ANALYTICAL,
-            grains=frozenset({AnalyticalGrain(dataset.grain)}),
-        )
-        if cursor is not None and any(
-            value is not None for value in (start, end, size, facility)
-        ):
-            raise InvalidRequestError("Continuation accepts only its cursor")
-        if cursor is None and (
-            any(value is not None and type(value) is not date for value in (start, end))
-            or start is not None
-            and end is not None
-            and start > end
-            or size is not None
-            and (type(size) is not int or not 1 <= size <= 500)
-        ):
-            raise InvalidRequestError("Invalid preview parameters")
-        if facility is not None:
-            if dataset.grain == "national":
-                raise InvalidRequestError("National preview does not support facility")
-            try:
-                facility = validate_facility_identifier(facility)
-            except InvalidFacilityIdentifier as error:
-                raise InvalidRequestError(str(error)) from None
+        dataset = access.dataset
+        user_id = access.principal.id
+        request.validate_dataset(dataset)
         sequence: PreviewSequence | None = None
         reservation = None
-        initial = cursor is None
+        initial = request.cursor is None
         try:
-            if cursor is not None:
-                position = self._sequences.acquire(
-                    cursor, authorization.principal.id, dataset
-                )
+            if request.cursor is not None:
+                position = self._sequences.acquire(request.cursor, user_id, dataset)
                 sequence, after = position.sequence, position.after
             else:
                 after = None
             # Reserve before publication/files on initial reads; no download on busy.
             reservation = self._execution.reserve()
             if sequence is None:
-                generation = self._publications.active_generation()
-                if generation is None:
-                    raise DataUnavailableError("Published data unavailable")
-                inputs = self._inputs.prepare(generation, dataset)
-                try:
-                    reservation.check_preparation()
-                    sequence = self._sequences.create(
-                        authorization.principal.id,
-                        dataset,
-                        generation,
-                        start,
-                        end,
-                        100 if size is None else size,
-                        inputs,
-                        facility=facility,
-                    )
-                except BaseException:
-                    inputs.close()
-                    raise
+                sequence = self._start_sequence(user_id, dataset, request, reservation)
             result = reservation.preview(
                 PreviewRead(
                     dataset,
@@ -147,62 +86,78 @@ class PreviewService:
                     sequence.facility,
                 )
             )
-            if (
-                len(result.rows) != len(result.keys)
-                or len(result.rows) > sequence.size
-                or result.has_more
-                and not result.rows
-            ):
-                raise AnalyticalResourceError("Invalid preview worker output")
-            page_cursor = self._sequences.cursor(sequence, after)
-            columns = self._encoding.columns(dataset.columns)
-            rows = [self._encoding.row(dataset.columns, row) for row in result.rows]
-            count = len(rows)
-            while True:
-                has_more = result.has_more or count < len(rows)
-                next_cursor = (
-                    self._sequences.cursor(sequence, result.keys[count - 1])
-                    if has_more and count
-                    else None
-                )
-                response: dict[str, object] = {
-                    "dataset": dataset.id,
-                    "generation_id": sequence.generation.id,
-                    "columns": columns,
-                    "rows": rows[:count],
-                    "page_size": sequence.size,
-                    "page_cursor": page_cursor,
-                    "next_cursor": next_cursor,
-                    "has_more": has_more,
-                    "expires_at": sequence.expires_at.isoformat().replace(
-                        "+00:00", "Z"
-                    ),
-                }
-                if self._encoding.bytes(response) <= self._response_bytes and (
-                    count or not rows
-                ):
-                    return response
-                count -= 1
-                if count < 1:
-                    raise AnalyticalResourceError(
-                        "Preview row or envelope exceeds response byte bound"
-                    )
+            return self._response(sequence, after, result)
         except BaseException:
             if initial and sequence is not None:
                 self._sequences.discard(sequence)
             raise
         finally:
-            # An unreaped worker can still use its inputs. Retain both capacity
-            # and the active pin until the runtime supervisor proves termination.
-            if reservation is not None:
-                try:
-                    reservation.close()
-                except BaseException:
-                    reservation.handoff(
-                        ()
-                        if sequence is None
-                        else (_ActivePreviewLease(self._sequences, sequence),)
-                    )
-                    raise
-            if sequence is not None:
-                self._sequences.release(sequence)
+            self._release_read(reservation, sequence)
+
+    def _release_read(
+        self, reservation: ExecutionReservation | None, sequence: PreviewSequence | None
+    ) -> None:
+        # Unreaped workers retain capacity and pins until termination is proved.
+        if reservation is not None:
+            try:
+                reservation.close()
+            except BaseException:
+                leases = (
+                    ()
+                    if sequence is None
+                    else (_ActivePreviewLease(self._sequences, sequence),)
+                )
+                reservation.handoff(leases)
+                raise
+        if sequence is not None:
+            self._sequences.release(sequence)
+
+    def _start_sequence(
+        self,
+        user_id: str,
+        dataset: Dataset,
+        request: PreviewRequest,
+        reservation: ExecutionReservation,
+    ) -> PreviewSequence:
+        generation = self._publications.active_generation()
+        if generation is None:
+            raise DataUnavailableError("Published data unavailable")
+        inputs = self._inputs.prepare(generation, dataset)
+        try:
+            reservation.check_preparation()
+            return self._sequences.create(
+                user_id,
+                dataset,
+                generation,
+                request.start,
+                request.end,
+                request.page_size,
+                inputs,
+                facility=request.facility,
+            )
+        except BaseException:
+            inputs.close()
+            raise
+
+    def _response(
+        self,
+        sequence: PreviewSequence,
+        after: tuple[str, ...] | None,
+        result: PreviewRows,
+    ) -> dict[str, object]:
+        dataset = sequence.dataset
+        page = CursorPage(
+            rows=tuple(self._encoding.row(dataset.columns, row) for row in result.rows),
+            keys=result.keys,
+            has_more=result.has_more,
+            size=sequence.size,
+            after=after,
+            cursor=lambda key: self._sequences.cursor(sequence, key),
+            metadata={
+                "dataset": dataset.id,
+                "generation_id": sequence.generation.id,
+                "columns": self._encoding.columns(dataset.columns),
+                "expires_at": sequence.expires_at.isoformat().replace("+00:00", "Z"),
+            },
+        )
+        return self._paginator.paginate(page)

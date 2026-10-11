@@ -56,6 +56,28 @@ def roles_required(
     return decorate
 
 
+def dataset_required(access: AccessService) -> Callable[[Handler], Handler]:
+    """Require dataset scope after roles_required has established request access."""
+
+    def decorate(handler: Handler) -> Handler:
+        @wraps(handler)
+        def guarded(*args: object, **kwargs: object) -> Response:
+            request_access = kwargs.get("request_access")
+            if not isinstance(request_access, RequestAccess):
+                raise UnauthenticatedError("Authentication required")
+            dataset_id = kwargs.get("dataset")
+            if not isinstance(dataset_id, str):
+                raise ValueError("Dataset guard requires a dataset route parameter")
+            kwargs["preview_access"] = access.require_dataset(
+                request_access, dataset_id
+            )
+            return handler(*args, **kwargs)
+
+        return guarded
+
+    return decorate
+
+
 def csrf_protected(
     access: AccessService,
     transport: AuthTransport,

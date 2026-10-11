@@ -42,7 +42,7 @@ src/outage_explorer/
       connector.py             # build a resource candidate
       resource_artifacts.py    # persist/recover exact resource files
       catalog.py               # authorized dataset descriptions
-      preview.py               # snapshot-bound browsing
+      preview.py               # approved snapshot reads and input lifecycle
       queries.py               # inspect, authorize, execute and page SQL
       refresh.py               # refresh admission
       refresh_execution.py     # coordinate run lifecycle and final publication
@@ -50,6 +50,7 @@ src/outage_explorer/
       refresh_candidate.py     # build candidates and validate their outcomes
       refresh_publication.py   # persist resources and prepare publication metadata
       refresh_recovery.py      # reconcile interrupted work
+    pagination/                # reusable cursor requests and bounded page assembly
     ports/                     # application-owned interfaces
   infrastructure/
     postgresql/                # operational repositories and transactions
@@ -104,8 +105,9 @@ Runtime calls through a port do not permit importing its concrete implementation
 Database drivers, SDKs, engine calls and file/network I/O belong in infrastructure.
 Under [ADR-0068](../adr/0068-declarative-refresh-configuration-validation.md),
 `domain/refresh_configuration.py` alone may import Pydantic's model, configuration,
-field and model-validator APIs for pure declarative validation. Other domain and
-application dependencies retain the standard-library rule above.
+field and model-validator APIs for pure declarative validation. ADR-0071 also permits narrow Pydantic validation APIs in
+`application/pagination/request.py` and `application/preview_request.py`. Other
+domain and application dependencies retain the standard-library rule above.
 Flask request context (`request`, `g`, `current_app`) stays out of domain and
 application code. Relative imports, dynamic imports and re-exports must not bypass
 the matrix. An allowed import alone does not prove the code is pure.
@@ -121,7 +123,7 @@ wrapper or use bootstrap as a service locator. New wrappers need checker coverag
 | You need to… | Put it in… | Keep out of… |
 | --- | --- | --- |
 | Parse `page_size`, reject malformed HTTP input or serialize JSON. | HTTP schemas/routes. | Domain rules and database repositories. |
-| Resolve current access and choose a pinned preview generation. | Application preview/access services. | Route decorators as the sole authorization check. |
+| Resolve preview access and choose a pinned generation. | Controller guards call application AccessService; preview consumes approved access (ADR-0070). | Browser-supplied roles or reused access contexts. |
 | Decide whether capacity is valid and calculate the offline share. | Pure domain policy. | HTTP handlers or DuckDB SQL as the sole policy definition. |
 | Verify a Cognito signature or exchange an authorization code. | Cognito adapter behind an application port. | Domain and route bodies. |
 | Read role assignments or commit publication metadata. | PostgreSQL adapter through an application port. | Flask routes and analytical workers. |
@@ -235,3 +237,14 @@ publication or reset authorization.
 | Auth implementation and accepted/live evidence | [User-access verification](../specs/user-access/verification.md). |
 | Analytical startup and evidence scope | [Runtime evidence map](../specs/data-api/runtime-evidence.md). |
 | Recorded modeling findings and offline reproduction | [Challenge documentation](../challenge/README.md). |
+
+## Reusing cursor pagination
+
+New cursor endpoints can derive their request DTO from `CursorPaginationRequest`
+and inject `CursorPaginator` with their response byte limit and byte counter.
+Supply a `CursorPage` containing a bounded ordered read, one continuation key per
+row, a cursor callback, fixed size, current position and endpoint metadata.
+`paginate` returns the shared rows/page-size/current/next-cursor/has-more envelope.
+The endpoint retains responsibility for authorization, filtering, stable ordering,
+snapshot ownership and cleanup; the paginator never fetches data or alters SQL.
+See [ADR-0071](../adr/0071-shared-cursor-pagination-and-request-validation.md).

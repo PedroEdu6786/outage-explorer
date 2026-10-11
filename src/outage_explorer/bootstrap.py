@@ -35,6 +35,7 @@ from outage_explorer.application.errors import (
     InvalidRequestError,
     RuntimeUnavailableError,
 )
+from outage_explorer.application.pagination.cursor import CursorPaginator
 from outage_explorer.application.ports.analytical_inputs import PublishedResourceInputs
 from outage_explorer.application.ports.artifacts import (
     ArtifactBounds,
@@ -257,13 +258,12 @@ def build_data_services(
     return DataServices(
         CatalogService(access, store),
         PreviewService(
-            access,
             store,
             inputs,
             execution,
             sequences,
             encoding,
-            response_bytes=response_bytes,
+            CursorPaginator(encoding.bytes, response_bytes=response_bytes),
         ),
         QueryService(
             access,

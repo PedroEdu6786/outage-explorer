@@ -33,7 +33,8 @@ behavior remains supported. No historical ADR is rewritten.
   revisits, refresh snapshot isolation, fixed 60-second expiry and cleanup.
 - **FR4:** Preserve current application-owned authorization on every page.
   Viewer cannot access facility or generator data, including through filtered
-  requests, cursor reuse or direct use-case calls. Unauthorized requests must
+  requests and cursor reuse. Under ADR-0070, non-HTTP callers authenticate freshly
+  and approve dataset scope through AccessService before the use-case call. Unauthorized requests must
   reach neither analytical preparation nor execution.
 - **FR5:** Catalog `supported_filters` advertises facility only for `facilities`
   and `generators`. Synchronize the HTTP contract, both OpenAPI copies, fixtures,

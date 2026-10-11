@@ -1,7 +1,15 @@
 """Resolve fresh local identity and invalidate only the supplied session."""
 
-from outage_explorer.application.dto import CurrentIdentity, RequestAccess
-from outage_explorer.application.errors import ForbiddenError, UnauthenticatedError
+from outage_explorer.application.dto import (
+    CurrentIdentity,
+    PreviewAccess,
+    RequestAccess,
+)
+from outage_explorer.application.errors import (
+    DatasetUnavailableError,
+    ForbiddenError,
+    UnauthenticatedError,
+)
 from outage_explorer.application.ports.access import SecurityMaterial, SessionStore
 from outage_explorer.application.ports.clock import Clock
 from outage_explorer.domain.access import (
@@ -12,6 +20,7 @@ from outage_explorer.domain.access import (
     Session,
     permits_scope,
 )
+from outage_explorer.domain.datasets import PUBLIC_DATASETS
 
 
 class AccessService:
@@ -84,6 +93,23 @@ class AccessService:
         if request_access.principal.role.value not in roles:
             raise ForbiddenError("Access denied")
         return request_access
+
+    def require_dataset(
+        self, request_access: RequestAccess, dataset_id: str
+    ) -> PreviewAccess:
+        """Approve a public dataset using this request's authenticated identity."""
+        dataset = next(
+            (item for item in PUBLIC_DATASETS if item.id == dataset_id), None
+        )
+        if dataset is None:
+            raise DatasetUnavailableError("Dataset unavailable")
+        grains = frozenset({AnalyticalGrain(dataset.grain)})
+        if not permits_scope(
+            request_access.principal.role, AccessOperation.ANALYTICAL, grains
+        ):
+            # Unknown and forbidden dataset IDs have the same public outcome.
+            raise DatasetUnavailableError("Dataset unavailable")
+        return PreviewAccess(request_access.principal, dataset)
 
     def validate_csrf(self, token: str, supplied: str) -> RequestAccess:
         request_access = self.authenticate(token)

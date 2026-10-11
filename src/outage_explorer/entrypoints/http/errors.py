@@ -66,6 +66,8 @@ def data_error_response(error: Exception, *, dataset: bool = False) -> Response:
         status, code, message = 401, "unauthenticated", "Authentication required"
     elif isinstance(error, errors.ForbiddenError):
         status, code, message = 403, "forbidden", "Access denied"
+    elif isinstance(error, errors.DatasetUnavailableError):
+        status, code, message = 404, "dataset_unavailable", "Dataset unavailable"
     elif isinstance(error, errors.QueryExpiredError):
         status, code, message = 410, "query_unavailable", "Query unavailable"
     elif isinstance(error, errors.QueryUnavailableError):

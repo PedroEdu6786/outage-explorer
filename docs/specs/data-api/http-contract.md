@@ -408,3 +408,12 @@ and provider diagnostics do not appear in responses.
 The `query_row_limit` fixture shows page 1 of 1,000 retained rows with page size
 1. It is a complete page, not a shortened retained result. Named duplicate-label
 and reference-free fixtures cover those independent SQL behaviors.
+
+## Preview request composition (ADR-0070 / ADR-0071)
+
+Preview controller guards authenticate once and check dataset scope before parsing
+filters. `PreviewService.read` consumes approved `PreviewAccess` and a strict,
+frozen `PreviewRequest`; it performs no second authentication. Non-HTTP callers
+must obtain fresh access through `AccessService.authenticate` and `require_dataset`.
+Reusable cursor pagination lives in `application/pagination/`; preview owns its
+snapshot/worker lifecycle. Retained SQL result pagination is unchanged.

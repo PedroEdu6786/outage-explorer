@@ -15,8 +15,8 @@ import pytest
 from outage_explorer.application.errors import (
     AnalyticalBusyError,
     AnalyticalResourceError,
+    DatasetUnavailableError,
     DataUnavailableError,
-    ForbiddenError,
     InvalidRequestError,
     PreviewCapacityError,
     PreviewUnavailableError,
@@ -25,7 +25,6 @@ from outage_explorer.application.errors import (
 )
 from outage_explorer.application.ports.execution import ExecutionBounds, PreviewRows
 from outage_explorer.application.services.catalog import CatalogService
-from outage_explorer.application.services.preview import PreviewService
 from outage_explorer.domain.access import AnalyticalGrain, Role
 from outage_explorer.domain.datasets import PUBLIC_DATASETS
 from outage_explorer.domain.publication import (
@@ -52,6 +51,7 @@ from outage_explorer.infrastructure.worker_runtime.launcher import VerifiedLaunc
 from tests.integration import test_connector_cli as connector
 from tests.integration import test_data_api_postgresql as coordination
 from tests.integration import test_refresh_execution as resource_refresh
+from tests.integration.preview_client import PreviewClient, synthetic_access
 from tests.integration.test_connector_cli import ARTIFACT, row
 from tests.integration.test_refresh_execution import RefreshS3, execute
 
@@ -127,7 +127,7 @@ def browsing(system, database, tmp_path):
         clock, METADATA, b"synthetic-test-cursor-key-32-bytes!"
     )
     encoding = PreviewEncoding(ENCODING)
-    service = PreviewService(
+    service = PreviewClient(
         system[1]._access,
         system[0],
         cache,
@@ -156,7 +156,7 @@ def test_catalog_roles_and_public_columns_before_data(system, browsing, role):
     )
     service, _, _, _, runtime, _, _ = browsing
     if role is Role.VIEWER:
-        with pytest.raises(ForbiddenError):
+        with pytest.raises(DatasetUnavailableError):
             service.page(system[2][role], "facilities")
         assert not runtime.calls
     else:
@@ -280,7 +280,7 @@ def test_role_change_and_logout_deny_before_continuation_execution(
             "UPDATE users SET role_code='viewer' WHERE id=%s",
             (system[3][Role.ANALYST].id,),
         )
-    with pytest.raises(ForbiddenError):
+    with pytest.raises(DatasetUnavailableError):
         service.page(token, "facilities", cursor=first["next_cursor"])
     assert len(runtime.calls) == calls
     system[1]._access.logout(token)
@@ -316,7 +316,7 @@ def test_old_generation_reads_during_new_publication_and_source_unavailable(
 def test_integrity_failure_and_busy_before_download(system, browsing):
     service, cache, _, _, _, client, _ = browsing
     token = system[2][Role.VIEWER]
-    reservation = service._execution.reserve()
+    reservation = service.service._execution.reserve()
     client.calls.clear()
     try:
         with pytest.raises(AnalyticalBusyError):
@@ -352,13 +352,13 @@ def test_response_byte_prefix_never_skips_and_oversized_first_row(system, browsi
     service = browsing[0]
     token = system[2][Role.ADMIN]
     reference = service.page(token, "generators", size=5)
-    service._response_bytes = len(canonical_json(reference)) - 10
+    service.service._paginator._response_bytes = len(canonical_json(reference)) - 10
     page = service.page(token, "generators", size=5)
     assert 0 < len(page["rows"]) < 5 and page["has_more"]
     first_rows = page["rows"]
     following = service.page(token, "generators", cursor=page["next_cursor"])
     assert following["rows"][0][-1] == f"{len(first_rows):04}"
-    service._response_bytes = 1
+    service.service._paginator._response_bytes = 1
     with pytest.raises(AnalyticalResourceError):
         service.page(token, "national")
 
@@ -464,13 +464,12 @@ def test_local_modeled_projection_and_controlled_worker_without_cloud_or_databas
     launcher = VerifiedLauncher(
         EXECUTION, runtime, evidence="controlled test fixture only"
     )
-    access = Mock()
-    access.authorize.return_value.principal.id = "synthetic-user"
+    access = synthetic_access("synthetic-user")
     publications = Mock()
     publications.active_generation.return_value = generation
     clock = Clock()
     sequences = BoundedPreviewSequences(clock, METADATA, b"x" * 32)
-    service = PreviewService(
+    service = PreviewClient(
         access,
         publications,
         cache,
@@ -518,14 +517,13 @@ def test_unreaped_worker_keeps_active_preview_pin_through_expiry():
     cache = Mock()
     cache.prepare.return_value = inputs
     publications = Mock()
-    access = Mock()
-    access.authorize.return_value.principal.id = "user"
+    access = synthetic_access()
     sequences = BoundedPreviewSequences(clock, METADATA, b"x" * 32)
     runtime = Mock()
     runtime.preview.return_value = PreviewRows((), (), False)
     runtime.terminate_and_reap.side_effect = OSError("controlled failed reap")
     launcher = VerifiedLauncher(EXECUTION, runtime, evidence="test only")
-    service = PreviewService(
+    service = PreviewClient(
         access,
         publications,
         cache,
@@ -552,8 +550,8 @@ def test_unreaped_worker_keeps_active_preview_pin_through_expiry():
 
 
 def test_missing_runtime_denies_before_publication_or_preparation():
-    access, publications, cache, sequences = Mock(), Mock(), Mock(), Mock()
-    service = PreviewService(
+    access, publications, cache, sequences = synthetic_access(), Mock(), Mock(), Mock()
+    service = PreviewClient(
         access,
         publications,
         cache,
@@ -630,7 +628,7 @@ def portable_selection():
     runtime.preview.side_effect = preview
     launcher = VerifiedLauncher(EXECUTION, runtime, evidence="injected port only")
     sequences = BoundedPreviewSequences(clock, METADATA, b"x" * 32)
-    service = PreviewService(
+    service = PreviewClient(
         access,
         publications,
         inputs,
@@ -740,7 +738,7 @@ def test_portable_facility_authorization_before_inputs_and_execution(
         state.sessions.resolve_session.return_value = replace(
             session, user=replace(session.user, role=Role.VIEWER)
         )
-        error = ForbiddenError
+        error = DatasetUnavailableError
     elif denial == "foreign":
         state.sessions.resolve_session.return_value = replace(
             session, user=replace(session.user, id="other")
@@ -794,13 +792,15 @@ def test_portable_facility_utf8_metadata_capacity_and_rollback(portable_selectio
     probe.release(unfiltered)
     pin.close.reset_mock()
     bounds = replace(METADATA, metadata_bytes=baseline + 2)
-    state.service._sequences = BoundedPreviewSequences(state.clock, bounds, b"x" * 32)
+    state.service.service._sequences = BoundedPreviewSequences(
+        state.clock, bounds, b"x" * 32
+    )
     with pytest.raises(PreviewCapacityError):
         state.service.page(state.token, "facilities", facility="éé")
     state.pins[0].close.assert_called_once()
     state.runtime.preview.assert_not_called()
     # Failed admission consumed no capacity. A two-byte selection fits exactly.
-    store = state.service._sequences
+    store = state.service.service._sequences
     sequence = store.create(
         "analyst", dataset, generation, None, None, 100, pin, facility="é"
     )
@@ -838,7 +838,9 @@ def test_portable_facility_lost_store_rejects_cursor_before_execution(
     first = state.service.page(state.token, "facilities", facility="001")
     state.sequences.close()
     state.pins[0].close.assert_called_once()
-    state.service._sequences = BoundedPreviewSequences(state.clock, METADATA, b"x" * 32)
+    state.service.service._sequences = BoundedPreviewSequences(
+        state.clock, METADATA, b"x" * 32
+    )
     calls = len(state.requests)
     with pytest.raises(PreviewUnavailableError):
         state.service.page(state.token, "facilities", cursor=first["page_cursor"])

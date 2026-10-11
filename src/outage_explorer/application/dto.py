@@ -16,6 +16,7 @@ from outage_explorer.application.ports.candidates import (
 )
 from outage_explorer.application.ports.source import SourceQuality
 from outage_explorer.domain.access import SeededUser
+from outage_explorer.domain.datasets import Dataset
 from outage_explorer.domain.observations import (
     DailyResult,
     Disposition,
@@ -36,6 +37,14 @@ class RequestAccess:
     """Server-resolved identity for one request; never parsed from caller input."""
 
     principal: SeededUser
+
+
+@dataclass(frozen=True)
+class PreviewAccess:
+    """One authenticated principal and the dataset approved for this request."""
+
+    principal: SeededUser
+    dataset: Dataset
 
 
 @dataclass(frozen=True)

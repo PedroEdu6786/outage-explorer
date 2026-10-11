@@ -1,8 +1,15 @@
-"""Catalog and preview transport; use cases enforce current analytical access."""
+"""Catalog transport and guarded, validated preview reads."""
 
 from flask import Blueprint, Response, jsonify
 
-from outage_explorer.application.errors import DatasetUnavailableError, ForbiddenError
+from outage_explorer.application.dto import PreviewAccess, RequestAccess
+from outage_explorer.application.preview_request import PreviewRequest
+from outage_explorer.application.services.access import AccessService
+from outage_explorer.entrypoints.http.auth_helpers import (
+    dataset_required,
+    roles_required,
+    validated_request,
+)
 from outage_explorer.entrypoints.http.auth_transport import AuthTransport
 from outage_explorer.entrypoints.http.data_schemas import parameters, preview_parameters
 from outage_explorer.entrypoints.http.data_services import DataServices
@@ -10,7 +17,7 @@ from outage_explorer.entrypoints.http.errors import data_error_response
 
 
 def create_datasets_blueprint(
-    services: DataServices, transport: AuthTransport
+    services: DataServices, access: AccessService, transport: AuthTransport
 ) -> Blueprint:
     blueprint = Blueprint("datasets", __name__)
 
@@ -36,22 +43,16 @@ def create_datasets_blueprint(
         )
 
     @blueprint.get("/api/datasets/<dataset>/preview")
-    def preview(dataset: str) -> Response:
-        values = preview_parameters()
-        try:
-            return jsonify(
-                services.preview.page(
-                    transport.credential(),
-                    dataset,
-                    start=values.start,
-                    end=values.end,
-                    size=values.size,
-                    cursor=values.cursor,
-                    facility=values.facility,
-                )
-            )
-        except (DatasetUnavailableError, ForbiddenError) as error:
-            # Unknown/forbidden ID must not disclose the available projection.
-            return data_error_response(error, dataset=True)
+    @roles_required(access, transport, "viewer", "analyst", "admin")
+    @dataset_required(access)
+    @validated_request(preview_parameters)
+    def preview(
+        dataset: str,
+        *,
+        request_access: RequestAccess,
+        preview_access: PreviewAccess,
+        validated: PreviewRequest,
+    ) -> Response:
+        return jsonify(services.preview.read(preview_access, validated))
 
     return blueprint

@@ -136,6 +136,11 @@ reruns. Recovery must prevent stale owners from publishing.
    resolves fresh identity and checks roles in the guards, which pass approved
    access into refresh use cases without a second lookup. Non-HTTP refresh callers
    must obtain fresh access through `RefreshService.authorize(token)` first.
+   ADR-0070 extends request-scoped access to preview: controller role/dataset guards
+   establish `PreviewAccess`; `PreviewService.read` consumes it without another lookup.
+   Non-HTTP callers authenticate freshly and call `AccessService.require_dataset`
+   before reading. ADR-0071 permits narrowly reviewed Pydantic APIs in
+   `application/pagination/request.py` and `application/preview_request.py` only.
    Cognito supplies identity;
    application-owned PostgreSQL users and role assignments determine access.
    Under ADR-0043, users and roles are seeded; registration and Admin user

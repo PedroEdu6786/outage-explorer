@@ -69,8 +69,9 @@ def guarded_app():
     @validated_request(
         lambda: json_object(frozenset({"value"}), required=frozenset({"value"}))
     )
-    def write(*, credential, identity, csrf_validated, validated):
+    def write(*, credential, identity, csrf_validated, request_access, validated):
         assert csrf_validated and identity.user.role == Role.ANALYST
+        assert request_access.principal == identity.user
         assert validated == {"value": "ok"}
         calls.append("handler")
         return protected_use_case(credential)

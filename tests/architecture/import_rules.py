@@ -221,6 +221,20 @@ def allowed_dependency(source: str, target: str) -> bool:
         "pydantic.model_validator",
     }:
         return True  # ADR-0068: pure configuration validation only.
+    if source == f"{ROOT}.application.preview_request" and target in {
+        "pydantic.Field",
+        "pydantic.field_validator",
+        "pydantic.model_validator",
+    }:
+        return True  # ADR-0071: pure request validation only.
+    if source == f"{ROOT}.application.pagination.request" and target in {
+        "pydantic.BaseModel",
+        "pydantic.ConfigDict",
+        "pydantic.Field",
+        "pydantic.ValidationError",
+        "pydantic.model_validator",
+    }:
+        return True  # ADR-0071: shared pagination request validation only.
     external = target.split(".")[0]
     if source == f"{ROOT}.entrypoints.http.routes.documentation" and target in {
         "json",

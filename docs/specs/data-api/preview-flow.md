@@ -27,7 +27,7 @@ flowchart TD
     Client["Web client"] --> Endpoint["GET /api/datasets/{dataset}/preview<br/>Optional dates, facility and page_size"]
 
     subgraph Backend["Flask API and application services"]
-        Endpoint --> Auth["Authenticate session<br/>Authorize dataset"]
+        Endpoint --> Auth["Controller role/dataset guards<br/>Authenticate once and approve dataset"]
         Auth --> Slot["Reserve the single analytical slot"]
         Slot --> Snapshot["Select active published generation"]
         Snapshot --> Hit{"Verified local cache entry<br/>for this generation + dataset?"}
@@ -47,7 +47,7 @@ flowchart TD
         Load --> Query["Apply dates and exact facility equality<br/>then page position<br/>Sort newest first<br/>Read page_size + 1 rows"]
     end
 
-    Query --> Response["API encodes bounded JSON<br/>Rows, columns, generation_id<br/>page_cursor, next_cursor, has_more, expires_at"]
+    Query --> Response["Shared CursorPaginator assembles bounded JSON<br/>Rows, columns, generation_id<br/>page_cursor, next_cursor, has_more, expires_at"]
     Response --> Client
 ```
 
@@ -135,6 +135,7 @@ Paths below are relative to `src/outage_explorer/`.
 | Responsibility | Source |
 | --- | --- |
 | HTTP endpoints | `entrypoints/http/routes/datasets.py` |
+| Shared cursor page assembly | `application/pagination/cursor.py` |
 | Catalog and preview orchestration | `application/services/catalog.py`, `application/services/preview.py` |
 | Active publication lookup | `infrastructure/postgresql/publication.py` |
 | S3 transfer and integrity checks | `infrastructure/s3/resources.py` |

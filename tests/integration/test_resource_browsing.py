@@ -12,13 +12,12 @@ import pytest
 from outage_explorer.application.dto import RefreshAdmissionRequest
 from outage_explorer.application.errors import (
     AnalyticalBusyError,
+    DatasetUnavailableError,
     DataUnavailableError,
-    ForbiddenError,
     PreviewUnavailableError,
 )
 from outage_explorer.application.ports.sql_inspection import SqlRejected
 from outage_explorer.application.services.catalog import CatalogService
-from outage_explorer.application.services.preview import PreviewService
 from outage_explorer.application.services.queries import QueryService
 from outage_explorer.application.services.refresh import RefreshService
 from outage_explorer.application.services.resource_artifacts import (
@@ -52,6 +51,7 @@ from outage_explorer.infrastructure.s3.resources import S3ResourceStore
 from outage_explorer.infrastructure.sql_validation.inspection import DuckdbSqlInspector
 from outage_explorer.infrastructure.worker_runtime.launcher import VerifiedLauncher
 from tests.integration import test_data_api_postgresql as coordination
+from tests.integration.preview_client import PreviewClient
 from tests.integration.test_catalog_preview import (
     CACHE,
     ENCODING,
@@ -177,7 +177,7 @@ def browsing(system, database, tmp_path):
     sequences = BoundedPreviewSequences(
         clock, METADATA, b"synthetic-test-cursor-key-32-bytes!"
     )
-    service = PreviewService(
+    service = PreviewClient(
         system[1]._access,
         publications,
         cache,
@@ -210,7 +210,7 @@ def test_catalog_roles_and_public_columns_before_data(system, browsing):
 
 def test_forbidden_dataset_is_denied_before_any_download(system, browsing):
     service, cache, _, _, runtime, durable, _, _ = browsing
-    with pytest.raises(ForbiddenError):
+    with pytest.raises(DatasetUnavailableError):
         service.page(system[2][Role.VIEWER], "facilities")
     assert durable.client.calls == [] and not runtime.calls and not cache._entries
 
@@ -301,7 +301,7 @@ def test_missing_or_corrupt_descriptor_object_is_unavailable(system, browsing, f
 
 def test_busy_runtime_denies_before_download(system, browsing):
     service, _, _, _, _, durable, _, _ = browsing
-    reservation = service._execution.reserve()
+    reservation = service.service._execution.reserve()
     try:
         with pytest.raises(AnalyticalBusyError):
             service.page(system[2][Role.VIEWER], "national")
@@ -381,6 +381,6 @@ def test_private_columns_are_not_queryable_and_viewer_is_denied(
         assert rejected.value.code == "invalid_sql"
     durable = browsing[5]
     durable.client.calls.clear()
-    with pytest.raises(ForbiddenError):
+    with pytest.raises(DatasetUnavailableError):
         service.execute(system[2][Role.VIEWER], "SELECT * FROM facilities")
     assert durable.client.calls == []

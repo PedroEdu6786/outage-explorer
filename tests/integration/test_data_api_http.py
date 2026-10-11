@@ -46,7 +46,7 @@ def app_for(system, browsing, queries):
         auth_transport=transport,
         data_services=DataServices(
             CatalogService(access, system[0]),
-            browsing[0],
+            browsing[0].service,
             queries[0],
             system[1],
             PreviewEncoding(ENCODING),
@@ -396,7 +396,7 @@ def test_supervised_http_start_paging_restart_and_current_role(
 
 def preview_http_client(state):
     """Actual HTTP/application authorization and lifecycle with injected ports."""
-    access = state.service._access
+    access = state.service.access
     app = create_app(
         HealthService(state.clock),
         login_service=Mock(),
@@ -404,7 +404,7 @@ def preview_http_client(state):
         auth_transport=AuthTransport(ORIGIN, frozenset({ORIGIN}), True),
         data_services=DataServices(
             CatalogService(access, state.publications),
-            state.service,
+            state.service.service,
             Mock(),
             Mock(),
             PreviewEncoding(ENCODING),
