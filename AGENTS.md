@@ -154,7 +154,8 @@ reruns. Recovery must prevent stale owners from publishing.
    [ADR-0037](docs/adr/0037-connector-initial-load-and-retention.md) retains absent
    prior keys and wholly excluded routes while allowing other valid updates.
    Initial live loading requires usable output in all three grains; its explicit
-   initial interval is April 2–October 1, 2026 inclusive.
+   initial start is April 2, 2026; ADR-0069 replaces the fixed initial end with
+   the UTC end date frozen at admission for product refreshes.
 6. Inject concrete dependencies at startup. Avoid module-import side effects,
    circular imports, catch-all utilities, generic CRUD hierarchies, and live
    database connections shared across processes.

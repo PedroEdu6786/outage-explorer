@@ -38,8 +38,9 @@ exact facility ID on facility/generator datasets; national remains date-only.
 Generator-specific identifier filters are excluded.
 Refresh uses the configured start through today's UTC date, frozen at admission,
 without caller-supplied dates or a fixed 183-day ceiling. Other resource bounds
-and the explicit initial-load interval remain enforced
-([ADR-0063](../../adr/0063-configured-start-current-end-refresh.md)).
+and the initial April 2, 2026 start remain enforced. The first load also uses
+the dynamic end frozen at admission
+([ADR-0069](../../adr/0069-dynamic-end-for-initial-refresh.md)).
 
 | Method and path | Purpose | Access | Success |
 | --- | --- | --- | --- |

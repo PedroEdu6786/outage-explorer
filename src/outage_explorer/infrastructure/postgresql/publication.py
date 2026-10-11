@@ -197,7 +197,7 @@ class PostgresqlResourcePublicationStore:
             base_generation_id = coordination["active_generation_id"]
             self._check_base(connection, base_generation_id)
             if base_generation_id is None:
-                configuration.validate_initial_load_dates()
+                configuration.validate_initial_load_start_date()
 
             run_id = self._create_queued_run(
                 connection, requester_id, key_digest, configuration, base_generation_id
@@ -392,7 +392,7 @@ class PostgresqlResourcePublicationStore:
                     raise StaleRefreshOwnerError("Publication base changed")
                 self._check_base(connection, active)
                 if active is None:
-                    run.configuration.validate_initial_load_dates()
+                    run.configuration.validate_initial_load_start_date()
                 connection.execute(
                     "INSERT INTO published_generations(id, run_id, base_generation_id, verification_version, verified_at, datasets) VALUES (%s,%s,%s,%s,%s,%s)",
                     (

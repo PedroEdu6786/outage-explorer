@@ -67,6 +67,18 @@ def test_midnight_updates_new_run_but_replay_keeps_original(monkeypatch):
     assert store.admit.call_count == 2
 
 
+def test_initial_load_accepts_dynamic_end_and_keeps_it_after_midnight(monkeypatch):
+    refresh, now, reads, _, _ = service(monkeypatch)
+    run = refresh.admit(refresh.authorize("token"), RefreshAdmissionRequest("i" * 16))
+    assert run.configuration.end == date(2026, 10, 7)
+    run.configuration.validate_initial_load_start_date()
+
+    now[0] += timedelta(days=1)
+    run.configuration.validate_initial_load_start_date()
+    assert run.configuration.end == date(2026, 10, 7)
+    assert len(reads) == 1
+
+
 def test_today_uses_utc_independent_of_host_timezone(monkeypatch):
     refresh, now, _, _, _ = service(monkeypatch)
     now[0] = datetime(2026, 10, 7, 23, 30, tzinfo=timezone(timedelta(hours=-6)))
@@ -145,7 +157,7 @@ def test_long_intervals_preserve_initial_policy_and_frozen_caps():
         persistence_seconds=1800,
     )
     with pytest.raises(ValueError):
-        config.validate_initial_load_dates()
+        config.validate_initial_load_start_date()
     with pytest.raises(ValueError):
         RefreshConfiguration.model_validate(
             config.model_dump() | {"source_interval_days": 183}
