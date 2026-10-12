@@ -132,27 +132,37 @@ class BoundedPreviewSequences:
     def acquire(self, cursor: str, user_id: str, dataset: Dataset) -> PreviewPosition:
         with self._lock:
             self.cleanup()
-            if not isinstance(cursor, str) or len(cursor) > self._bounds.cursor_bytes:
-                raise PreviewUnavailableError("Preview unavailable")
+            self._validate_cursor_signature(cursor)
+
             try:
-                encoded, supplied = cursor.encode("ascii").split(b".")
-                expected = base64.urlsafe_b64encode(
-                    hmac.digest(self._key, encoded, "sha256")
-                ).rstrip(b"=")
-                if not hmac.compare_digest(supplied, expected):
-                    raise ValueError
                 sequence_id, after = self._cursors[cursor]
                 state = self._states[sequence_id]
-                if (
-                    state.retired
-                    or state.sequence.user_id != user_id
-                    or state.sequence.dataset != dataset
-                ):
-                    raise ValueError
-            except (ValueError, KeyError, UnicodeError):
+            except KeyError:
                 raise PreviewUnavailableError("Preview unavailable") from None
+
+            if state.retired:
+                raise PreviewUnavailableError("Preview unavailable")
+            if state.sequence.user_id != user_id:
+                raise PreviewUnavailableError("Preview unavailable")
+            if state.sequence.dataset != dataset:
+                raise PreviewUnavailableError("Preview unavailable")
+
             state.active += 1
             return PreviewPosition(state.sequence, after)
+
+    def _validate_cursor_signature(self, cursor: str) -> None:
+        """Reject malformed cursors or cursors changed after the server issued them."""
+        if not isinstance(cursor, str) or len(cursor) > self._bounds.cursor_bytes:
+            raise PreviewUnavailableError("Preview unavailable")
+        try:
+            encoded_payload, supplied_signature = cursor.encode("ascii").split(b".")
+        except (ValueError, UnicodeError):
+            raise PreviewUnavailableError("Preview unavailable") from None
+
+        signature_bytes = hmac.digest(self._key, encoded_payload, "sha256")
+        expected_signature = base64.urlsafe_b64encode(signature_bytes).rstrip(b"=")
+        if not hmac.compare_digest(supplied_signature, expected_signature):
+            raise PreviewUnavailableError("Preview unavailable")
 
     def release(self, sequence: PreviewSequence) -> None:
         with self._lock:
