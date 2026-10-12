@@ -371,7 +371,7 @@ def test_failed_reap_preserves_slot_pins_and_recovers(harness, synthetic_file):
             self.closed = True
 
     pin = Pin()
-    reservation = launcher.reserve()
+    reservation = launcher.acquire_slot()
     reservation.handoff((pin,))
     try:
         reservation.query(
@@ -386,7 +386,7 @@ def test_failed_reap_preserves_slot_pins_and_recovers(harness, synthetic_file):
         assert record is not None
         assert list(Path(record["staging"]).glob("*.parquet"))
         with pytest.raises(AnalyticalBusyError):
-            launcher.reserve()
+            launcher.acquire_slot()
         # Logical expiry/cleanup cannot release unresolved ownership.
         launcher.recovery.reconcile()
         assert launcher.active and not pin.closed

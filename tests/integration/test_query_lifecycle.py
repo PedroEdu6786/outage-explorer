@@ -282,7 +282,7 @@ def test_topology_rejected_and_no_fork_reuse(tmp_path, monkeypatch):
 
 def test_busy_admission_before_inputs_and_reservation_release(queries, system):
     service, store, _, runtime, launcher = queries
-    held = launcher.reserve()
+    held = launcher.acquire_slot()
     service._inputs = Mock()
     try:
         with pytest.raises(AnalyticalBusyError):
@@ -364,7 +364,7 @@ def test_unreaped_sql_explicitly_hands_off_all_pins_and_result_reservation():
     pin.close.assert_called_once()
     results.reserve.return_value.close.assert_called_once()
     assert launcher.recovery.pending == 0
-    launcher.reserve().close()
+    launcher.acquire_slot().close()
 
 
 @pytest.mark.parametrize("sql", ["SELECT 42", "SELECT * FROM national"])
@@ -388,5 +388,5 @@ def test_denied_application_authorization_before_results_inputs_or_runtime(sql):
         service.execute("token", sql)
     publications.active_generation.assert_not_called()
     inputs.prepare.assert_not_called()
-    execution.reserve.assert_not_called()
+    execution.acquire_slot.assert_not_called()
     results.reserve.assert_not_called()

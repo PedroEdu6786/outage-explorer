@@ -60,7 +60,7 @@ class QueryService:
         execution = None
         pins: list[PinnedInputs] = []
         try:
-            execution = self._execution.reserve()
+            execution = self._execution.acquire_slot()
             generation = self._publications.active_generation() if grains else None
             if grains and generation is None:
                 raise DataUnavailableError("Published data unavailable")

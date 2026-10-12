@@ -171,8 +171,8 @@ class ForwardExecution:
     def __init__(self, supervisor: AnalyticalSupervisor) -> None:
         self._supervisor = supervisor
 
-    def reserve(self) -> ExecutionReservation:
-        return self._supervisor.ready().execution.reserve()
+    def acquire_slot(self) -> ExecutionReservation:
+        return self._supervisor.ready().execution.acquire_slot()
 
 
 class ForwardResults:

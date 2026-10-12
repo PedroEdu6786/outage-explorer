@@ -50,20 +50,32 @@ class VerifiedLauncher:
             raise ValueError("Reviewed runtime evidence reference required")
         self._bounds, self._runtime = bounds, runtime
         self._slot = Lock()
-        self._guard = Lock()
+        self._lifecycle_lock = Lock()
         self._accepting = True
         self.recovery = recovery if recovery is not None else RecoveryOwner()
 
-    def reserve(self) -> "_Reservation":
-        with self._guard:
-            if self._runtime is None or not self._accepting:
+    def acquire_slot(self) -> "_Reservation":
+        """Claim the single execution slot, or fail immediately if unavailable."""
+        # Keep shutdown from starting between the readiness check and admission.
+        with self._lifecycle_lock:
+            if self._runtime is None:
                 raise RuntimeUnavailableError("Reviewed analytical runtime unavailable")
-            if not self._slot.acquire(blocking=False):
+            if not self._accepting:
+                raise RuntimeUnavailableError("Reviewed analytical runtime unavailable")
+
+            slot_acquired = self._slot.acquire(blocking=False)
+            if not slot_acquired:
                 raise AnalyticalBusyError("Analytical execution busy")
-            return _Reservation(self._slot, self._runtime, self._bounds, self.recovery)
+
+            return _Reservation(
+                slot=self._slot,
+                runtime=self._runtime,
+                bounds=self._bounds,
+                recovery=self.recovery,
+            )
 
     def stop(self) -> None:
-        with self._guard:
+        with self._lifecycle_lock:
             self._accepting = False
 
     @property

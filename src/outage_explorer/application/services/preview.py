@@ -63,7 +63,7 @@ class PreviewService:
         user_id = access.principal.id
         request.validate_dataset(dataset)
         sequence: PreviewSequence | None = None
-        reservation = None
+        execution_slot = None
         initial = request.cursor is None
         try:
             if request.cursor is not None:
@@ -72,10 +72,12 @@ class PreviewService:
             else:
                 after = None
             # Reserve before publication/files on initial reads; no download on busy.
-            reservation = self._execution.reserve()
+            execution_slot = self._execution.acquire_slot()
             if sequence is None:
-                sequence = self._start_sequence(user_id, dataset, request, reservation)
-            result = reservation.preview(
+                sequence = self._start_sequence(
+                    user_id, dataset, request, execution_slot
+                )
+            result = execution_slot.preview(
                 PreviewRead(
                     dataset,
                     sequence.inputs.files,
@@ -92,22 +94,24 @@ class PreviewService:
                 self._sequences.discard(sequence)
             raise
         finally:
-            self._release_read(reservation, sequence)
+            self._release_read(execution_slot, sequence)
 
     def _release_read(
-        self, reservation: ExecutionReservation | None, sequence: PreviewSequence | None
+        self,
+        execution_slot: ExecutionReservation | None,
+        sequence: PreviewSequence | None,
     ) -> None:
         # Unreaped workers retain capacity and pins until termination is proved.
-        if reservation is not None:
+        if execution_slot is not None:
             try:
-                reservation.close()
+                execution_slot.close()
             except BaseException:
                 leases = (
                     ()
                     if sequence is None
                     else (_ActivePreviewLease(self._sequences, sequence),)
                 )
-                reservation.handoff(leases)
+                execution_slot.handoff(leases)
                 raise
         if sequence is not None:
             self._sequences.release(sequence)
@@ -117,14 +121,14 @@ class PreviewService:
         user_id: str,
         dataset: Dataset,
         request: PreviewRequest,
-        reservation: ExecutionReservation,
+        execution_slot: ExecutionReservation,
     ) -> PreviewSequence:
         generation = self._publications.active_generation()
         if generation is None:
             raise DataUnavailableError("Published data unavailable")
         inputs = self._inputs.prepare(generation, dataset)
         try:
-            reservation.check_preparation()
+            execution_slot.check_preparation()
             return self._sequences.create(
                 user_id,
                 dataset,

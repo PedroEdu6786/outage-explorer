@@ -143,7 +143,7 @@ def test_uncertain_control_retains_capacity_staging_and_explicit_leases(
     launcher = VerifiedLauncher(
         adapter.profile.execution_bounds, adapter, evidence="controlled only"
     )
-    reservation = launcher.reserve()
+    reservation = launcher.acquire_slot()
     if failure in {"create", "start", "inspect"}:
         control.fail = failure
         with pytest.raises(RuntimeUnavailableError):
@@ -159,7 +159,7 @@ def test_uncertain_control_retains_capacity_staging_and_explicit_leases(
         reservation.close()
     reservation.handoff((lease,))
     with pytest.raises(AnalyticalBusyError):
-        launcher.reserve()
+        launcher.acquire_slot()
     assert ledger.read() is not None and list(
         Path(adapter.profile.staging_root).iterdir()
     )
@@ -169,7 +169,7 @@ def test_uncertain_control_retains_capacity_staging_and_explicit_leases(
     launcher.recovery.reconcile()
     lease.close.assert_called_once()
     assert launcher.recovery.pending == 0 and ledger.read() is None
-    launcher.reserve().close()
+    launcher.acquire_slot().close()
 
 
 @pytest.mark.parametrize(
@@ -509,7 +509,7 @@ def test_staging_cleanup_failure_retains_slot_and_ledger_until_retry(runtime):
     launcher = VerifiedLauncher(
         adapter.profile.execution_bounds, adapter, evidence="controlled"
     )
-    reservation = launcher.reserve()
+    reservation = launcher.acquire_slot()
     reservation.query(QueryRead("SELECT 42", ()))
     staging = adapter._staging
     original = staging.close
@@ -517,11 +517,11 @@ def test_staging_cleanup_failure_retains_slot_and_ledger_until_retry(runtime):
     with pytest.raises(RuntimeUnavailableError):
         reservation.close()
     with pytest.raises(AnalyticalBusyError):
-        launcher.reserve()
+        launcher.acquire_slot()
     assert ledger.read() is not None
     staging.close = original
     reservation.close()
-    launcher.reserve().close()
+    launcher.acquire_slot().close()
 
 
 @pytest.mark.parametrize("fault", ["timeout", "cancel", "resource", "subprocess"])

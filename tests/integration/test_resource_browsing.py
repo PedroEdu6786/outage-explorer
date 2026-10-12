@@ -301,7 +301,7 @@ def test_missing_or_corrupt_descriptor_object_is_unavailable(system, browsing, f
 
 def test_busy_runtime_denies_before_download(system, browsing):
     service, _, _, _, _, durable, _, _ = browsing
-    reservation = service.service._execution.reserve()
+    reservation = service.service._execution.acquire_slot()
     try:
         with pytest.raises(AnalyticalBusyError):
             service.page(system[2][Role.VIEWER], "national")

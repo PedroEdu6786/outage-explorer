@@ -115,19 +115,19 @@ def test_inert_construction_start_idempotence_and_order(composed, tmp_path):
     supervisor, resources, _, _, order = composed
     assert not list(tmp_path.iterdir())
     with pytest.raises(RuntimeUnavailableError):
-        supervisor.execution.reserve()
+        supervisor.execution.acquire_slot()
     assert resources == []
     supervisor.start()
     supervisor.start()
     assert order == ["reconcile", "construct"]
-    reservation = supervisor.execution.reserve()
+    reservation = supervisor.execution.acquire_slot()
     reservation.close()
     supervisor.close()
     supervisor.close()
     assert not resources[0].results._records
     assert resources[0].close_inputs.call_count == 1
     with pytest.raises(RuntimeUnavailableError):
-        supervisor.execution.reserve()
+        supervisor.execution.acquire_slot()
 
 
 @pytest.mark.parametrize("mode", [{"serving_processes": 2}, {"reloader": True}])
@@ -186,7 +186,7 @@ def test_process_ownership_checked_before_start_and_close(composed, monkeypatch)
         for operation in (
             supervisor.start,
             supervisor.close,
-            supervisor.execution.reserve,
+            supervisor.execution.acquire_slot,
         ):
             with pytest.raises(RuntimeUnavailableError):
                 operation()
@@ -196,13 +196,13 @@ def test_process_ownership_checked_before_start_and_close(composed, monkeypatch)
 def test_close_preserves_active_execution_then_retries(composed):
     supervisor, resources, _, _, _ = composed
     supervisor.start()
-    reservation = supervisor.execution.reserve()
+    reservation = supervisor.execution.acquire_slot()
     with pytest.raises(RuntimeUnavailableError):
         supervisor.close()
     assert supervisor._ledger._fd is not None
     assert resources[0].close_inputs.call_count == 0
     with pytest.raises(RuntimeUnavailableError):
-        supervisor.execution.reserve()
+        supervisor.execution.acquire_slot()
     reservation.close()
     supervisor.close()
     assert supervisor._ledger._fd is None

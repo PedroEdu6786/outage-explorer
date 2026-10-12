@@ -236,7 +236,7 @@ def build_data_services(
         refresh_configuration,
         security,
     )
-    # With no reviewed runtime, reserve fails before preparation or source access.
+    # With no reviewed runtime, acquire_slot fails before preparation or source access.
     if resources is None:
         encoding: TabularEncoding = PreviewEncoding(
             EncodingBounds(1048576, 16, 10000, 100, 65536)

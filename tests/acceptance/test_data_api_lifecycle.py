@@ -100,7 +100,7 @@ def test_http_ack_overlap_publication_and_snapshot_survival(
 
 def test_http_busy_slot_keeps_health_and_status_available(app, system, queries):
     client, headers = http.client_for(app, system)
-    reservation = queries[4].reserve()
+    reservation = queries[4].acquire_slot()
     try:
         result = client.post("/api/query", json={"sql": "SELECT 1"}, headers=headers)
         assert (

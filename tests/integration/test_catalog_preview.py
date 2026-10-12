@@ -316,7 +316,7 @@ def test_old_generation_reads_during_new_publication_and_source_unavailable(
 def test_integrity_failure_and_busy_before_download(system, browsing):
     service, cache, _, _, _, client, _ = browsing
     token = system[2][Role.VIEWER]
-    reservation = service.service._execution.reserve()
+    reservation = service.service._execution.acquire_slot()
     client.calls.clear()
     try:
         with pytest.raises(AnalyticalBusyError):
@@ -365,20 +365,20 @@ def test_response_byte_prefix_never_skips_and_oversized_first_row(system, browsi
 
 def test_absent_reviewed_runtime_and_reaping_capacity_are_fail_closed():
     with pytest.raises(RuntimeUnavailableError):
-        VerifiedLauncher(EXECUTION).reserve()
+        VerifiedLauncher(EXECUTION).acquire_slot()
     runtime = Mock()
     launcher = VerifiedLauncher(EXECUTION, runtime, evidence="test only")
-    reservation = launcher.reserve()
+    reservation = launcher.acquire_slot()
     with pytest.raises(AnalyticalBusyError):
-        launcher.reserve()
+        launcher.acquire_slot()
     runtime.terminate_and_reap.side_effect = OSError("test failed reaping")
     with pytest.raises(OSError):
         reservation.close()
     with pytest.raises(AnalyticalBusyError):
-        launcher.reserve()
+        launcher.acquire_slot()
     runtime.terminate_and_reap.side_effect = None
     reservation.close()
-    launcher.reserve().close()
+    launcher.acquire_slot().close()
 
 
 def test_metadata_counts_bytes_and_active_expiry_cleanup():
@@ -541,12 +541,12 @@ def test_unreaped_worker_keeps_active_preview_pin_through_expiry():
     launcher.recovery.reconcile()
     inputs.close.assert_not_called()
     with pytest.raises(AnalyticalBusyError):
-        launcher.reserve()
+        launcher.acquire_slot()
     runtime.terminate_and_reap.side_effect = None
     launcher.recovery.reconcile()
     inputs.close.assert_called_once()
     assert launcher.recovery.pending == 0
-    launcher.reserve().close()
+    launcher.acquire_slot().close()
 
 
 def test_missing_runtime_denies_before_publication_or_preparation():
@@ -825,7 +825,7 @@ def test_portable_facility_unreaped_worker_retains_pin_until_reconciliation(
     state.sequences.cleanup()
     state.pins[0].close.assert_not_called()
     with pytest.raises(AnalyticalBusyError):
-        state.launcher.reserve()
+        state.launcher.acquire_slot()
     state.runtime.terminate_and_reap.side_effect = None
     state.launcher.recovery.reconcile()
     state.pins[0].close.assert_called_once()

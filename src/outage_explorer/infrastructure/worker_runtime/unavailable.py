@@ -29,7 +29,7 @@ class UnavailableInputs:
 
 
 class UnavailableExecution:
-    def reserve(self) -> ExecutionReservation:
+    def acquire_slot(self) -> ExecutionReservation:
         raise RuntimeUnavailableError("Analytical resources unavailable")
 
 

@@ -248,7 +248,7 @@ def test_authentication_and_scope_authorization_precede_inputs():
         service.execute("private-session", "SELECT * FROM generators")
     publication.active_generation.assert_not_called()
     inputs.prepare.assert_not_called()
-    execution.reserve.assert_not_called()
+    execution.acquire_slot.assert_not_called()
     results.reserve.assert_not_called()
 
 
