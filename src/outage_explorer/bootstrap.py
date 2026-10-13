@@ -49,7 +49,10 @@ from outage_explorer.application.ports.execution import (
 )
 from outage_explorer.application.ports.preview_sequences import PreviewSequences
 from outage_explorer.application.ports.query_results import QueryResults
-from outage_explorer.application.ports.refresh_execution import RefreshPipeline
+from outage_explorer.application.ports.refresh_execution import (
+    RefreshPipeline,
+    RefreshPipelineFactory,
+)
 from outage_explorer.application.ports.source import ROUTES, SourceBounds
 from outage_explorer.application.ports.sql_inspection import SqlInspector
 from outage_explorer.application.ports.tabular_encoding import TabularEncoding
@@ -175,6 +178,8 @@ from outage_explorer.settings import (
     ArtifactSettings,
     DatabaseSettings,
     ModelSettings,
+    ResourceWorkerSettings,
+    S3Settings,
     SourceSettings,
     artifact_settings,
     auth_settings,
@@ -523,20 +528,26 @@ def execute_connector(
             wire.close()
 
 
-def execute_connector_artifacts(
-    inputs: ConnectorArtifactInput,
-    *,
-    environment: Mapping[str, str] | None = None,
-    session_factory: Callable[..., Any] | None = None,
-    client: Any = None,
-) -> DurableResourceReceipt:
-    """Explicit AWS operation; an injected session owns credential resolution."""
+@dataclass(frozen=True)
+class _ArtifactTransferPlan:
+    root: Path
+    identity: CandidateResult | DurableResourceReceipt
+    artifacts: ArtifactBounds
+    model: RefreshBounds
+    target: S3Settings
+    workers: ResourceWorkerSettings
+    transfer: TransferBounds
+
+
+def _artifact_transfer_plan(
+    inputs: ConnectorArtifactInput, environment: Mapping[str, str]
+) -> _ArtifactTransferPlan:
     try:
         root_text, identity_path, artifacts, model, s3, worker_config = (
             artifact_settings(
                 inputs.staging,
                 inputs.resources,
-                os.environ if environment is None else environment,
+                environment,
                 inputs.config_path,
                 inputs.s3_workers,
             )
@@ -571,56 +582,86 @@ def execute_connector_artifacts(
         > worker_config.temporary_bytes
     ):
         raise ConnectorConfigurationError("Invalid connector artifact worker limits")
+    return _ArtifactTransferPlan(
+        root,
+        identity,
+        artifact_bounds,
+        model_bounds,
+        s3,
+        worker_config,
+        transfer_bounds,
+    )
+
+
+def _artifact_s3_client(
+    plan: _ArtifactTransferPlan, session_factory: Callable[..., Any] | None
+) -> Any:
+    provider = boto3.Session if session_factory is None else session_factory
+    session = provider(profile_name=plan.target.profile, region_name=plan.target.region)
+    return session.client(
+        "s3",
+        config=Config(
+            connect_timeout=plan.transfer.timeout_seconds,
+            read_timeout=plan.transfer.timeout_seconds,
+            retries={"mode": "standard", "total_max_attempts": 1},
+            max_pool_connections=plan.workers.s3_workers,
+        ),
+    )
+
+
+def _save_artifact_receipt(root: Path, receipt: DurableResourceReceipt) -> None:
+    receipt_path = root / "receipts" / (receipt.generation_id + ".json")
+    if receipt_path.exists():
+        if read_receipt(str(receipt_path)) != receipt:
+            raise ConnectorConfigurationError("Conflicting local resource receipt")
+    else:
+        write_receipt(receipt_path, receipt)
+
+
+def execute_connector_artifacts(
+    inputs: ConnectorArtifactInput,
+    *,
+    environment: Mapping[str, str] | None = None,
+    session_factory: Callable[..., Any] | None = None,
+    client: Any = None,
+) -> DurableResourceReceipt:
+    """Explicit AWS operation; an injected session owns credential resolution."""
+    plan = _artifact_transfer_plan(
+        inputs, os.environ if environment is None else environment
+    )
     workers = BoundedConnectorWorkers(
-        worker_config.s3_workers, elapsed_seconds=transfer_bounds.elapsed_seconds
+        plan.workers.s3_workers, elapsed_seconds=plan.transfer.elapsed_seconds
     )
     local = LocalConnectorEvidence(
-        LocalParquetStore(root / "objects", artifact_bounds, workers.check), workers
+        LocalParquetStore(plan.root / "objects", plan.artifacts, workers.check), workers
     )
     # Verify the complete local candidate before constructing an AWS client.
     if inputs.operation == "persist":
-        assert isinstance(identity, CandidateResult)
-        local.verify_candidate(identity, model_bounds)
+        assert isinstance(plan.identity, CandidateResult)
+        local.verify_candidate(plan.identity, plan.model)
     wire = client
     owned = wire is None
     try:
         if wire is None:
-            provider = boto3.Session if session_factory is None else session_factory
-            session = provider(profile_name=s3.profile, region_name=s3.region)
-            wire = session.client(
-                "s3",
-                config=Config(
-                    connect_timeout=transfer_bounds.timeout_seconds,
-                    read_timeout=transfer_bounds.timeout_seconds,
-                    retries={"mode": "standard", "total_max_attempts": 1},
-                    max_pool_connections=worker_config.s3_workers,
-                ),
-            )
+            wire = _artifact_s3_client(plan, session_factory)
         durable = S3ResourceStore(
             wire,
-            s3.bucket,
-            s3.prefix,
-            artifact_bounds,
-            transfer_bounds,
+            plan.target.bucket,
+            plan.target.prefix,
+            plan.artifacts,
+            plan.transfer,
             cancelled=workers.cancelled,
         )
         if inputs.operation == "persist":
-            assert isinstance(identity, CandidateResult)
+            assert isinstance(plan.identity, CandidateResult)
             receipt = PersistResourceArtifacts(local, durable, workers).execute(
-                identity, model_bounds
+                plan.identity, plan.model
             )
-            receipt_path = root / "receipts" / (identity.generation_id + ".json")
-            if receipt_path.exists():
-                if read_receipt(str(receipt_path)) != receipt:
-                    raise ConnectorConfigurationError(
-                        "Conflicting local resource receipt"
-                    )
-            else:
-                write_receipt(receipt_path, receipt)
+            _save_artifact_receipt(plan.root, receipt)
             return receipt
-        assert isinstance(identity, DurableResourceReceipt)
-        RecoverResourceArtifacts(local, durable).execute(identity, model_bounds)
-        return identity
+        assert isinstance(plan.identity, DurableResourceReceipt)
+        RecoverResourceArtifacts(local, durable).execute(plan.identity, plan.model)
+        return plan.identity
     except MissingDependencyException:
         raise ConnectorDependencyError("AWS SDK login dependency unavailable") from None
     finally:
@@ -709,65 +750,82 @@ def _access_pool(database: DatabaseSettings) -> BoundedPostgresqlPool:
     )
 
 
-def build_refresh_worker(
-    *,
-    environment: Mapping[str, str] | None = None,
-    transport: httpx.BaseTransport | None = None,
-    client: Any = None,
-) -> SupervisedRefreshProcess:
-    """Explicit independent process composition; construction starts no jobs/I/O."""
-    env = dict(os.environ if environment is None else environment)
-    try:
-        target = s3_settings(env)  # Fail before admitting any source work.
-        database = database_settings(env)
-        staging = env["OUTAGE_REFRESH_STAGING"]
-        api_key = env["EIA_API_KEY"]
-        if not staging or "\x00" in staging or not api_key:
-            raise ValueError
-    except (KeyError, ValueError):
-        raise ConnectorConfigurationError(
-            "Invalid refresh worker configuration"
-        ) from None
-    pool = _access_pool(database)
-    store = PostgresqlResourcePublicationStore(
-        pool,
-        PostgresqlRefreshRunRepository(pool),
-        PostgresqlPublishedGenerationRepository(pool),
-        PostgresqlRefreshCoordinationRepository(pool),
+@dataclass(frozen=True)
+class _RefreshRunLimits:
+    source: SourceBounds
+    model: RefreshBounds
+    artifacts: ArtifactBounds
+    workers: ResourceWorkerSettings
+
+
+def _refresh_run_limits(config: RefreshConfiguration) -> _RefreshRunLimits:
+    source = SourceBounds(
+        **asdict(
+            replace(
+                SourceSettings(),
+                interval_days=config.source_interval_days,
+                elapsed_seconds=config.candidate_seconds,
+            )
+        )
     )
-    lease = RenewableRefreshLease(store)
+    model = RefreshBounds(
+        **asdict(
+            replace(
+                ModelSettings(),
+                interval_days=config.model_interval_days,
+            )
+        )
+    )
+    artifacts = ArtifactBounds(**asdict(ArtifactSettings()))
+    workers = resource_worker_settings({}, s3=config.s3_workers)
+    if (
+        workers.s3_workers * (2 * artifacts.file_bytes + artifacts.row_group_bytes)
+        > workers.memory_bytes
+        or 2 * artifacts.total_bytes + workers.s3_workers * artifacts.file_bytes
+        > workers.temporary_bytes
+    ):
+        raise ConnectorConfigurationError("Invalid refresh worker limits")
+    return _RefreshRunLimits(source, model, artifacts, workers)
+
+
+def _close_refresh_run_resources(
+    run_root: Path,
+    wire: httpx.BaseTransport | None,
+    sdk: Any,
+    *,
+    owned_wire: bool,
+    owned_sdk: bool,
+) -> None:
+    try:
+        shutil.rmtree(run_root)
+    finally:
+        try:
+            if owned_wire and wire is not None:
+                wire.close()
+        finally:
+            if owned_sdk and sdk is not None:
+                sdk.close()
+
+
+def _refresh_pipeline_factory(
+    store: PostgresqlResourcePublicationStore,
+    lease: RenewableRefreshLease,
+    target: S3Settings,
+    staging: str,
+    api_key: str,
+    transport: httpx.BaseTransport | None,
+    client: Any,
+) -> RefreshPipelineFactory:
+    """Bind process dependencies; create run resources only when called."""
 
     @contextmanager
     def pipeline(run: RefreshRun, owner: RefreshOwner) -> Iterator[RefreshPipeline]:
         config = run.configuration
-        source_bounds = SourceBounds(
-            **asdict(
-                replace(
-                    SourceSettings(),
-                    interval_days=config.source_interval_days,
-                    elapsed_seconds=config.candidate_seconds,
-                )
-            )
-        )
-        model_bounds = RefreshBounds(
-            **asdict(
-                replace(
-                    ModelSettings(),
-                    interval_days=config.model_interval_days,
-                )
-            )
-        )
-        artifacts = ArtifactBounds(**asdict(ArtifactSettings()))
-        worker_config = resource_worker_settings({}, s3=config.s3_workers)
-        if (
-            worker_config.s3_workers
-            * (2 * artifacts.file_bytes + artifacts.row_group_bytes)
-            > worker_config.memory_bytes
-            or 2 * artifacts.total_bytes
-            + worker_config.s3_workers * artifacts.file_bytes
-            > worker_config.temporary_bytes
-        ):
-            raise ConnectorConfigurationError("Invalid refresh worker limits")
+        limits = _refresh_run_limits(config)
+        source_bounds = limits.source
+        model_bounds = limits.model
+        artifacts = limits.artifacts
+        worker_config = limits.workers
         workers = BoundedConnectorWorkers(1, elapsed_seconds=config.candidate_seconds)
 
         active_workers = workers
@@ -886,15 +944,43 @@ def build_refresh_worker(
                 ),
             )
         finally:
-            try:
-                shutil.rmtree(run_root)
-            finally:
-                try:
-                    if owned_wire and wire is not None:
-                        wire.close()
-                finally:
-                    if owned_sdk and sdk is not None:
-                        sdk.close()
+            _close_refresh_run_resources(
+                run_root, wire, sdk, owned_wire=owned_wire, owned_sdk=owned_sdk
+            )
+
+    return pipeline
+
+
+def build_refresh_worker(
+    *,
+    environment: Mapping[str, str] | None = None,
+    transport: httpx.BaseTransport | None = None,
+    client: Any = None,
+) -> SupervisedRefreshProcess:
+    """Explicit independent process composition; construction starts no jobs/I/O."""
+    env = dict(os.environ if environment is None else environment)
+    try:
+        target = s3_settings(env)  # Fail before admitting any source work.
+        database = database_settings(env)
+        staging = env["OUTAGE_REFRESH_STAGING"]
+        api_key = env["EIA_API_KEY"]
+        if not staging or "\x00" in staging or not api_key:
+            raise ValueError
+    except (KeyError, ValueError):
+        raise ConnectorConfigurationError(
+            "Invalid refresh worker configuration"
+        ) from None
+    pool = _access_pool(database)
+    store = PostgresqlResourcePublicationStore(
+        pool,
+        PostgresqlRefreshRunRepository(pool),
+        PostgresqlPublishedGenerationRepository(pool),
+        PostgresqlRefreshCoordinationRepository(pool),
+    )
+    lease = RenewableRefreshLease(store)
+    pipeline = _refresh_pipeline_factory(
+        store, lease, target, staging, api_key, transport, client
+    )
 
     execution = RefreshExecution(store, store, pipeline)
     worker = RefreshWorker(store, execution, lease, str(uuid4()))
