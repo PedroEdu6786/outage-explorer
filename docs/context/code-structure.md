@@ -20,7 +20,7 @@ ADRs and devlogs rather than in this directory guide.
 | `application/ports/` | Interfaces the application needs from external capabilities. | Published inputs, storage, SQL inspection and execution. |
 | `infrastructure/` | Concrete implementations of those interfaces. | PostgreSQL, Cognito, EIA, S3, Parquet, cache and worker runtime. |
 | `entrypoints/` | Translate HTTP, CLI and worker inputs/outputs. | Flask routes, command arguments and worker protocols. |
-| `bootstrap.py` | Construct dependencies and inject them at explicit startup. | Connect a use case to PostgreSQL/S3/worker adapters. |
+| `bootstrap.py`, `refresh_pipeline_composition.py` | Construct dependencies and inject them at explicit startup. | Connect a use case to PostgreSQL/S3/worker adapters; assemble one refresh run's pipeline. |
 | `configuration/` | Read and validate startup configuration by consumer. | Connector, artifact, S3, database, auth, refresh and analytical settings. |
 | `settings.py` | Preserve existing configuration imports while callers migrate. | Re-exports only; no validation or I/O. |
 
@@ -29,6 +29,7 @@ Selected existing files and packages:
 ```text
 src/outage_explorer/
   bootstrap.py
+  refresh_pipeline_composition.py  # per-run refresh dependency wiring
   settings.py
   configuration/             # focused startup settings and loaders
   domain/
@@ -88,6 +89,11 @@ features can be grouped inside each layer. Create files only when behavior needs
 them; do not add a parallel `modules/<feature>/{domain,application}` hierarchy,
 generic CRUD framework or repository for every analytical row type.
 
+`bootstrap.py` validates refresh worker startup configuration and constructs the
+supervisor. Its focused composition helper `refresh_pipeline_composition.py`
+assembles and closes one run's concrete resources when the worker invokes the
+pipeline factory. No refresh resources start at import or factory construction.
+
 Within `entrypoints/http/`, `routes/` owns controllers, `requests/` owns
 decoding and request DTOs, `responses/` owns public response mapping, and
 `transport/` owns guards, browser cookies, errors and preflight. `app.py`,
@@ -99,8 +105,11 @@ ADR-0092 relocates ADR-0076's exact request-model import allowances to the
 
 For local Parquet restoration, `LocalConnectorEvidence` delegates to
 `ResourceRestorer` in `infrastructure/parquet/resource_restoration.py`.
-`ResourceDownload` owns one transfer's stream lifetime; `LocalParquetStore`
-owns file lookup, capacity accounting and atomic installation. Baseline content
+`ResourceDownload` owns one transfer's stream lifetime. In `infrastructure/parquet/`,
+`object_storage.py` owns file lookup, capacity accounting and atomic installation;
+`staged_object.py` streams and verifies one temporary file before admission;
+`storage.py` adds Parquet encoding and verification through `LocalParquetStore`.
+`value_bounds.py` checks nested row values before Arrow allocation. Baseline content
 verification remains in `ParquetResourceBuilder`, supplied to restoration as a
 callable. Restoration does not access the store's private locks or counters.
 
@@ -118,6 +127,7 @@ Runtime calls through a port do not permit importing its concrete implementation
 | `configuration` | Other focused configuration modules. | Application, infrastructure, entrypoints and bootstrap. |
 | `settings.py` | Focused configuration modules for compatibility imports. | Validation logic and process I/O. |
 | `bootstrap` | All layers and settings, for construction and injection. | Business rules and request orchestration. |
+| `refresh_pipeline_composition.py` | All layers and settings, for per-run construction and cleanup invoked by bootstrap. | Business rules and request orchestration. |
 
 Database drivers, SDKs, engine calls and file/network I/O belong in infrastructure.
 Under [ADR-0068](../adr/0068-declarative-refresh-configuration-validation.md),

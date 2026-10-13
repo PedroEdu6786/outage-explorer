@@ -1,23 +1,14 @@
-"""Local content-addressed storage with explicit staging and decode bounds."""
+"""Bounded Parquet encoding and verification over immutable local objects."""
 
-import hashlib
 import io
-import math
-import os
-import re
-import tempfile
-from collections.abc import Callable, Iterable, Iterator
-from datetime import date, datetime
-from decimal import Decimal
-from pathlib import Path
-from threading import RLock
+from collections.abc import Iterable, Iterator
+from datetime import date
 from typing import Any, cast
 
 import pyarrow as pa  # type: ignore[import-untyped]
 import pyarrow.parquet as pq  # type: ignore[import-untyped]
 
 from outage_explorer.application.ports.artifacts import (
-    ArtifactBounds,
     ArtifactError,
     ArtifactKind,
     ArtifactLimitError,
@@ -25,51 +16,9 @@ from outage_explorer.application.ports.artifacts import (
     StoredObject,
 )
 from outage_explorer.domain.observations import Grain
+from outage_explorer.infrastructure.parquet.object_storage import LocalObjectStore
 from outage_explorer.infrastructure.parquet.schemas import schema_for
-
-
-def value_size(value: object, bounds: ArtifactBounds, depth: int = 0) -> int:
-    """Bound recursively before Arrow/JSON allocation; approximate Python payload."""
-    if depth > bounds.json_depth:
-        raise ArtifactLimitError("Exceeded nested value depth")
-    if isinstance(value, str):
-        if len(value) > bounds.field_bytes:
-            raise ArtifactLimitError("Exceeded field bytes")
-        size = len(value.encode("utf-8"))
-        if size > bounds.field_bytes:
-            raise ArtifactLimitError("Exceeded field bytes")
-        return size + 8
-    if value is None or isinstance(value, (bool, date, datetime, Decimal)):
-        return 32
-    if type(value) is int:
-        if value.bit_length() > bounds.field_bytes * 3:
-            raise ArtifactLimitError("Exceeded integer bytes")
-        return max(8, value.bit_length())
-    if type(value) is float:
-        if not math.isfinite(value):
-            raise ArtifactError("JSON values must be finite")
-        return 16
-    if isinstance(value, (dict, list, tuple)):
-        count = len(value)
-        if count > bounds.row_group_bytes:
-            raise ArtifactLimitError("Exceeded collection size")
-        size = 8
-        if isinstance(value, dict):
-            for key, item in value.items():
-                if not isinstance(key, str):
-                    raise ArtifactError("Object keys must be strings")
-                size += value_size(key, bounds, depth + 1) + value_size(
-                    item, bounds, depth + 1
-                )
-                if size > bounds.row_group_bytes:
-                    raise ArtifactLimitError("Exceeded row-group bytes")
-        else:
-            for item in value:
-                size += value_size(item, bounds, depth + 1)
-                if size > bounds.row_group_bytes:
-                    raise ArtifactLimitError("Exceeded row-group bytes")
-        return size
-    raise ArtifactError("Unsupported artifact value")
+from outage_explorer.infrastructure.parquet.value_bounds import value_size as value_size
 
 
 class _LimitedBuffer(io.BytesIO):
@@ -83,57 +32,8 @@ class _LimitedBuffer(io.BytesIO):
         return super().write(data)
 
 
-class LocalParquetStore:
-    """An explicitly bounded write session; limits are not production defaults."""
-
-    def __init__(
-        self,
-        root: Path,
-        bounds: ArtifactBounds,
-        check: Callable[[], None] | None = None,
-    ) -> None:
-        self.check: Callable[[], None] = (lambda: None) if check is None else check
-        self.root = root
-        self.bounds = bounds
-        self._lock = RLock()
-        self._bytes = 0
-        self._transient_bytes = 0
-        self._objects: set[str] = set()
-        root.mkdir(parents=True, exist_ok=True)
-
-    def contains(self, reference: StoredObject) -> bool:
-        """Check for a local file; callers must verify it before reuse."""
-        return self._path(reference).exists()
-
-    def check_recovery_capacity(self, missing: tuple[ArtifactRef, ...]) -> None:
-        """Preflight missing files; writes still enforce capacity under the lock."""
-        download_bytes = sum(reference.object.byte_count for reference in missing)
-        with self._lock:
-            total_file_count = len(self._objects) + len(missing)
-            if total_file_count > self.bounds.objects:
-                raise ArtifactLimitError(
-                    "Resource recovery exceeds aggregate staging bounds"
-                )
-
-            occupied_bytes = self._bytes + self._transient_bytes
-            total_bytes_after_download = occupied_bytes + download_bytes
-            if total_bytes_after_download > self.bounds.total_bytes:
-                raise ArtifactLimitError(
-                    "Resource recovery exceeds aggregate staging bounds"
-                )
-
-    def account_transient(self, size: int) -> None:
-        """Charge cumulative transient input against this shared staging session.
-
-        Accounting remains conservative after inputs are released, just as
-        immutable file writes consume the session's aggregate budget.
-        """
-        self.check()
-        with self._lock:
-            occupied_bytes = self._bytes + self._transient_bytes
-            if occupied_bytes + size > self.bounds.total_bytes:
-                raise ArtifactLimitError("Exceeded aggregate transient staging bytes")
-            self._transient_bytes += size
+class LocalParquetStore(LocalObjectStore):
+    """Write and verify bounded Parquet files over one immutable staging session."""
 
     def adopt_exact(self, reference: ArtifactRef) -> None:
         """Charge an explicitly referenced existing file once, without listing.
@@ -153,125 +53,6 @@ class LocalParquetStore:
                 raise ArtifactLimitError("Exceeded total bytes")
             self._objects.add(reference.object.key)
             self._bytes += reference.object.byte_count
-
-    def discard_owned(self, reference: StoredObject) -> None:
-        """Remove an explicitly tracked recovery-owned file after workers join."""
-        path = self._path(reference, check=False)
-        with self._lock:
-            path.unlink(missing_ok=True)
-            if reference.key in self._objects:
-                self._objects.remove(reference.key)
-                self._bytes -= reference.byte_count
-
-    def _path(self, reference: StoredObject, *, check: bool = True) -> Path:
-        if check:
-            self.check()
-        if not re.fullmatch(r"[0-9a-f]{64}", reference.key):
-            raise ArtifactError("Invalid immutable object identity")
-        if reference.sha256 != reference.key:
-            raise ArtifactError("Invalid immutable object identity")
-        if type(reference.byte_count) is not int:
-            raise ArtifactLimitError("Invalid or oversized object bytes")
-        if not 0 < reference.byte_count <= self.bounds.file_bytes:
-            raise ArtifactLimitError("Invalid or oversized object bytes")
-        path = self.root / reference.key
-        if path.is_symlink():
-            raise ArtifactError("Object must not be a symbolic link")
-        return path
-
-    def put_immutable(
-        self, chunks: Iterable[bytes], *, expected: StoredObject | None = None
-    ) -> StoredObject:
-        if expected is not None:
-            self._path(expected)
-        temporary: Path | None = None
-        try:
-            digest = hashlib.sha256()
-            bytes_written = 0
-            with tempfile.NamedTemporaryFile(
-                dir=self.root, prefix=".staging-", delete=False
-            ) as target:
-                temporary = Path(target.name)
-                for chunk in chunks:
-                    self.check()
-                    if not isinstance(chunk, bytes):
-                        raise ArtifactError("Object chunks must be bytes")
-                    bytes_written += len(chunk)
-                    if bytes_written > self.bounds.file_bytes:
-                        raise ArtifactLimitError("Exceeded file bytes")
-                    if expected is not None and bytes_written > expected.byte_count:
-                        raise ArtifactError(
-                            "Object differs from expected exact identity"
-                        )
-                    target.write(chunk)
-                    digest.update(chunk)
-                self.check()
-                if not bytes_written:
-                    raise ArtifactError("Empty object")
-                checksum = digest.hexdigest()
-                reference = StoredObject(checksum, checksum, bytes_written)
-                if expected is not None and reference != expected:
-                    raise ArtifactError("Object differs from expected exact identity")
-                target.flush()
-                os.fsync(target.fileno())
-            self._commit_staged_file(temporary, reference)
-            return reference
-        except OSError as exc:
-            raise ArtifactError("Cannot persist immutable object") from exc
-        finally:
-            if temporary is not None:
-                temporary.unlink(missing_ok=True)
-
-    def _commit_staged_file(self, temporary: Path, reference: StoredObject) -> None:
-        """Install verified bytes atomically and count each identity once."""
-        path = self._path(reference)
-        # Downloads stay outside this lock so independent transfers can proceed.
-        with self._lock:
-            if reference.key in self._objects:
-                self.verify_object(reference)
-                return
-
-            if len(self._objects) >= self.bounds.objects:
-                raise ArtifactLimitError("Exceeded object count")
-            occupied_bytes = self._bytes + self._transient_bytes
-            if occupied_bytes + reference.byte_count > self.bounds.total_bytes:
-                raise ArtifactLimitError("Exceeded total bytes")
-
-            try:
-                os.link(temporary, path)
-            except FileExistsError:
-                self.verify_object(reference)
-            self._objects.add(reference.key)
-            self._bytes += reference.byte_count
-
-    def verify_object(self, reference: StoredObject) -> None:
-        path = self._path(reference)
-        try:
-            if path.stat().st_size != reference.byte_count:
-                raise ArtifactError("Object byte count mismatch")
-            digest = hashlib.sha256()
-            bytes_read = 0
-            with path.open("rb") as source:
-                while chunk := source.read(min(65536, self.bounds.file_bytes)):
-                    self.check()
-                    bytes_read += len(chunk)
-                    if bytes_read > reference.byte_count:
-                        raise ArtifactError("Object grew while reading")
-                    digest.update(chunk)
-            if bytes_read != reference.byte_count:
-                raise ArtifactError("Object checksum mismatch")
-            actual_checksum = digest.hexdigest()
-            if actual_checksum != reference.sha256:
-                raise ArtifactError("Object checksum mismatch")
-        except OSError as exc:
-            raise ArtifactError("Object unavailable") from exc
-
-    def read(self, reference: StoredObject) -> Iterator[bytes]:
-        self.verify_object(reference)
-        with self._path(reference).open("rb") as source:
-            while chunk := source.read(min(65536, self.bounds.file_bytes)):
-                self.check()
-                yield chunk
 
     def write(
         self,

@@ -142,7 +142,7 @@ def test_disk_failure_removes_staging_without_admitting_object(
         raise OSError("disk unavailable")
 
     monkeypatch.setattr(
-        f"outage_explorer.infrastructure.parquet.storage.os.{operation}", fail
+        f"outage_explorer.infrastructure.parquet.object_storage.os.{operation}", fail
     )
     with pytest.raises(ArtifactError, match="Cannot persist immutable object"):
         store.put_immutable([b"valid"])

@@ -3,13 +3,10 @@
 import atexit
 import logging
 import os
-import shutil
-from collections.abc import Callable, Iterator, Mapping
-from contextlib import contextmanager
+from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass, replace
 from datetime import UTC
 from pathlib import Path
-from threading import Event
 from typing import Any
 from uuid import uuid4
 
@@ -49,10 +46,6 @@ from outage_explorer.application.ports.execution import (
 )
 from outage_explorer.application.ports.preview_sequences import PreviewSequences
 from outage_explorer.application.ports.query_results import QueryResults
-from outage_explorer.application.ports.refresh_execution import (
-    RefreshPipeline,
-    RefreshPipelineFactory,
-)
 from outage_explorer.application.ports.source import ROUTES, SourceBounds
 from outage_explorer.application.ports.sql_inspection import SqlInspector
 from outage_explorer.application.ports.tabular_encoding import TabularEncoding
@@ -72,16 +65,8 @@ from outage_explorer.application.services.login import LoginService
 from outage_explorer.application.services.preview import PreviewService
 from outage_explorer.application.services.queries import QueryService
 from outage_explorer.application.services.refresh import RefreshService
-from outage_explorer.application.services.refresh_baseline import RestoreRefreshBaseline
-from outage_explorer.application.services.refresh_candidate import (
-    PrepareRefreshCandidate,
-)
 from outage_explorer.application.services.refresh_execution import (
     RefreshExecution,
-    RefreshReports,
-)
-from outage_explorer.application.services.refresh_publication import (
-    PrepareRefreshPublication,
 )
 from outage_explorer.application.services.refresh_worker import RefreshWorker
 from outage_explorer.application.services.resource_artifacts import (
@@ -100,19 +85,14 @@ from outage_explorer.configuration.artifact import artifact_settings
 from outage_explorer.configuration.auth import auth_settings
 from outage_explorer.configuration.connector import (
     ArtifactSettings,
-    ModelSettings,
     ResourceWorkerSettings,
-    SourceSettings,
     connector_settings,
-    resource_worker_settings,
 )
 from outage_explorer.configuration.database import DatabaseSettings, database_settings
 from outage_explorer.configuration.refresh import refresh_settings
 from outage_explorer.configuration.s3 import S3Settings, s3_settings
 from outage_explorer.domain.publication import (
     RefreshConfiguration,
-    RefreshOwner,
-    RefreshRun,
 )
 from outage_explorer.domain.refresh import Interval, RefreshBounds
 from outage_explorer.entrypoints.cli.access_setup import read_manifest
@@ -197,6 +177,7 @@ from outage_explorer.infrastructure.worker_runtime.unavailable import (
     UnavailableResults,
     UnavailableSequences,
 )
+from outage_explorer.refresh_pipeline_composition import refresh_pipeline_factory
 
 
 @dataclass(frozen=True)
@@ -769,207 +750,6 @@ def _access_pool(database: DatabaseSettings) -> BoundedPostgresqlPool:
     )
 
 
-@dataclass(frozen=True)
-class _RefreshRunLimits:
-    source: SourceBounds
-    model: RefreshBounds
-    artifacts: ArtifactBounds
-    workers: ResourceWorkerSettings
-
-
-def _refresh_run_limits(config: RefreshConfiguration) -> _RefreshRunLimits:
-    source = SourceBounds(
-        **asdict(
-            replace(
-                SourceSettings(),
-                interval_days=config.source_interval_days,
-                elapsed_seconds=config.candidate_seconds,
-            )
-        )
-    )
-    model = RefreshBounds(
-        **asdict(
-            replace(
-                ModelSettings(),
-                interval_days=config.model_interval_days,
-            )
-        )
-    )
-    artifacts = ArtifactBounds(**asdict(ArtifactSettings()))
-    workers = resource_worker_settings({}, s3=config.s3_workers)
-    if (
-        workers.s3_workers * (2 * artifacts.file_bytes + artifacts.row_group_bytes)
-        > workers.memory_bytes
-        or 2 * artifacts.total_bytes + workers.s3_workers * artifacts.file_bytes
-        > workers.temporary_bytes
-    ):
-        raise ConnectorConfigurationError("Invalid refresh worker limits")
-    return _RefreshRunLimits(source, model, artifacts, workers)
-
-
-def _close_refresh_run_resources(
-    run_root: Path,
-    wire: httpx.BaseTransport | None,
-    sdk: Any,
-    *,
-    owned_wire: bool,
-    owned_sdk: bool,
-) -> None:
-    try:
-        shutil.rmtree(run_root)
-    finally:
-        try:
-            if owned_wire and wire is not None:
-                wire.close()
-        finally:
-            if owned_sdk and sdk is not None:
-                sdk.close()
-
-
-def _refresh_pipeline_factory(
-    store: PostgresqlResourcePublicationStore,
-    lease: RenewableRefreshLease,
-    target: S3Settings,
-    staging: str,
-    api_key: str,
-    transport: httpx.BaseTransport | None,
-    client: Any,
-) -> RefreshPipelineFactory:
-    """Bind process dependencies; create run resources only when called."""
-
-    @contextmanager
-    def pipeline(run: RefreshRun, owner: RefreshOwner) -> Iterator[RefreshPipeline]:
-        config = run.configuration
-        limits = _refresh_run_limits(config)
-        source_bounds = limits.source
-        model_bounds = limits.model
-        artifacts = limits.artifacts
-        worker_config = limits.workers
-        workers = BoundedConnectorWorkers(1, elapsed_seconds=config.candidate_seconds)
-
-        active_workers = workers
-
-        def check() -> None:
-            lease.check()
-            active_workers.check()
-
-        run_root = Path(staging) / run.id
-        run_root.mkdir(parents=True, exist_ok=False)
-        local = LocalConnectorEvidence(
-            LocalParquetStore(
-                run_root / "objects",
-                artifacts,
-                check,
-            ),
-            workers,
-        )
-
-        def cancelled() -> bool:
-            lease.check()
-            return active_workers.cancelled.is_set()
-
-        class Cancellation(Event):
-            def is_set(self) -> bool:
-                return cancelled()
-
-            def set(self) -> None:
-                active_workers.cancelled.set()
-
-        source_budget = SourceRunBudget(source_bounds, Cancellation())
-        wire = transport
-        sdk = client
-        owned_wire, owned_sdk = wire is None, sdk is None
-        try:
-            if wire is None:
-                wire = httpx.HTTPTransport(retries=0, trust_env=False)
-            if sdk is None:
-                sdk = boto3.Session(
-                    profile_name=target.profile, region_name=target.region
-                ).client(
-                    "s3",
-                    config=Config(
-                        connect_timeout=10,
-                        read_timeout=10,
-                        retries={"mode": "standard", "total_max_attempts": 1},
-                        max_pool_connections=worker_config.s3_workers,
-                    ),
-                )
-            durable = S3ResourceStore(
-                sdk,
-                target.bucket,
-                target.prefix,
-                artifacts,
-                replace(
-                    TransferBounds(),
-                    elapsed_seconds=config.candidate_seconds,
-                    temporary_bytes=worker_config.temporary_bytes,
-                ),
-                cancelled=Cancellation(),
-            )
-            reports = RefreshReports(store, owner)
-            candidate = CreateResourceCandidate(
-                lambda request: EiaSource(
-                    request, source_bounds, wire, api_key, budget=source_budget
-                ),
-                local,
-                ParquetResourceBuilder(local.store),
-                reports,
-                workers=workers,
-            )
-
-            def persist(
-                verified: CandidateResult, bounds: RefreshBounds
-            ) -> DurableResourceReceipt:
-                nonlocal active_workers
-                lease.check()
-                persistence_workers = BoundedConnectorWorkers(
-                    worker_config.s3_workers, elapsed_seconds=config.persistence_seconds
-                )
-                active_workers = persistence_workers
-                local.workers = persistence_workers
-                remote = S3ResourceStore(
-                    sdk,
-                    target.bucket,
-                    target.prefix,
-                    artifacts,
-                    replace(
-                        TransferBounds(),
-                        elapsed_seconds=config.persistence_seconds,
-                        temporary_bytes=worker_config.temporary_bytes,
-                    ),
-                    cancelled=Cancellation(),
-                )
-                return PersistResourceArtifacts(
-                    local, remote, workers=persistence_workers
-                ).execute(verified, bounds)
-
-            yield RefreshPipeline(
-                baseline=RestoreRefreshBaseline(
-                    store,
-                    store,
-                    RecoverResourceArtifacts(local, durable).execute,
-                    model_bounds,
-                ),
-                candidate=PrepareRefreshCandidate(
-                    candidate,
-                    local.verify_candidate,
-                    model_bounds,
-                ),
-                publication=PrepareRefreshPublication(
-                    durable.addresses,
-                    persist,
-                    model_bounds,
-                    SystemClock(),
-                ),
-            )
-        finally:
-            _close_refresh_run_resources(
-                run_root, wire, sdk, owned_wire=owned_wire, owned_sdk=owned_sdk
-            )
-
-    return pipeline
-
-
 def build_refresh_worker(
     *,
     environment: Mapping[str, str] | None = None,
@@ -997,7 +777,7 @@ def build_refresh_worker(
         PostgresqlRefreshCoordinationRepository(pool),
     )
     lease = RenewableRefreshLease(store)
-    pipeline = _refresh_pipeline_factory(
+    pipeline = refresh_pipeline_factory(
         store, lease, target, staging, api_key, transport, client
     )
 

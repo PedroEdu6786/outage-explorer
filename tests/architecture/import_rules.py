@@ -194,7 +194,10 @@ def allowed_dependency(source: str, target: str) -> bool:
     if source == f"{ROOT}.entrypoints.query_worker_startup" and target == "sys":
         return True  # Its exact AST permits only passing stdin/stdout at startup.
     layer = source.removeprefix(ROOT + ".").split(".")[0]
-    if layer == "bootstrap":
+    if source in {
+        f"{ROOT}.bootstrap",
+        f"{ROOT}.refresh_pipeline_composition",
+    }:
         return True
     if under(target, ROOT):
         return any(

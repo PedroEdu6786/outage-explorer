@@ -238,19 +238,19 @@ def test_identical_object_retry_at_exact_budget_is_idempotent(tmp_path):
 
 
 def test_failed_atomic_install_leaves_no_final_or_staging_object(tmp_path, monkeypatch):
-    from outage_explorer.infrastructure.parquet import storage
+    from outage_explorer.infrastructure.parquet import object_storage
 
     store = LocalParquetStore(tmp_path, BOUNDS)
-    real_link = storage.os.link
+    real_link = object_storage.os.link
 
     def fail_link(*args, **kwargs):
         raise OSError("simulated disk fault")
 
-    monkeypatch.setattr(storage.os, "link", fail_link)
+    monkeypatch.setattr(object_storage.os, "link", fail_link)
     with pytest.raises(ArtifactError, match="persist"):
         store.put_immutable([b"retry me"])
     assert list(tmp_path.iterdir()) == []
-    monkeypatch.setattr(storage.os, "link", real_link)
+    monkeypatch.setattr(object_storage.os, "link", real_link)
     obj = store.put_immutable([b"retry me"])
     store.verify_object(obj)
 

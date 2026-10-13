@@ -262,7 +262,7 @@ def test_interrupted_immutable_link_leaves_prior_readable_and_no_final_success(
         return link(source, target, **kwargs)
 
     with patch(
-        "outage_explorer.infrastructure.parquet.storage.os.link",
+        "outage_explorer.infrastructure.parquet.object_storage.os.link",
         side_effect=fail_object_link,
     ):
         result, _ = execute(tmp_path, prior=reference)
