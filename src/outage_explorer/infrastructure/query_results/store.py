@@ -11,6 +11,7 @@ from threading import RLock
 from typing import BinaryIO
 from uuid import uuid4
 
+from outage_explorer.application.dto import NumberedPage
 from outage_explorer.application.errors import (
     AnalyticalResourceError,
     QueryExpiredError,
@@ -21,12 +22,12 @@ from outage_explorer.application.errors import (
 from outage_explorer.application.ports.clock import Clock
 from outage_explorer.application.ports.query_results import QueryOutput
 from outage_explorer.domain.access import AnalyticalGrain
+from outage_explorer.domain.pagination import numbered_window, validate_numbered_page
 from outage_explorer.domain.query_results import (
     LIFETIME_SECONDS,
     MAX_BYTES,
     MAX_ROWS,
     ResultIdentity,
-    validate_page,
 )
 from outage_explorer.infrastructure.query_results.encoding import canonical_json
 
@@ -120,7 +121,7 @@ class BoundedQueryResults:
         generation_id: str | None,
         page_size: int,
     ) -> ResultIdentity:
-        validate_page(1, page_size)
+        validate_numbered_page(1, page_size)
         with self._lock:
             directory = self._check()
             owner = self._pending.get(key)
@@ -317,11 +318,13 @@ class _Reader:
     def identity(self) -> ResultIdentity:
         return self._record.identity
 
-    def page(self, page: int) -> dict[str, object]:
+    def page(self, page: int) -> NumberedPage[object]:
         if self._closed:
             raise QueryUnavailableError("Result reader closed")
         try:
-            start, end = self.identity.position(page)
+            start, end = numbered_window(
+                page, self.identity.page_size, self.identity.retained_row_count
+            )
         except ValueError as exc:
             raise QueryPageError("page_out_of_range", self.identity) from exc
         path = self._record.path
@@ -338,17 +341,20 @@ class _Reader:
                     rows.append(json.loads(stream.read(size)))
         except (OSError, ValueError) as exc:
             raise QueryUnavailableError("Query results unavailable") from exc
-        return {
-            **self._record.metadata,
-            "rows": rows,
-            "query_id": self.identity.id,
-            "generation_id": self.identity.generation_id,
-            "page": page,
-            "page_size": self.identity.page_size,
-            "total_pages": self.identity.total_pages,
-            "has_more": page < self.identity.total_pages,
-            "expires_at": self.identity.expires_at.isoformat().replace("+00:00", "Z"),
-        }
+        return NumberedPage(
+            rows=rows,
+            number=page,
+            size=self.identity.page_size,
+            total_rows=self.identity.retained_row_count,
+            metadata={
+                **self._record.metadata,
+                "query_id": self.identity.id,
+                "generation_id": self.identity.generation_id,
+                "expires_at": self.identity.expires_at.isoformat().replace(
+                    "+00:00", "Z"
+                ),
+            },
+        )
 
     def close(self) -> None:
         with self._store._lock:

@@ -45,7 +45,7 @@ def create_queries_blueprint(
     @validated_request(query_page_request)
     @respond_with(JsonPayloadResponse)
     def page(*, credential: str, validated: QueryPageRequest, **_: object) -> object:
-        return services.queries.page(
+        return services.query_pages.read(
             credential,
             validated.query_id,
             page=validated.page,

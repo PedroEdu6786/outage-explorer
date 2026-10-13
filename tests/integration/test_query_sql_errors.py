@@ -6,6 +6,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from outage_explorer.application.pagination.query_results import QueryResultPager
 from outage_explorer.application.services.queries import QueryService
 from outage_explorer.entrypoints.http.app import create_app
 from outage_explorer.entrypoints.http.auth_transport import AuthTransport
@@ -79,13 +80,16 @@ def system(tmp_path):
         inputs,
         launcher,
         store,
+        QueryResultPager(access, store),
     )
     app = create_app(
         Mock(),
         login_service=Mock(),
         access_service=access,
         auth_transport=AuthTransport(ORIGIN, frozenset({ORIGIN}), True),
-        data_services=DataServices(Mock(), Mock(), service, Mock(), Mock()),
+        data_services=DataServices(
+            Mock(), Mock(), service, service.pages, Mock(), Mock()
+        ),
     )
     client = app.test_client()
     client.set_cookie("outage_session", "token")

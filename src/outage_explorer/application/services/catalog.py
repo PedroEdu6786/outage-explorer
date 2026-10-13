@@ -2,12 +2,16 @@
 
 from dataclasses import dataclass
 
+from outage_explorer.application.catalog_responses import (
+    CatalogDatasetResult,
+    CatalogResult,
+)
+from outage_explorer.application.dto import CatalogAccess
 from outage_explorer.application.errors import DataUnavailableError
 from outage_explorer.application.ports.publication import ResourcePublicationStore
 from outage_explorer.application.ports.tabular_encoding import TabularEncoding
-from outage_explorer.application.services.access import AccessService
-from outage_explorer.domain.access import AccessOperation, AnalyticalGrain, Role
-from outage_explorer.domain.datasets import PUBLIC_DATASETS, Dataset
+from outage_explorer.domain.access import AnalyticalGrain
+from outage_explorer.domain.datasets import Dataset
 from outage_explorer.domain.publication import DatasetSummary
 
 
@@ -19,64 +23,41 @@ class CatalogEntry:
 
 
 class CatalogService:
-    def __init__(
-        self, access: AccessService, publications: ResourcePublicationStore
-    ) -> None:
-        self._access = access
+    def __init__(self, publications: ResourcePublicationStore) -> None:
         self._publications = publications
 
-    def list(self, token: str) -> tuple[CatalogEntry, ...]:
-        identity = self._access.resolve(token)
-        datasets = tuple(
-            item
-            for item in PUBLIC_DATASETS
-            if identity.user.role is not Role.VIEWER or item.id == "national"
-        )
-        self._access.authorize(
-            token,
-            AccessOperation.ANALYTICAL,
-            grains=frozenset(AnalyticalGrain(item.grain) for item in datasets),
-        )
+    def list(self, catalog_access: CatalogAccess) -> tuple[CatalogEntry, ...]:
+        datasets = catalog_access.datasets
         active = self._publications.active_generation()
-        if active is not None:
-            active.validate()
+        if active is None:
+            return tuple(CatalogEntry(dataset, None, None) for dataset in datasets)
+
+        active.validate()
+        coverage_by_grain = {summary.grain: summary for summary in active.datasets}
         return tuple(
             CatalogEntry(
                 dataset,
-                None if active is None else active.id,
-                None
-                if active is None
-                else next(
-                    item
-                    for item in active.datasets
-                    if item.grain.value == dataset.grain
-                ),
+                active.id,
+                coverage_by_grain[AnalyticalGrain(dataset.grain)],
             )
             for dataset in datasets
         )
 
-    def payload(self, token: str, encoding: TabularEncoding) -> dict[str, object]:
-        entries = self.list(token)
-        if not entries or entries[0].generation_id is None:
+    def describe(
+        self, catalog_access: CatalogAccess, encoding: TabularEncoding
+    ) -> CatalogResult:
+        entries = self.list(catalog_access)
+        generation_id = entries[0].generation_id if entries else None
+        if generation_id is None:
             raise DataUnavailableError("Published data unavailable")
-        return {
-            "generation_id": entries[0].generation_id,
-            "datasets": [
-                {
-                    "id": entry.dataset.id,
-                    "sql_name": entry.dataset.id,
-                    "label": entry.dataset.label,
-                    "schema_version": entry.dataset.schema_version,
-                    "columns": encoding.columns(entry.dataset.columns),
-                    "supported_filters": ["start_date", "end_date"]
-                    + ([] if entry.dataset.id == "national" else ["facility"]),
-                    "coverage": None
-                    if entry.coverage is None
-                    else {
-                        "start_date": entry.coverage.start.isoformat(),
-                        "end_date": entry.coverage.end.isoformat(),
-                    },
-                }
+        return CatalogResult(
+            generation_id=generation_id,
+            datasets=tuple(
+                CatalogDatasetResult(
+                    dataset=entry.dataset,
+                    columns=encoding.columns(entry.dataset.columns),
+                    coverage=entry.coverage,
+                )
                 for entry in entries
-            ],
-        }
+            ),
+        )

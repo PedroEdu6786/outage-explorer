@@ -138,6 +138,10 @@ def test_query_worker_startup_exception_remains_exact(tmp_path, addition):
             "application/ports/refresh_execution.py",
             "from contextlib import contextmanager",
         ),
+        (
+            "application/ports/refresh.py",
+            "from contextlib import contextmanager",
+        ),
         ("application/services/bad.py", "import psycopg"),
         ("application/services/bad.py", "import boto3"),
         (

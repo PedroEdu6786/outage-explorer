@@ -1,5 +1,6 @@
 """HTTP admission dates with a controlled clock and no external services."""
 
+from contextlib import contextmanager
 from datetime import UTC, date, datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -32,12 +33,24 @@ def service(monkeypatch, start="2026-04-02"):
     saved = {}
     store.replay.side_effect = lambda user, key: saved.get(key)
 
-    def admit(user, key, config):
+    admission = Mock()
+    admission.active_run_id = None
+    admission.base_generation_id = None
+    admission.replay.side_effect = lambda user, key: saved.get(key)
+
+    def create_queued_run(user, key, config):
         run = SimpleNamespace(configuration=config)
         saved[key] = run
         return run
 
-    store.admit.side_effect = admit
+    admission.create_queued_run.side_effect = create_queued_run
+
+    @contextmanager
+    def admission_transaction():
+        yield admission
+
+    store.admission_transaction.side_effect = admission_transaction
+    store.admission = admission
     services = build_data_services(
         access, store, RandomSecurityMaterial(), {"OUTAGE_REFRESH_START_DATE": start}
     )
@@ -70,7 +83,7 @@ def test_midnight_updates_new_run_but_replay_keeps_original(monkeypatch):
     assert later.configuration.end == date(2026, 10, 8)
     assert later.configuration.max_interval_days == 190
     assert original.configuration.end == date(2026, 10, 7)
-    assert store.admit.call_count == 2
+    assert store.admission.create_queued_run.call_count == 2
 
 
 def test_initial_load_accepts_dynamic_end_and_keeps_it_after_midnight(monkeypatch):
@@ -102,7 +115,7 @@ def test_future_start_fails_before_storage_admission(monkeypatch):
             refresh.authorize("token"),
             RefreshAdmissionRequest(idempotency_key="d" * 16),
         )
-    store.admit.assert_not_called()
+    store.admission_transaction.assert_not_called()
 
 
 def test_denial_does_not_resolve_clock(monkeypatch):
@@ -114,7 +127,7 @@ def test_denial_does_not_resolve_clock(monkeypatch):
             RefreshAdmissionRequest(idempotency_key="f" * 16),
         )
     assert not reads
-    store.admit.assert_not_called()
+    store.admission_transaction.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -139,7 +152,7 @@ def test_valid_idempotency_keys_are_admitted(monkeypatch, key):
         refresh.authorize("token"), RefreshAdmissionRequest(idempotency_key=key)
     )
     assert run.configuration.end == date(2026, 10, 7)
-    store.admit.assert_called_once()
+    store.admission.create_queued_run.assert_called_once()
     assert len(reads) == 1
 
 
@@ -152,7 +165,7 @@ def test_programmatic_admission_authorizes_before_replay_or_configuration(monkey
             RefreshAdmissionRequest(idempotency_key="a" * 16),
         )
     store.replay.assert_not_called()
-    store.admit.assert_not_called()
+    store.admission_transaction.assert_not_called()
     assert not reads
 
 
@@ -162,7 +175,7 @@ def test_admission_uses_decorator_principal_without_reauthorizing(monkeypatch):
     refresh.admit(request_access, RefreshAdmissionRequest(idempotency_key="a" * 16))
     assert not access.mock_calls
     assert store.replay.call_args.args[0] == "verified-admin"
-    assert store.admit.call_args.args[0] == "verified-admin"
+    assert store.admission.create_queued_run.call_args.args[0] == "verified-admin"
 
 
 def test_long_intervals_preserve_initial_policy_and_frozen_caps():

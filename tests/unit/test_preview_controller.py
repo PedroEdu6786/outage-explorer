@@ -26,7 +26,7 @@ def preview_http():
         token, user, now, now + timedelta(hours=1)
     )
     access = AccessService(sessions, security, clock)
-    services = DataServices(Mock(), Mock(), Mock(), Mock(), Mock())
+    services = DataServices(Mock(), Mock(), Mock(), Mock(), Mock(), Mock())
     services.preview.read.return_value = {"rows": []}
     transport = AuthTransport(ORIGIN, frozenset({ORIGIN}), True)
     app = create_app(

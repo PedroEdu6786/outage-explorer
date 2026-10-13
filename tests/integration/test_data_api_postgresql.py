@@ -44,6 +44,15 @@ from outage_explorer.infrastructure.postgresql.pool import BoundedPostgresqlPool
 from outage_explorer.infrastructure.postgresql.publication import (
     PostgresqlResourcePublicationStore,
 )
+from outage_explorer.infrastructure.postgresql.published_generation_repository import (
+    PostgresqlPublishedGenerationRepository,
+)
+from outage_explorer.infrastructure.postgresql.refresh_coordination_repository import (
+    PostgresqlRefreshCoordinationRepository,
+)
+from outage_explorer.infrastructure.postgresql.refresh_run_repository import (
+    PostgresqlRefreshRunRepository,
+)
 from outage_explorer.infrastructure.security import RandomSecurityMaterial
 from outage_explorer.settings import refresh_settings
 
@@ -147,7 +156,12 @@ def system(database):
         )
         tokens[role] = token
         users[role] = user
-    store = PostgresqlResourcePublicationStore(pool)
+    store = PostgresqlResourcePublicationStore(
+        pool,
+        PostgresqlRefreshRunRepository(pool),
+        PostgresqlPublishedGenerationRepository(pool),
+        PostgresqlRefreshCoordinationRepository(pool),
+    )
     access = AccessService(access_store, security, Clock())
     service = RefreshService(access, store, lambda: CONFIG, security)
     try:
@@ -234,16 +248,18 @@ def test_scoped_idempotency_races_and_busy(system):
         )
 
 
-def test_initial_interval_and_all_grains(system):
+def test_initial_interval_and_all_grains(system, monkeypatch):
     store, service, tokens, users, pool = system
+    invalid_configuration = RefreshConfiguration.model_validate(
+        CONFIG.model_dump() | {"start": INITIAL_END}
+    )
+    monkeypatch.setattr(service, "_configuration", lambda: invalid_configuration)
     with pytest.raises(ValueError):
-        store.admit(
-            users[Role.ADMIN].id,
-            "a" * 64,
-            RefreshConfiguration.model_validate(
-                CONFIG.model_dump() | {"start": INITIAL_END}
-            ),
+        service.admit(
+            service.authorize(tokens[Role.ADMIN]),
+            RefreshAdmissionRequest(idempotency_key="a" * 16),
         )
+    monkeypatch.setattr(service, "_configuration", lambda: CONFIG)
     assert store.latest() is None
     run = service.admit(
         service.authorize(tokens[Role.ADMIN]),
@@ -328,6 +344,66 @@ def test_healthy_lease_recovery_expiration_and_stale_owner(system, database):
     )
 
 
+def test_claim_rolls_back_coordination_if_run_update_fails(system, database):
+    store, service, tokens, _, _ = system
+    run = service.admit(
+        service.authorize(tokens[Role.ADMIN]),
+        RefreshAdmissionRequest(idempotency_key="rollback-claim-01"),
+    )
+    with psycopg.connect(database) as connection:
+        connection.execute(
+            """
+            CREATE FUNCTION reject_refresh_run_update() RETURNS trigger
+            LANGUAGE plpgsql AS $$
+            BEGIN
+                RAISE EXCEPTION 'forced run update failure';
+            END;
+            $$
+            """
+        )
+        connection.execute(
+            """
+            CREATE TRIGGER reject_refresh_run_update
+            BEFORE UPDATE ON refresh_runs
+            FOR EACH ROW EXECUTE FUNCTION reject_refresh_run_update()
+            """
+        )
+
+    with pytest.raises(AccessStoreError, match="PostgreSQL operation failed"):
+        store.claim("worker", 60)
+
+    with psycopg.connect(database) as connection:
+        coordination = connection.execute(
+            "SELECT epoch, owner_identity, lease_until FROM refresh_coordination"
+        ).fetchone()
+        status = connection.execute(
+            "SELECT status FROM refresh_runs WHERE id = %s", (run.id,)
+        ).fetchone()
+    assert coordination == (0, None, None)
+    assert status == (RunStatus.ACCEPTED.value,)
+
+
+def test_progress_preserves_quality_and_rejects_expired_owner(system, database):
+    store, service, tokens, _, _ = system
+    run = service.admit(
+        service.authorize(tokens[Role.ADMIN]),
+        RefreshAdmissionRequest(idempotency_key="progress-check-01"),
+    )
+    owner = store.claim("worker", 60)
+
+    store.progress(owner, RefreshStage.VERIFYING, '{"checked": 1}')
+    store.progress(owner, RefreshStage.PUBLISHING)
+    current = store.get_run(run.id)
+    assert current.stage is RefreshStage.PUBLISHING
+    assert json.loads(current.quality_json) == {"checked": 1}
+
+    expire(database)
+    with pytest.raises(StaleRefreshOwnerError):
+        store.progress(owner, RefreshStage.VERIFYING, '{"checked": 2}')
+    assert store.get_run(run.id).stage is RefreshStage.PUBLISHING
+    assert json.loads(store.get_run(run.id).quality_json) == {"checked": 1}
+
+
 class FaultPool:
     def __init__(self, pool, mode):
         self.pool, self.mode, self.calls = pool, mode, 0
@@ -347,6 +423,21 @@ class FaultPool:
             if self.calls == 1:
                 raise AccessStoreError("Commit response lost")
 
+    @contextmanager
+    def session(self):
+        self.calls += 1
+        if self.calls > 1 and self.mode == "unavailable":
+            raise AccessStoreError("Unavailable fresh connection")
+        if self.calls == 1 and self.mode == "rollback":
+            with self.pool.session() as session:
+                yield session
+                raise AccessStoreError("Connection lost before commit")
+        else:
+            with self.pool.session() as session:
+                yield session
+            if self.calls == 1:
+                raise AccessStoreError("Commit response lost")
+
 
 @pytest.mark.parametrize("mode", ["committed", "rollback", "unavailable"])
 def test_commit_loss_uses_fresh_serialized_history(system, mode):
@@ -356,7 +447,13 @@ def test_commit_loss_uses_fresh_serialized_history(system, mode):
         RefreshAdmissionRequest(idempotency_key="f" * 16),
     )
     owner = store.claim("worker", 60)
-    faulty = PostgresqlResourcePublicationStore(FaultPool(pool, mode))
+    fault_pool = FaultPool(pool, mode)
+    faulty = PostgresqlResourcePublicationStore(
+        fault_pool,
+        PostgresqlRefreshRunRepository(pool),
+        PostgresqlPublishedGenerationRepository(fault_pool),
+        PostgresqlRefreshCoordinationRepository(pool),
+    )
     if mode == "unavailable":
         with pytest.raises(AccessStoreError):
             faulty.publish(owner, candidate(run))
@@ -443,7 +540,12 @@ def test_accepted_restart_and_revoked_admin_before_lookup(
         service.authorize(tokens[Role.ADMIN]),
         RefreshAdmissionRequest(idempotency_key="q" * 16),
     )
-    restarted = PostgresqlResourcePublicationStore(pool)
+    restarted = PostgresqlResourcePublicationStore(
+        pool,
+        PostgresqlRefreshRunRepository(pool),
+        PostgresqlPublishedGenerationRepository(pool),
+        PostgresqlRefreshCoordinationRepository(pool),
+    )
     assert restarted.recover(run.id).status is RunStatus.ACCEPTED
     assert restarted.claim("new-process", 60).run_id == run.id
     with psycopg.connect(database) as connection:
@@ -492,7 +594,12 @@ def resource_candidate(run, base=None):
 @pytest.fixture
 def resources(system):
     store, service, tokens, users, pool = system
-    resource_store = PostgresqlResourcePublicationStore(pool)
+    resource_store = PostgresqlResourcePublicationStore(
+        pool,
+        PostgresqlRefreshRunRepository(pool),
+        PostgresqlPublishedGenerationRepository(pool),
+        PostgresqlRefreshCoordinationRepository(pool),
+    )
     resource_service = RefreshService(
         service._access, resource_store, lambda: CONFIG, service._security
     )
@@ -598,7 +705,13 @@ def test_resource_commit_loss_uses_fresh_serialized_history(resources, mode):
         RefreshAdmissionRequest(idempotency_key="c1" * 8),
     )
     owner = store.claim("worker", 60)
-    faulty = PostgresqlResourcePublicationStore(FaultPool(pool, mode))
+    fault_pool = FaultPool(pool, mode)
+    faulty = PostgresqlResourcePublicationStore(
+        fault_pool,
+        PostgresqlRefreshRunRepository(pool),
+        PostgresqlPublishedGenerationRepository(fault_pool),
+        PostgresqlRefreshCoordinationRepository(pool),
+    )
     if mode == "unavailable":
         with pytest.raises(AccessStoreError):
             faulty.publish(owner, resource_candidate(run))
@@ -836,17 +949,19 @@ def test_remove_columns_preserves_history_pointer_and_guards(empty_database):
         ).fetchone() == (2,)
     pool = BoundedPostgresqlPool(empty_database)
     try:
-        store = PostgresqlResourcePublicationStore(pool)
+        store = PostgresqlResourcePublicationStore(
+            pool,
+            PostgresqlRefreshRunRepository(pool),
+            PostgresqlPublishedGenerationRepository(pool),
+            PostgresqlRefreshCoordinationRepository(pool),
+        )
         with pytest.raises(UnsupportedPublicationLayoutError):
             store.active_generation()
         with pytest.raises(UnsupportedPublicationLayoutError):
             store.generation_for_run(run_id)
-        with psycopg.connect(empty_database) as connection:
-            requester = str(
-                connection.execute("SELECT id FROM users LIMIT 1").fetchone()[0]
-            )
         with pytest.raises(UnsupportedPublicationLayoutError):
-            store.admit(requester, "z" * 64, CONFIG)
+            with store.admission_transaction() as admission:
+                admission.require_supported_base()
         assert _state(empty_database) == before
     finally:
         pool.close()
@@ -869,7 +984,12 @@ def test_remove_columns_preserves_resource_publication(empty_database):
     before = _state(empty_database)
     pool = BoundedPostgresqlPool(empty_database)
     try:
-        store = PostgresqlResourcePublicationStore(pool)
+        store = PostgresqlResourcePublicationStore(
+            pool,
+            PostgresqlRefreshRunRepository(pool),
+            PostgresqlPublishedGenerationRepository(pool),
+            PostgresqlRefreshCoordinationRepository(pool),
+        )
         generation = store.active_generation()
         assert generation.id == identity
         migrate(empty_database, "upgrade", "head")

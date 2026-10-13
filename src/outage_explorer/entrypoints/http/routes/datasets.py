@@ -2,16 +2,17 @@
 
 from flask import Blueprint
 
-from outage_explorer.application.dto import PreviewAccess, RequestAccess
+from outage_explorer.application.dto import CatalogAccess, PreviewAccess, RequestAccess
 from outage_explorer.application.preview_request import PreviewRequest
 from outage_explorer.application.services.access import AccessService
 from outage_explorer.entrypoints.http.auth_helpers import (
-    authenticated,
+    catalog_required,
     dataset_required,
     roles_required,
     validated_request,
 )
 from outage_explorer.entrypoints.http.auth_transport import AuthTransport
+from outage_explorer.entrypoints.http.catalog_responses import CatalogResponse
 from outage_explorer.entrypoints.http.data_schemas import (
     empty_request,
     preview_parameters,
@@ -26,11 +27,12 @@ def create_datasets_blueprint(
     blueprint = Blueprint("datasets", __name__)
 
     @blueprint.get("/api/datasets")
-    @authenticated(access, transport)
+    @roles_required(access, transport, "viewer", "analyst", "admin")
+    @catalog_required(access)
     @validated_request(empty_request)
-    @respond_with(JsonPayloadResponse)
-    def catalog(*, credential: str, **_: object) -> object:
-        return services.catalog.payload(credential, services.encoding)
+    @respond_with(CatalogResponse)
+    def catalog(*, catalog_access: CatalogAccess, **_: object) -> object:
+        return services.catalog.describe(catalog_access, services.encoding)
 
     @blueprint.get("/api/datasets/<dataset>/preview")
     @roles_required(access, transport, "viewer", "analyst", "admin")

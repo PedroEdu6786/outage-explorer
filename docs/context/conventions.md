@@ -20,6 +20,12 @@ is wrong, propose a change here rather than silently deviating.
 
 ## Code practices
 
+- For new or refactored operational persistence, follow the mandatory
+  [repository convention](persistence-repositories.md) and
+  [ADR-0078](../adr/0078-model-repositories-and-session-decorators.md): centralize
+  model queries in dedicated SQLAlchemy repositories with `@with_session`.
+  Process logic calls persistence operations; it must not embed raw SQL or ORM
+  queries. Existing mixed raw-SQL paths are legacy, not examples to copy.
 - Follow the accepted [layered monolith structure](code-structure.md) and root
   [AGENTS.md](../../AGENTS.md). Their dependency matrix governs new application
   code; ADR-0030 replaces the earlier feature-first proposal.

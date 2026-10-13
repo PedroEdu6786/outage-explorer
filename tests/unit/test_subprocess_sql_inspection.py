@@ -233,7 +233,17 @@ def test_authentication_and_scope_authorization_precede_inputs():
     from outage_explorer.application.services.queries import QueryService
 
     access, parser, publication, inputs, execution, results = (Mock() for _ in range(6))
-    service = QueryService(access, parser, publication, inputs, execution, results)
+    from outage_explorer.application.pagination.query_results import QueryResultPager
+
+    service = QueryService(
+        access,
+        parser,
+        publication,
+        inputs,
+        execution,
+        results,
+        QueryResultPager(access, results),
+    )
     access.resolve.side_effect = UnauthenticatedError()
     with pytest.raises(UnauthenticatedError):
         service.execute("private-session", "SELECT 1")

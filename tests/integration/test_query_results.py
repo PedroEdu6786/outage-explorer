@@ -4,10 +4,12 @@ import pickle
 import subprocess
 import sys
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 
 from outage_explorer.application.errors import AnalyticalResourceError, QueryPageError
+from outage_explorer.application.pagination.query_results import QueryResultPager
 from outage_explorer.application.ports.query_results import QueryOutput
 from outage_explorer.application.services.queries import QueryService
 from outage_explorer.domain.access import Role
@@ -66,6 +68,7 @@ def queries(system, browsing, tmp_path):
         cache,
         launcher,
         store,
+        QueryResultPager(system[1]._access, store),
     )
     yield service, store, clock, runtime, launcher
     store.close()
@@ -77,14 +80,28 @@ def test_one_execution_duplicates_direct_and_revisited_pages(queries, system):
     sql = "SELECT generator AS x, generator AS x FROM generators UNION ALL SELECT generator, generator FROM generators ORDER BY x DESC LIMIT 901"
     first = service.execute(token, sql, page=3, page_size=100)
     assert [col["name"] for col in first["columns"]] == ["x", "x"]
-    pages = [service.page(token, first["query_id"], page=n) for n in range(1, 11)]
+    pages = [service.pages.read(token, first["query_id"], page=n) for n in range(1, 11)]
     assert sum(len(page["rows"]) for page in pages) == 901
-    assert service.page(token, first["query_id"], page=3) == first
+    assert service.pages.read(token, first["query_id"], page=3) == first
     rows = [row for page in pages for row in page["rows"]]
     assert rows == sorted(rows, reverse=True)
     assert len({tuple(row) for row in rows}) < len(rows)
     assert runtime.calls[0].sql == sql and len(runtime.calls) == 1
     assert runtime.reaps == 1
+
+
+def test_initial_page_reuses_execution_access_but_continuation_rechecks(
+    queries, system
+):
+    service, _, _, _, _ = queries
+    token = system[2][Role.VIEWER]
+    service._access.authorize = Mock(wraps=service._access.authorize)
+
+    first = service.execute(token, "SELECT 1 AS x")
+    assert service._access.authorize.call_count == 1
+
+    service.pages.read(token, first["query_id"], page=1)
+    assert service._access.authorize.call_count == 2
 
 
 @pytest.mark.parametrize("count,reason", [(0, None), (1000, None), (1001, "row_limit")])
@@ -113,10 +130,10 @@ def test_initial_out_of_range_keeps_owned_result(queries, system):
         service.execute(token, "SELECT 42 AS x", page=2)
     identity = caught.value.identity
     assert identity is not None and identity.owner == system[3][Role.VIEWER].id
-    assert service.page(token, identity.id)["rows"] == [["42"]]
+    assert service.pages.read(token, identity.id)["rows"] == [["42"]]
     assert len(runtime.calls) == 1
     with pytest.raises(QueryPageError, match="Invalid retained"):
-        service.page(token, identity.id, page_size=500)
+        service.pages.read(token, identity.id, page_size=500)
 
 
 @pytest.mark.parametrize(
@@ -137,7 +154,7 @@ def test_utf8_whole_document_prefix_never_skips(queries, system):
     sql = "SELECT CAST(list_resize(['😀'],60000,'😀') AS VARCHAR) AS x FROM (VALUES(0),(1),(2),(3)) a(x)"
     page = service.execute(system[2][Role.VIEWER], sql, page_size=1)
     assert page["retained_row_count"] == 2 and page["truncation_reason"] == "byte_limit"
-    second = service.page(system[2][Role.VIEWER], page["query_id"], page=2)
+    second = service.pages.read(system[2][Role.VIEWER], page["query_id"], page=2)
     assert second["rows"] == page["rows"]
     document = next(store._directory.glob("*.json")).read_bytes()
     assert len(document) <= 1048576

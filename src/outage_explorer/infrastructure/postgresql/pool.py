@@ -1,14 +1,19 @@
 """Lazy process-owned bounded PostgreSQL connections."""
 
 import os
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator, Iterator
 from contextlib import contextmanager
 from threading import Lock
+from typing import cast
 
 import psycopg
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
-from psycopg.rows import DictRow, dict_row
+from psycopg.rows import DictRow, TupleRow, dict_row, tuple_row
 from psycopg_pool import ConnectionPool
+from sqlalchemy import create_engine
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
+from sqlalchemy.pool import NullPool
 
 from outage_explorer.application.errors import (
     AccessConfigurationError,
@@ -59,6 +64,12 @@ class BoundedPostgresqlPool:
         self._password_provider = password_provider
         if password_provider is not None and "password" in conninfo_to_dict(dsn):
             raise AccessConfigurationError("Mixed PostgreSQL credentials")
+        self._orm_engine = create_engine(
+            "postgresql+psycopg://",
+            creator=self._orm_connection,
+            poolclass=NullPool,
+            hide_parameters=True,
+        )
 
     def _connection_dsn(self) -> str:
         if os.getpid() != self._owner:
@@ -84,6 +95,8 @@ class BoundedPostgresqlPool:
                     max_waiting=16,
                     timeout=3,
                     reconnect_timeout=3,
+                    close_returns=True,
+                    reset=self._reset_row_factory,
                     kwargs={
                         "row_factory": dict_row,
                         "connect_timeout": 3,
@@ -93,6 +106,28 @@ class BoundedPostgresqlPool:
                 )
                 self._pool.open()
             return self._pool
+
+    @staticmethod
+    def _reset_row_factory(connection: psycopg.Connection[DictRow]) -> None:
+        # ORM checkouts use tuples; existing SQL adapters expect dictionaries.
+        connection.row_factory = dict_row
+
+    def _orm_connection(self) -> psycopg.Connection[TupleRow]:
+        connection = cast(psycopg.Connection[TupleRow], self._get_pool().getconn())
+        connection.row_factory = tuple_row
+        # close_returns=True returns this checkout when SQLAlchemy closes it.
+        return connection
+
+    @contextmanager
+    def session(self) -> Generator[Session]:
+        """Own one ORM transaction; never share its session across threads."""
+        try:
+            with Session(self._orm_engine) as session, session.begin():
+                yield session
+        except (SQLAlchemyError, psycopg.Error):
+            raise AccessStoreError("PostgreSQL operation failed") from None
+        except (TimeoutError, RuntimeError):
+            raise AccessStoreError("PostgreSQL unavailable") from None
 
     @contextmanager
     def connection(self) -> Iterator[psycopg.Connection[DictRow]]:
@@ -110,5 +145,6 @@ class BoundedPostgresqlPool:
             raise AccessStoreError("PostgreSQL resources cannot cross processes")
         with self._lock:
             self._closed = True
+            self._orm_engine.dispose()
             if self._pool is not None:
                 self._pool.close()

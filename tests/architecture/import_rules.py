@@ -200,7 +200,11 @@ def allowed_dependency(source: str, target: str) -> bool:
             under(target, f"{ROOT}.{prefix}") for prefix in ALLOWED.get(layer, ())
         )
     if (
-        source == f"{ROOT}.application.ports.refresh_execution"
+        source
+        in {
+            f"{ROOT}.application.ports.refresh",
+            f"{ROOT}.application.ports.refresh_execution",
+        }
         and target == "contextlib.AbstractContextManager"
     ):
         return True  # Type contract only; no context-manager execution helper.

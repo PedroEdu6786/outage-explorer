@@ -1,6 +1,7 @@
 """Resolve fresh local identity and invalidate only the supplied session."""
 
 from outage_explorer.application.dto import (
+    CatalogAccess,
     CurrentIdentity,
     PreviewAccess,
     RequestAccess,
@@ -110,6 +111,19 @@ class AccessService:
             # Unknown and forbidden dataset IDs have the same public outcome.
             raise DatasetUnavailableError("Dataset unavailable")
         return PreviewAccess(request_access.principal, dataset)
+
+    def require_catalog(self, request_access: RequestAccess) -> CatalogAccess:
+        """Approve the public datasets visible to this request's role."""
+        role = request_access.principal.role
+        datasets = tuple(
+            dataset
+            for dataset in PUBLIC_DATASETS
+            if role is not Role.VIEWER or dataset.id == "national"
+        )
+        grains = frozenset(AnalyticalGrain(dataset.grain) for dataset in datasets)
+        if not permits_scope(role, AccessOperation.ANALYTICAL, grains):
+            raise ForbiddenError("Access denied")
+        return CatalogAccess(request_access.principal, datasets)
 
     def validate_csrf(self, token: str, supplied: str) -> RequestAccess:
         request_access = self.authenticate(token)

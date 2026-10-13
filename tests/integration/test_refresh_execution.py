@@ -26,10 +26,24 @@ def system(database):
     from outage_explorer.infrastructure.postgresql.publication import (
         PostgresqlResourcePublicationStore,
     )
+    from outage_explorer.infrastructure.postgresql.published_generation_repository import (
+        PostgresqlPublishedGenerationRepository,
+    )
+    from outage_explorer.infrastructure.postgresql.refresh_coordination_repository import (
+        PostgresqlRefreshCoordinationRepository,
+    )
+    from outage_explorer.infrastructure.postgresql.refresh_run_repository import (
+        PostgresqlRefreshRunRepository,
+    )
 
     for publication_system in coordination.system.__wrapped__(database):
         _, service, tokens, users, pool = publication_system
-        store = PostgresqlResourcePublicationStore(pool)
+        store = PostgresqlResourcePublicationStore(
+            pool,
+            PostgresqlRefreshRunRepository(pool),
+            PostgresqlPublishedGenerationRepository(pool),
+            PostgresqlRefreshCoordinationRepository(pool),
+        )
         refresh = RefreshService(
             service._access, store, lambda: coordination.CONFIG, service._security
         )

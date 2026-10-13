@@ -1,5 +1,6 @@
 """Transport-independent application results."""
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal
@@ -30,6 +31,25 @@ class RequestAccess:
     """Server-resolved identity for one request; never parsed from caller input."""
 
     principal: SeededUser
+
+
+@dataclass(frozen=True)
+class CatalogAccess:
+    """Public datasets approved for one authenticated request."""
+
+    principal: SeededUser
+    datasets: tuple[Dataset, ...]
+
+
+@dataclass(frozen=True)
+class NumberedPage[Row]:
+    """Rows and metadata from one stable, addressable result read."""
+
+    rows: Sequence[Row]
+    number: int
+    size: int
+    total_rows: int
+    metadata: Mapping[str, object]
 
 
 @dataclass(frozen=True)

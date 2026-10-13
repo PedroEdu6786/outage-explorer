@@ -16,7 +16,6 @@ from outage_explorer.application.errors import (
     AnalyticalBusyError,
     AnalyticalTimeoutError,
     ForbiddenError,
-    InvalidRequestError,
     QueryExpiredError,
     QueryUnavailableError,
     ResultCapacityError,
@@ -61,36 +60,22 @@ def complete(store, owner="user"):
         reservation.close()
 
 
-@pytest.mark.parametrize(
-    "page,size", [(0, None), (-1, None), (True, None), (1, 0), (1, 501), (1, True)]
-)
-def test_invalid_pages_before_engine(queries, system, page, size):
-    with pytest.raises(InvalidRequestError):
-        queries[0].execute(
-            system[2][Role.VIEWER],
-            "SELECT 1",
-            page=page,
-            page_size=100 if size is None else size,
-        )
-    assert not queries[3].calls
-
-
 def test_fresh_roles_foreign_ids_logout_before_payload(queries, system, database):
     service, _, _, runtime, _ = queries
     token = system[2][Role.ANALYST]
     result = service.execute(token, "SELECT * FROM facilities")
     with pytest.raises(QueryUnavailableError):
-        service.page(system[2][Role.ADMIN], result["query_id"])
+        service.pages.read(system[2][Role.ADMIN], result["query_id"])
     with psycopg.connect(database) as connection:
         connection.execute(
             "UPDATE users SET role_code='viewer' WHERE id=%s",
             (system[3][Role.ANALYST].id,),
         )
     with pytest.raises(ForbiddenError):
-        service.page(token, result["query_id"])
+        service.pages.read(token, result["query_id"])
     system[1]._access.logout(token)
     with pytest.raises(UnauthenticatedError):
-        service.page(token, result["query_id"])
+        service.pages.read(token, result["query_id"])
     assert len(runtime.calls) == 1
 
 
@@ -131,13 +116,13 @@ def test_fixed_completion_expiry_and_unavailable_after_loss(queries, system):
     assert identity.completed_at == clock.now()
     assert identity.expires_at == clock.now() + timedelta(seconds=60)
     clock.value += timedelta(seconds=59)
-    assert service.page(token, identity.id)["expires_at"] == result["expires_at"]
+    assert service.pages.read(token, identity.id)["expires_at"] == result["expires_at"]
     clock.value += timedelta(seconds=1)
     with pytest.raises(QueryExpiredError):
-        service.page(token, identity.id)
+        service.pages.read(token, identity.id)
     store.cleanup()
     with pytest.raises(QueryUnavailableError):
-        service.page(token, identity.id)
+        service.pages.read(token, identity.id)
     assert len(runtime.calls) == 1
 
 
@@ -150,7 +135,7 @@ def test_generation_republication_does_not_execute_or_download(queries, system):
     service._publications = Mock()
     service._inputs = Mock()
     assert (
-        service.page(token, result["query_id"], page=2)["generation_id"]
+        service.pages.read(token, result["query_id"], page=2)["generation_id"]
         == result["generation_id"]
     )
     service._publications.active_generation.assert_not_called()
@@ -179,7 +164,7 @@ def test_reservations_count_inflight_release_and_never_evict(tmp_path):
     replacement = store.reserve("c")
     replacement.close()
     reader = store.acquire(identity.id, "b")
-    assert reader.page(1)["rows"] == [["1"], ["2"]]
+    assert reader.page(1).rows == [["1"], ["2"]]
     reader.close()
     store.close()
 
@@ -319,14 +304,15 @@ def test_missing_tampered_spool_unavailable_without_execution(queries, system):
     path = store._records[result["query_id"]].path
     path.write_bytes(b"x")
     with pytest.raises(QueryUnavailableError):
-        service.page(token, result["query_id"])
+        service.pages.read(token, result["query_id"])
     path.unlink()
     with pytest.raises(QueryUnavailableError):
-        service.page(token, result["query_id"])
+        service.pages.read(token, result["query_id"])
     assert len(runtime.calls) == 1
 
 
 def test_unreaped_sql_explicitly_hands_off_all_pins_and_result_reservation():
+    from outage_explorer.application.pagination.query_results import QueryResultPager
     from outage_explorer.application.ports.execution import QueryRead
     from outage_explorer.application.services.queries import QueryService
     from outage_explorer.infrastructure.sql_validation.inspection import (
@@ -350,6 +336,7 @@ def test_unreaped_sql_explicitly_hands_off_all_pins_and_result_reservation():
         inputs,
         launcher,
         results,
+        QueryResultPager(access, results),
     )
     with pytest.raises(RuntimeUnavailableError):
         service.execute("token", "SELECT * FROM national")
@@ -369,6 +356,7 @@ def test_unreaped_sql_explicitly_hands_off_all_pins_and_result_reservation():
 
 @pytest.mark.parametrize("sql", ["SELECT 42", "SELECT * FROM national"])
 def test_denied_application_authorization_before_results_inputs_or_runtime(sql):
+    from outage_explorer.application.pagination.query_results import QueryResultPager
     from outage_explorer.application.services.queries import QueryService
     from outage_explorer.infrastructure.sql_validation.inspection import (
         DuckdbSqlInspector,
@@ -383,6 +371,7 @@ def test_denied_application_authorization_before_results_inputs_or_runtime(sql):
         inputs,
         execution,
         results,
+        QueryResultPager(access, results),
     )
     with pytest.raises(ForbiddenError):
         service.execute("token", sql)

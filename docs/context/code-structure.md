@@ -43,14 +43,14 @@ src/outage_explorer/
       resource_artifacts.py    # persist/recover exact resource files
       catalog.py               # authorized dataset descriptions
       preview.py               # approved snapshot reads and input lifecycle
-      queries.py               # inspect, authorize, execute and page SQL
+      queries.py               # inspect, authorize and execute SQL once
       refresh.py               # refresh admission
       refresh_execution.py     # coordinate run lifecycle and final publication
       refresh_baseline.py      # restore and verify the pinned generation
       refresh_candidate.py     # build candidates and validate their outcomes
       refresh_publication.py   # persist resources and prepare publication metadata
       refresh_recovery.py      # reconcile interrupted work
-    pagination/                # reusable cursor requests and bounded page assembly
+    pagination/                # reusable cursor and numbered page contracts
     ports/                     # application-owned interfaces
   infrastructure/
     postgresql/                # operational repositories and transactions
@@ -127,6 +127,7 @@ wrapper or use bootstrap as a service locator. New wrappers need checker coverag
 | --- | --- | --- |
 | Parse `page_size`, reject malformed HTTP input or serialize JSON. | HTTP schemas/routes. | Domain rules and database repositories. |
 | Resolve preview access and choose a pinned generation. | Controller guards call application AccessService; preview consumes approved access (ADR-0070). | Browser-supplied roles or reused access contexts. |
+| Select public catalog datasets. | Controller guards call application AccessService; catalog consumes approved `CatalogAccess` (ADR-0083). | Token resolution or role policy inside `CatalogService`. |
 | Decide whether capacity is valid and calculate the offline share. | Pure domain policy. | HTTP handlers or DuckDB SQL as the sole policy definition. |
 | Verify a Cognito signature or exchange an authorization code. | Cognito adapter behind an application port. | Domain and route bodies. |
 | Read role assignments or commit publication metadata. | PostgreSQL adapter through an application port. | Flask routes and analytical workers. |
@@ -253,6 +254,23 @@ The endpoint retains responsibility for authorization, filtering, stable orderin
 snapshot ownership and cleanup; the paginator never fetches data or alters SQL.
 See [ADR-0071](../adr/0071-shared-cursor-pagination-and-request-validation.md).
 
+## Reusing numbered pagination
+
+`domain/pagination.py` owns pure numbered-page bounds; `application/dto.py`
+provides `NumberedPage`, and `application/pagination/numbered.py` assembles the
+common numbered-page fields around rows and caller-supplied metadata.
+The query controller validates HTTP page fields through its request DTO before
+execution. Non-HTTP entrypoints must validate before invoking `QueryService`.
+The service authorizes the inspected SQL scope once and passes that approval to
+`QueryResultPager` for the first page. Later page requests reauthorize current
+access to the retained grains. The pager owns fixed-size checks, reader cleanup
+and assembly; `QueryService` has no page method. The query-result adapter
+computes the pure window, reads verified
+spool rows, and returns query identity, generation and expiry metadata. The
+generic paginator owns no storage, authorization, lifetime or SQL execution.
+Future services must provide those boundaries and enforce their own response
+byte budgets. See [ADR-0090](../adr/0090-shared-numbered-pagination.md).
+
 `PreviewRequest` requires the dataset ID alongside query inputs. Its Pydantic
 model validators reject unsupported dataset/filter combinations during construction;
 `PreviewService.read` does not perform DTO validation. The HTTP validation guard
@@ -306,8 +324,82 @@ auth preflight permits GET/POST, query permits GET/POST, datasets permit GET, an
 refresh permits POST for admission and GET for reads. All refresh endpoints
 currently allow Idempotency-Key. Update policies explicitly when adding endpoints.
 
+## Required model repositories and current ORM implementation
+
+[ADR-0078](../adr/0078-model-repositories-and-session-decorators.md) establishes
+dedicated SQLAlchemy model repositories and `@with_session` as the required
+pattern for new and refactored operational persistence. Read the
+[repository guide](persistence-repositories.md) before adding model queries.
+Process coordinators invoke persistence operations; they must not mix raw SQL
+or inline ORM queries into workflow logic. Existing raw-SQL adapters are legacy
+implementation, not examples for new code.
+
+The read implementation from [ADR-0074](../adr/0074-refresh-run-orm-pilot.md)
+and [ADR-0077](../adr/0077-latest-refresh-run-orm-read.md) covers
+`PostgresqlResourcePublicationStore.get_run` and `latest`, which delegate to an injected
+`PostgresqlRefreshRunRepository` in `refresh_run_repository.py`. Bootstrap
+constructs both with the same bounded pool. Its typed `RefreshRunRecord` lives
+in `infrastructure/postgresql/refresh_run_record.py` and converts to the existing
+plain domain `RefreshRun` before the session closes. Application ports and
+callers remain independent of ORM types.
+
+The typed `@with_session` decorator in `session_scope.py` injects the session
+into the repository's reads, so their bodies only query and map records.
+`latest` joins the partial `RefreshCoordinationRecord` mapping to prioritize the
+active run before admission time and UUID descending. Both record types share
+`orm_base.py` metadata. Callers still pass only `run_id` to `get_run` and no
+arguments to `latest`. Each decorated invocation owns a separate transaction; the
+decorator does not compose multiple calls into a shared Unit of Work.
+
+[ADR-0079](../adr/0079-refresh-ownership-and-base-repositories.md) extends this
+pattern to claim and heartbeat in `PostgresqlRefreshCoordinationRepository`.
+Each locks the coordination row and completes its updates in one decorated
+transaction. [ADR-0080](../adr/0080-refresh-progress-repository.md) places
+progress in that repository with the same ownership check and transaction
+boundary. [ADR-0081](../adr/0081-refresh-finish-repository.md) places
+unpublished finish there too, including the run outcome and slot release in one
+transaction. `PostgresqlPublishedGenerationRepository` contains the active-base
+validation and generation reads. Admission's base validation takes its existing
+ORM session; opening another session would lose admission atomicity.
+
+[ADR-0082](../adr/0082-atomic-published-generation-repository.md) moves the
+whole successful publication transaction into `PostgresqlPublishedGenerationRepository`.
+Its `PublishedGenerationRecord` maps the immutable descriptors; the ORM base
+check shares the publication session. Admission's base check shares its own
+locked ORM session. The publication store retains uncertain-commit
+reconciliation outside the repository operation.
+[ADR-0087](../adr/0087-atomic-refresh-admission-repository.md) established the
+atomic queued-run and slot write. [ADR-0088](../adr/0088-pure-refresh-admission-policy.md)
+places replay priority, busy-slot rejection and initial-load start eligibility
+in pure domain policy. [ADR-0089](../adr/0089-service-owned-refresh-admission.md)
+makes `RefreshService` evaluate those rules with values obtained through the
+locked admission transaction port. The run repository owns the session, reads
+and atomic run/slot writes.
+[ADR-0084](../adr/0084-pure-publication-base-policy.md) puts the publication
+base and initial-load eligibility rule in `domain/publication_policy.py`; the
+repository supplies freshly locked values and retains the atomic writes.
+[ADR-0085](../adr/0085-active-generation-orm-read.md) moves the active-generation
+join into a decorated repository read; the publication store only delegates.
+[ADR-0086](../adr/0086-reconcile-refresh-in-repository.md) puts recovery and
+uncertain-commit reconciliation into one decorated generation-repository
+transaction. The domain policy decides interruption eligibility; the repository
+checks publication history and applies the run/slot changes under its lock.
+
+`BoundedPostgresqlPool.session()` provides a short-lived transaction over the
+same process-owned psycopg pool used by handwritten SQL. SQLAlchemy NullPool
+avoids a second physical pool; ORM connections use tuple rows and the pool reset
+restores dictionary rows before reuse. Construction remains free of database
+connections. The read mapping is not complete schema metadata: Alembic remains
+the schema authority and is not configured for ORM autogeneration.
+
+Access persistence remains outside this migration. Continue only within requested
+work, preserving atomicity and recovery contracts.
+Read-path acceptance is defined in the [pilot specification](../specs/refresh-run-orm/spec.md).
+
+
 Auth and query request DTOs also use narrowly allowed Pydantic APIs in the HTTP
 layer under [ADR-0076](../adr/0076-auth-and-query-transport-request-models.md).
 Query services retain their existing scalar arguments and fresh authorization.
-Catalog/preview/query public payloads use `JsonPayloadResponse`; auth redirects
-and cookie/bodyless results use dedicated `respond_with_auth` DTOs.
+Catalog uses a typed `CatalogResult` with `CatalogResponse` to build its public
+dataset envelope. Preview/query public payloads use `JsonPayloadResponse`; auth
+redirects and cookie/bodyless results use dedicated `respond_with_auth` DTOs.

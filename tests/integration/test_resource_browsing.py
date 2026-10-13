@@ -15,6 +15,7 @@ from outage_explorer.application.errors import (
     DataUnavailableError,
     PreviewUnavailableError,
 )
+from outage_explorer.application.pagination.query_results import QueryResultPager
 from outage_explorer.application.ports.sql_inspection import SqlRejected
 from outage_explorer.application.refresh_request import RefreshAdmissionRequest
 from outage_explorer.application.services.catalog import CatalogService
@@ -39,6 +40,15 @@ from outage_explorer.infrastructure.parquet.schemas import schema_for
 from outage_explorer.infrastructure.parquet.storage import LocalParquetStore
 from outage_explorer.infrastructure.postgresql.publication import (
     PostgresqlResourcePublicationStore,
+)
+from outage_explorer.infrastructure.postgresql.published_generation_repository import (
+    PostgresqlPublishedGenerationRepository,
+)
+from outage_explorer.infrastructure.postgresql.refresh_coordination_repository import (
+    PostgresqlRefreshCoordinationRepository,
+)
+from outage_explorer.infrastructure.postgresql.refresh_run_repository import (
+    PostgresqlRefreshRunRepository,
 )
 from outage_explorer.infrastructure.query_results.preview_encoding import (
     PreviewEncoding,
@@ -117,7 +127,12 @@ class Durable:
         ).execute(candidate, BOUNDS)
         self.baseline = candidate.baseline
         coverage = {item.grain: item for item in candidate.summaries}
-        publications = PostgresqlResourcePublicationStore(pool)
+        publications = PostgresqlResourcePublicationStore(
+            pool,
+            PostgresqlRefreshRunRepository(pool),
+            PostgresqlPublishedGenerationRepository(pool),
+            PostgresqlRefreshCoordinationRepository(pool),
+        )
         refresh = RefreshService(
             service._access,
             publications,
@@ -163,7 +178,12 @@ class Durable:
 def browsing(system, database, tmp_path):
     durable = Durable(tmp_path)
     first = durable.publish(system, values_for(), "r1" * 8)
-    publications = PostgresqlResourcePublicationStore(system[4])
+    publications = PostgresqlResourcePublicationStore(
+        system[4],
+        PostgresqlRefreshRunRepository(system[4]),
+        PostgresqlPublishedGenerationRepository(system[4]),
+        PostgresqlRefreshCoordinationRepository(system[4]),
+    )
     cache = VerifiedResourceCache(
         tmp_path / "cache",
         ResourceReadSessions(durable.objects),
@@ -195,7 +215,9 @@ def browsing(system, database, tmp_path):
 def test_catalog_roles_and_public_columns_before_data(system, browsing):
     _, _, _, _, runtime, durable, first, publications = browsing
     for role in Role:
-        catalog = CatalogService(system[1]._access, publications).list(system[2][role])
+        access = system[1]._access
+        catalog_access = access.require_catalog(access.authenticate(system[2][role]))
+        catalog = CatalogService(publications).list(catalog_access)
         assert [entry.dataset.id for entry in catalog] == (
             ["national"]
             if role is Role.VIEWER
@@ -351,6 +373,7 @@ def queries(system, browsing, tmp_path):
         cache,
         launcher,
         store,
+        QueryResultPager(system[1]._access, store),
     )
     yield service, runtime
     store.close()
@@ -362,7 +385,7 @@ def test_single_execution_pagination_over_public_views(system, browsing, queries
     durable = browsing[5]
     sql = "SELECT generator AS x FROM generators ORDER BY x DESC LIMIT 301"
     first = service.execute(token, sql, page=1, page_size=100)
-    pages = [service.page(token, first["query_id"], page=n) for n in range(1, 5)]
+    pages = [service.pages.read(token, first["query_id"], page=n) for n in range(1, 5)]
     assert sum(len(page["rows"]) for page in pages) == 301
     assert len(runtime.calls) == 1 and runtime.calls[0].sql == sql
     assert [name for name, _ in [(d.id, d) for d, _ in runtime.calls[0].relations]] == [

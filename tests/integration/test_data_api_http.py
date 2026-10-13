@@ -45,9 +45,10 @@ def app_for(system, browsing, queries):
         access_service=access,
         auth_transport=transport,
         data_services=DataServices(
-            CatalogService(access, system[0]),
+            CatalogService(system[0]),
             browsing[0].service,
             queries[0],
+            queries[0].pages,
             system[1],
             PreviewEncoding(ENCODING),
         ),
@@ -403,8 +404,9 @@ def preview_http_client(state):
         access_service=access,
         auth_transport=AuthTransport(ORIGIN, frozenset({ORIGIN}), True),
         data_services=DataServices(
-            CatalogService(access, state.publications),
+            CatalogService(state.publications),
             state.service.service,
+            Mock(),
             Mock(),
             Mock(),
             PreviewEncoding(ENCODING),

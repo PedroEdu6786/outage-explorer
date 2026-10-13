@@ -16,6 +16,15 @@ from outage_explorer.domain.publication import RunStatus
 from outage_explorer.infrastructure.postgresql.publication import (
     PostgresqlResourcePublicationStore,
 )
+from outage_explorer.infrastructure.postgresql.published_generation_repository import (
+    PostgresqlPublishedGenerationRepository,
+)
+from outage_explorer.infrastructure.postgresql.refresh_coordination_repository import (
+    PostgresqlRefreshCoordinationRepository,
+)
+from outage_explorer.infrastructure.postgresql.refresh_run_repository import (
+    PostgresqlRefreshRunRepository,
+)
 from outage_explorer.infrastructure.refresh_worker import RenewableRefreshLease
 from tests.integration import test_data_api_postgresql as coordination
 from tests.integration import test_refresh_execution as resource_refresh
@@ -93,7 +102,13 @@ def test_verified_publication_commit_loss_reconciles_without_source_repeat(
     run = admit(system)
     process = composition(database, tmp_path)
     worker = process.tick.__self__
-    faulty = PostgresqlResourcePublicationStore(coordination.FaultPool(system[4], mode))
+    fault_pool = coordination.FaultPool(system[4], mode)
+    faulty = PostgresqlResourcePublicationStore(
+        fault_pool,
+        PostgresqlRefreshRunRepository(system[4]),
+        PostgresqlPublishedGenerationRepository(fault_pool),
+        PostgresqlRefreshCoordinationRepository(system[4]),
+    )
     worker.execution.publication = faulty
     # Use the good read port; fault occurs at publish, after verified three-file readback.
     faulty.active_generation = system[0].active_generation

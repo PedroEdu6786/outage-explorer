@@ -18,6 +18,10 @@ from outage_explorer.application.ports.clock import Clock
 from outage_explorer.domain.access import LoginAttempt, Role
 
 
+def _valid_callback_value(value: object) -> bool:
+    return isinstance(value, str) and 0 < len(value) <= 4096 and value.isascii()
+
+
 class LoginService:
     def __init__(
         self,
@@ -64,56 +68,70 @@ class LoginService:
     def begin(self, return_to: str = "/") -> LoginRedirect:
         if return_to not in self._destinations:
             raise UnauthenticatedError("Login failed")
-        state, binding, verifier = (self._security.random_token() for _ in range(3))
-        now = self._clock.now()
-        expiry = now + timedelta(seconds=self._attempt_seconds)
+
+        state = self._security.random_token()
+        browser_binding = self._security.random_token()
+        pkce_verifier = self._security.random_token()
+        created_at = self._clock.now()
+        expires_at = created_at + timedelta(seconds=self._attempt_seconds)
+
         attempt = LoginAttempt(
-            self._security.digest(state),
-            self._security.digest(binding),
-            verifier,
+            state_digest=self._security.digest(state),
+            browser_binding_digest=self._security.digest(browser_binding),
+            pkce_verifier=pkce_verifier,
+            callback_uri=self._callback_uri,
+            return_to=return_to,
+            created_at=created_at,
+            expires_at=expires_at,
+        )
+        authorization_url = self._provider.authorization_url(
             self._callback_uri,
-            return_to,
-            now,
-            expiry,
+            state,
+            self._security.pkce_challenge(pkce_verifier),
         )
-        url = self._provider.authorization_url(
-            self._callback_uri, state, self._security.pkce_challenge(verifier)
+        self._attempts.create_attempt(attempt, created_at)
+        return LoginRedirect(
+            authorization_url=authorization_url,
+            browser_binding=browser_binding,
+            expires_at=expires_at,
         )
-        self._attempts.create_attempt(attempt, now)
-        return LoginRedirect(url, binding, expiry)
 
     def complete(
         self, code: str, state: str, browser_binding: str
     ) -> EstablishedSession:
-        if any(
-            not isinstance(value, str)
-            or not value
-            or len(value) > 4096
-            or not value.isascii()
-            for value in (code, state, browser_binding)
+        if not all(
+            _valid_callback_value(value) for value in (code, state, browser_binding)
         ):
             raise UnauthenticatedError("Login failed")
+
         now = self._clock.now()
         attempt = self._attempts.consume_attempt(
             self._security.digest(state), self._security.digest(browser_binding), now
         )
-        if (
-            attempt is None
-            or not attempt.created_at <= now < attempt.expires_at
-            or attempt.callback_uri != self._callback_uri
-            or attempt.return_to not in self._destinations
-        ):
+        if attempt is None:
             raise UnauthenticatedError("Login failed")
+
+        attempt_is_current = attempt.created_at <= now < attempt.expires_at
+        callback_is_expected = attempt.callback_uri == self._callback_uri
+        destination_is_allowed = attempt.return_to in self._destinations
+        if not (attempt_is_current and callback_is_expected and destination_is_allowed):
+            raise UnauthenticatedError("Login failed")
+
         identity = self._provider.exchange(
             code, attempt.pkce_verifier, attempt.callback_uri
         )
         user = self._users.find_user(identity.issuer, identity.subject)
         if user is None or user.role not in Role:
             raise UnauthenticatedError("Login failed")
-        token = self._security.random_token()
-        established = self._clock.now()
-        expiry = established + timedelta(seconds=self._session_seconds)
+        session_token = self._security.random_token()
+        established_at = self._clock.now()
+        expires_at = established_at + timedelta(seconds=self._session_seconds)
         self._sessions.create_session(
-            self._security.digest(token), user.id, established, expiry
+            self._security.digest(session_token), user.id, established_at, expires_at
         )
-        return EstablishedSession(token, user, expiry, attempt.return_to)
+        return EstablishedSession(
+            token=session_token,
+            user=user,
+            expires_at=expires_at,
+            return_to=attempt.return_to,
+        )

@@ -24,6 +24,33 @@ development and integration tests use PostgreSQL, while unit tests may use
 fakes. Do not reintroduce SQLite as an implicit development fallback. RDS does
 not change the one-replica limit or make query-ID metadata durable.
 
+Under [ADR-0078](docs/adr/0078-model-repositories-and-session-decorators.md),
+dedicated model repositories using SQLAlchemy and `@with_session` are the required
+pattern for new and refactored operational persistence. `RefreshStore.get_run`
+and `latest` follow it under ADR-0074/ADR-0077; claim and heartbeat follow
+[ADR-0079](docs/adr/0079-refresh-ownership-and-base-repositories.md). Base
+validation stays on its caller's transaction through a generation repository.
+Progress follows [ADR-0080](docs/adr/0080-refresh-progress-repository.md), and
+unpublished finish follows [ADR-0081](docs/adr/0081-refresh-finish-repository.md).
+Atomic generation publication follows
+[ADR-0082](docs/adr/0082-atomic-published-generation-repository.md); uncertain
+commits still require fresh locked reconciliation. Publication-base eligibility
+is pure domain policy under
+[ADR-0084](docs/adr/0084-pure-publication-base-policy.md).
+[ADR-0085](docs/adr/0085-active-generation-orm-read.md) moves the active
+generation read to the decorated ORM repository.
+[ADR-0086](docs/adr/0086-reconcile-refresh-in-repository.md) places recovery
+and uncertain-commit reconciliation in one decorated repository transaction.
+[ADR-0087](docs/adr/0087-atomic-refresh-admission-repository.md) moves queued
+run creation and the full atomic admission operation to the run repository.
+[ADR-0088](docs/adr/0088-pure-refresh-admission-policy.md) keeps replay priority
+and initial-load eligibility in pure domain policy.
+[ADR-0089](docs/adr/0089-service-owned-refresh-admission.md) makes
+`RefreshService` invoke those rules inside a focused admission transaction port.
+Keep records and sessions in `infrastructure/postgresql/`, return domain values and share the existing
+bounded psycopg pool. Remaining raw-SQL paths are legacy to migrate within the
+requested scope. Do not use partial ORM metadata to generate schema migrations.
+
 Deployment targets **Amazon EC2**, replacing ECS under
 [ADR-0038](docs/adr/0038-ec2-deployment-local-development.md). Development runs
 locally with configured RDS, Cognito and S3 resources as needed. An EC2 instance
@@ -139,8 +166,11 @@ reruns. Recovery must prevent stale owners from publishing.
    ADR-0070 extends request-scoped access to preview: controller role/dataset guards
    establish `PreviewAccess`; `PreviewService.read` consumes it without another lookup.
    Non-HTTP callers authenticate freshly and call `AccessService.require_dataset`
-   before reading. ADR-0071 permits narrowly reviewed Pydantic APIs in
-   `application/pagination/request.py` and `application/preview_request.py` only.
+   before reading. ADR-0083 extends request-scoped access to catalog: the guards
+   establish `CatalogAccess`, and non-HTTP callers authenticate freshly and call
+   `AccessService.require_catalog` before listing. ADR-0071 permits narrowly
+   reviewed Pydantic APIs in `application/pagination/request.py` and
+   `application/preview_request.py` only.
    ADR-0073 additionally permits `BaseModel`, `ConfigDict`, `Field` and
    `ValidationError` in `application/refresh_request.py` for admission validation.
    Cognito supplies identity;
@@ -153,7 +183,12 @@ reruns. Recovery must prevent stale owners from publishing.
 3. Execute user SQL only through the isolated execution boundary, with authorized
    inputs and bounded resources. No API-process DuckDB fallback or worker
    access to operational PostgreSQL, cloud credentials, or unrestricted cache files.
-4. Preserve one execution's result for SQL pagination. Do not inject pagination
+4. Preserve one execution's result for SQL pagination. Under ADR-0090, HTTP
+   request DTOs validate page inputs before execution; non-HTTP execution
+   entrypoints must validate their own inputs. `QueryService` authorizes the
+   inspected SQL scope once and the pager reuses that approval for its first
+   page; each later page request requires fresh authorization. `QueryService`
+   has no page method. Do not inject pagination
    clauses, silently rerun SQL, or persist query-ID metadata in PostgreSQL.
 5. Keep refresh outside request/import/app-factory lifecycles. Publish only a
    fully verified generation; preserve previous data and accepted invalid-row,
@@ -169,6 +204,32 @@ reruns. Recovery must prevent stale owners from publishing.
 7. Preserve concurrent changes, historical ADRs, and the append-only devlog.
    Record a new ADR for a changed accepted boundary; do not silently treat an
    unaccepted recommendation as an implementation decision.
+
+## Mandatory persistence repository convention
+
+Before adding model queries or refactoring persistence, read
+[Required persistence repository pattern](docs/context/persistence-repositories.md).
+Use `PostgresqlRefreshRunRepository` as the reference implementation.
+
+- MUST centralize model queries in dedicated infrastructure repositories using
+  SQLAlchemy ORM/expressions. ORM records describe mapping; repositories own queries.
+- MUST use `@with_session` at repository operation boundaries to inject the
+  short-lived session and keep lifecycle boilerplate out of query methods.
+- MUST keep process/workflow logic separate: invoke persistence operations through
+  application ports or injected repositories as allowed by the layer. No raw SQL
+  or inline ORM queries mixed into process coordinators, services or controllers.
+- MUST construct/inject concrete repositories through bootstrap and return domain
+  values/DTOs rather than live ORM objects. Preserve the shared bounded pool.
+- MUST preserve atomic transactions: separate decorated calls do not share a
+  transaction. Multi-step atomic database operations need one shared session;
+  their internal helpers must not open independent decorated sessions.
+- Admission is the scoped exception in ADR-0089: its repository exposes an
+  application-owned transaction port so `RefreshService` can invoke policy
+  under the coordination lock. The session remains inside infrastructure.
+- Remaining raw queries in publication/access adapters are not patterns to copy.
+  Migrate only within the user's requested scope. Migration/connection SQL and
+  isolated analytical SQL retain their separate documented roles; any necessary
+  raw operational statement belongs in a repository with a documented reason.
 
 ## Mandatory HTTP controller convention
 
@@ -190,8 +251,9 @@ Use the refresh controller as the reference implementation.
   missing-result response branches, local exception handlers or preflight hooks
   in JSON controllers. The guide maps each old pattern to its required replacement.
 - Auth/query transport DTO Pydantic APIs are scoped to the exact modules in
-  [ADR-0076](docs/adr/0076-auth-and-query-transport-request-models.md). Catalog and
-  query services retain application authorization. Auth redirects and bodyless
+  [ADR-0076](docs/adr/0076-auth-and-query-transport-request-models.md). Catalog
+  receives approved application-owned `CatalogAccess` under ADR-0083; query
+  services retain application authorization. Auth redirects and bodyless
   logout use dedicated response decorators; session/logout reject nonempty inputs.
 - Existing legacy routes are not examples to copy. Non-JSON flows and public
   endpoints retain their documented transport/access contracts; do not add
@@ -205,6 +267,10 @@ scaffold includes automated import-boundary checks in `tests/architecture/`
 and `.github/workflows/ci.yml`. Preserve their negative fixtures and narrow
 startup exception. Run Ruff, mypy, and pytest as documented in README.
 Static checks and liveness do not prove runtime authorization or isolation.
+
+Temporary user instruction (2026-10-12): pause running unit tests to reduce
+token use until the user asks to resume. Use focused checks for current work and
+report exactly which checks ran; this does not change CI or the test suite.
 
 EC2 deployment/storage, sandbox launcher, session mapping, and measured budgets
 remain open. One WSGI process is a proposal, not an accepted runtime mandate.

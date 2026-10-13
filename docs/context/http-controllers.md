@@ -31,8 +31,8 @@ before adding or changing a controller. The reference implementation is
    Add the endpoint's preflight policy in `preflight.py` where credentialed CORS
    applies. Register new error policies centrally in `errors.py` as needed.
 7. Preserve application authorization boundaries. Guards invoke application-owned
-   access checks; this convention does not extend ADR-0066/0070's request-scoped
-   access exceptions to other use cases or remove their existing checks.
+   access checks. Request-scoped refresh, preview and catalog follow their
+   explicit ADR-0066/0070/0083 contracts; other use cases retain their checks.
 
 For a new endpoint, these are implementation requirements, not optional cleanup
 or a reason to ask the user to approve decorators again. Ask only when the
@@ -150,10 +150,16 @@ allow `Idempotency-Key`. Moving policies is not permission to change allowances.
 
 ## Scope, existing routes and review checks
 
-Refresh, datasets, queries and access now follow this convention. Catalog,
-preview and query results already contain public application payloads and use
-`JsonPayloadResponse` without another envelope. Session uses `SessionResponse`
-to project the identity allowlist. Apply the same convention to future changes;
+Refresh, datasets, queries and access now follow this convention. Catalog uses
+`roles_required` and `catalog_required` to obtain `CatalogAccess` from
+application-owned access policy. `CatalogService` builds entries and encoded
+columns from the approved datasets; `CatalogResult` and `CatalogResponse` map
+filters, coverage and the public JSON envelope. Preview and query results
+already contain public application payloads and use `JsonPayloadResponse`.
+Query GET invokes `QueryResultPager` after its validated request DTO; SQL
+execution remains in `QueryService`.
+Session uses `SessionResponse` to project
+the identity allowlist. Apply the same convention to future changes;
 other endpoints, such as health and documentation, retain their explicit contracts.
 
 `respond_with` currently supports JSON bodies. Login redirects, cookie transport,

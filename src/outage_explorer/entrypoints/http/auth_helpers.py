@@ -78,6 +78,23 @@ def dataset_required(access: AccessService) -> Callable[[Handler], Handler]:
     return decorate
 
 
+def catalog_required(access: AccessService) -> Callable[[Handler], Handler]:
+    """Approve catalog scope from the request's authenticated identity."""
+
+    def decorate(handler: Handler) -> Handler:
+        @wraps(handler)
+        def guarded(*args: object, **kwargs: object) -> Response:
+            request_access = kwargs.get("request_access")
+            if not isinstance(request_access, RequestAccess):
+                raise UnauthenticatedError("Authentication required")
+            kwargs["catalog_access"] = access.require_catalog(request_access)
+            return handler(*args, **kwargs)
+
+        return guarded
+
+    return decorate
+
+
 def csrf_protected(
     access: AccessService,
     transport: AuthTransport,

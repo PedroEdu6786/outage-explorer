@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import Protocol
 
+from outage_explorer.application.dto import NumberedPage
 from outage_explorer.domain.access import AnalyticalGrain
 from outage_explorer.domain.query_results import ResultIdentity
 
@@ -28,7 +29,7 @@ class ResultReservation(Protocol):
 class ResultReader(Protocol):
     @property
     def identity(self) -> ResultIdentity: ...
-    def page(self, page: int) -> dict[str, object]: ...
+    def page(self, page: int) -> NumberedPage[object]: ...
     def close(self) -> None: ...
 
 

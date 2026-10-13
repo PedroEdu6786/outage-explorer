@@ -220,6 +220,11 @@ Application-owned access policy remains in `AccessService`; preview does not
 repeat authorization. Shared `application/pagination/` assembles cursor responses
 from preview's bounded read. See ADR-0070 and ADR-0071.
 
+Catalog follows the same request-scoped boundary under ADR-0083. Controller
+`roles_required` and `catalog_required` guards resolve one fresh identity and
+pass approved public datasets as `CatalogAccess` to `CatalogService`. Direct
+callers establish that context through `AccessService` before catalog reads.
+
 
 ## Required HTTP controller structure
 
@@ -232,3 +237,41 @@ error handling and endpoint preflight policies. Do not reintroduce inline
 validation/response construction or controller-local error/preflight hooks.
 Refresh, datasets, queries and access follow this pattern. Specialized non-JSON
 transport and existing access contracts remain.
+
+## Required operational persistence structure
+
+[ADR-0078](../adr/0078-model-repositories-and-session-decorators.md) establishes
+model repositories with SQLAlchemy and `@with_session` as the project pattern.
+The [repository guide](persistence-repositories.md) defines its required use.
+ORM records hold mappings; dedicated repositories centralize model queries;
+services/process coordinators invoke persistence operations through the allowed
+interfaces. Do not mix raw SQL or inline ORM queries into process logic.
+Bootstrap injects repositories using the shared bounded pool, and callers receive
+plain domain values/DTOs. ORM types remain in infrastructure.
+
+Each decorated operation has its own transaction. Preserve one shared transaction
+for an atomic multi-table operation, and keep external work outside it. Existing
+publication/access raw-SQL paths remain legacy implementation pending scoped
+migration; adopting this convention does not claim a complete ORM migration.
+Claim, heartbeat, progress and unpublished finish now use one ORM repository
+transaction each
+([ADR-0079](../adr/0079-refresh-ownership-and-base-repositories.md),
+[ADR-0080](../adr/0080-refresh-progress-repository.md),
+[ADR-0081](../adr/0081-refresh-finish-repository.md)). Active-base
+validation lives in the generation repository and shares the caller's ORM
+transaction for admission and publication.
+
+Successful generation publication now uses one ORM repository transaction for
+the descriptor insert, run outcome, pointer switch and slot release
+([ADR-0082](../adr/0082-atomic-published-generation-repository.md)). Admission
+uses a focused transaction port: `RefreshService` decides replay, busy-slot and
+initial-load eligibility under the repository's coordination lock, while the
+repository commits the queued run and slot together
+([ADR-0089](../adr/0089-service-owned-refresh-admission.md)). Recovery uses a separate decorated
+ORM repository transaction that locks coordination before checking history and
+changing the run or slot
+([ADR-0086](../adr/0086-reconcile-refresh-in-repository.md)); a lost publication
+commit response still triggers fresh locked reconciliation.
+The publication repository evaluates the pure domain base-eligibility rule with
+the run and active pointer it read under the lock
+([ADR-0084](../adr/0084-pure-publication-base-policy.md)).

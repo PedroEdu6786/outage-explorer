@@ -1,5 +1,6 @@
 """Durable admission and fenced background ownership transactions."""
 
+from contextlib import AbstractContextManager
 from typing import Protocol
 
 from outage_explorer.domain.publication import (
@@ -11,14 +12,28 @@ from outage_explorer.domain.publication import (
 )
 
 
-class RefreshStore(Protocol):
+class RefreshAdmissionTransaction(Protocol):
+    @property
+    def active_run_id(self) -> str | None: ...
+
+    @property
+    def base_generation_id(self) -> str | None: ...
+
     def replay(self, requester_id: str, key_digest: str) -> RefreshRun | None: ...
-    def admit(
+    def require_supported_base(self) -> None: ...
+    def create_queued_run(
         self,
         requester_id: str,
         key_digest: str,
         configuration: RefreshConfiguration,
     ) -> RefreshRun: ...
+
+
+class RefreshStore(Protocol):
+    def replay(self, requester_id: str, key_digest: str) -> RefreshRun | None: ...
+    def admission_transaction(
+        self,
+    ) -> AbstractContextManager[RefreshAdmissionTransaction]: ...
     def get_run(self, run_id: str) -> RefreshRun | None: ...
     def latest(self) -> RefreshRun | None: ...
     def claim(self, identity: str, lease_seconds: int) -> RefreshOwner | None: ...

@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+from outage_explorer.application.pagination.query_results import QueryResultPager
 from outage_explorer.application.ports.tabular_encoding import TabularEncoding
 from outage_explorer.application.services.catalog import CatalogService
 from outage_explorer.application.services.preview import PreviewService
@@ -14,5 +15,6 @@ class DataServices:
     catalog: CatalogService
     preview: PreviewService
     queries: QueryService
+    query_pages: QueryResultPager
     refresh: RefreshService
     encoding: TabularEncoding

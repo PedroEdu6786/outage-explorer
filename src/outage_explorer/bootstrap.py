@@ -36,6 +36,7 @@ from outage_explorer.application.errors import (
     RuntimeUnavailableError,
 )
 from outage_explorer.application.pagination.cursor import CursorPaginator
+from outage_explorer.application.pagination.query_results import QueryResultPager
 from outage_explorer.application.ports.analytical_inputs import PublishedResourceInputs
 from outage_explorer.application.ports.artifacts import (
     ArtifactBounds,
@@ -123,6 +124,15 @@ from outage_explorer.infrastructure.postgresql.migrations import run_migrations
 from outage_explorer.infrastructure.postgresql.pool import BoundedPostgresqlPool
 from outage_explorer.infrastructure.postgresql.publication import (
     PostgresqlResourcePublicationStore,
+)
+from outage_explorer.infrastructure.postgresql.published_generation_repository import (
+    PostgresqlPublishedGenerationRepository,
+)
+from outage_explorer.infrastructure.postgresql.refresh_coordination_repository import (
+    PostgresqlRefreshCoordinationRepository,
+)
+from outage_explorer.infrastructure.postgresql.refresh_run_repository import (
+    PostgresqlRefreshRunRepository,
 )
 from outage_explorer.infrastructure.query_results.cleanup import QueryCleanup
 from outage_explorer.infrastructure.query_results.encoding import EncodingBounds
@@ -255,8 +265,20 @@ def build_data_services(
             resources.sequences,
             resources.response_bytes,
         )
+    query_pages = QueryResultPager(access, results)
+    queries = QueryService(
+        access,
+        resources.inspector
+        if resources is not None and resources.inspector is not None
+        else UnavailableSqlInspector(),
+        store,
+        inputs,
+        execution,
+        results,
+        query_pages,
+    )
     return DataServices(
-        CatalogService(access, store),
+        CatalogService(store),
         PreviewService(
             store,
             inputs,
@@ -265,16 +287,8 @@ def build_data_services(
             encoding,
             CursorPaginator(encoding.bytes, response_bytes=response_bytes),
         ),
-        QueryService(
-            access,
-            resources.inspector
-            if resources is not None and resources.inspector is not None
-            else UnavailableSqlInspector(),
-            store,
-            inputs,
-            execution,
-            results,
-        ),
+        queries,
+        query_pages,
         refresh,
         encoding,
     )
@@ -361,7 +375,12 @@ def build_http_app(*, data_resources: DataHttpResources | None = None) -> Flask:
             auth_transport=transport,
             data_services=build_data_services(
                 access,
-                PostgresqlResourcePublicationStore(pool),
+                PostgresqlResourcePublicationStore(
+                    pool,
+                    PostgresqlRefreshRunRepository(pool),
+                    PostgresqlPublishedGenerationRepository(pool),
+                    PostgresqlRefreshCoordinationRepository(pool),
+                ),
                 security,
                 os.environ,
                 data_resources,
@@ -710,7 +729,12 @@ def build_refresh_worker(
             "Invalid refresh worker configuration"
         ) from None
     pool = _access_pool(database)
-    store = PostgresqlResourcePublicationStore(pool)
+    store = PostgresqlResourcePublicationStore(
+        pool,
+        PostgresqlRefreshRunRepository(pool),
+        PostgresqlPublishedGenerationRepository(pool),
+        PostgresqlRefreshCoordinationRepository(pool),
+    )
     lease = RenewableRefreshLease(store)
 
     @contextmanager

@@ -142,7 +142,9 @@ def browsing(system, database, tmp_path):
 
 @pytest.mark.parametrize("role", list(Role))
 def test_catalog_roles_and_public_columns_before_data(system, browsing, role):
-    catalog = CatalogService(system[1]._access, system[0]).list(system[2][role])
+    access = system[1]._access
+    catalog_access = access.require_catalog(access.authenticate(system[2][role]))
+    catalog = CatalogService(system[0]).list(catalog_access)
     assert [entry.dataset.id for entry in catalog] == (
         ["national"]
         if role is Role.VIEWER

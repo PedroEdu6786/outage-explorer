@@ -1,6 +1,7 @@
 """Adversarial transport boundaries; no database or analytical adapters."""
 
 import json
+from contextlib import contextmanager
 from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 from types import SimpleNamespace
@@ -9,12 +10,17 @@ from unittest.mock import Mock
 import pytest
 
 from outage_explorer.application import errors
-from outage_explorer.application.dto import RequestAccess
+from outage_explorer.application.catalog_responses import (
+    CatalogDatasetResult,
+    CatalogResult,
+)
+from outage_explorer.application.dto import CatalogAccess, RequestAccess
 from outage_explorer.application.ports.sql_inspection import SqlRejected
 from outage_explorer.application.refresh_request import RefreshAdmissionRequest
 from outage_explorer.application.services.access import AccessService
 from outage_explorer.application.services.refresh import RefreshService
 from outage_explorer.domain.access import Role, SeededUser, Session
+from outage_explorer.domain.datasets import PUBLIC_DATASETS
 from outage_explorer.domain.publication import (
     PublicationState,
     RefreshConfiguration,
@@ -37,7 +43,10 @@ def transport():
     access.authenticate.return_value = context
     access.validate_csrf.return_value = context
     access.require_roles.side_effect = lambda context, roles: context
-    services = DataServices(Mock(), Mock(), Mock(), Mock(), Mock())
+    access.require_catalog.return_value = CatalogAccess(
+        context.principal, PUBLIC_DATASETS
+    )
+    services = DataServices(Mock(), Mock(), Mock(), Mock(), Mock(), Mock())
     app = create_app(
         Mock(),
         login_service=Mock(),
@@ -82,6 +91,7 @@ def test_strict_get_rejects_before_services(transport, path):
         not services.catalog.mock_calls
         and not services.preview.mock_calls
         and not services.queries.mock_calls
+        and not services.query_pages.mock_calls
         and not services.refresh.mock_calls
     )
 
@@ -121,6 +131,27 @@ def test_strict_query_body(transport, body):
     )
     assert response.status_code == 400
     assert not services.queries.mock_calls
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "page=0",
+        "page=-1",
+        "page=2147483648",
+        "page=1&page=2",
+        "page_size=0",
+        "page_size=501",
+        "page_size=1&page_size=2",
+    ],
+)
+def test_invalid_submission_pagination_is_rejected_before_execution(transport, query):
+    client, _, services = transport
+    response = client.post(
+        f"/api/query?{query}", json={"sql": "SELECT 1"}, headers={"Origin": ORIGIN}
+    )
+    assert response.status_code == 400
+    services.queries.execute.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -204,7 +235,7 @@ def test_get_body_rejected(transport, path):
 )
 def test_safe_errors_and_retry(transport, failure, status, code):
     client, _, services = transport
-    services.queries.page.side_effect = failure
+    services.query_pages.read.side_effect = failure
     response = client.get("/api/query?query_id=x&page=1", headers={"Origin": ORIGIN})
     assert response.status_code == status and response.json["error"]["code"] == code
     assert "private" not in response.text
@@ -251,7 +282,7 @@ def test_preflight_exact_origins_methods_and_headers(transport):
 
 
 def test_app_requires_auth_and_construction_is_inert():
-    services = DataServices(Mock(), Mock(), Mock(), Mock(), Mock())
+    services = DataServices(Mock(), Mock(), Mock(), Mock(), Mock(), Mock())
     with pytest.raises(ValueError):
         create_app(Mock(), data_services=services)
     app = create_app(
@@ -285,6 +316,7 @@ def test_app_requires_auth_and_construction_is_inert():
             services.catalog,
             services.preview,
             services.queries,
+            services.query_pages,
             services.refresh,
         )
     )
@@ -403,7 +435,12 @@ def test_refresh_resolves_session_once_and_does_not_reuse_access_on_later_reques
     access = AccessService(sessions, security, clock)
     store = Mock()
     store.replay.return_value = None
-    store.admit.side_effect = errors.RefreshBusyError()
+
+    @contextmanager
+    def busy_admission():
+        yield SimpleNamespace(replay=lambda user, digest: None, active_run_id="busy")
+
+    store.admission_transaction.side_effect = busy_admission
     store.latest.return_value = None
     configuration = RefreshConfiguration(
         start=date(2026, 4, 2),
@@ -420,7 +457,7 @@ def test_refresh_resolves_session_once_and_does_not_reuse_access_on_later_reques
         login_service=Mock(),
         access_service=access,
         auth_transport=AuthTransport(ORIGIN, frozenset({ORIGIN}), True),
-        data_services=DataServices(Mock(), Mock(), Mock(), refresh, Mock()),
+        data_services=DataServices(Mock(), Mock(), Mock(), Mock(), refresh, Mock()),
     )
     client = app.test_client()
     client.set_cookie("outage_session", token)
@@ -434,7 +471,7 @@ def test_refresh_resolves_session_once_and_does_not_reuse_access_on_later_reques
     assert client.post("/api/refresh", json={}, headers=headers).status_code == 409
     assert sessions.resolve_session.call_count == 1
     store.replay.assert_called_once_with(user.id, security.digest(key))
-    store.admit.assert_called_once_with(user.id, security.digest(key), configuration)
+    store.admission_transaction.assert_called_once_with()
 
     assert client.get("/api/refresh/latest").status_code == 200
     assert sessions.resolve_session.call_count == 2
@@ -449,7 +486,7 @@ def test_refresh_resolves_session_once_and_does_not_reuse_access_on_later_reques
     )
     assert client.post("/api/refresh", json={}, headers=headers).status_code == 403
     assert sessions.resolve_session.call_count == 4
-    assert store.admit.call_count == 1
+    assert store.admission_transaction.call_count == 1
     sessions.resolve_session.return_value = None
     assert client.get("/api/refresh/latest").status_code == 401
     assert sessions.resolve_session.call_count == 5
@@ -638,6 +675,7 @@ def test_central_preflight_policies_do_not_invoke_services(
         services.catalog,
         services.preview,
         services.queries,
+        services.query_pages,
         services.refresh,
     ):
         assert not service.mock_calls
@@ -664,14 +702,21 @@ def test_unrelated_routing_errors_keep_their_http_status(transport):
     assert client.post("/health").status_code == 405
 
 
-@pytest.mark.parametrize("path", ["/api/datasets?unknown=1", "/api/query?page=bad"])
-def test_catalog_and_query_authenticate_before_validation(transport, path):
+@pytest.mark.parametrize(
+    ("path", "auth_method"),
+    [
+        ("/api/datasets?unknown=1", "authenticate"),
+        ("/api/query?page=bad", "current_identity"),
+    ],
+)
+def test_catalog_and_query_authenticate_before_validation(transport, path, auth_method):
     client, access, services = transport
-    access.current_identity.side_effect = errors.UnauthenticatedError()
+    getattr(access, auth_method).side_effect = errors.UnauthenticatedError()
     response = client.get(path)
     assert response.status_code == 401
     assert not services.catalog.mock_calls
     assert not services.queries.mock_calls
+    assert not services.query_pages.mock_calls
 
 
 def test_query_csrf_denies_before_parsing_or_execution(transport):
@@ -689,7 +734,7 @@ def test_query_dtos_forward_unchanged_sql_and_pagination(transport):
     client.set_cookie("outage_session", "session-token")
     payload = {"rows": [[1]], "page": 2, "query_id": "retained-id"}
     services.queries.execute.return_value = payload
-    services.queries.page.return_value = payload
+    services.query_pages.read.return_value = payload
     sql = "  SELECT 1;\n"
     response = client.post(
         "/api/query?page=2&page_size=25", json={"sql": sql}, headers={"Origin": ORIGIN}
@@ -700,17 +745,41 @@ def test_query_dtos_forward_unchanged_sql_and_pagination(transport):
     )
     response = client.get("/api/query?query_id=retained-id&page=2")
     assert response.status_code == 200 and response.json == payload
-    services.queries.page.assert_called_once_with(
+    services.query_pages.read.assert_called_once_with(
         "session-token", "retained-id", page=2, page_size=None
     )
     assert services.queries.execute.call_count == 1
 
 
 def test_catalog_payload_is_not_reenveloped(transport):
-    client, _, services = transport
+    client, access, services = transport
     client.set_cookie("outage_session", "session-token")
-    payload = {"generation_id": "generation", "datasets": [{"id": "national"}]}
-    services.catalog.payload.return_value = payload
+    services.catalog.describe.return_value = CatalogResult(
+        generation_id="generation",
+        datasets=(
+            CatalogDatasetResult(
+                dataset=PUBLIC_DATASETS[0], columns=[{"name": "period"}], coverage=None
+            ),
+        ),
+    )
     response = client.get("/api/datasets")
-    assert response.status_code == 200 and response.json == payload
-    services.catalog.payload.assert_called_once_with("session-token", services.encoding)
+    assert response.status_code == 200
+    assert response.json == {
+        "generation_id": "generation",
+        "datasets": [
+            {
+                "id": "national",
+                "sql_name": "national",
+                "label": "National",
+                "schema_version": "1",
+                "columns": [{"name": "period"}],
+                "supported_filters": ["start_date", "end_date"],
+                "coverage": None,
+            }
+        ],
+    }
+    services.catalog.describe.assert_called_once_with(
+        access.require_catalog.return_value, services.encoding
+    )
+    access.authenticate.assert_called_once_with("session-token")
+    access.require_catalog.assert_called_once_with(access.authenticate.return_value)

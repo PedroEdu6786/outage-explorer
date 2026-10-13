@@ -1,7 +1,7 @@
 """Explicit process polling and independent database-time lease renewal."""
 
 import signal
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from threading import Event, Thread
 from types import FrameType
@@ -12,39 +12,55 @@ from outage_explorer.domain.publication import RefreshOwner
 
 
 class RenewableRefreshLease:
+    """Keep refresh ownership alive while work runs inside the context."""
+
     def __init__(
         self, store: RefreshStore, seconds: int = 60, renew_seconds: float = 10
     ) -> None:
         if not 0 < renew_seconds < seconds:
             raise ValueError("Invalid renewal interval")
-        self.store, self.seconds, self.renew_seconds = store, seconds, renew_seconds
+        self.store = store
+        self.seconds = seconds
+        self.renew_seconds = renew_seconds
         self.failure: Exception | None = None
 
     def check(self) -> None:
+        """Raise any heartbeat failure in the thread performing the refresh."""
         if self.failure is not None:
             raise self.failure
 
     @contextmanager
-    def __call__(self, owner: RefreshOwner) -> Iterator[None]:
-        stopped = Event()
+    def __call__(self, owner: RefreshOwner) -> Generator[None]:
+        """Start lease renewal on entry and stop it when refresh work exits."""
+        stop_renewal = Event()
         self.failure = None
 
-        def renew() -> None:
-            while not stopped.wait(self.renew_seconds):
-                try:
-                    self.store.heartbeat(owner, self.seconds)
-                except Exception as error:
-                    self.failure = error
-                    return
-
         # Ownership was committed before this thread and any source retrieval.
-        thread = Thread(target=renew, name="refresh-lease", daemon=False)
-        thread.start()
+        renewal_thread = Thread(
+            target=self._renew_until_stopped,
+            args=(owner, stop_renewal),
+            name="refresh-lease",
+            daemon=False,
+        )
+        renewal_thread.start()
         try:
             yield
         finally:
-            stopped.set()
-            thread.join()
+            stop_renewal.set()
+            renewal_thread.join()
+
+    def _renew_until_stopped(self, owner: RefreshOwner, stop_renewal: Event) -> None:
+        while True:
+            # Wait between heartbeats, waking immediately when work finishes.
+            if stop_renewal.wait(self.renew_seconds):
+                return
+
+            try:
+                self.store.heartbeat(owner, self.seconds)
+            except Exception as error:
+                # Save the failure for check(); exceptions cannot cross threads.
+                self.failure = error
+                return
 
 
 class SupervisedRefreshProcess:
