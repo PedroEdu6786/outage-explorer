@@ -278,6 +278,7 @@ class RuntimeEvidence:
         if not isinstance(self.acceptance_scope, str) or self.acceptance_scope not in {
             "complete-runtime",
             "local-preview-sql",
+            "private-ec2-smoke",
         }:
             raise ValueError("Unsupported analytical acceptance scope")
         if type(self.reviewed_on) is not date:
@@ -310,10 +311,12 @@ class RuntimeEvidence:
     def require_ready(
         self, profile: RuntimeProfile, *, started: bool, local_acceptance: bool = False
     ) -> None:
+        # Both scoped records require the explicit single-process loopback
+        # startup path; generic runtime consumers need complete evidence.
         if (
             started is not True
             or (
-                self.acceptance_scope == "local-preview-sql"
+                self.acceptance_scope in {"local-preview-sql", "private-ec2-smoke"}
                 and local_acceptance is not True
             )
             or profile.temporary_backend != "quota-disk"

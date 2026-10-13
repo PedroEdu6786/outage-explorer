@@ -439,16 +439,17 @@ the selected disk backend. `tmpfs-smoke` still fails this gate. No real Linux
 quota probe was executed in the corrective implementation; a passing subset of
 the harness cannot establish readiness.
 
-### Representative public inputs and existing overlap workload
+### Representative resource inputs and existing overlap workload
 
 Measurements currently require a **Linux host with procfs and cgroup v2 Docker**.
 Other hosts produce an explicit unsupported measurement gate. Prepare two
-independently approved, already verified immutable public-projection snapshots:
+independently approved, already verified immutable unified resource snapshots:
 `old` (retained while `current` runs) and `current`. Each must contain usable
 national/facility/generator data over the initial inclusive April 2–October 1,
-2026 interval or a reviewed larger retained interval. Use the public projection
-schemas from `PUBLIC_DATASETS`, not modeled provenance/raw artifacts. Include
-all verified files, exact SHA-256, bytes and rows. Record actual grain/date/entity
+2026 interval or a reviewed larger retained interval. Use the exact `resource`
+Parquet schema for each grain, including its private provenance; the worker views
+project only the columns in `PUBLIC_DATASETS`. Include all verified files, exact
+SHA-256, bytes and rows. Record actual grain/date/entity
 coverage and why these are representative with the separately reviewed evidence;
 the harness never labels its small synthetic canaries representative.
 
@@ -473,9 +474,10 @@ Create a separate nonsecret measurement manifest (maximum 1 MiB; reports remain 
 ```
 
 Numbers/hashes above are format examples, **not measurements or verified inputs**.
-The manifest rejects unknown/duplicate keys, symlinks, nonpublic columns,
+The manifest rejects unknown/duplicate keys, symlinks, files outside the exact
+unified resource schemas,
 empty grains, invalid PID/port values, wrong hashes/bytes/rows and input budgets.
-The worker rechecks full public types before executing. `refresh_pid` must identify
+The worker rechecks each resource schema before executing. `refresh_pid` must identify
 an independently authorized, already running refresh workload; `api_pid` identifies
 its separately running local API. The sampler reads numeric resource metrics and
 Linux process-start ticks to reject PID reuse; it neither starts nor restarts either
@@ -509,7 +511,7 @@ container memory/CPU, host available memory, refresh/API RSS and CPU counters,
 harness CPU/RSS, health response latency/failures and sampling coverage/failures.
 These are sampled maxima, not guaranteed peaks; representative queries must last
 long enough to obtain container samples. Linux host memory and process samplers
-fail closed when unavailable. Background `docker stats` output is capped and uses
+fail closed when unavailable. Background Docker API stats responses are capped and use
 only numeric formatting, never full inspection. Very short workloads, process
 exit/PID reuse, inaccessible measurements or unavailable health fail the run.
 
@@ -535,10 +537,10 @@ October 5 measurement continuation found two existing local initial-interval
 candidate graphs and derived their exact public projections using the same domain
 decoder/schema/column mapping as the product cache. That helper preserved all
 549 daily partitions per snapshot and has been removed with the daily layout
-([ADR-0057](../../docs/adr/0057-single-file-modeled-datasets.md)): generations now
-carry one verified public file per dataset. A validation snapshot descriptor
-(`path`, `sha256`, `byte_count`, `rows` per dataset) now names each generation's
-public file from its manifest directly; no preparation helper exists. The
+([ADR-0057](../../docs/adr/0057-single-file-modeled-datasets.md)): generations then
+carried one verified public file per dataset. A validation snapshot descriptor
+(`path`, `sha256`, `byte_count`, `rows` per dataset) then named each generation's
+public file from its manifest directly; no preparation helper existed. The
 earlier preparation did not replay the full raw/disposition graph or establish
 publication. Its private `snapshots.json` deliberately omits
 overlap PIDs until a real independently authorized Linux workload is available.

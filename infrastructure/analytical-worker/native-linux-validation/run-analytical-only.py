@@ -72,7 +72,11 @@ def main():
             == (33 if args.include_previews else 6)
             else "failed"
         )
-        harness.report.document["resource_sampler"] = "docker-api-v1.51-one-shot"
+        harness.report.document["resource_sampler"] = (
+            "docker-api-v1.44-one-shot-docker25-request-identity"
+            if harness.profile.daemon_version.startswith("25.")
+            else "docker-api-v1.44-one-shot"
+        )
         harness.report.document["container_memory_basis"] = (
             "total-cgroup-usage-including-cache"
         )

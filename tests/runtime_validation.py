@@ -30,6 +30,7 @@ from outage_explorer.application.ports.analytical_inputs import ApprovedFile
 from outage_explorer.application.ports.execution import PreviewRead, QueryRead
 from outage_explorer.domain.datasets import PUBLIC_DATASETS
 from outage_explorer.domain.preview_keys import follows_preview_key
+from outage_explorer.infrastructure.parquet.schemas import schema_for
 from outage_explorer.infrastructure.query_results.preview_encoding import (
     PreviewEncoding,
 )
@@ -152,7 +153,10 @@ class RuntimeHarness:
             uuid4().hex,
         )
         self.runtime = DockerRuntime(self.profile, self.control, self.ledger)
-        self.stats = ContainerStats(self.profile.daemon_endpoint)
+        self.stats = ContainerStats(
+            self.profile.daemon_endpoint,
+            allow_missing_identity=self.profile.daemon_version.startswith("25."),
+        )
         self._opened = False
 
     def command(self, arguments, *, data=b"", seconds=None, limit=8192):
@@ -295,7 +299,7 @@ class RepresentativeInputs:
 
 
 def read_representative_inputs(path, profile, *, analytical_only=False):
-    """Only pre-existing, public projection files. No fetch, refresh or publish."""
+    """Only pre-existing, exact unified resources. No fetch, refresh or publish."""
     if path.is_symlink():
         raise ValueError("Invalid representative manifest")
     with path.open("rb") as stream:
@@ -369,7 +373,7 @@ def read_representative_inputs(path, profile, *, analytical_only=False):
                     or type(approved.rows) is not int
                     or approved.rows <= 0
                 ):
-                    raise ValueError("Invalid representative public file")
+                    raise ValueError("Invalid representative resource file")
                 total += approved.byte_count
                 count += 1
                 if total > profile.cache_bytes or count > profile.input_files:
@@ -389,9 +393,11 @@ def read_representative_inputs(path, profile, *, analytical_only=False):
                     source.stat().st_size != approved.byte_count
                     or digest.hexdigest() != approved.sha256
                     or parquet.metadata.num_rows != approved.rows
-                    or parquet.schema_arrow.names != [c.name for c in dataset.columns]
+                    or not parquet.schema_arrow.equals(
+                        schema_for("resource", dataset.grain), check_metadata=True
+                    )
                 ):
-                    raise ValueError("Representative public projection mismatch")
+                    raise ValueError("Representative resource schema mismatch")
                 files.append(approved)
             relations.append((dataset, tuple(files)))
         return tuple(relations)

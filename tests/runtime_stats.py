@@ -26,7 +26,7 @@ class _ResponseSocket:
         return io.BytesIO(self.data)
 
 
-def decode_stats(raw, identity):
+def decode_stats(raw, identity, *, allow_missing_identity=False):
     response = http.client.HTTPResponse(_ResponseSocket(raw))
     response.begin()
     if response.status != 200:
@@ -35,7 +35,10 @@ def decode_stats(raw, identity):
     if len(body) > LIMIT:
         raise ValueError("Container metrics exceeded")
     value = json.loads(body)
-    if value.get("id") != identity:
+    # Docker 25 omits id/name from one-shot stats. The request still addresses
+    # the exact 64-hex container ID on the local daemon socket.
+    reported = value.get("id")
+    if reported != identity and not (allow_missing_identity and reported is None):
         raise ValueError("Container metrics identity mismatch")
 
     def number(value):
@@ -53,12 +56,15 @@ def decode_stats(raw, identity):
 
 
 class ContainerStats:
-    def __init__(self, endpoint):
+    def __init__(self, endpoint, *, allow_missing_identity=False):
         self.endpoint = endpoint
+        self.allow_missing_identity = allow_missing_identity
         self.previous = {}
 
     def sample(self, identity):
-        memory, current = container_stats(self.endpoint, identity)
+        memory, current = container_stats(
+            self.endpoint, identity, allow_missing_identity=self.allow_missing_identity
+        )
         if identity not in self.previous and len(self.previous) >= 1024:
             raise ValueError("Container metrics identity budget exceeded")
         before = self.previous.get(identity)
@@ -72,7 +78,7 @@ class ContainerStats:
         return memory, percent
 
 
-def container_stats(endpoint, identity):
+def container_stats(endpoint, identity, *, allow_missing_identity=False):
     if (
         not endpoint.startswith("unix:///")
         or re.fullmatch(r"[0-9a-f]{64}", identity) is None
@@ -80,7 +86,7 @@ def container_stats(endpoint, identity):
         raise ValueError("Explicit local container metrics required")
     deadline = monotonic() + 2
     request = (
-        f"GET /v1.51/containers/{identity}/stats?stream=false&one-shot=true HTTP/1.1\r\n"
+        f"GET /v1.44/containers/{identity}/stats?stream=false&one-shot=true HTTP/1.1\r\n"
         "Host: localhost\r\nConnection: close\r\n\r\n"
     ).encode("ascii")
     raw = bytearray()
@@ -102,4 +108,6 @@ def container_stats(endpoint, identity):
                     raise ValueError("Container metrics exceeded")
     except TimeoutError:
         raise AnalyticalTimeoutError("Container metrics deadline") from None
-    return decode_stats(bytes(raw), identity)
+    return decode_stats(
+        bytes(raw), identity, allow_missing_identity=allow_missing_identity
+    )
