@@ -24,6 +24,7 @@ shell_quote = '$(subst ','"'"',$(1))'
 help:
 	@printf '%s\n' \
 	  'make local-help   Show the guided Colima setup commands' \
+	  'Local restart/troubleshooting: docs/development/local-recovery.md' \
 	  'make setup   Install the pinned dependencies in .venv' \
 	  'make run     Start macOS Flask health/docs scaffold (preview/SQL unavailable)' \
 	  'make run-analytical   Serve the configured Colima API with AWS credential renewal' \

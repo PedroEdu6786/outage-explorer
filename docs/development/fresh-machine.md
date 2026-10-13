@@ -348,12 +348,12 @@ explicitly rerun the SQL afterward. Restart Next.js after editing its settings.
 | --- | --- |
 | Docker connection denied | The `outage-runtime` Colima guest is running; its Docker socket group matches the controller. |
 | Setup refuses an existing path | Preserve existing evidence; this is a fresh-install helper. Use the existing installation's recovery procedure. |
-| Configuration fails | Reviewed identities match; API is stopped; CA file exists; `.env` uses one valid database mode. |
+| Configuration fails | Follow the [local recovery checklist](local-recovery.md) for missing reviewed profiles, CA paths and stopped-service checks. |
 | API fails to start | AWS login/profile is current; Linux service configuration is installed; inspect `colima ssh --profile outage-runtime -- sudo journalctl -u outage-api-local` privately. |
 | Browser cannot reach API on macOS | SSH forwarding is running and port 8000 is free. |
 | Cognito redirect fails | Client callback, sign-out URL, scopes and both localhost origins match exactly. |
 | Preview/SQL unavailable | Check actual containment tests, matching reviewed profiles and published generation descriptors. |
-| RDS connection fails | Endpoint/region/user, verified CA, IAM grants or password, and host network/VPN access. |
+| PostgreSQL connection fails | Follow the [database connection checks](local-recovery.md#postgresql-pool-connection-fails) to distinguish a TCP timeout from TLS or password errors. |
 
 After a guest reboot, `/run/outage-api` is gone. Enter the guest with
 `colima ssh --profile outage-runtime --` and restore the spill mount before startup
@@ -367,6 +367,8 @@ Exit the guest shell, then repeat step 8 from macOS and start the API. If
 filesystem, daemon, image or parser identities changed, preserve the previous candidate/reports/review as an archive
 outside the active report directory. Capture new candidates (step 6), then
 repeat steps 7–8 for the new identities.
+If configuration cannot find the reviewed profiles after a reboot, follow the
+[same-installation profile recovery](local-recovery.md#reviewed-profiles-are-missing).
 Do not patch old evidence. Source updates require installing the new committed
 revision and rebuilding the image before collecting new evidence. Fresh
 preparation is not an update command. See the

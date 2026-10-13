@@ -188,6 +188,10 @@ otherwise, existing `/run/outage-api/runtime.json` and `parser.json` are reused.
 Both paths require valid review evidence; missing or invalid profiles fail
 configuration rather than creating a new review. Installed `/run` profiles
 alone do not survive a guest reboot.
+If both guest locations are missing after a reboot, the same installation may
+still have private reviewed copies in host `.local-runtime`. Follow
+[profile recovery](local-recovery.md#reviewed-profiles-are-missing); do not use
+another machine's review or run `make local-runtime` as a repair command.
 
 **After:** The API is configured but stopped. This does not log in to AWS, export
 credentials, migrate/seed the database or publish data. Repeat after changing

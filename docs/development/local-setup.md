@@ -14,6 +14,9 @@ This assumes your `outage-runtime` Colima guest is running, its spill filesystem
 is mounted, private API configuration is installed and your AWS login is current.
 After a guest reboot, first follow [reboot recovery](fresh-machine.md#11-stop-restart-and-troubleshoot).
 
+For a reboot or a failed `make local-configure`, use the
+[local recovery checklist](local-recovery.md) before starting the terminals below.
+
 Run these in separate macOS terminals and leave them running. If an existing
 Colima SSH tunnel already exposes the API at `localhost:8000`, reuse it and skip
 terminal 2; do not start a second listener on the same port.
@@ -60,7 +63,7 @@ that remain deferred.
 
 | File | Purpose | Where to find the values |
 | --- | --- | --- |
-| Backend `.env` | AWS profile, RDS connection, Cognito, S3 and local API settings. | [First-time backend configuration](fresh-machine.md#5-fill-in-backend-settings). |
+| Backend `.env` | AWS profile, PostgreSQL connection, Cognito, S3 and local API settings. | [First-time backend configuration](fresh-machine.md#5-fill-in-backend-settings). |
 | Web `.env.local` | Backend origin, public Cognito domain/client ID and logout URL. | [First-time web configuration](fresh-machine.md#10-configure-and-start-the-web-client). |
 | Backend `.local-runtime/` | Local source archive, copied reviewed profiles, optional CA bundle and SSH settings. | Created by the documented Make commands. |
 | Guest `/run/outage-api/` | Private installed API settings, reviewed profiles, CA and renewed credentials. | Written by `make local-configure` and the API supervisor; lost after a guest reboot. |
@@ -121,6 +124,7 @@ Colima VM and Docker daemon running. API restarts lose ephemeral query/cursor ID
 - **Database migrations/seeding:** [operator runbook](../specs/user-access/setup.md).
   These are separate operator actions, not part of daily application startup.
 - **Recorded findings:** [FINDINGS.md](../../FINDINGS.md).
+- **Reboot, configuration and database failures:** [local recovery checklist](local-recovery.md).
 
 Integrated acceptance was confirmed by the user on October 7, 2026. That does
 not replace a new machine's containment checks. EC2 deployment is not required
