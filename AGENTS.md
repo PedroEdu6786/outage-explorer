@@ -47,6 +47,8 @@ run creation and the full atomic admission operation to the run repository.
 and initial-load eligibility in pure domain policy.
 [ADR-0089](docs/adr/0089-service-owned-refresh-admission.md) makes
 `RefreshService` invoke those rules inside a focused admission transaction port.
+[ADR-0091](docs/adr/0091-context-lifetime-session-decorator.md) uses
+`@with_session_context` for that port's repository session lifetime.
 Keep records and sessions in `infrastructure/postgresql/`, return domain values and share the existing
 bounded psycopg pool. Remaining raw-SQL paths are legacy to migrate within the
 requested scope. Do not use partial ORM metadata to generate schema migrations.
@@ -225,7 +227,8 @@ Use `PostgresqlRefreshRunRepository` as the reference implementation.
   their internal helpers must not open independent decorated sessions.
 - Admission is the scoped exception in ADR-0089: its repository exposes an
   application-owned transaction port so `RefreshService` can invoke policy
-  under the coordination lock. The session remains inside infrastructure.
+  under the coordination lock. `@with_session_context` keeps its session open
+  for the entire `with` block; the session remains inside infrastructure.
 - Remaining raw queries in publication/access adapters are not patterns to copy.
   Migrate only within the user's requested scope. Migration/connection SQL and
   isolated analytical SQL retain their separate documented roles; any necessary

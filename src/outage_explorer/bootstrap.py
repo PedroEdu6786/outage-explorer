@@ -76,11 +76,11 @@ from outage_explorer.application.services.refresh_candidate import (
 from outage_explorer.application.services.refresh_execution import (
     RefreshExecution,
     RefreshReports,
-    RefreshWorker,
 )
 from outage_explorer.application.services.refresh_publication import (
     PrepareRefreshPublication,
 )
+from outage_explorer.application.services.refresh_worker import RefreshWorker
 from outage_explorer.application.services.resource_artifacts import (
     PersistResourceArtifacts,
     RecoverResourceArtifacts,

@@ -1,7 +1,6 @@
 """ORM queries for refresh runs, returning database-independent domain values."""
 
 from collections.abc import Generator
-from contextlib import contextmanager
 from uuid import uuid4
 
 from sqlalchemy import select, true
@@ -27,7 +26,10 @@ from outage_explorer.infrastructure.postgresql.refresh_coordination_repository i
 from outage_explorer.infrastructure.postgresql.refresh_run_record import (
     RefreshRunRecord,
 )
-from outage_explorer.infrastructure.postgresql.session_scope import with_session
+from outage_explorer.infrastructure.postgresql.session_scope import (
+    with_session,
+    with_session_context,
+)
 
 
 class PostgresqlRefreshAdmissionTransaction:
@@ -104,12 +106,13 @@ class PostgresqlRefreshRunRepository:
         record = self._replay_in_transaction(session, requester_id, key_digest)
         return record.to_domain() if record is not None else None
 
-    @contextmanager
-    def admission_transaction(self) -> Generator[PostgresqlRefreshAdmissionTransaction]:
+    @with_session_context
+    def admission_transaction(
+        self, session: Session
+    ) -> Generator[PostgresqlRefreshAdmissionTransaction]:
         """Hold one session across the service's admission decision and write."""
-        with self._pool.session() as session:
-            coordination, _ = PostgresqlRefreshCoordinationRepository._lock(session)
-            yield PostgresqlRefreshAdmissionTransaction(session, coordination)
+        coordination, _ = PostgresqlRefreshCoordinationRepository._lock(session)
+        yield PostgresqlRefreshAdmissionTransaction(session, coordination)
 
     @with_session
     def get_run(self, session: Session, run_id: str) -> RefreshRun | None:

@@ -25,7 +25,7 @@ def resource_generation_from_values(
     verified_at: datetime,
     datasets: list[dict[str, Any]],
 ) -> ResourcePublishedGeneration:
-    """Convert stored descriptors for both ORM and existing psycopg reads."""
+    """Convert stored descriptors into a validated domain generation."""
     try:
         summaries = tuple(
             DatasetSummary(

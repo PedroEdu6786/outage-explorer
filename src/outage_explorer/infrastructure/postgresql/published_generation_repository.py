@@ -1,7 +1,5 @@
 """Published generation queries and atomic publication persistence."""
 
-from psycopg import Connection
-from psycopg.rows import DictRow
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
@@ -25,7 +23,6 @@ from outage_explorer.domain.publication_policy import (
 from outage_explorer.infrastructure.postgresql.pool import BoundedPostgresqlPool
 from outage_explorer.infrastructure.postgresql.published_generation_record import (
     PublishedGenerationRecord,
-    resource_generation_from_values,
 )
 from outage_explorer.infrastructure.postgresql.refresh_coordination_record import (
     RefreshCoordinationRecord,
@@ -37,22 +34,6 @@ from outage_explorer.infrastructure.postgresql.refresh_run_record import (
     RefreshRunRecord,
 )
 from outage_explorer.infrastructure.postgresql.session_scope import with_session
-
-
-def _resource_generation(row: DictRow) -> ResourcePublishedGeneration:
-    try:
-        return resource_generation_from_values(
-            row["id"],
-            row["run_id"],
-            row["base_generation_id"],
-            row["verification_version"],
-            row["verified_at"],
-            row["datasets"],
-        )
-    except KeyError:
-        raise UnsupportedPublicationLayoutError(
-            "Stored publication descriptors are invalid"
-        ) from None
 
 
 class PostgresqlPublishedGenerationRepository:
@@ -191,10 +172,13 @@ class PostgresqlPublishedGenerationRepository:
         coordination.lease_until = None
         coordination.epoch += 1
 
+    @with_session
     def generation_for_run(
-        self, connection: Connection[DictRow], run_id: str
+        self, session: Session, run_id: str
     ) -> ResourcePublishedGeneration | None:
-        row = connection.execute(
-            "SELECT * FROM published_generations WHERE run_id = %s", (run_id,)
-        ).fetchone()
-        return _resource_generation(row) if row else None
+        record = session.scalar(
+            select(PublishedGenerationRecord).where(
+                PublishedGenerationRecord.run_id == run_id
+            )
+        )
+        return record.to_domain() if record is not None else None

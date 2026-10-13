@@ -12,6 +12,7 @@ Read it before adding model queries or changing persistence/process boundaries.
 | ORM record, e.g. `RefreshRunRecord` | Table/column mapping and conversion to domain values | `infrastructure/postgresql/*_record.py` |
 | Repository, e.g. `PostgresqlRefreshRunRepository` | Central home for queries involving its model or cohesive model concern | `infrastructure/postgresql/*_repository.py` |
 | `@with_session` | Inject a per-operation session using the existing lifecycle wrapper | `infrastructure/postgresql/session_scope.py` |
+| `@with_session_context` | Hold an injected session across a repository transaction context | `infrastructure/postgresql/session_scope.py` |
 | Service/process coordinator | Decide the workflow and invoke persistence operations through the allowed interfaces | Existing application/infrastructure layer, according to the dependency matrix |
 | Bootstrap | Construct repositories and inject them with the shared bounded pool | `bootstrap.py` |
 
@@ -58,8 +59,11 @@ read methods to this repository.
 
 ## Transactions
 
-Each decorated call opens its own transaction. Multiple decorated calls do not
+Each `@with_session` call opens its own transaction. Multiple such calls do not
 become atomic simply because one process method invokes them together.
+`@with_session_context` differs: entering its returned context opens the
+session, and exiting that context commits or rolls back. It is for a focused
+transaction port whose caller must decide between locked reads and writes.
 
 Keep a multi-table atomic database operation within one shared session. Its
 internal query helpers take that session instead of opening new ones. Preserve
@@ -75,8 +79,9 @@ and generation publication use the decorated pattern. Admission holds one
 repository-owned session and coordination lock across the application service's
 replay, busy-slot and initial-load decisions. The service invokes pure domain
 policy through a focused transaction port; the repository only queries and
-writes the queued run and slot. This is a scoped exception to `@with_session`:
-separate decorated calls would split the transaction. Each ownership write locks
+writes the queued run and slot. Its repository operation uses
+`@with_session_context`; separate `@with_session` calls would split the
+transaction. Each ownership write locks
 `refresh_coordination` and completes within one decorated transaction.
 Heartbeat, progress and finish share the same fenced
 ownership check. Finish updates the run and releases the slot atomically.
@@ -87,6 +92,9 @@ helper with its own locked ORM session. Uncertain publication commits still
 reconcile through a fresh, locked checkout.
 `active_generation` uses its own decorated ORM read over the active pointer and
 returns a validated domain generation, or `None` when no generation is active.
+`generation_for_run` likewise reads published history through a decorated ORM
+query and returns a validated domain generation, or `None` when that run has no
+publication.
 The repository rechecks the base under its lock, then calls the pure
 `domain.publication_policy.require_publishable_base` rule with domain values.
 The rule decides base eligibility and initial-load start validity; the

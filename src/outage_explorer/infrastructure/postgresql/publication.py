@@ -123,8 +123,7 @@ class PostgresqlResourcePublicationStore:
         return self._generations.active_generation()
 
     def generation_for_run(self, run_id: str) -> ResourcePublishedGeneration | None:
-        with self._pool.connection() as connection:
-            return self._generations.generation_for_run(connection, run_id)
+        return self._generations.generation_for_run(run_id)
 
     def publish(
         self,

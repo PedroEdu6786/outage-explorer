@@ -46,6 +46,7 @@ src/outage_explorer/
       queries.py               # inspect, authorize and execute SQL once
       refresh.py               # refresh admission
       refresh_execution.py     # coordinate run lifecycle and final publication
+      refresh_worker.py        # recover, claim and lease one run per tick
       refresh_baseline.py      # restore and verify the pinned generation
       refresh_candidate.py     # build candidates and validate their outcomes
       refresh_publication.py   # persist resources and prepare publication metadata
@@ -375,6 +376,9 @@ in pure domain policy. [ADR-0089](../adr/0089-service-owned-refresh-admission.md
 makes `RefreshService` evaluate those rules with values obtained through the
 locked admission transaction port. The run repository owns the session, reads
 and atomic run/slot writes.
+[ADR-0091](../adr/0091-context-lifetime-session-decorator.md) injects that
+session with `@with_session_context`, which keeps it open for the service's
+`with` block. Ordinary repository methods still use `@with_session`.
 [ADR-0084](../adr/0084-pure-publication-base-policy.md) puts the publication
 base and initial-load eligibility rule in `domain/publication_policy.py`; the
 repository supplies freshly locked values and retains the atomic writes.
