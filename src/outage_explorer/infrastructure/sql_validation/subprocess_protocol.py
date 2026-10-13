@@ -5,19 +5,24 @@ from typing import cast
 
 from outage_explorer.application.ports.sql_inspection import InspectedSql, SqlRejected
 from outage_explorer.domain.observations import Grain
+from outage_explorer.infrastructure.sql_validation.parser_request import (
+    inspect_request as _inspect_request,
+)
+from outage_explorer.infrastructure.sql_validation.protocol_wire import (
+    REQUEST_LIMIT,
+    RESPONSE_LIMIT,
+    VERSION,
+    unique_object,
+)
 
-VERSION = 1
-REQUEST_LIMIT = 6 * 65_536 + 1024
-RESPONSE_LIMIT = 1024
-
-
-def unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
-    result: dict[str, object] = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError("Duplicate inspection field")
-        result[key] = value
-    return result
+__all__ = [
+    "REQUEST_LIMIT",
+    "RESPONSE_LIMIT",
+    "VERSION",
+    "unique_object",
+    "decode_scope",
+    "inspect_request",
+]
 
 
 def decode_scope(raw: bytes, sql: str) -> InspectedSql:
@@ -37,59 +42,25 @@ def decode_scope(raw: bytes, sql: str) -> InspectedSql:
         raise SqlRejected(value["code"])
     if set(value) != {"version", "status", "grains"} or value["status"] != "ok":
         raise ValueError("Invalid inspection response")
-    grains = value["grains"]
-    if (
-        not isinstance(grains, list)
-        or len(grains) > 3
-        or any(
-            type(g) is not str or g not in ("national", "facility", "generator")
-            for g in grains
-        )
-        or len(set(grains)) != len(grains)
-    ):
-        raise ValueError("Invalid inspection scope")
-    scope = frozenset(cast(Grain, g) for g in grains)
+    scope = _decode_grains(value["grains"])
     return InspectedSql(sql, scope, not scope)
 
 
-def inspect_request(raw: bytes) -> bytes:
-    """Called only by the limited child; imports parser after launcher limits."""
-    from outage_explorer.infrastructure.sql_validation.inspection import (
-        DuckdbSqlInspector,
-    )
-
-    try:
-        if len(raw) > REQUEST_LIMIT:
-            raise ValueError
-        value = json.loads(raw, object_pairs_hook=unique_object)
+def _decode_grains(value: object) -> frozenset[Grain]:
+    if not isinstance(value, list) or len(value) > 3:
+        raise ValueError("Invalid inspection scope")
+    grains: set[Grain] = set()
+    for item in value:
         if (
-            not isinstance(value, dict)
-            or set(value)
-            != {"version", "sql", "max_sql_bytes", "max_nodes", "max_depth"}
-            or type(value["version"]) is not int
-            or value["version"] != VERSION
-            or type(value["sql"]) is not str
+            type(item) is not str
+            or item not in ("national", "facility", "generator")
+            or item in grains
         ):
-            raise ValueError
-        for key, ceiling in (
-            ("max_sql_bytes", 65_536),
-            ("max_nodes", 10_000),
-            ("max_depth", 64),
-        ):
-            if type(value[key]) is not int or not 1 <= value[key] <= ceiling:
-                raise ValueError
-        inspected = DuckdbSqlInspector(
-            max_sql_bytes=value["max_sql_bytes"],
-            max_nodes=value["max_nodes"],
-            max_depth=value["max_depth"],
-        ).inspect(value["sql"])
-        response = {
-            "version": VERSION,
-            "status": "ok",
-            "grains": sorted(inspected.grains),
-        }
-    except SqlRejected as error:
-        response = {"version": VERSION, "status": "rejected", "code": error.code}
-    except (ValueError, TypeError, UnicodeError, RecursionError):
-        response = {"version": VERSION, "status": "rejected", "code": "invalid_sql"}
-    return json.dumps(response, separators=(",", ":")).encode("ascii")
+            raise ValueError("Invalid inspection scope")
+        grains.add(cast(Grain, item))
+    return frozenset(grains)
+
+
+def inspect_request(raw: bytes) -> bytes:
+    """Compatibility entry point for the bounded parser child."""
+    return _inspect_request(raw)
