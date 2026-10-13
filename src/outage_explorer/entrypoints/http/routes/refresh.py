@@ -4,8 +4,13 @@ from flask import Blueprint, Response, jsonify, request
 
 from outage_explorer.application.data_payloads import refresh_payload
 from outage_explorer.application.dto import RequestAccess
+from outage_explorer.application.refresh_request import RefreshAdmissionRequest
 from outage_explorer.application.services.access import AccessService
-from outage_explorer.entrypoints.http.auth_helpers import csrf_protected, roles_required
+from outage_explorer.entrypoints.http.auth_helpers import (
+    csrf_protected,
+    roles_required,
+    validated_request,
+)
 from outage_explorer.entrypoints.http.auth_transport import AuthTransport
 from outage_explorer.entrypoints.http.data_schemas import (
     identifier,
@@ -37,9 +42,14 @@ def create_refresh_blueprint(
     @blueprint.post("/api/refresh")
     @csrf_protected(access, transport)
     @roles_required(access, transport, "admin")
-    def admit(*, request_access: RequestAccess, **_: object) -> Response:
-        admission = refresh_admission_request()
-        run = services.refresh.admit(request_access, admission)
+    @validated_request(refresh_admission_request)
+    def admit(
+        *,
+        request_access: RequestAccess,
+        validated: RefreshAdmissionRequest,
+        **_: object,
+    ) -> Response:
+        run = services.refresh.admit(request_access, validated)
         url = "/api/refresh/" + run.id
         response = jsonify(
             run_id=run.id,

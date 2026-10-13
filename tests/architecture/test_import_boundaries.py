@@ -27,6 +27,10 @@ def test_application_obeys_import_boundaries():
         for symbol in ("Field", "field_validator", "model_validator")
     ]
     + [
+        ("application/refresh_request.py", symbol)
+        for symbol in ("BaseModel", "ConfigDict", "Field", "ValidationError")
+    ]
+    + [
         ("application/pagination/request.py", symbol)
         for symbol in (
             "BaseModel",
@@ -45,7 +49,12 @@ def test_preview_request_validation_imports_are_reviewed(tmp_path, module, symbo
 
 
 @pytest.mark.parametrize(
-    "module", ["application/preview_request.py", "application/pagination/request.py"]
+    "module",
+    [
+        "application/preview_request.py",
+        "application/pagination/request.py",
+        "application/refresh_request.py",
+    ],
 )
 def test_request_validation_exception_does_not_allow_other_pydantic_apis(
     tmp_path, module

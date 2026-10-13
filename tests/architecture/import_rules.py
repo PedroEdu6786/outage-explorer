@@ -221,6 +221,13 @@ def allowed_dependency(source: str, target: str) -> bool:
         "pydantic.model_validator",
     }:
         return True  # ADR-0068: pure configuration validation only.
+    if source == f"{ROOT}.application.refresh_request" and target in {
+        "pydantic.BaseModel",
+        "pydantic.ConfigDict",
+        "pydantic.Field",
+        "pydantic.ValidationError",
+    }:
+        return True  # ADR-0073: pure refresh admission validation only.
     if source == f"{ROOT}.application.preview_request" and target in {
         "pydantic.Field",
         "pydantic.field_validator",

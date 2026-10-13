@@ -9,7 +9,6 @@ from uuid import uuid4
 import pyarrow.parquet as pq
 import pytest
 
-from outage_explorer.application.dto import RefreshAdmissionRequest
 from outage_explorer.application.errors import (
     AnalyticalBusyError,
     DatasetUnavailableError,
@@ -17,6 +16,7 @@ from outage_explorer.application.errors import (
     PreviewUnavailableError,
 )
 from outage_explorer.application.ports.sql_inspection import SqlRejected
+from outage_explorer.application.refresh_request import RefreshAdmissionRequest
 from outage_explorer.application.services.catalog import CatalogService
 from outage_explorer.application.services.queries import QueryService
 from outage_explorer.application.services.refresh import RefreshService
@@ -125,7 +125,8 @@ class Durable:
             service._security,
         )
         run = refresh.admit(
-            refresh.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest(key)
+            refresh.authorize(tokens[Role.ADMIN]),
+            RefreshAdmissionRequest(idempotency_key=key),
         )
         base = publications.active_generation()
         published = ResourcePublishedGeneration(

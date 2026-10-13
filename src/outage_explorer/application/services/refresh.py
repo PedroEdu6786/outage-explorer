@@ -3,10 +3,11 @@
 import re
 from collections.abc import Callable
 
-from outage_explorer.application.dto import RefreshAdmissionRequest, RequestAccess
+from outage_explorer.application.dto import RequestAccess
 from outage_explorer.application.errors import InvalidRequestError
 from outage_explorer.application.ports.access import SecurityMaterial
 from outage_explorer.application.ports.refresh import RefreshStore
+from outage_explorer.application.refresh_request import RefreshAdmissionRequest
 from outage_explorer.application.services.access import AccessService
 from outage_explorer.domain.publication import RefreshConfiguration, RefreshRun
 

@@ -141,9 +141,10 @@ See the [endpoint diagrams](diagrams/endpoints.md),
    quality, successful outcome and the active pointer in PostgreSQL.
 
 HTTP refresh admission uses `csrf_protected` and `roles_required(..., "admin")`
-guards before parsing. Status routes also require Admin. The HTTP parser enforces
-the empty JSON body and constructs a `RefreshAdmissionRequest`; the immutable
-DTO validates the idempotency key. Refresh decorators share one server-resolved
+guards before parsing. Status routes also require Admin. The `validated_request` decorator runs the HTTP adapter, which enforces
+the empty JSON body and constructs a strict frozen Pydantic
+`RefreshAdmissionRequest`; its fields validate the idempotency key (ADR-0073).
+The controller consumes the injected DTO without parsing input. Refresh decorators share one server-resolved
 `RequestAccess`: CSRF and role checks use the same identity, then refresh use cases
 consume it without revalidating transport input or looking up the session again.
 Each new request resolves fresh access. Non-HTTP refresh callers obtain it through

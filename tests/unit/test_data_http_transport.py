@@ -9,8 +9,9 @@ from unittest.mock import Mock
 import pytest
 
 from outage_explorer.application import errors
-from outage_explorer.application.dto import RefreshAdmissionRequest, RequestAccess
+from outage_explorer.application.dto import RequestAccess
 from outage_explorer.application.ports.sql_inspection import SqlRejected
+from outage_explorer.application.refresh_request import RefreshAdmissionRequest
 from outage_explorer.application.services.access import AccessService
 from outage_explorer.application.services.refresh import RefreshService
 from outage_explorer.domain.access import Role, SeededUser, Session
@@ -328,7 +329,7 @@ def test_refresh_passes_validated_dto_and_verified_access(transport):
     )
     assert response.status_code == 409
     services.refresh.admit.assert_called_once_with(
-        access.validate_csrf.return_value, RefreshAdmissionRequest(key)
+        access.validate_csrf.return_value, RefreshAdmissionRequest(idempotency_key=key)
     )
     access.authenticate.assert_not_called()
     access.require_roles.assert_called_once_with(

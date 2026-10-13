@@ -141,6 +141,8 @@ reruns. Recovery must prevent stale owners from publishing.
    Non-HTTP callers authenticate freshly and call `AccessService.require_dataset`
    before reading. ADR-0071 permits narrowly reviewed Pydantic APIs in
    `application/pagination/request.py` and `application/preview_request.py` only.
+   ADR-0073 additionally permits `BaseModel`, `ConfigDict`, `Field` and
+   `ValidationError` in `application/refresh_request.py` for admission validation.
    Cognito supplies identity;
    application-owned PostgreSQL users and role assignments determine access.
    Under ADR-0043, users and roles are seeded; registration and Admin user

@@ -16,7 +16,7 @@ from alembic.config import Config
 from psycopg import sql
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
-from outage_explorer.application.dto import RefreshAdmissionRequest, SeedIdentity
+from outage_explorer.application.dto import SeedIdentity
 from outage_explorer.application.errors import (
     AccessStoreError,
     ForbiddenError,
@@ -24,6 +24,7 @@ from outage_explorer.application.errors import (
     StaleRefreshOwnerError,
     UnsupportedPublicationLayoutError,
 )
+from outage_explorer.application.refresh_request import RefreshAdmissionRequest
 from outage_explorer.application.services.access import AccessService
 from outage_explorer.application.services.refresh import RefreshService
 from outage_explorer.domain.access import AnalyticalGrain, Role
@@ -178,7 +179,8 @@ def test_authorize_before_reads_and_configuration(system, monkeypatch):
             service.latest(service.authorize(tokens[role]))
         with pytest.raises(ForbiddenError):
             service.admit(
-                service.authorize(tokens[role]), RefreshAdmissionRequest("k" * 16)
+                service.authorize(tokens[role]),
+                RefreshAdmissionRequest(idempotency_key="k" * 16),
             )
 
 
@@ -186,7 +188,8 @@ def test_admission_freezes_interval_and_replays_before_config(system):
     store, service, tokens, users, pool = system
     assert service.latest(service.authorize(tokens[Role.ADMIN])) is None
     run = service.admit(
-        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("k" * 16)
+        service.authorize(tokens[Role.ADMIN]),
+        RefreshAdmissionRequest(idempotency_key="k" * 16),
     )
     assert run.status is RunStatus.ACCEPTED
     assert set(run.grains) == set(AnalyticalGrain)
@@ -197,7 +200,8 @@ def test_admission_freezes_interval_and_replays_before_config(system):
     service._configuration = invalid_configuration
     assert (
         service.admit(
-            service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("k" * 16)
+            service.authorize(tokens[Role.ADMIN]),
+            RefreshAdmissionRequest(idempotency_key="k" * 16),
         )
         == run
     )
@@ -217,7 +221,7 @@ def test_scoped_idempotency_races_and_busy(system):
             executor.map(
                 lambda _: service.admit(
                     service.authorize(tokens[Role.ADMIN]),
-                    RefreshAdmissionRequest("r" * 16),
+                    RefreshAdmissionRequest(idempotency_key="r" * 16),
                 ),
                 range(4),
             )
@@ -225,7 +229,8 @@ def test_scoped_idempotency_races_and_busy(system):
     assert len({run.id for run in runs}) == 1
     with pytest.raises(RefreshBusyError):
         service.admit(
-            service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("s" * 16)
+            service.authorize(tokens[Role.ADMIN]),
+            RefreshAdmissionRequest(idempotency_key="s" * 16),
         )
 
 
@@ -241,7 +246,8 @@ def test_initial_interval_and_all_grains(system):
         )
     assert store.latest() is None
     run = service.admit(
-        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("g" * 16)
+        service.authorize(tokens[Role.ADMIN]),
+        RefreshAdmissionRequest(idempotency_key="g" * 16),
     )
     owner = store.claim("worker", 60)
     with pytest.raises(ValueError):
@@ -254,7 +260,8 @@ def test_initial_interval_and_all_grains(system):
 def test_atomic_publication_history_and_prior_survives_failure(system):
     store, service, tokens, users, pool = system
     run = service.admit(
-        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("a" * 16)
+        service.authorize(tokens[Role.ADMIN]),
+        RefreshAdmissionRequest(idempotency_key="a" * 16),
     )
     owner = store.claim("worker", 60)
     generation = candidate(run)
@@ -266,7 +273,8 @@ def test_atomic_publication_history_and_prior_survives_failure(system):
     assert succeeded.status is RunStatus.SUCCEEDED
     assert store.active_generation() == generation
     second = service.admit(
-        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("b" * 16)
+        service.authorize(tokens[Role.ADMIN]),
+        RefreshAdmissionRequest(idempotency_key="b" * 16),
     )
     assert second.base_generation_id == generation.id
     assert store.active_generation() == generation
@@ -274,7 +282,8 @@ def test_atomic_publication_history_and_prior_survives_failure(system):
     store.finish(second_owner, RunStatus.FAILED, failure="retrieval")
     assert store.active_generation() == generation
     third = service.admit(
-        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("c" * 16)
+        service.authorize(tokens[Role.ADMIN]),
+        RefreshAdmissionRequest(idempotency_key="c" * 16),
     )
     store.publish(store.claim("worker", 60), candidate(third, generation.id))
     assert store.recover(run.id).generation_id == generation.id
@@ -284,7 +293,8 @@ def test_atomic_publication_history_and_prior_survives_failure(system):
 def test_healthy_lease_recovery_expiration_and_stale_owner(system, database):
     store, service, tokens, users, pool = system
     run = service.admit(
-        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("l" * 16)
+        service.authorize(tokens[Role.ADMIN]),
+        RefreshAdmissionRequest(idempotency_key="l" * 16),
     )
     owner = store.claim("worker", 60)
     assert store.claim("other", 60) is None
@@ -304,13 +314,15 @@ def test_healthy_lease_recovery_expiration_and_stale_owner(system, database):
             action()
     assert (
         service.admit(
-            service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("l" * 16)
+            service.authorize(tokens[Role.ADMIN]),
+            RefreshAdmissionRequest(idempotency_key="l" * 16),
         ).status
         is RunStatus.INTERRUPTED
     )
     assert (
         service.admit(
-            service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("m" * 16)
+            service.authorize(tokens[Role.ADMIN]),
+            RefreshAdmissionRequest(idempotency_key="m" * 16),
         ).id
         != run.id
     )
@@ -340,7 +352,8 @@ class FaultPool:
 def test_commit_loss_uses_fresh_serialized_history(system, mode):
     store, service, tokens, users, pool = system
     run = service.admit(
-        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("f" * 16)
+        service.authorize(tokens[Role.ADMIN]),
+        RefreshAdmissionRequest(idempotency_key="f" * 16),
     )
     owner = store.claim("worker", 60)
     faulty = PostgresqlResourcePublicationStore(FaultPool(pool, mode))
@@ -367,7 +380,8 @@ def test_no_runs_differs_from_unavailable(system):
 def test_admission_and_publication_history_immutable(system, database):
     store, service, tokens, users, pool = system
     run = service.admit(
-        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("h" * 16)
+        service.authorize(tokens[Role.ADMIN]),
+        RefreshAdmissionRequest(idempotency_key="h" * 16),
     )
     with psycopg.connect(database) as connection:
         with pytest.raises(psycopg.Error):
@@ -401,7 +415,8 @@ def test_refresh_settings_validate_together():
 def test_compare_and_swap_rejects_wrong_base_and_duplicate_publication(system):
     store, service, tokens, users, pool = system
     run = service.admit(
-        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("p" * 16)
+        service.authorize(tokens[Role.ADMIN]),
+        RefreshAdmissionRequest(idempotency_key="p" * 16),
     )
     owner = store.claim("worker", 60)
     with pytest.raises(StaleRefreshOwnerError):
@@ -425,7 +440,8 @@ def test_accepted_restart_and_revoked_admin_before_lookup(
 ):
     store, service, tokens, users, pool = system
     run = service.admit(
-        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("q" * 16)
+        service.authorize(tokens[Role.ADMIN]),
+        RefreshAdmissionRequest(idempotency_key="q" * 16),
     )
     restarted = PostgresqlResourcePublicationStore(pool)
     assert restarted.recover(run.id).status is RunStatus.ACCEPTED
@@ -486,7 +502,8 @@ def resources(system):
 def test_resource_publication_is_atomic_exact_and_manifest_free(resources, database):
     store, service, tokens, pool = resources
     run = service.admit(
-        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("r1" * 8)
+        service.authorize(tokens[Role.ADMIN]),
+        RefreshAdmissionRequest(idempotency_key="r1" * 8),
     )
     owner = store.claim("worker", 60)
     generation = resource_candidate(run)
@@ -512,7 +529,8 @@ def test_resource_publication_is_atomic_exact_and_manifest_free(resources, datab
     assert pointer == (generation.id, None)
     # Subsequent publications retain immutable prior history and the base chain.
     second = service.admit(
-        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("r2" * 8)
+        service.authorize(tokens[Role.ADMIN]),
+        RefreshAdmissionRequest(idempotency_key="r2" * 8),
     )
     assert second.base_generation_id == generation.id
     store.publish(store.claim("worker", 60), resource_candidate(second, generation.id))
@@ -523,7 +541,8 @@ def test_resource_publication_is_atomic_exact_and_manifest_free(resources, datab
 def test_resource_publication_fences_and_failure_preserve_prior_state(resources):
     store, service, tokens, pool = resources
     run = service.admit(
-        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("f1" * 8)
+        service.authorize(tokens[Role.ADMIN]),
+        RefreshAdmissionRequest(idempotency_key="f1" * 8),
     )
     owner = store.claim("worker", 60)
     with pytest.raises(StaleRefreshOwnerError):
@@ -545,7 +564,8 @@ def test_resource_publication_fences_and_failure_preserve_prior_state(resources)
                 results.append(None)
     assert len([result for result in results if result is not None]) == 1
     second = service.admit(
-        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("f2" * 8)
+        service.authorize(tokens[Role.ADMIN]),
+        RefreshAdmissionRequest(idempotency_key="f2" * 8),
     )
     failed = store.claim("worker", 60)
     store.finish(failed, RunStatus.FAILED, failure="retrieval")
@@ -559,7 +579,8 @@ def test_resource_publication_fences_and_failure_preserve_prior_state(resources)
 def test_resource_stale_owner_after_lease_expiry(resources, database):
     store, service, tokens, pool = resources
     run = service.admit(
-        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("e1" * 8)
+        service.authorize(tokens[Role.ADMIN]),
+        RefreshAdmissionRequest(idempotency_key="e1" * 8),
     )
     owner = store.claim("worker", 60)
     expire(database)
@@ -573,7 +594,8 @@ def test_resource_stale_owner_after_lease_expiry(resources, database):
 def test_resource_commit_loss_uses_fresh_serialized_history(resources, mode):
     store, service, tokens, pool = resources
     run = service.admit(
-        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("c1" * 8)
+        service.authorize(tokens[Role.ADMIN]),
+        RefreshAdmissionRequest(idempotency_key="c1" * 8),
     )
     owner = store.claim("worker", 60)
     faulty = PostgresqlResourcePublicationStore(FaultPool(pool, mode))
@@ -593,7 +615,8 @@ def test_resource_commit_loss_uses_fresh_serialized_history(resources, mode):
 def test_resource_history_is_immutable(resources, database):
     store, service, tokens, pool = resources
     run = service.admit(
-        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("h1" * 8)
+        service.authorize(tokens[Role.ADMIN]),
+        RefreshAdmissionRequest(idempotency_key="h1" * 8),
     )
     generation = resource_candidate(run)
     store.publish(store.claim("worker", 60), generation)
@@ -685,7 +708,8 @@ def _mutations():
 def test_database_rejects_malformed_resource_descriptors(resources, database, name):
     store, service, tokens, pool = resources
     run = service.admit(
-        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("d1" * 8)
+        service.authorize(tokens[Role.ADMIN]),
+        RefreshAdmissionRequest(idempotency_key="d1" * 8),
     )
     generation = resource_candidate(run)
     datasets = _datasets(generation)
@@ -705,7 +729,8 @@ def test_database_rejects_malformed_resource_descriptors(resources, database, na
 def test_database_rejects_summaries_without_exact_descriptors(resources, database):
     store, service, tokens, pool = resources
     run = service.admit(
-        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("m1" * 8)
+        service.authorize(tokens[Role.ADMIN]),
+        RefreshAdmissionRequest(idempotency_key="m1" * 8),
     )
     generation = resource_candidate(run)
     summaries = [
@@ -859,7 +884,8 @@ def test_remove_columns_preserves_resource_publication(empty_database):
 def test_removed_manifest_values_cannot_be_recreated_by_downgrade(resources, database):
     store, service, tokens, pool = resources
     run = service.admit(
-        service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest("dg1" * 6)
+        service.authorize(tokens[Role.ADMIN]),
+        RefreshAdmissionRequest(idempotency_key="dg1" * 6),
     )
     store.publish(store.claim("worker", 60), resource_candidate(run))
     before = _state(database)
@@ -915,7 +941,8 @@ def test_refresh_cleanup_preserves_admitted_retry_and_fenced_publication(
 
         service._configuration = changed_configuration
         run = service.admit(
-            service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest(key)
+            service.authorize(tokens[Role.ADMIN]),
+            RefreshAdmissionRequest(idempotency_key=key),
         )
         assert run.id == run_id
         assert run.configuration == CONFIG
@@ -927,7 +954,8 @@ def test_refresh_cleanup_preserves_admitted_retry_and_fenced_publication(
         assert store.active_generation() == generation
         assert (
             service.admit(
-                service.authorize(tokens[Role.ADMIN]), RefreshAdmissionRequest(key)
+                service.authorize(tokens[Role.ADMIN]),
+                RefreshAdmissionRequest(idempotency_key=key),
             ).generation_id
             == generation.id
         )

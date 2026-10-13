@@ -228,7 +228,10 @@ Idempotency-Key: <client-generated-key>
 {}
 ```
 
-Accept an empty JSON object. Resolve configured inclusive start/end dates at
+Accept an empty JSON object. After CSRF and Admin guards, `validated_request`
+injects a Pydantic `RefreshAdmissionRequest`; the controller performs no admission
+input validation. Invalid keys continue to return `400 invalid_request` before
+service invocation (ADR-0073). Resolve configured inclusive start/end dates at
 admission and persist the resolved interval with the run. Reject caller date
 fields and dataset selectors. Invalid/missing/reversed/excessive configured
 intervals prevent admission with a safe configuration/service error before

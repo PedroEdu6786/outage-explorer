@@ -106,7 +106,10 @@ Database drivers, SDKs, engine calls and file/network I/O belong in infrastructu
 Under [ADR-0068](../adr/0068-declarative-refresh-configuration-validation.md),
 `domain/refresh_configuration.py` alone may import Pydantic's model, configuration,
 field and model-validator APIs for pure declarative validation. ADR-0071 also permits narrow Pydantic validation APIs in
-`application/pagination/request.py` and `application/preview_request.py`. Other
+`application/pagination/request.py` and `application/preview_request.py`.
+ADR-0073 permits `BaseModel`, `ConfigDict`, `Field` and `ValidationError` in
+`application/refresh_request.py`: the admission decorator injects a strict frozen
+Pydantic DTO after CSRF and Admin guards. Other
 domain and application dependencies retain the standard-library rule above.
 Flask request context (`request`, `g`, `current_app`) stays out of domain and
 application code. Relative imports, dynamic imports and re-exports must not bypass
