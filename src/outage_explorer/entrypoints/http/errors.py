@@ -1,13 +1,14 @@
 """Sanitized auth failures; never serialize exception text."""
 
 from flask import Flask, Response, jsonify, make_response, request
-from werkzeug.exceptions import HTTPException
+from werkzeug.exceptions import HTTPException, InternalServerError
 
 from outage_explorer.application.errors import (
     ForbiddenError,
     InvalidRequestError,
     UnauthenticatedError,
 )
+from outage_explorer.entrypoints.http.auth_transport import AuthTransport
 
 
 def error_response(error: Exception, *, login: bool = False) -> Response:
@@ -29,14 +30,28 @@ def error_response(error: Exception, *, login: bool = False) -> Response:
     return response
 
 
-def register_auth_errors(app: Flask) -> None:
-    @app.errorhandler(HTTPException)
-    def framework_error(error: HTTPException) -> Response:
-        if request.path.startswith(("/api/datasets", "/api/query", "/api/refresh")):
-            return data_error_response(InvalidRequestError("Invalid request"))
-        if request.path.startswith("/api/auth/"):
-            return error_response(InvalidRequestError("Invalid request"))
-        return make_response(error.get_response())
+def register_error_handlers(app: Flask, transport: AuthTransport) -> None:
+    """Register shared mappings while retaining auth callback cleanup."""
+
+    @app.errorhandler(Exception)
+    def failure(error: Exception) -> Response:
+        if request.blueprint in {"datasets", "queries", "refresh"}:
+            return data_error_response(error)
+        if request.blueprint == "access":
+            response = error_response(
+                error, login=request.endpoint in {"access.login", "access.callback"}
+            )
+            if request.endpoint == "access.callback":
+                transport.clear_cookie(response, transport.attempt_cookie)
+            return response
+        if isinstance(error, HTTPException):
+            if request.path.startswith(("/api/datasets", "/api/query", "/api/refresh")):
+                return data_error_response(InvalidRequestError("Invalid request"))
+            if request.path.startswith("/api/auth/"):
+                return error_response(InvalidRequestError("Invalid request"))
+            return make_response(error.get_response())
+        app.logger.exception("Unhandled HTTP error")
+        return make_response(InternalServerError().get_response())
 
 
 def data_error_response(error: Exception, *, dataset: bool = False) -> Response:

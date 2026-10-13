@@ -45,10 +45,19 @@ is wrong, propose a change here rather than silently deviating.
   resource limits use typed defaults with optional `--config PATH` JSON overrides,
   not `OUTAGE_CONNECTOR_*` variables ([ADR-0041](../adr/0041-connector-defaults-and-json-configuration.md)).
 
+## Controller conventions
+
+- Follow [Required HTTP controller pattern](http-controllers.md) for every new
+  controller and controller refactor (ADR-0075). Use applicable auth guards,
+  request DTO validation decorators and response DTO decorators; register shared
+  blueprint/error/preflight concerns centrally.
+- The guide explicitly lists forbidden former patterns. Do not copy remaining
+  legacy inline validation or response construction as a model for new code.
+
 ## Git practices
 
-- Every completed, verified update is committed automatically; pushing still
-  requires user instruction.
+- Commit only when the user explicitly requests it. Completed, verified updates
+  remain uncommitted until then. Pushing also requires user instruction.
 - Every new commit follows Conventional Commits as defined below and includes
   a descriptive body logging the changes made, verification performed, and
   any remaining validation gaps.

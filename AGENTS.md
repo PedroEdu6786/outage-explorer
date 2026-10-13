@@ -170,6 +170,33 @@ reruns. Recovery must prevent stale owners from publishing.
    Record a new ADR for a changed accepted boundary; do not silently treat an
    unaccepted recommendation as an implementation decision.
 
+## Mandatory HTTP controller convention
+
+Before adding or refactoring any controller, read
+[Required HTTP controller pattern](docs/context/http-controllers.md) and
+[ADR-0075](docs/adr/0075-decorator-driven-http-controllers.md).
+Use the refresh controller as the reference implementation.
+
+- MUST declare applicable auth/role/dataset/CSRF guards as decorators, then
+  `validated_request` and `respond_with(ResponseDto)` for JSON endpoints.
+- MUST use validated request DTOs with reviewed Pydantic APIs for structured
+  inputs; no-input endpoints still use the empty-request validation decorator.
+- MUST keep handlers focused on service calls and returning their results.
+  Response DTOs specify body/status/headers; the generic decorator builds HTTP.
+- MUST register blueprints, error handling and endpoint preflight policies
+  centrally in HTTP setup. Preserve existing authorization/CORS/error contracts.
+- MUST NOT reintroduce inline `parameters(set())`, request parsers, identifier
+  checks, manual DTO constraint loops, `jsonify`, response/status/header building,
+  missing-result response branches, local exception handlers or preflight hooks
+  in JSON controllers. The guide maps each old pattern to its required replacement.
+- Auth/query transport DTO Pydantic APIs are scoped to the exact modules in
+  [ADR-0076](docs/adr/0076-auth-and-query-transport-request-models.md). Catalog and
+  query services retain application authorization. Auth redirects and bodyless
+  logout use dedicated response decorators; session/logout reject nonempty inputs.
+- Existing legacy routes are not examples to copy. Non-JSON flows and public
+  endpoints retain their documented transport/access contracts; do not add
+  authentication or force redirects/bodyless responses through JSON serialization.
+
 ## Verification and reporting
 
 Use the dependency matrix and change checklist in the structure guide.

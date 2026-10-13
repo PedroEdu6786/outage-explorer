@@ -1,9 +1,10 @@
 """Validate transport inputs and serialize the public identity allowlist."""
 
 import json
-from dataclasses import dataclass
+from collections.abc import Callable
 
 from flask import request
+from pydantic import BaseModel, ConfigDict
 
 from outage_explorer.application.dto import CurrentIdentity
 from outage_explorer.application.errors import InvalidRequestError, UnauthenticatedError
@@ -72,29 +73,36 @@ def json_object(
     return {str(key): value for key, value in decoded.items()}
 
 
-@dataclass(frozen=True)
-class LoginQuery:
+class LoginQuery(BaseModel):
+    model_config = ConfigDict(strict=True, frozen=True, extra="forbid")
+
     return_to: str
 
 
-@dataclass(frozen=True)
-class CallbackQuery:
+class CallbackQuery(BaseModel):
+    model_config = ConfigDict(strict=True, frozen=True, extra="forbid")
+
     code: str
     state: str
+    browser_binding: str = ""
 
 
 def login_query() -> LoginQuery:
     values = query_fields(frozenset({"return_to"}))
-    return LoginQuery(values.get("return_to", "/"))
+    return LoginQuery(return_to=values.get("return_to", "/"))
 
 
-def callback_query() -> CallbackQuery:
+def callback_query(*, binding: Callable[[], str] | None = None) -> CallbackQuery:
     values = query_fields(
         frozenset({"code", "state", "error", "error_description", "error_uri"})
     )
     if "error" in values:
         raise UnauthenticatedError("Login failed")
-    return CallbackQuery(values.get("code", ""), values.get("state", ""))
+    return CallbackQuery(
+        code=values.get("code", ""),
+        state=values.get("state", ""),
+        browser_binding="" if binding is None else binding(),
+    )
 
 
 def identity_payload(identity: CurrentIdentity) -> dict[str, object]:

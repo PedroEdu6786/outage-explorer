@@ -137,8 +137,9 @@ wrapper or use bootstrap as a service locator. New wrappers need checker coverag
 For example, a preview request follows this flow:
 
 ```text
-HTTP route: validate input
-  → application service: resolve session and authorize
+HTTP guards: resolve session and approve dataset through AccessService
+  → request DTO: validate path dataset and query inputs together
+  → application service: consume approved access and validated request
   → application ports: select published inputs and execute bounded preview
   ← application result
 HTTP route: serialize response
@@ -251,3 +252,62 @@ row, a cursor callback, fixed size, current position and endpoint metadata.
 The endpoint retains responsibility for authorization, filtering, stable ordering,
 snapshot ownership and cleanup; the paginator never fetches data or alters SQL.
 See [ADR-0071](../adr/0071-shared-cursor-pagination-and-request-validation.md).
+
+`PreviewRequest` requires the dataset ID alongside query inputs. Its Pydantic
+model validators reject unsupported dataset/filter combinations during construction;
+`PreviewService.read` does not perform DTO validation. The HTTP validation guard
+forwards the named dataset route parameter after authorization. Non-HTTP callers
+construct the DTO with the dataset ID from their freshly approved `PreviewAccess`.
+
+
+## Mandatory controller convention
+
+Before controller work, read [Required HTTP controller pattern](http-controllers.md)
+and [ADR-0075](../adr/0075-decorator-driven-http-controllers.md). Its required
+decorator order and must-do/must-not-do examples govern new controllers and
+controller refactors; existing legacy route code is not a precedent.
+
+## HTTP response DTOs
+
+Use `@respond_with(ResponseDto)` inside authorization and request-validation
+guards. The handler returns its service result. The generic decorator in
+`entrypoints/http/responses.py` passes it to `ResponseDto.from_result`, calls
+`build()` for `ResponseData`, and serializes the body, status (default `200`)
+and optional headers. Exceptions reach existing error handlers; transport
+finalization still applies shared security and CORS headers. This contract is
+for JSON endpoints; redirects, streaming and bodyless responses retain their
+existing transport handling.
+
+Refresh uses `RefreshAdmissionResponse`, `RefreshLatestResponse` and
+`RefreshStatusResponse` in `entrypoints/http/refresh_responses.py`. These DTOs
+specify public envelopes, status codes, headers and missing-run responses without
+constructing Flask responses. Application result bases in
+`application/refresh_responses.py` map runs to public data without Flask.
+Existing public quality projections remain in `application/data_payloads.py`.
+
+Refresh GET validation also runs through `validated_request`: `empty_request`
+rejects query/body inputs for latest, and `refresh_status_request` additionally
+validates the route run ID before status lookup. Refresh handlers contain only
+service calls; role guards run before all request validation.
+
+## Shared HTTP error and preflight handling
+
+`create_app` registers `register_error_handlers` and `register_preflight_handler`
+once when authentication transport is configured. Controllers do not register
+local exception or preflight hooks. `errors.py` retains the data/auth mappings,
+login/callback error semantics and callback attempt-cookie cleanup. Routing
+errors on API paths remain sanitized; unrelated routing errors retain their HTTP
+status. Shared response finalization still runs for successes and failures.
+
+`preflight.py` maps registered endpoint names to explicit methods and header
+allowances. OPTIONS requests are handled before guards or service invocation;
+unmatched URLs proceed to routing error handling. Preserve current compatibility:
+auth preflight permits GET/POST, query permits GET/POST, datasets permit GET, and
+refresh permits POST for admission and GET for reads. All refresh endpoints
+currently allow Idempotency-Key. Update policies explicitly when adding endpoints.
+
+Auth and query request DTOs also use narrowly allowed Pydantic APIs in the HTTP
+layer under [ADR-0076](../adr/0076-auth-and-query-transport-request-models.md).
+Query services retain their existing scalar arguments and fresh authorization.
+Catalog/preview/query public payloads use `JsonPayloadResponse`; auth redirects
+and cookie/bodyless results use dedicated `respond_with_auth` DTOs.

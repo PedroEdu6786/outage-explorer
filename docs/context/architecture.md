@@ -219,3 +219,16 @@ approved principal/dataset plus a Pydantic request into `PreviewService.read`.
 Application-owned access policy remains in `AccessService`; preview does not
 repeat authorization. Shared `application/pagination/` assembles cursor responses
 from preview's bounded read. See ADR-0070 and ADR-0071.
+
+
+## Required HTTP controller structure
+
+[ADR-0075](../adr/0075-decorator-driven-http-controllers.md) makes the
+[controller convention](http-controllers.md) mandatory for new controllers and
+controller refactors. Routes declare applicable authorization guards, request DTO
+validation and response DTO serialization through decorators; handlers invoke
+application services and return results. Central HTTP setup registers blueprints,
+error handling and endpoint preflight policies. Do not reintroduce inline
+validation/response construction or controller-local error/preflight hooks.
+Refresh, datasets, queries and access follow this pattern. Specialized non-JSON
+transport and existing access contracts remain.

@@ -420,3 +420,12 @@ frozen `PreviewRequest`; it performs no second authentication. Non-HTTP callers
 must obtain fresh access through `AccessService.authenticate` and `require_dataset`.
 Reusable cursor pagination lives in `application/pagination/`; preview owns its
 snapshot/worker lifecycle. Retained SQL result pagination is unchanged.
+
+
+## Controller validation order
+
+Dataset catalog and retained SQL pages now authenticate before transport input
+validation, following ADR-0075. Malformed unauthenticated requests return 401
+before input errors. Submission CSRF checks still precede parsing; query services
+retain reference-dependent authorization and ownership checks. Response envelopes,
+SQL text and retained pagination behavior are unchanged.

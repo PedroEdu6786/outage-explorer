@@ -1,17 +1,16 @@
 """Immutable preview inputs shared by HTTP and direct application callers."""
 
 from datetime import date
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import Field, field_validator, model_validator
 
-from outage_explorer.application.errors import InvalidRequestError
 from outage_explorer.application.pagination.request import CursorPaginationRequest
-from outage_explorer.domain.datasets import Dataset
 from outage_explorer.domain.preview_filters import validate_facility_identifier
 
 
 class PreviewRequest(CursorPaginationRequest):
+    dataset: Literal["national", "facilities", "generators"]
     start: date | None = None
     end: date | None = None
     facility: str | None = Field(default=None, min_length=1, max_length=256)
@@ -32,6 +31,8 @@ class PreviewRequest(CursorPaginationRequest):
             raise ValueError("Start date must not follow end date")
         return self
 
-    def validate_dataset(self, dataset: Dataset) -> None:
-        if self.facility is not None and dataset.grain == "national":
-            raise InvalidRequestError("National preview does not support facility")
+    @model_validator(mode="after")
+    def supported_filters(self) -> Self:
+        if self.facility is not None and self.dataset == "national":
+            raise ValueError("National preview does not support facility")
+        return self

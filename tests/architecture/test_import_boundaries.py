@@ -22,7 +22,18 @@ def test_application_obeys_import_boundaries():
 
 @pytest.mark.parametrize(
     ("module", "symbol"),
-    [
+    [("entrypoints/http/schemas.py", symbol) for symbol in ("BaseModel", "ConfigDict")]
+    + [
+        ("entrypoints/http/query_requests.py", symbol)
+        for symbol in (
+            "BaseModel",
+            "ConfigDict",
+            "Field",
+            "ValidationError",
+            "field_validator",
+        )
+    ]
+    + [
         ("application/preview_request.py", symbol)
         for symbol in ("Field", "field_validator", "model_validator")
     ]
@@ -51,6 +62,9 @@ def test_preview_request_validation_imports_are_reviewed(tmp_path, module, symbo
 @pytest.mark.parametrize(
     "module",
     [
+        "entrypoints/http/schemas.py",
+        "entrypoints/http/query_requests.py",
+        "entrypoints/http/routes/queries.py",
         "application/preview_request.py",
         "application/pagination/request.py",
         "application/refresh_request.py",

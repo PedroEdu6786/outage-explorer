@@ -522,3 +522,27 @@ def test_malformed_provider_configuration_redacts_netloc(monkeypatch):
         build_http_app()
     assert str(error.value) == "Invalid authentication configuration"
     assert "SECRET" not in str(error.value)
+
+
+@pytest.mark.parametrize("body", [False, True])
+@pytest.mark.parametrize("path", ["/api/auth/session", "/api/auth/logout"])
+def test_empty_auth_inputs_rejected_without_revoking_session(http_app, path, body):
+    client = http_app[0].test_client()
+    sign_in(client)
+    identity = client.get("/api/auth/session").json
+    headers = {"Origin": UI, "X-CSRF-Token": identity["csrf_token"]}
+    options = {"json": {}} if body else {"query_string": {"unknown": "value"}}
+    response = client.open(
+        path,
+        method="POST" if path.endswith("logout") else "GET",
+        headers=headers,
+        **options,
+    )
+    assert response.status_code == 400
+    assert "Set-Cookie" not in response.headers
+    assert client.get("/api/auth/session").json == identity
+
+
+def test_session_authentication_precedes_empty_input_validation(http_app):
+    response = http_app[0].test_client().get("/api/auth/session?unknown=value")
+    assert response.status_code == 401

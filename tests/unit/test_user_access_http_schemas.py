@@ -17,11 +17,11 @@ from outage_explorer.entrypoints.http.schemas import (
 def test_typed_query_values_and_defaults():
     app = Flask(__name__)
     with app.test_request_context("/"):
-        assert login_query() == LoginQuery("/")
+        assert login_query() == LoginQuery(return_to="/")
     with app.test_request_context("/?return_to=/dashboard"):
-        assert login_query() == LoginQuery("/dashboard")
+        assert login_query() == LoginQuery(return_to="/dashboard")
     with app.test_request_context("/?code=code&state=state"):
-        assert callback_query() == CallbackQuery("code", "state")
+        assert callback_query() == CallbackQuery(code="code", state="state")
 
 
 @pytest.mark.parametrize(

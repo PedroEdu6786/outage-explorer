@@ -10,10 +10,13 @@ from flask import request
 from outage_explorer.application.errors import InvalidRequestError
 from outage_explorer.application.preview_request import PreviewRequest
 from outage_explorer.application.refresh_request import RefreshAdmissionRequest
+from outage_explorer.entrypoints.http.query_requests import (
+    QueryPageRequest,
+    QuerySubmissionRequest,
+)
 
 MAX_BODY_BYTES = 131072
 MAX_QUERY_BYTES = 8192
-MAX_SQL_BYTES = 65536
 MAX_ID_BYTES = 4096
 
 
@@ -83,6 +86,16 @@ def json_object(fields: set[str]) -> dict[str, object]:
     return value
 
 
+def empty_request() -> None:
+    """Reject query parameters and bodies for endpoints with no request inputs."""
+    parameters(set())
+
+
+def refresh_status_request(*, run_id: str) -> str:
+    empty_request()
+    return identifier(run_id)
+
+
 def refresh_admission_request() -> RefreshAdmissionRequest:
     parameters(set(), body=True)
     json_object(set())
@@ -91,47 +104,55 @@ def refresh_admission_request() -> RefreshAdmissionRequest:
     )
 
 
-def preview_parameters() -> PreviewRequest:
-    values = parameters({"start_date", "end_date", "page_size", "cursor", "facility"})
+def preview_parameters(*, dataset: str) -> PreviewRequest:
+    query = parameters({"start_date", "end_date", "page_size", "cursor", "facility"})
+    validate_query_encoding()
+
+    start_date = day(query.get("start_date"))
+    end_date = day(query.get("end_date"))
+    facility = query.get("facility")
+
+    page_size = None
+    if "page_size" in query:
+        page_size = positive(query["page_size"])
+
+    cursor = None
+    if "cursor" in query:
+        cursor = identifier(query["cursor"])
+
+    return PreviewRequest.parse(
+        dataset=dataset,
+        start=start_date,
+        end=end_date,
+        size=page_size,
+        facility=facility,
+        cursor=cursor,
+    )
+
+
+def validate_query_encoding() -> None:
+    """Reject invalid UTF-8 before percent escapes can become identifiers."""
     # Werkzeug preserves malformed UTF-8 as percent escapes. Validate the
     # bounded transport bytes so an invalid encoding cannot become an ID.
     try:
         unquote_to_bytes(request.query_string).decode("utf-8", errors="strict")
     except UnicodeDecodeError:
         raise InvalidRequestError("Invalid request") from None
-    if "cursor" in values:
-        if len(values) != 1:
-            raise InvalidRequestError("Invalid request")
-        return PreviewRequest.parse(cursor=identifier(values["cursor"]))
-    start, end = day(values.get("start_date")), day(values.get("end_date"))
-    return PreviewRequest.parse(
-        start=start,
-        end=end,
-        size=positive(values.get("page_size"), 100, maximum=500),
-        facility=values.get("facility"),
+
+
+def query_submission_request() -> QuerySubmissionRequest:
+    values = parameters({"page", "page_size"}, body=True)
+    return QuerySubmissionRequest.parse(
+        sql=json_object({"sql"})["sql"],
+        page=positive(values.get("page"), 1),
+        page_size=positive(values.get("page_size"), 100),
     )
 
 
-def query_parameters(*, submission: bool) -> tuple[str, int, int | None]:
-    values = parameters(
-        {"page", "page_size"} if submission else {"query_id", "page", "page_size"},
-        body=submission,
+def query_page_request() -> QueryPageRequest:
+    values = parameters({"query_id", "page", "page_size"})
+    return QueryPageRequest.parse(
+        query_id=values.get("query_id"),
+        page=positive(values.get("page")),
+        page_size=positive(values["page_size"]) if "page_size" in values else None,
     )
-    page = positive(values.get("page"), 1 if submission else None)
-    size = (
-        positive(values.get("page_size"), 100, maximum=500)
-        if submission or "page_size" in values
-        else None
-    )
-    if submission:
-        sql = json_object({"sql"})["sql"]
-        if not isinstance(sql, str) or not sql.strip():
-            raise InvalidRequestError("Invalid request")
-        try:
-            sql_bytes = len(sql.encode("utf-8"))
-        except UnicodeEncodeError:
-            raise InvalidRequestError("Invalid request") from None
-        if sql_bytes > MAX_SQL_BYTES:
-            raise InvalidRequestError("Invalid request")
-        return sql, page, size
-    return identifier(values.get("query_id")), page, size

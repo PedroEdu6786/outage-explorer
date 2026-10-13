@@ -15,7 +15,13 @@ from outage_explorer.application.refresh_request import RefreshAdmissionRequest
 from outage_explorer.application.services.access import AccessService
 from outage_explorer.application.services.refresh import RefreshService
 from outage_explorer.domain.access import Role, SeededUser, Session
-from outage_explorer.domain.publication import RefreshConfiguration
+from outage_explorer.domain.publication import (
+    PublicationState,
+    RefreshConfiguration,
+    RefreshRun,
+    RefreshStage,
+    RunStatus,
+)
 from outage_explorer.entrypoints.http.app import create_app
 from outage_explorer.entrypoints.http.auth_transport import AuthTransport
 from outage_explorer.entrypoints.http.data_services import DataServices
@@ -49,6 +55,8 @@ def transport():
         "/api/datasets?unexpected=1",
         "/api/datasets?x=1&x=2",
         "/api/refresh/latest?unknown=1",
+        "/api/refresh/run-123?unknown=1",
+        "/api/refresh/" + "a" * 4097,
         "/api/datasets/national/preview?page_size=0",
         "/api/datasets/national/preview?page_size=501",
         "/api/datasets/national/preview?page_size=1&page_size=2",
@@ -161,7 +169,13 @@ def test_query_preserves_valid_unicode_and_enforces_utf8_byte_limit(
 
 
 @pytest.mark.parametrize(
-    "path", ["/api/datasets", "/api/query?query_id=x&page=1", "/api/refresh/latest"]
+    "path",
+    [
+        "/api/datasets",
+        "/api/query?query_id=x&page=1",
+        "/api/refresh/latest",
+        "/api/refresh/run-123",
+    ],
 )
 def test_get_body_rejected(transport, path):
     assert transport[0].get(path, json={}).status_code == 400
@@ -481,3 +495,222 @@ def test_invalid_data_enablement(value):
 
     with pytest.raises(ValueError):
         data_http_settings({"OUTAGE_DATA_HTTP_ENABLED": value})
+
+
+@pytest.fixture
+def refresh_run():
+    return RefreshRun(
+        id="run-123",
+        requester_id="private-user",
+        key_digest="private-key",
+        configuration=RefreshConfiguration(
+            start=date(2026, 4, 2),
+            end=date(2026, 10, 1),
+            max_interval_days=183,
+            source_interval_days=183,
+            model_interval_days=183,
+            candidate_seconds=1800,
+            persistence_seconds=1800,
+        ),
+        base_generation_id=None,
+        status=RunStatus.ACCEPTED,
+        stage=RefreshStage.QUEUED,
+        admitted_at=datetime(2026, 10, 1, tzinfo=UTC),
+        epoch=None,
+        generation_id=None,
+        publication=PublicationState.PENDING,
+        quality_json=None,
+        failure=None,
+        no_publication_reason=None,
+    )
+
+
+@pytest.mark.parametrize(
+    "status,code",
+    [
+        (RunStatus.ACCEPTED, 202),
+        (RunStatus.RUNNING, 202),
+        (RunStatus.PUBLICATION_UNKNOWN, 202),
+        (RunStatus.SUCCEEDED, 200),
+        (RunStatus.RETAINED, 200),
+        (RunStatus.FAILED, 200),
+        (RunStatus.INTERRUPTED, 200),
+    ],
+)
+def test_refresh_admission_response_contract(transport, refresh_run, status, code):
+    client, _, services = transport
+    services.refresh.admit.return_value = replace(refresh_run, status=status)
+    response = client.post(
+        "/api/refresh",
+        json={},
+        headers={
+            "Origin": ORIGIN,
+            "Idempotency-Key": "a" * 16,
+        },
+    )
+    assert response.status_code == code
+    assert response.json == {
+        "run_id": "run-123",
+        "status": status.value,
+        "effective_interval": {"start_date": "2026-04-02", "end_date": "2026-10-01"},
+        "status_url": "/api/refresh/run-123",
+    }
+    assert response.headers["Location"] == "/api/refresh/run-123"
+    assert response.headers["Retry-After"] == "3"
+    assert response.headers["Cache-Control"] == "no-store"
+
+
+def test_refresh_read_response_envelopes_and_private_fields(transport, refresh_run):
+    client, _, services = transport
+    services.refresh.status.return_value = refresh_run
+    services.refresh.latest.return_value = refresh_run
+    status = client.get("/api/refresh/run-123")
+    latest = client.get("/api/refresh/latest")
+    assert status.status_code == latest.status_code == 200
+    assert latest.json == {"run": status.json}
+    assert set(status.json) == {
+        "run_id",
+        "status",
+        "stage",
+        "effective_interval",
+        "accepted_at",
+        "started_at",
+        "finished_at",
+        "datasets",
+        "publication",
+        "failure",
+    }
+    assert status.json["run_id"] == "run-123"
+    assert status.json["accepted_at"] == "2026-10-01T00:00:00Z"
+    assert "private-user" not in status.text and "private-key" not in status.text
+    services.refresh.status.return_value = None
+    missing = client.get("/api/refresh/missing")
+    assert missing.status_code == 404
+    assert missing.json == {
+        "error": {
+            "code": "refresh_unavailable",
+            "message": "Refresh unavailable",
+        }
+    }
+    assert missing.headers["Cache-Control"] == "no-store"
+
+
+@pytest.mark.parametrize(
+    "path,method,idempotency",
+    [
+        ("/api/auth/login", "GET", False),
+        ("/api/auth/callback", "POST", False),
+        ("/api/auth/session", "GET", False),
+        ("/api/auth/logout", "POST", False),
+        ("/api/datasets", "GET", False),
+        ("/api/datasets/national/preview", "GET", False),
+        ("/api/query", "GET", False),
+        ("/api/query", "POST", False),
+        ("/api/refresh", "POST", True),
+        ("/api/refresh/latest", "GET", True),
+        ("/api/refresh/run-123", "GET", True),
+    ],
+)
+def test_central_preflight_policies_do_not_invoke_services(
+    transport, path, method, idempotency
+):
+    client, access, services = transport
+    requested_headers = "Content-Type, X-CSRF-Token"
+    if idempotency:
+        requested_headers += ", Idempotency-Key"
+    response = client.options(
+        path,
+        headers={
+            "Origin": ORIGIN,
+            "Access-Control-Request-Method": method,
+            "Access-Control-Request-Headers": requested_headers,
+        },
+    )
+    assert response.status_code == 204
+    assert response.headers["Access-Control-Allow-Origin"] == ORIGIN
+    assert response.headers["Access-Control-Allow-Credentials"] == "true"
+    assert method in response.headers["Access-Control-Allow-Methods"]
+    assert (
+        "Idempotency-Key" in response.headers["Access-Control-Allow-Headers"]
+    ) == idempotency
+    assert not access.mock_calls
+    for service in (
+        services.catalog,
+        services.preview,
+        services.queries,
+        services.refresh,
+    ):
+        assert not service.mock_calls
+
+
+@pytest.mark.parametrize("path", ["/api/auth/missing", "/api/refresh/missing/path"])
+def test_unmatched_preflight_remains_a_sanitized_routing_error(transport, path):
+    client, _, _ = transport
+    response = client.options(
+        path,
+        headers={
+            "Origin": ORIGIN,
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+    assert response.status_code == 400
+    assert response.json["error"]["code"] == "invalid_request"
+    assert "Access-Control-Allow-Methods" not in response.headers
+
+
+def test_unrelated_routing_errors_keep_their_http_status(transport):
+    client, _, _ = transport
+    assert client.get("/unregistered").status_code == 404
+    assert client.post("/health").status_code == 405
+
+
+@pytest.mark.parametrize("path", ["/api/datasets?unknown=1", "/api/query?page=bad"])
+def test_catalog_and_query_authenticate_before_validation(transport, path):
+    client, access, services = transport
+    access.current_identity.side_effect = errors.UnauthenticatedError()
+    response = client.get(path)
+    assert response.status_code == 401
+    assert not services.catalog.mock_calls
+    assert not services.queries.mock_calls
+
+
+def test_query_csrf_denies_before_parsing_or_execution(transport):
+    client, access, services = transport
+    access.validate_csrf.side_effect = errors.ForbiddenError()
+    response = client.post(
+        "/api/query?page=bad", data="invalid", headers={"Origin": ORIGIN}
+    )
+    assert response.status_code == 403
+    services.queries.execute.assert_not_called()
+
+
+def test_query_dtos_forward_unchanged_sql_and_pagination(transport):
+    client, _, services = transport
+    client.set_cookie("outage_session", "session-token")
+    payload = {"rows": [[1]], "page": 2, "query_id": "retained-id"}
+    services.queries.execute.return_value = payload
+    services.queries.page.return_value = payload
+    sql = "  SELECT 1;\n"
+    response = client.post(
+        "/api/query?page=2&page_size=25", json={"sql": sql}, headers={"Origin": ORIGIN}
+    )
+    assert response.status_code == 200 and response.json == payload
+    services.queries.execute.assert_called_once_with(
+        "session-token", sql, page=2, page_size=25
+    )
+    response = client.get("/api/query?query_id=retained-id&page=2")
+    assert response.status_code == 200 and response.json == payload
+    services.queries.page.assert_called_once_with(
+        "session-token", "retained-id", page=2, page_size=None
+    )
+    assert services.queries.execute.call_count == 1
+
+
+def test_catalog_payload_is_not_reenveloped(transport):
+    client, _, services = transport
+    client.set_cookie("outage_session", "session-token")
+    payload = {"generation_id": "generation", "datasets": [{"id": "national"}]}
+    services.catalog.payload.return_value = payload
+    response = client.get("/api/datasets")
+    assert response.status_code == 200 and response.json == payload
+    services.catalog.payload.assert_called_once_with("session-token", services.encoding)

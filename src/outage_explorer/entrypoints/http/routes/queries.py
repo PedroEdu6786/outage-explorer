@@ -1,12 +1,24 @@
 """One SQL submission and retained reads share the same transport path."""
 
-from flask import Blueprint, Response, jsonify, request
+from flask import Blueprint
 
 from outage_explorer.application.services.access import AccessService
+from outage_explorer.entrypoints.http.auth_helpers import (
+    authenticated,
+    csrf_protected,
+    validated_request,
+)
 from outage_explorer.entrypoints.http.auth_transport import AuthTransport
-from outage_explorer.entrypoints.http.data_schemas import query_parameters
+from outage_explorer.entrypoints.http.data_schemas import (
+    query_page_request,
+    query_submission_request,
+)
 from outage_explorer.entrypoints.http.data_services import DataServices
-from outage_explorer.entrypoints.http.errors import data_error_response
+from outage_explorer.entrypoints.http.query_requests import (
+    QueryPageRequest,
+    QuerySubmissionRequest,
+)
+from outage_explorer.entrypoints.http.responses import JsonPayloadResponse, respond_with
 
 
 def create_queries_blueprint(
@@ -14,31 +26,30 @@ def create_queries_blueprint(
 ) -> Blueprint:
     blueprint = Blueprint("queries", __name__)
 
-    @blueprint.errorhandler(Exception)
-    def failure(error: Exception) -> Response:
-        return data_error_response(error)
-
-    @blueprint.before_request
-    def preflight() -> Response | None:
-        return transport.preflight() if request.method == "OPTIONS" else None
-
     @blueprint.post("/api/query")
-    def execute() -> Response:
-        credential = transport.credential()
-        access.validate_csrf(credential, transport.mutation_csrf())
-        sql, page, size = query_parameters(submission=True)
-        assert size is not None
-        return jsonify(
-            services.queries.execute(credential, sql, page=page, page_size=size)
+    @csrf_protected(access, transport)
+    @validated_request(query_submission_request)
+    @respond_with(JsonPayloadResponse)
+    def execute(
+        *, credential: str, validated: QuerySubmissionRequest, **_: object
+    ) -> object:
+        return services.queries.execute(
+            credential,
+            validated.sql,
+            page=validated.page,
+            page_size=validated.page_size,
         )
 
     @blueprint.get("/api/query")
-    def page() -> Response:
-        identity, page, size = query_parameters(submission=False)
-        return jsonify(
-            services.queries.page(
-                transport.credential(), identity, page=page, page_size=size
-            )
+    @authenticated(access, transport)
+    @validated_request(query_page_request)
+    @respond_with(JsonPayloadResponse)
+    def page(*, credential: str, validated: QueryPageRequest, **_: object) -> object:
+        return services.queries.page(
+            credential,
+            validated.query_id,
+            page=validated.page,
+            page_size=validated.page_size,
         )
 
     return blueprint

@@ -20,6 +20,12 @@ published generation of the datasets.
 access; Analyst and Admin have all three. Every request checks the current
 application session and role. Preview defaults to 100 rows, with a maximum of 500.
 
+After authorization, the controller validation guard combines the dataset path
+parameter with the query inputs to construct `PreviewRequest`. Pydantic validates
+field constraints and combinations, including rejection of facility filters on
+national data, before the service is invoked. `PreviewService.read` consumes the
+validated DTO without calling an additional request validator.
+
 ## First-page flow
 
 ```mermaid

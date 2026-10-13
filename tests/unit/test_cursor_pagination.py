@@ -100,11 +100,24 @@ def test_shared_request_rejects_invalid_inputs(values):
 )
 def test_preview_adds_filter_validation(values):
     with pytest.raises(InvalidRequestError):
-        PreviewRequest.parse(**values)
+        PreviewRequest.parse(dataset="facilities", **values)
 
 
 def test_request_is_frozen_and_preserves_identifier():
-    request = PreviewRequest.parse(facility="001")
+    request = PreviewRequest.parse(dataset="facilities", facility="001")
     assert request.facility == "001" and request.page_size == 100
     with pytest.raises(ValidationError):
         request.size = 5
+
+
+def test_preview_dto_rejects_national_facility_at_construction():
+    with pytest.raises(ValidationError, match="National preview"):
+        PreviewRequest(dataset="national", facility="001")
+    with pytest.raises(InvalidRequestError):
+        PreviewRequest.parse(dataset="national", facility="001")
+
+
+@pytest.mark.parametrize("values", [{}, {"dataset": "unknown"}])
+def test_preview_dto_requires_a_known_dataset(values):
+    with pytest.raises(InvalidRequestError):
+        PreviewRequest.parse(**values)

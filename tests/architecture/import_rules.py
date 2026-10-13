@@ -242,6 +242,19 @@ def allowed_dependency(source: str, target: str) -> bool:
         "pydantic.model_validator",
     }:
         return True  # ADR-0071: shared pagination request validation only.
+    if source == f"{ROOT}.entrypoints.http.schemas" and target in {
+        "pydantic.BaseModel",
+        "pydantic.ConfigDict",
+    }:
+        return True  # ADR-0076: typed auth transport inputs only.
+    if source == f"{ROOT}.entrypoints.http.query_requests" and target in {
+        "pydantic.BaseModel",
+        "pydantic.ConfigDict",
+        "pydantic.Field",
+        "pydantic.ValidationError",
+        "pydantic.field_validator",
+    }:
+        return True  # ADR-0076: bounded SQL transport DTOs, no SQL parsing.
     external = target.split(".")[0]
     if source == f"{ROOT}.entrypoints.http.routes.documentation" and target in {
         "json",

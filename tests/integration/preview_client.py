@@ -36,7 +36,9 @@ class PreviewClient:
     def page(self, token, dataset_id, **values):
         identity = self.access.authenticate(token)
         approved = self.access.require_dataset(identity, dataset_id)
-        return self.service.read(approved, PreviewRequest.parse(**values))
+        return self.service.read(
+            approved, PreviewRequest.parse(dataset=approved.dataset.id, **values)
+        )
 
 
 def synthetic_access(user_id="user"):

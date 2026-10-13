@@ -50,6 +50,16 @@ def test_preview_guard_resolves_once_and_passes_validated_context(preview_http):
     access, request = services.preview.read.call_args.args
     assert access.principal.id == "reader" and access.dataset.id == "facilities"
     assert request.facility == "001" and request.size == 2
+    assert request.dataset == "facilities"
+
+
+def test_national_facility_is_rejected_before_service(preview_http):
+    client, sessions, services = preview_http
+    response = client.get("/api/datasets/national/preview?facility=001")
+    assert response.status_code == 400
+    assert response.json["error"]["code"] == "invalid_request"
+    sessions.resolve_session.assert_called_once()
+    services.preview.read.assert_not_called()
 
 
 @pytest.mark.parametrize("dataset", ["facilities", "generators", "unknown"])

@@ -61,7 +61,6 @@ class PreviewService:
     ) -> dict[str, object]:
         dataset = access.dataset
         user_id = access.principal.id
-        request.validate_dataset(dataset)
         sequence: PreviewSequence | None = None
         execution_slot = None
         initial = request.cursor is None

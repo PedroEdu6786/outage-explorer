@@ -6,7 +6,11 @@ from outage_explorer.application.services.login import LoginService
 from outage_explorer.entrypoints.http.auth_transport import AuthTransport
 from outage_explorer.entrypoints.http.data_schemas import MAX_BODY_BYTES
 from outage_explorer.entrypoints.http.data_services import DataServices
-from outage_explorer.entrypoints.http.errors import register_auth_errors
+from outage_explorer.entrypoints.http.errors import register_error_handlers
+from outage_explorer.entrypoints.http.preflight import (
+    PREFLIGHT_POLICIES,
+    register_preflight_handler,
+)
 from outage_explorer.entrypoints.http.routes.access import create_access_blueprint
 from outage_explorer.entrypoints.http.routes.datasets import create_datasets_blueprint
 from outage_explorer.entrypoints.http.routes.documentation import register_documentation
@@ -46,7 +50,8 @@ def create_app(
         and access_service is not None
         and auth_transport is not None
     ):
-        register_auth_errors(app)
+        register_error_handlers(app, auth_transport)
+        register_preflight_handler(app, auth_transport, PREFLIGHT_POLICIES)
         app.register_blueprint(
             create_access_blueprint(login_service, access_service, auth_transport)
         )

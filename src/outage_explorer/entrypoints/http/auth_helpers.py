@@ -116,16 +116,38 @@ def csrf_protected(
 
 
 def validated_request[Validated](
-    parser: Callable[[], Validated],
+    parser: Callable[..., Validated],
+    *,
+    route_parameters: tuple[str, ...] = (),
 ) -> Callable[[Handler], Handler]:
-    """Inject a plain schema result as validated; parsing cannot authorize."""
+    """Validate transport inputs, optionally including named route parameters."""
 
     def decorate(handler: Handler) -> Handler:
         @wraps(handler)
         def guarded(*args: object, **kwargs: object) -> Response:
-            kwargs["validated"] = parser()
+            inputs = {name: kwargs[name] for name in route_parameters}
+            kwargs["validated"] = parser(**inputs)
             return handler(*args, **kwargs)
 
         return guarded
 
     return decorate
+
+
+def logout_if_authenticated(
+    handler: Callable[..., object],
+) -> Callable[..., object]:
+    """Skip revocation for the CSRF guard's invalid-session logout outcome.
+
+    Use inside the logout response decorator and after csrf_protected with
+    allow_invalid_session=True. Invalid origin, live-session CSRF failures and
+    store failures still propagate from that outer guard.
+    """
+
+    @wraps(handler)
+    def guarded(*args: object, csrf_validated: bool, **kwargs: object) -> object:
+        if not csrf_validated:
+            return None
+        return handler(*args, **kwargs)
+
+    return guarded
