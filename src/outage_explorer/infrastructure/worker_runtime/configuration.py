@@ -1,8 +1,9 @@
 """Inert nonsecret profile and matching readiness contracts; no runtime probing."""
 
 import hashlib
+import json
 import re
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from datetime import date
 from pathlib import Path, PurePosixPath
 
@@ -15,6 +16,22 @@ from outage_explorer.infrastructure.query_results.encoding import (
 )
 
 WORKER_PROTOCOL_VERSION = 2
+
+
+def _positive_int(value: object, *, ceiling: int | None = None) -> bool:
+    return type(value) is int and value > 0 and (ceiling is None or value <= ceiling)
+
+
+def _canonical_absolute_path(value: object) -> bool:
+    if not isinstance(value, str) or not value.startswith("/"):
+        return False
+    path = PurePosixPath(value)
+    return (
+        len(value) <= 4096
+        and "\x00" not in value
+        and ".." not in path.parts
+        and str(path) == value
+    )
 
 
 @dataclass(frozen=True)
@@ -34,7 +51,7 @@ class WorkerImageLimits:
     max_schema_bytes: int = 65_536
 
     def __post_init__(self) -> None:
-        if any(type(v) is not int or v <= 0 for v in vars(self).values()):
+        if not all(_positive_int(value) for value in vars(self).values()):
             raise ValueError("Invalid analytical worker limits")
         if self.execution_seconds > 10 or self.output_bytes > 1_048_576:
             raise ValueError("Analytical worker limits exceed accepted caps")
@@ -93,16 +110,37 @@ class RuntimeProfile:
     environment: tuple[tuple[str, str], ...] = ()
 
     def __post_init__(self) -> None:
-        if (
-            not isinstance(self.docker_executable, str)
-            or not self.docker_executable.startswith("/")
-            or str(PurePosixPath(self.docker_executable)) != self.docker_executable
-            or ".." in PurePosixPath(self.docker_executable).parts
-            or any(c in self.docker_executable for c in ("\n", "\x00"))
-            or len(self.docker_executable) > 4096
+        self._validate_paths()
+        self._validate_identities()
+        self._validate_bounds()
+        self._validate_fixed_profile()
+        self._validate_capacity()
+
+    def _validate_paths(self) -> None:
+        if not _canonical_absolute_path(self.docker_executable) or (
+            "\n" in self.docker_executable
         ):
             raise ValueError("Explicit absolute Docker executable required")
-        if re.fullmatch(r"sha256:[0-9a-f]{64}", self.image_id) is None:
+        roots = (
+            self.staging_root,
+            self.cache_root,
+            self.result_root,
+            self.temporary_root,
+        )
+        for root in roots:
+            if not _canonical_absolute_path(root) or len(PurePosixPath(root).parts) < 3:
+                raise ValueError("Private absolute runtime roots required")
+        paths = tuple(PurePosixPath(root) for root in roots)
+        for index, path in enumerate(paths):
+            for other in paths[index + 1 :]:
+                if path == other or path in other.parents or other in path.parents:
+                    raise ValueError("Separate private runtime roots required")
+
+    def _validate_identities(self) -> None:
+        if (
+            not isinstance(self.image_id, str)
+            or re.fullmatch(r"sha256:[0-9a-f]{64}", self.image_id) is None
+        ):
             raise ValueError("Immutable analytical image identity required")
         if (
             not isinstance(self.daemon_endpoint, str)
@@ -111,30 +149,6 @@ class RuntimeProfile:
             or ".." in self.daemon_endpoint.split("/")
         ):
             raise ValueError("Explicit local Docker endpoint required")
-        roots = (
-            self.staging_root,
-            self.cache_root,
-            self.result_root,
-            self.temporary_root,
-        )
-        for root in roots:
-            if (
-                not isinstance(root, str)
-                or not root.startswith("/")
-                or len(root) > 4096
-                or "\x00" in root
-                or str(PurePosixPath(root)) != root
-                or ".." in PurePosixPath(root).parts
-                or len(PurePosixPath(root).parts) < 3
-            ):
-                raise ValueError("Private absolute runtime roots required")
-        if any(
-            a == b or a in PurePosixPath(b).parents
-            for i, a in enumerate(map(PurePosixPath, roots))
-            for j, b in enumerate(map(PurePosixPath, roots))
-            if i != j
-        ):
-            raise ValueError("Separate private runtime roots required")
         for value in (
             self.platform,
             self.daemon_version,
@@ -143,64 +157,75 @@ class RuntimeProfile:
         ):
             if not isinstance(value, str) or not value or len(value) > 256:
                 raise ValueError("Runtime platform identity required")
-        integer_bounds = (
-            "container_memory_bytes",
-            "swap_bytes",
-            "cpu_millicores",
-            "process_limit",
-            "input_files",
-            "input_bytes",
-            "staging_bytes",
-            "cache_bytes",
-            "cache_rows",
-            "result_bytes",
-            "result_count",
-            "results_per_user",
-            "request_bytes",
-            "stdout_bytes",
-            "stderr_bytes",
-            "control_seconds",
-            "termination_seconds",
-            "cleanup_interval_seconds",
-            "json_nodes",
-            "temporary_inodes",
+
+    def _validate_bounds(self) -> None:
+        bounds = (
+            self.container_memory_bytes,
+            self.swap_bytes,
+            self.cpu_millicores,
+            self.process_limit,
+            self.input_files,
+            self.input_bytes,
+            self.staging_bytes,
+            self.cache_bytes,
+            self.cache_rows,
+            self.result_bytes,
+            self.result_count,
+            self.results_per_user,
+            self.request_bytes,
+            self.stdout_bytes,
+            self.stderr_bytes,
+            self.control_seconds,
+            self.termination_seconds,
+            self.cleanup_interval_seconds,
+            self.json_nodes,
+            self.temporary_inodes,
         )
-        if any(
-            type(getattr(self, name)) is not int or not 0 < getattr(self, name) <= 2**40
-            for name in integer_bounds
-        ):
+        if not all(_positive_int(value, ceiling=2**40) for value in bounds):
             raise ValueError("Finite positive runtime bounds required")
+
+    def _validate_fixed_profile(self) -> None:
         if self.worker != WorkerImageLimits():
             raise ValueError("Worker limits must match internal v1 image profile")
+        fixed_integers = (
+            (self.preview_lifetime_seconds, LIFETIME_SECONDS),
+            (self.result_lifetime_seconds, LIFETIME_SECONDS),
+            (self.protocol_version, WORKER_PROTOCOL_VERSION),
+            (self.uid, 65534),
+            (self.gid, 65534),
+            (self.serving_processes, 1),
+            (self.temporary_layout_version, 1),
+        )
+        fixed_settings = (
+            (self.engine_version, "1.5.6"),
+            (self.network, "none"),
+            (self.ipc, "none"),
+            (self.drop_capabilities, ("ALL",)),
+            (self.temporary_options, ("noexec", "nosuid", "nodev")),
+            (self.mounts, ()),
+            (self.environment, ()),
+        )
         if (
-            type(self.preview_lifetime_seconds) is not int
-            or self.preview_lifetime_seconds != LIFETIME_SECONDS
-            or type(self.result_lifetime_seconds) is not int
-            or self.result_lifetime_seconds != LIFETIME_SECONDS
-            or type(self.protocol_version) is not int
-            or self.protocol_version != WORKER_PROTOCOL_VERSION
-            or self.engine_version != "1.5.6"
-            or type(self.uid) is not int
-            or self.uid != 65534
-            or type(self.gid) is not int
-            or self.gid != 65534
-            or type(self.serving_processes) is not int
-            or self.serving_processes != 1
-            or self.network != "none"
-            or self.ipc != "none"
+            any(
+                type(actual) is not int or actual != expected
+                for actual, expected in fixed_integers
+            )
+            or any(actual != expected for actual, expected in fixed_settings)
             or self.read_only_root is not True
             or self.no_new_privileges is not True
-            or self.drop_capabilities != ("ALL",)
-            or self.temporary_options != ("noexec", "nosuid", "nodev")
-            or self.mounts != ()
-            or self.environment != ()
             or self.temporary_backend not in {"tmpfs-smoke", "quota-disk"}
-            or type(self.temporary_layout_version) is not int
-            or self.temporary_layout_version != 1
-            or self.swap_bytes != self.container_memory_bytes
-            or self.container_memory_bytes
-            <= self.worker.memory_bytes + self.worker.temporary_bytes
-            or self.request_bytes > 131_072
+        ):
+            raise ValueError("Unsupported analytical isolation profile")
+
+    def _validate_capacity(self) -> None:
+        if self.swap_bytes != self.container_memory_bytes:
+            raise ValueError("Unsupported analytical isolation profile")
+        if self.container_memory_bytes <= (
+            self.worker.memory_bytes + self.worker.temporary_bytes
+        ):
+            raise ValueError("Unsupported analytical isolation profile")
+        if (
+            self.request_bytes > 131_072
             or self.stdout_bytes > 1_179_648
             or self.stdout_bytes < self.worker.output_bytes
             or self.input_files > 10_000
@@ -255,11 +280,20 @@ class RuntimeEvidence:
             "local-preview-sql",
         }:
             raise ValueError("Unsupported analytical acceptance scope")
-        for name, value in vars(self).items():
-            if name == "reviewed_on":
-                if type(value) is not date:
-                    raise ValueError("Evidence review date required")
-            elif not isinstance(value, str) or not value or len(value) > 256:
+        if type(self.reviewed_on) is not date:
+            raise ValueError("Evidence review date required")
+        identities = (
+            self.profile_identity,
+            self.controlled_report,
+            self.isolation_report,
+            self.termination_report,
+            self.storage_report,
+            self.measurement_report,
+            self.reviewer,
+            self.acceptance_scope,
+        )
+        for value in identities:
+            if not isinstance(value, str) or not value or len(value) > 256:
                 raise ValueError("Bounded nonsecret evidence identity required")
         if re.fullmatch(r"[0-9a-f]{64}", self.profile_identity) is None:
             raise ValueError("Evidence profile identity required")
@@ -288,48 +322,58 @@ class RuntimeEvidence:
             raise RuntimeUnavailableError("Reviewed analytical runtime unavailable")
 
 
-def read_runtime_config(path: "Path") -> tuple[RuntimeProfile, RuntimeEvidence | None]:
+def _unique_config_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("Duplicate runtime configuration key")
+        result[key] = value
+    return result
+
+
+def _decode_document(raw: bytes) -> dict[str, object]:
+    if len(raw) > 65_536:
+        raise ValueError("Runtime configuration oversized")
+    document = json.loads(raw, object_pairs_hook=_unique_config_object)
+    if not isinstance(document, dict) or set(document) != {"profile", "evidence"}:
+        raise ValueError("Invalid runtime configuration document")
+    return document
+
+
+def _decode_profile(value: object) -> RuntimeProfile:
+    if not isinstance(value, dict) or set(value) - {
+        item.name for item in fields(RuntimeProfile)
+    }:
+        raise ValueError("Invalid runtime profile fields")
+    values = dict(value)
+    if "worker" in values:
+        values["worker"] = WorkerImageLimits(**values["worker"])
+    for name in ("drop_capabilities", "temporary_options", "mounts"):
+        if name in values:
+            values[name] = tuple(values[name])
+    if "environment" in values:
+        values["environment"] = tuple(tuple(item) for item in values["environment"])
+    return RuntimeProfile(**values)
+
+
+def _decode_evidence(value: object) -> RuntimeEvidence | None:
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise ValueError("Invalid runtime evidence")
+    values = dict(value)
+    values["reviewed_on"] = date.fromisoformat(values["reviewed_on"])
+    return RuntimeEvidence(**values)
+
+
+def read_runtime_config(path: Path) -> tuple[RuntimeProfile, RuntimeEvidence | None]:
     """Read one bounded strict nonsecret profile and optional reviewed record."""
-    import json
-    from dataclasses import fields
-
-    def unique(pairs: list[tuple[str, object]]) -> dict[str, object]:
-        result: dict[str, object] = {}
-        for key, value in pairs:
-            if key in result:
-                raise ValueError("Duplicate runtime configuration key")
-            result[key] = value
-        return result
-
     with path.open("rb") as stream:
         raw = stream.read(65_537)
     try:
-        if len(raw) > 65_536:
-            raise ValueError()
-        document = json.loads(raw, object_pairs_hook=unique)
-        if not isinstance(document, dict) or set(document) != {"profile", "evidence"}:
-            raise ValueError()
-        values = document["profile"]
-        if not isinstance(values, dict) or set(values) - {
-            f.name for f in fields(RuntimeProfile)
-        }:
-            raise ValueError()
-        values = dict(values)
-        if "worker" in values:
-            values["worker"] = WorkerImageLimits(**values["worker"])
-        for name in ("drop_capabilities", "temporary_options", "mounts"):
-            if name in values:
-                values[name] = tuple(values[name])
-        if "environment" in values:
-            values["environment"] = tuple(tuple(v) for v in values["environment"])
-        profile = RuntimeProfile(**values)
-        record = document["evidence"]
-        if record is None:
-            return profile, None
-        if not isinstance(record, dict):
-            raise ValueError()
-        record = dict(record)
-        record["reviewed_on"] = date.fromisoformat(record["reviewed_on"])
-        return profile, RuntimeEvidence(**record)
+        document = _decode_document(raw)
+        return _decode_profile(document["profile"]), _decode_evidence(
+            document["evidence"]
+        )
     except (ValueError, KeyError, TypeError, UnicodeError, RecursionError):
         raise ValueError("Invalid nonsecret analytical runtime configuration") from None
