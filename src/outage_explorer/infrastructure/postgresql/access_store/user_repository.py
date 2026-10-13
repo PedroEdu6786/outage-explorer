@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from outage_explorer.application.dto import SeedIdentity
 from outage_explorer.application.errors import SeedConflictError
 from outage_explorer.domain.access import Role, SeededUser
-from outage_explorer.infrastructure.postgresql.access_record import (
+from outage_explorer.infrastructure.postgresql.access_store.access_record import (
     RoleRecord,
     UserRecord,
 )

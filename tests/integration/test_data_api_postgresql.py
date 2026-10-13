@@ -44,13 +44,13 @@ from outage_explorer.infrastructure.postgresql.pool import BoundedPostgresqlPool
 from outage_explorer.infrastructure.postgresql.publication import (
     PostgresqlResourcePublicationStore,
 )
-from outage_explorer.infrastructure.postgresql.published_generation_repository import (
+from outage_explorer.infrastructure.postgresql.refresh.published_generation_repository import (
     PostgresqlPublishedGenerationRepository,
 )
-from outage_explorer.infrastructure.postgresql.refresh_coordination_repository import (
+from outage_explorer.infrastructure.postgresql.refresh.refresh_coordination_repository import (
     PostgresqlRefreshCoordinationRepository,
 )
-from outage_explorer.infrastructure.postgresql.refresh_run_repository import (
+from outage_explorer.infrastructure.postgresql.refresh.refresh_run_repository import (
     PostgresqlRefreshRunRepository,
 )
 from outage_explorer.infrastructure.security import RandomSecurityMaterial

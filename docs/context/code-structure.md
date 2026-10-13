@@ -58,6 +58,8 @@ src/outage_explorer/
     ports/                     # application-owned interfaces
   infrastructure/
     postgresql/                # operational repositories and transactions
+      access_store/            # user, session and login-attempt records/repositories
+      refresh/                 # run, coordination and generation records/repositories
     cognito/                   # provider exchange/token verification
     eia/                       # bounded source retrieval
     parquet/                   # physical schemas, reads and writes
@@ -94,6 +96,12 @@ supervisor. Its focused composition helper `refresh_pipeline_composition.py`
 assembles and closes one run's concrete resources when the worker invokes the
 pipeline factory. No refresh resources start at import or factory construction.
 
+Within `infrastructure/postgresql/`, `access_store/` owns access records and
+repositories, and `refresh/` owns run, coordination and published-generation
+records and repositories. The root `access.py` and `publication.py` keep the
+injected adapter APIs; `pool.py`, `session_scope.py`, `orm_base.py` and migrations
+remain shared infrastructure.
+
 Within `entrypoints/http/`, `routes/` owns controllers, `requests/` owns
 decoding and request DTOs, `responses/` owns public response mapping, and
 `transport/` owns guards, browser cookies, errors and preflight. `app.py`,
@@ -108,10 +116,15 @@ For local Parquet restoration, `LocalConnectorEvidence` delegates to
 `ResourceDownload` owns one transfer's stream lifetime. In `infrastructure/parquet/`,
 `object_storage.py` owns file lookup, capacity accounting and atomic installation;
 `staged_object.py` streams and verifies one temporary file before admission;
-`storage.py` adds Parquet encoding and verification through `LocalParquetStore`.
+`storage.py` exposes `LocalParquetStore` and accounts for adopted exact files;
+`file_io/` owns bounded Parquet encoding, physical verification and record iteration.
 `value_bounds.py` checks nested row values before Arrow allocation. Baseline content
 verification remains in `ParquetResourceBuilder`, supplied to restoration as a
 callable. Restoration does not access the store's private locks or counters.
+`candidates.py` coordinates the three-grain candidate. `candidate/` holds its
+input validation, grain construction, quality accounting and file verification.
+`evidence.py` collects bounded copied source rows; `source_evidence/` checks page
+and JSON shapes and matches transient request audits.
 
 ## Dependency matrix
 
@@ -364,9 +377,9 @@ implementation, not examples for new code.
 The read implementation from [ADR-0074](../adr/0074-refresh-run-orm-pilot.md)
 and [ADR-0077](../adr/0077-latest-refresh-run-orm-read.md) covers
 `PostgresqlResourcePublicationStore.get_run` and `latest`, which delegate to an injected
-`PostgresqlRefreshRunRepository` in `refresh_run_repository.py`. Bootstrap
+`PostgresqlRefreshRunRepository` in `refresh/refresh_run_repository.py`. Bootstrap
 constructs both with the same bounded pool. Its typed `RefreshRunRecord` lives
-in `infrastructure/postgresql/refresh_run_record.py` and converts to the existing
+in `infrastructure/postgresql/refresh/refresh_run_record.py` and converts to the existing
 plain domain `RefreshRun` before the session closes. Application ports and
 callers remain independent of ORM types.
 

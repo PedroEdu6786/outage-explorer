@@ -14,10 +14,10 @@ from outage_explorer.domain.publication import (
     RunStatus,
 )
 from outage_explorer.infrastructure.postgresql.pool import BoundedPostgresqlPool
-from outage_explorer.infrastructure.postgresql.refresh_coordination_record import (
+from outage_explorer.infrastructure.postgresql.refresh.refresh_coordination_record import (
     RefreshCoordinationRecord,
 )
-from outage_explorer.infrastructure.postgresql.refresh_run_record import (
+from outage_explorer.infrastructure.postgresql.refresh.refresh_run_record import (
     RefreshRunRecord,
 )
 from outage_explorer.infrastructure.postgresql.session_scope import with_session

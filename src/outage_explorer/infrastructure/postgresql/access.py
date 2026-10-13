@@ -14,16 +14,16 @@ from outage_explorer.domain.access import (
     Session,
     SessionLease,
 )
-from outage_explorer.infrastructure.postgresql.login_attempt_repository import (
+from outage_explorer.infrastructure.postgresql.access_store.login_attempt_repository import (
     PostgresqlLoginAttemptRepository,
 )
-from outage_explorer.infrastructure.postgresql.pool import BoundedPostgresqlPool
-from outage_explorer.infrastructure.postgresql.session_repository import (
+from outage_explorer.infrastructure.postgresql.access_store.session_repository import (
     PostgresqlSessionRepository,
 )
-from outage_explorer.infrastructure.postgresql.user_repository import (
+from outage_explorer.infrastructure.postgresql.access_store.user_repository import (
     PostgresqlUserRepository,
 )
+from outage_explorer.infrastructure.postgresql.pool import BoundedPostgresqlPool
 
 
 class PostgresqlAccessStore:

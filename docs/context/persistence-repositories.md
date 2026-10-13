@@ -4,13 +4,17 @@
 this convention for new and refactored operational PostgreSQL persistence.
 Read it before adding model queries or changing persistence/process boundaries.
 
+Access records and repositories live in `access_store/`; refresh-run,
+coordination and published-generation records and repositories live in `refresh/`.
+Both packages use the shared pool and session decorators at the PostgreSQL root.
+
 ## Responsibilities and location
 
 | Component | Responsibility | Location |
 | --- | --- | --- |
 | Domain value, e.g. `RefreshRun` | Domain meaning and rules, without database dependencies | `domain/` |
-| ORM record, e.g. `RefreshRunRecord` | Table/column mapping and conversion to domain values | `infrastructure/postgresql/*_record.py` |
-| Repository, e.g. `PostgresqlRefreshRunRepository` | Central home for queries involving its model or cohesive model concern | `infrastructure/postgresql/*_repository.py` |
+| ORM record, e.g. `RefreshRunRecord` | Table/column mapping and conversion to domain values | `infrastructure/postgresql/{access_store,refresh}/*_record.py` |
+| Repository, e.g. `PostgresqlRefreshRunRepository` | Central home for queries involving its model or cohesive model concern | `infrastructure/postgresql/{access_store,refresh}/*_repository.py` |
 | `@with_session` | Inject a per-operation session using the existing lifecycle wrapper | `infrastructure/postgresql/session_scope.py` |
 | `@with_session_context` | Hold an injected session across a repository transaction context | `infrastructure/postgresql/session_scope.py` |
 | Service/process coordinator | Decide the workflow and invoke persistence operations through the allowed interfaces | Existing application/infrastructure layer, according to the dependency matrix |
@@ -38,7 +42,7 @@ Read it before adding model queries or changing persistence/process boundaries.
 
 ## Reference implementation
 
-From [refresh_run_repository.py](../../src/outage_explorer/infrastructure/postgresql/refresh_run_repository.py):
+From [refresh_run_repository.py](../../src/outage_explorer/infrastructure/postgresql/refresh/refresh_run_repository.py):
 
 ```python
 class PostgresqlRefreshRunRepository:

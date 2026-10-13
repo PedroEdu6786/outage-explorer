@@ -114,32 +114,32 @@ from outage_explorer.infrastructure.parquet.candidates import ParquetResourceBui
 from outage_explorer.infrastructure.parquet.connector import LocalConnectorEvidence
 from outage_explorer.infrastructure.parquet.storage import LocalParquetStore
 from outage_explorer.infrastructure.postgresql.access import PostgresqlAccessStore
+from outage_explorer.infrastructure.postgresql.access_store.login_attempt_repository import (
+    PostgresqlLoginAttemptRepository,
+)
+from outage_explorer.infrastructure.postgresql.access_store.session_repository import (
+    PostgresqlSessionRepository,
+)
+from outage_explorer.infrastructure.postgresql.access_store.user_repository import (
+    PostgresqlUserRepository,
+)
 from outage_explorer.infrastructure.postgresql.credentials import (
     IAMCredentials,
     IAMTarget,
-)
-from outage_explorer.infrastructure.postgresql.login_attempt_repository import (
-    PostgresqlLoginAttemptRepository,
 )
 from outage_explorer.infrastructure.postgresql.migrations import run_migrations
 from outage_explorer.infrastructure.postgresql.pool import BoundedPostgresqlPool
 from outage_explorer.infrastructure.postgresql.publication import (
     PostgresqlResourcePublicationStore,
 )
-from outage_explorer.infrastructure.postgresql.published_generation_repository import (
+from outage_explorer.infrastructure.postgresql.refresh.published_generation_repository import (
     PostgresqlPublishedGenerationRepository,
 )
-from outage_explorer.infrastructure.postgresql.refresh_coordination_repository import (
+from outage_explorer.infrastructure.postgresql.refresh.refresh_coordination_repository import (
     PostgresqlRefreshCoordinationRepository,
 )
-from outage_explorer.infrastructure.postgresql.refresh_run_repository import (
+from outage_explorer.infrastructure.postgresql.refresh.refresh_run_repository import (
     PostgresqlRefreshRunRepository,
-)
-from outage_explorer.infrastructure.postgresql.session_repository import (
-    PostgresqlSessionRepository,
-)
-from outage_explorer.infrastructure.postgresql.user_repository import (
-    PostgresqlUserRepository,
 )
 from outage_explorer.infrastructure.query_results.cleanup import QueryCleanup
 from outage_explorer.infrastructure.query_results.encoding import EncodingBounds

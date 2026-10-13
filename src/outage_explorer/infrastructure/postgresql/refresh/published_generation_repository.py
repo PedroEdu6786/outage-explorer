@@ -21,16 +21,16 @@ from outage_explorer.domain.publication_policy import (
     should_interrupt_unpublished_run,
 )
 from outage_explorer.infrastructure.postgresql.pool import BoundedPostgresqlPool
-from outage_explorer.infrastructure.postgresql.published_generation_record import (
+from outage_explorer.infrastructure.postgresql.refresh.published_generation_record import (
     PublishedGenerationRecord,
 )
-from outage_explorer.infrastructure.postgresql.refresh_coordination_record import (
+from outage_explorer.infrastructure.postgresql.refresh.refresh_coordination_record import (
     RefreshCoordinationRecord,
 )
-from outage_explorer.infrastructure.postgresql.refresh_coordination_repository import (
+from outage_explorer.infrastructure.postgresql.refresh.refresh_coordination_repository import (
     PostgresqlRefreshCoordinationRepository,
 )
-from outage_explorer.infrastructure.postgresql.refresh_run_record import (
+from outage_explorer.infrastructure.postgresql.refresh.refresh_run_record import (
     RefreshRunRecord,
 )
 from outage_explorer.infrastructure.postgresql.session_scope import with_session

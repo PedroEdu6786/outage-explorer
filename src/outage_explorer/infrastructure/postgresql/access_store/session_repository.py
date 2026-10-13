@@ -6,7 +6,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from outage_explorer.domain.access import Session as AccessSession
-from outage_explorer.infrastructure.postgresql.access_record import (
+from outage_explorer.infrastructure.postgresql.access_store.access_record import (
     ApplicationSessionRecord,
     RoleRecord,
     UserRecord,
