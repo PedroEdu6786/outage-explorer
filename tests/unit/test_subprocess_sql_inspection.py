@@ -230,10 +230,12 @@ def test_unconfirmed_reap_keeps_capacity_until_explicit_close(inspector, monkeyp
 
 def test_authentication_and_scope_authorization_precede_inputs():
     from outage_explorer.application.errors import ForbiddenError, UnauthenticatedError
-    from outage_explorer.application.services.queries import QueryService
+    from outage_explorer.application.services.analytical.queries import QueryService
 
     access, parser, publication, inputs, execution, results = (Mock() for _ in range(6))
-    from outage_explorer.application.pagination.query_results import QueryResultPager
+    from outage_explorer.application.services.analytical.query_result_pager import (
+        QueryResultPager,
+    )
 
     service = QueryService(
         access,

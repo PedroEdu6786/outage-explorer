@@ -1,7 +1,9 @@
 """Application use-case tests with ports replaced; no Flask, storage or AWS."""
 
 from outage_explorer.application.dto import EvidenceBundle, ReportLocations
-from outage_explorer.application.services.evidence import VerifyNationalBaseline
+from outage_explorer.application.services.connector.evidence import (
+    VerifyNationalBaseline,
+)
 from outage_explorer.domain.national import SourceRecord
 
 

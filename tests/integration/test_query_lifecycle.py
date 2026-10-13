@@ -312,9 +312,11 @@ def test_missing_tampered_spool_unavailable_without_execution(queries, system):
 
 
 def test_unreaped_sql_explicitly_hands_off_all_pins_and_result_reservation():
-    from outage_explorer.application.pagination.query_results import QueryResultPager
     from outage_explorer.application.ports.execution import QueryRead
-    from outage_explorer.application.services.queries import QueryService
+    from outage_explorer.application.services.analytical.queries import QueryService
+    from outage_explorer.application.services.analytical.query_result_pager import (
+        QueryResultPager,
+    )
     from outage_explorer.infrastructure.sql_validation.inspection import (
         DuckdbSqlInspector,
     )
@@ -356,8 +358,10 @@ def test_unreaped_sql_explicitly_hands_off_all_pins_and_result_reservation():
 
 @pytest.mark.parametrize("sql", ["SELECT 42", "SELECT * FROM national"])
 def test_denied_application_authorization_before_results_inputs_or_runtime(sql):
-    from outage_explorer.application.pagination.query_results import QueryResultPager
-    from outage_explorer.application.services.queries import QueryService
+    from outage_explorer.application.services.analytical.queries import QueryService
+    from outage_explorer.application.services.analytical.query_result_pager import (
+        QueryResultPager,
+    )
     from outage_explorer.infrastructure.sql_validation.inspection import (
         DuckdbSqlInspector,
     )

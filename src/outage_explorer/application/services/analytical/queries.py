@@ -4,7 +4,6 @@ from outage_explorer.application.errors import (
     DataUnavailableError,
     InvalidRequestError,
 )
-from outage_explorer.application.pagination.query_results import QueryResultPager
 from outage_explorer.application.ports.analytical_inputs import (
     PinnedInputs,
     PublishedResourceInputs,
@@ -20,7 +19,10 @@ from outage_explorer.application.ports.query_results import (
     ResultReservation,
 )
 from outage_explorer.application.ports.sql_inspection import SqlInspector
-from outage_explorer.application.services.access import AccessService
+from outage_explorer.application.services.access.service import AccessService
+from outage_explorer.application.services.analytical.query_result_pager import (
+    QueryResultPager,
+)
 from outage_explorer.domain.access import (
     AccessOperation,
     AnalyticalGrain,

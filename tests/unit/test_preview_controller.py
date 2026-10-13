@@ -6,7 +6,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from outage_explorer.application.services.access import AccessService
+from outage_explorer.application.services.access.service import AccessService
 from outage_explorer.domain.access import Role, SeededUser, Session
 from outage_explorer.entrypoints.http.app import create_app
 from outage_explorer.entrypoints.http.data_services import DataServices

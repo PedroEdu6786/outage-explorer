@@ -10,7 +10,7 @@ from outage_explorer.application.ports.artifacts import (
     ArtifactLimitError,
     TransferBounds,
 )
-from outage_explorer.application.services.resource_artifacts import (
+from outage_explorer.application.services.connector.resource_artifacts import (
     PersistResourceArtifacts,
     RecoverResourceArtifacts,
 )
@@ -211,7 +211,7 @@ def test_shared_transfer_caps_no_receipt(tmp_path, cap):
     )
     with pytest.raises(ArtifactLimitError):
         PersistResourceArtifacts(local, remote, workers).execute(candidate, BOUNDS)
-    assert remote.temporary_bytes == 0
+    assert remote._budget.temporary_bytes == 0
     assert all(body.closed for body in client.closed_bodies)
     assert len(list(store.root.iterdir())) == 3
 
@@ -290,7 +290,7 @@ def test_recovery_staging_reserves_all_missing_bytes_before_sdk(tmp_path):
         RecoverResourceArtifacts(local, remote).execute(receipt, BOUNDS)
     assert client.calls == before
     assert list(target.root.iterdir()) == []
-    assert remote.temporary_bytes == 0
+    assert remote._budget.temporary_bytes == 0
 
 
 def test_cancelled_store_cleanup_after_join_preserves_preexisting(
@@ -314,7 +314,7 @@ def test_cancelled_store_cleanup_after_join_preserves_preexisting(
         RecoverResourceArtifacts(local, remote).execute(receipt, BOUNDS)
     assert list(target.root.iterdir()) == [target.root / existing.object.key]
     assert target._bytes == existing.object.byte_count
-    assert remote.temporary_bytes == 0
+    assert remote._budget.temporary_bytes == 0
 
 
 def test_faulty_transfer_port_cannot_commit_unexpected_digest(tmp_path):
@@ -333,4 +333,4 @@ def test_faulty_transfer_port_cannot_commit_unexpected_digest(tmp_path):
         local.restore_resources(receipt, FaultyTransfer(), BOUNDS)
     assert list(target.root.iterdir()) == []
     assert target._bytes == 0
-    assert remote.temporary_bytes == 0
+    assert remote._budget.temporary_bytes == 0

@@ -18,7 +18,7 @@ from outage_explorer.application.errors import (
     LoginAttemptLimitError,
     SeedConflictError,
 )
-from outage_explorer.application.services.seed_users import SeedUsers
+from outage_explorer.application.services.access.seed_users import SeedUsers
 from outage_explorer.domain.access import LoginAttempt, Role
 from outage_explorer.infrastructure.postgresql.access import PostgresqlAccessStore
 from outage_explorer.infrastructure.postgresql.migrations import run_migrations
@@ -465,8 +465,8 @@ def test_real_service_sessions_committed_logout_and_concurrent_replay(store, dat
     from urllib.parse import parse_qs, urlsplit
 
     from outage_explorer.application.errors import UnauthenticatedError
-    from outage_explorer.application.services.access import AccessService
-    from outage_explorer.application.services.login import LoginService
+    from outage_explorer.application.services.access.login import LoginService
+    from outage_explorer.application.services.access.service import AccessService
     from outage_explorer.infrastructure.security import RandomSecurityMaterial
 
     store.seed(PERSONAS)
@@ -516,7 +516,7 @@ def test_real_service_sessions_committed_logout_and_concurrent_replay(store, dat
 
 
 def test_failed_database_commit_is_not_logout_success(store, database):
-    from outage_explorer.application.services.access import AccessService
+    from outage_explorer.application.services.access.service import AccessService
     from outage_explorer.infrastructure.security import RandomSecurityMaterial
 
     store.seed(PERSONAS)
@@ -543,7 +543,7 @@ def test_failed_database_commit_is_not_logout_success(store, database):
 
 
 def test_session_service_database_unavailable_fails_closed(database):
-    from outage_explorer.application.services.access import AccessService
+    from outage_explorer.application.services.access.service import AccessService
     from outage_explorer.infrastructure.security import RandomSecurityMaterial
 
     pool = BoundedPostgresqlPool(database)

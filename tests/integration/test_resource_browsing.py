@@ -15,15 +15,17 @@ from outage_explorer.application.errors import (
     DataUnavailableError,
     PreviewUnavailableError,
 )
-from outage_explorer.application.pagination.query_results import QueryResultPager
 from outage_explorer.application.ports.sql_inspection import SqlRejected
 from outage_explorer.application.refresh_request import RefreshAdmissionRequest
-from outage_explorer.application.services.catalog import CatalogService
-from outage_explorer.application.services.queries import QueryService
-from outage_explorer.application.services.refresh import RefreshService
-from outage_explorer.application.services.resource_artifacts import (
+from outage_explorer.application.services.analytical.catalog import CatalogService
+from outage_explorer.application.services.analytical.queries import QueryService
+from outage_explorer.application.services.analytical.query_result_pager import (
+    QueryResultPager,
+)
+from outage_explorer.application.services.connector.resource_artifacts import (
     PersistResourceArtifacts,
 )
+from outage_explorer.application.services.refresh.admission import RefreshService
 from outage_explorer.domain.access import AnalyticalGrain, Role
 from outage_explorer.domain.datasets import PUBLIC_DATASETS
 from outage_explorer.domain.publication import (

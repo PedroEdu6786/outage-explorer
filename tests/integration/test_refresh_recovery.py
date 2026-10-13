@@ -11,7 +11,7 @@ from outage_explorer.application.errors import (
     RefreshBusyError,
     StaleRefreshOwnerError,
 )
-from outage_explorer.application.services.refresh_recovery import RefreshRecovery
+from outage_explorer.application.services.refresh.recovery import RefreshRecovery
 from outage_explorer.domain.publication import RunStatus
 from outage_explorer.infrastructure.postgresql.publication import (
     PostgresqlResourcePublicationStore,
@@ -29,11 +29,11 @@ from outage_explorer.infrastructure.refresh_worker import RenewableRefreshLease
 from tests.integration import test_data_api_postgresql as coordination
 from tests.integration import test_refresh_execution as resource_refresh
 from tests.integration.test_refresh_execution import (
-    RefreshS3,
     admit,
     composition,
     execute,
 )
+from tests.integration.test_s3_artifacts import ControlledS3
 
 database = coordination.database
 
@@ -46,7 +46,7 @@ def test_claim_loss_before_first_fetch_is_interrupted_without_retry(
     run = admit(system)
     owner = system[0].claim("lost-before-fetch", 60)
     coordination.expire(database)
-    client = RefreshS3()
+    client = ControlledS3()
     process = composition(database, tmp_path, client=client)
     try:
         assert process.tick() is None
@@ -81,7 +81,7 @@ def test_healthy_claim_and_renewal_survive_reconciliation(system, database):
 def test_recovery_reads_history_after_later_generation_without_sources(
     system, database, tmp_path
 ):
-    client = RefreshS3()
+    client = ControlledS3()
     first = execute(system, database, tmp_path, client=client)
     second = execute(system, database, tmp_path, client=client, key="b" * 16)
     active = system[0].active_generation()
@@ -160,7 +160,7 @@ def test_stale_worker_cannot_publish_after_recovery_during_source_work(
             return super().handle_request(request)
 
     run = admit(system)
-    client = RefreshS3()
+    client = ControlledS3()
     process = composition(database, tmp_path, BlockedWire(), client)
     try:
         with ThreadPoolExecutor() as pool:
@@ -189,7 +189,7 @@ def test_forged_owner_is_rejected_before_artifact_or_source_access(
 
     run = admit(system)
     owner = system[0].claim("trusted-worker", 60)
-    client, wire = RefreshS3(), Wire()
+    client, wire = ControlledS3(), Wire()
     process = composition(database, tmp_path, wire, client)
     try:
         with pytest.raises(StaleRefreshOwnerError):

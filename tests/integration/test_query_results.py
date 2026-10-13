@@ -9,9 +9,11 @@ from unittest.mock import Mock
 import pytest
 
 from outage_explorer.application.errors import AnalyticalResourceError, QueryPageError
-from outage_explorer.application.pagination.query_results import QueryResultPager
 from outage_explorer.application.ports.query_results import QueryOutput
-from outage_explorer.application.services.queries import QueryService
+from outage_explorer.application.services.analytical.queries import QueryService
+from outage_explorer.application.services.analytical.query_result_pager import (
+    QueryResultPager,
+)
 from outage_explorer.domain.access import Role
 from outage_explorer.infrastructure.query_results.encoding import retain_result
 from outage_explorer.infrastructure.query_results.store import (

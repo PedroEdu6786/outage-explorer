@@ -141,7 +141,7 @@ def test_atomic_wire_budget_across_parallel_readbacks():
     client = ControlledS3()
     refs = [reference(bytes([index]) * 64) for index in range(3)]
     for index, ref in enumerate(refs):
-        client.objects["connector/objects/" + ref.key] = bytes([index]) * 64
+        client.objects[ref.key] = bytes([index]) * 64
     worker = BoundedConnectorWorkers(3)
     store = adapter(
         client,
@@ -150,18 +150,18 @@ def test_atomic_wire_budget_across_parallel_readbacks():
     )
     with pytest.raises(ArtifactLimitError):
         worker.run([lambda ref=ref: list(store.read(ref)) for ref in refs])
-    assert store.wire_bytes <= 100
+    assert store._budget.wire_bytes <= 100
     assert all(body.closed for body in client.closed_bodies)
     assert not any(t.name.startswith("connector_") for t in threading.enumerate())
 
 
 def test_atomic_object_budget_does_not_multiply_with_workers():
     client = ControlledS3()
-    from outage_explorer.infrastructure.s3.artifacts import S3ArtifactStore
     from tests.integration.test_connector_cli import ARTIFACT
+    from tests.integration.test_s3_artifacts import ControlledResourceStore
 
     worker = BoundedConnectorWorkers(3)
-    store = S3ArtifactStore(
+    store = ControlledResourceStore(
         client,
         "test-bucket",
         "connector/",
@@ -171,13 +171,13 @@ def test_atomic_object_budget_does_not_multiply_with_workers():
     with pytest.raises(ArtifactLimitError):
         worker.run(
             [
-                lambda index=index: store.put_exact(
+                lambda index=index: store.put(
                     reference(bytes([index])), [bytes([index])]
                 )
                 for index in range(3)
             ]
         )
-    assert len(store.objects) <= 1
+    assert len(store._budget.objects) <= 1
     assert all(body.closed for body in client.closed_bodies)
 
 

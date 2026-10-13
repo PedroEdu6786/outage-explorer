@@ -2,7 +2,7 @@
 
 from flask import Blueprint
 
-from outage_explorer.application.services.access import AccessService
+from outage_explorer.application.services.access.service import AccessService
 from outage_explorer.entrypoints.http.data_services import DataServices
 from outage_explorer.entrypoints.http.requests.data import (
     query_page_request,

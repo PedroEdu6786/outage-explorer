@@ -7,7 +7,7 @@ from outage_explorer.application.errors import (
 )
 from outage_explorer.application.pagination.numbered import NumberedPaginator
 from outage_explorer.application.ports.query_results import QueryResults, ResultReader
-from outage_explorer.application.services.access import AccessService
+from outage_explorer.application.services.access.service import AccessService
 from outage_explorer.domain.access import AccessOperation, AuthorizedAccess
 from outage_explorer.domain.query_results import ResultIdentity
 

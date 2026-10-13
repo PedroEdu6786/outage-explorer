@@ -14,11 +14,11 @@ from outage_explorer.application.ports.artifacts import (
 )
 from outage_explorer.application.ports.candidates import CandidateResult, GrainSummary
 from outage_explorer.application.ports.connector import DurableResourceReceipt
-from outage_explorer.application.services.refresh_baseline import RestoreRefreshBaseline
-from outage_explorer.application.services.refresh_candidate import (
+from outage_explorer.application.services.refresh.baseline import RestoreRefreshBaseline
+from outage_explorer.application.services.refresh.candidate import (
     PrepareRefreshCandidate,
 )
-from outage_explorer.application.services.refresh_publication import (
+from outage_explorer.application.services.refresh.publication import (
     PrepareRefreshPublication,
 )
 from outage_explorer.domain.refresh import Interval, Quality, RefreshBounds

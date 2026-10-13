@@ -35,11 +35,11 @@ requires reconciliation, not a blind retry or pointer change.
 
 | Responsibility | Source |
 | --- | --- |
-| Candidate orchestration | [CreateResourceCandidate](../../../src/outage_explorer/application/services/connector.py) |
+| Candidate orchestration | [CreateResourceCandidate](../../../src/outage_explorer/application/services/connector/candidate.py) |
 | EIA retrieval and sanitization | [EIA adapters](../../../src/outage_explorer/infrastructure/eia/) |
 | Candidate inputs, building and verification | [Parquet adapters](../../../src/outage_explorer/infrastructure/parquet/) |
-| Durable persistence and recovery | [Resource artifact services](../../../src/outage_explorer/application/services/resource_artifacts.py) |
-| Product execution and publication orchestration | [Refresh execution](../../../src/outage_explorer/application/services/refresh_execution.py) |
+| Durable persistence and recovery | [Resource artifact services](../../../src/outage_explorer/application/services/connector/resource_artifacts.py) |
+| Product execution and publication orchestration | [Refresh execution](../../../src/outage_explorer/application/services/refresh/execution.py) |
 | Durable coordination/publication | [PostgreSQL publication](../../../src/outage_explorer/infrastructure/postgresql/publication.py) |
 
 The diagram shows the current composed source, not a newly executed live run.

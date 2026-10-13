@@ -16,7 +16,7 @@ from outage_explorer.application.errors import (
     ConnectorDependencyError,
 )
 from outage_explorer.application.ports.connector import DurableResourceReceipt
-from outage_explorer.application.services.connector_artifacts import (
+from outage_explorer.application.services.connector.durable_candidate import (
     DurableCandidateResult,
 )
 

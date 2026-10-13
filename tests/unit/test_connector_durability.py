@@ -15,7 +15,7 @@ from outage_explorer.application.ports.artifacts import (
     ArtifactLimitError,
 )
 from outage_explorer.application.ports.connector import DurableResourceReceipt
-from outage_explorer.application.services.connector_artifacts import (
+from outage_explorer.application.services.connector.durable_candidate import (
     CreateDurableConnectorCandidate,
 )
 from tests.unit.test_connector_service import resource_setup

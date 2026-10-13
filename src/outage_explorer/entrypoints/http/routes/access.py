@@ -5,8 +5,8 @@ from functools import partial
 from flask import Blueprint
 
 from outage_explorer.application.dto import CurrentIdentity
-from outage_explorer.application.services.access import AccessService
-from outage_explorer.application.services.login import LoginService
+from outage_explorer.application.services.access.login import LoginService
+from outage_explorer.application.services.access.service import AccessService
 from outage_explorer.entrypoints.http.requests.auth import (
     CallbackQuery,
     LoginQuery,

@@ -10,7 +10,7 @@ from outage_explorer.application.errors import (
     ForbiddenError,
     UnauthenticatedError,
 )
-from outage_explorer.application.services.access import AccessService
+from outage_explorer.application.services.access.service import AccessService
 from outage_explorer.domain.access import (
     AccessOperation,
     AnalyticalGrain,

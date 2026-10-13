@@ -2,8 +2,8 @@
 
 from outage_explorer.application.ports.refresh import RefreshStore
 from outage_explorer.application.ports.refresh_execution import RefreshLease
-from outage_explorer.application.services.refresh_execution import RefreshExecution
-from outage_explorer.application.services.refresh_recovery import RefreshRecovery
+from outage_explorer.application.services.refresh.execution import RefreshExecution
+from outage_explorer.application.services.refresh.recovery import RefreshRecovery
 from outage_explorer.domain.publication import RefreshOwner, RefreshRun
 
 

@@ -23,18 +23,20 @@ from outage_explorer.application.ports.refresh_execution import (
     RefreshPipelineFactory,
 )
 from outage_explorer.application.ports.source import SourceBounds
-from outage_explorer.application.services.connector import CreateResourceCandidate
-from outage_explorer.application.services.refresh_baseline import RestoreRefreshBaseline
-from outage_explorer.application.services.refresh_candidate import (
-    PrepareRefreshCandidate,
+from outage_explorer.application.services.connector.candidate import (
+    CreateResourceCandidate,
 )
-from outage_explorer.application.services.refresh_execution import RefreshReports
-from outage_explorer.application.services.refresh_publication import (
-    PrepareRefreshPublication,
-)
-from outage_explorer.application.services.resource_artifacts import (
+from outage_explorer.application.services.connector.resource_artifacts import (
     PersistResourceArtifacts,
     RecoverResourceArtifacts,
+)
+from outage_explorer.application.services.refresh.baseline import RestoreRefreshBaseline
+from outage_explorer.application.services.refresh.candidate import (
+    PrepareRefreshCandidate,
+)
+from outage_explorer.application.services.refresh.execution import RefreshReports
+from outage_explorer.application.services.refresh.publication import (
+    PrepareRefreshPublication,
 )
 from outage_explorer.configuration.connector import (
     ArtifactSettings,

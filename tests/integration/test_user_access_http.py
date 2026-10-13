@@ -11,9 +11,9 @@ from urllib.parse import parse_qs, urlsplit
 import pytest
 
 from outage_explorer.application.errors import AccessConfigurationError
-from outage_explorer.application.services.access import AccessService
+from outage_explorer.application.services.access.login import LoginService
+from outage_explorer.application.services.access.service import AccessService
 from outage_explorer.application.services.health import HealthService
-from outage_explorer.application.services.login import LoginService
 from outage_explorer.bootstrap import build_http_app
 from outage_explorer.domain.access import Role
 from outage_explorer.entrypoints.http.app import create_app

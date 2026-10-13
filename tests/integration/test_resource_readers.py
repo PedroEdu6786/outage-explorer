@@ -19,7 +19,7 @@ from outage_explorer.application.errors import (
     DataUnavailableError,
 )
 from outage_explorer.application.ports.execution import ExecutionBounds, PreviewRead
-from outage_explorer.application.services.resource_artifacts import (
+from outage_explorer.application.services.connector.resource_artifacts import (
     PersistResourceArtifacts,
 )
 from outage_explorer.domain.access import AnalyticalGrain

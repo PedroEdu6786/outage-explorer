@@ -1,9 +1,8 @@
 """Immutable artifact identities and explicit caller resource budgets."""
 
-from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from datetime import date
-from typing import Literal, Protocol
+from typing import Literal
 
 from outage_explorer.domain.observations import Grain
 
@@ -57,14 +56,6 @@ class ArtifactRef:
     schema_version: str = "1"
 
 
-class ArtifactStore(Protocol):
-    def put_immutable(self, chunks: Iterable[bytes]) -> StoredObject: ...
-
-    def read(self, reference: StoredObject) -> Iterator[bytes]: ...
-
-    def verify(self, reference: StoredObject) -> None: ...
-
-
 @dataclass(frozen=True)
 class TransferBounds:
     """Network transfer caps, including retries and verification reads."""
@@ -80,11 +71,3 @@ class TransferBounds:
     def __post_init__(self) -> None:
         if any(type(value) is not int or value <= 0 for value in vars(self).values()):
             raise ValueError("Transfer bounds must be positive integers")
-
-
-class ExactArtifactStore(Protocol):
-    """Application-generated identities, scoped to configured storage only."""
-
-    def put_exact(self, reference: StoredObject, chunks: Iterable[bytes]) -> None: ...
-
-    def read(self, reference: StoredObject) -> Iterator[bytes]: ...

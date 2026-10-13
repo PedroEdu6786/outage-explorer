@@ -22,7 +22,9 @@ from outage_explorer.application.ports.artifacts import (
 from outage_explorer.application.ports.candidates import ResourceBaseline
 from outage_explorer.application.ports.connector import DurableResourceReceipt
 from outage_explorer.application.ports.source import SourceError, SourceQuality
-from outage_explorer.application.services.connector import CreateResourceCandidate
+from outage_explorer.application.services.connector.candidate import (
+    CreateResourceCandidate,
+)
 from outage_explorer.bootstrap import (
     build_facility_verifier,
     build_generator_verifier,

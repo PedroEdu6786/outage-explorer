@@ -4,7 +4,6 @@ import hashlib
 import json
 import math
 import os
-import selectors
 import signal
 import stat
 import subprocess
@@ -13,22 +12,19 @@ from dataclasses import dataclass
 from pathlib import Path
 from threading import Event, Lock
 from time import monotonic
-from typing import BinaryIO, cast
 
 from outage_explorer.application.errors import (
     AnalyticalBusyError,
-    AnalyticalResourceError,
-    AnalyticalTimeoutError,
     RuntimeUnavailableError,
 )
 from outage_explorer.application.ports.sql_inspection import InspectedSql, SqlRejected
 from outage_explorer.infrastructure.sql_validation.ownership import ParserOwnership
 from outage_explorer.infrastructure.sql_validation.subprocess_protocol import (
     REQUEST_LIMIT,
-    RESPONSE_LIMIT,
     VERSION,
     decode_scope,
 )
+from outage_explorer.infrastructure.sql_validation.subprocess_transport import exchange
 
 
 @dataclass(frozen=True)
@@ -101,37 +97,39 @@ class SubprocessSqlInspector:
         self._pid = os.getpid()
 
     def start(self) -> None:
-        if os.getpid() != self._pid or sys.platform != "linux":
-            raise RuntimeUnavailableError("Bounded SQL inspection unavailable")
+        self._require_owner()
         with self._guard:
             if self._closed:
                 raise RuntimeUnavailableError("Bounded SQL inspection unavailable")
-            if self.executable_hashes is not None:
-                for path, expected in zip(
-                    (self.python, self.prlimit, self.setpriv),
-                    self.executable_hashes,
-                    strict=True,
-                ):
-                    try:
-                        with open(path, "rb") as stream:
-                            info = os.fstat(stream.fileno())
-                            if (
-                                not stat.S_ISREG(info.st_mode)
-                                or not 0 < info.st_size <= 64 * 1024**2
-                            ):
-                                raise OSError
-                            actual = hashlib.file_digest(stream, "sha256").hexdigest()
-                        if actual != expected:
-                            raise OSError
-                    except OSError:
-                        raise RuntimeUnavailableError(
-                            "SQL inspection executable identity mismatch"
-                        ) from None
+            self._verify_executables()
             self._ownership.open()
 
+    def _verify_executables(self) -> None:
+        if self.executable_hashes is None:
+            return
+        for path, expected in zip(
+            (self.python, self.prlimit, self.setpriv),
+            self.executable_hashes,
+            strict=True,
+        ):
+            try:
+                with open(path, "rb") as stream:
+                    info = os.fstat(stream.fileno())
+                    if (
+                        not stat.S_ISREG(info.st_mode)
+                        or not 0 < info.st_size <= 64 * 1024**2
+                    ):
+                        raise OSError
+                    actual = hashlib.file_digest(stream, "sha256").hexdigest()
+                if actual != expected:
+                    raise OSError
+            except OSError:
+                raise RuntimeUnavailableError(
+                    "SQL inspection executable identity mismatch"
+                ) from None
+
     def inspect(self, sql: str) -> InspectedSql:
-        if os.getpid() != self._pid or sys.platform != "linux":
-            raise RuntimeUnavailableError("Bounded SQL inspection unavailable")
+        self._require_owner()
         with self._guard:
             if self._running:
                 raise AnalyticalBusyError("SQL inspection busy")
@@ -141,34 +139,13 @@ class SubprocessSqlInspector:
                 raise AnalyticalBusyError("SQL inspection busy")
             self._running = True
         try:
-            try:
-                if (
-                    type(sql) is not str
-                    or len(sql) > self.bounds.max_sql_bytes
-                    or len(sql.encode("utf-8")) > self.bounds.max_sql_bytes
-                ):
-                    raise SqlRejected("invalid_sql")
-            except UnicodeError:
-                raise SqlRejected("invalid_sql") from None
-            request = json.dumps(
-                {
-                    "version": VERSION,
-                    "sql": sql,
-                    "max_sql_bytes": self.bounds.max_sql_bytes,
-                    "max_nodes": self.bounds.max_nodes,
-                    "max_depth": self.bounds.max_depth,
-                },
-                ensure_ascii=True,
-                separators=(",", ":"),
-            ).encode("ascii")
-            if len(request) > REQUEST_LIMIT:
-                raise SqlRejected("invalid_sql")
+            request = self._encode_request(sql)
             raw = self._run(request, monotonic() + self.bounds.wall_seconds)
             try:
                 return decode_scope(raw, sql)
-            except (ValueError, TypeError, UnicodeError, RecursionError) as error:
-                if isinstance(error, SqlRejected):
-                    raise
+            except SqlRejected:
+                raise
+            except (ValueError, TypeError, UnicodeError, RecursionError):
                 raise RuntimeUnavailableError(
                     "Invalid SQL inspection response"
                 ) from None
@@ -178,30 +155,39 @@ class SubprocessSqlInspector:
                 self._reap()
                 self._slot.release()
 
+    def _require_owner(self) -> None:
+        if os.getpid() != self._pid or sys.platform != "linux":
+            raise RuntimeUnavailableError("Bounded SQL inspection unavailable")
+
+    def _encode_request(self, sql: str) -> bytes:
+        try:
+            if (
+                type(sql) is not str
+                or len(sql) > self.bounds.max_sql_bytes
+                or len(sql.encode("utf-8")) > self.bounds.max_sql_bytes
+            ):
+                raise SqlRejected("invalid_sql")
+        except UnicodeError:
+            raise SqlRejected("invalid_sql") from None
+        request = json.dumps(
+            {
+                "version": VERSION,
+                "sql": sql,
+                "max_sql_bytes": self.bounds.max_sql_bytes,
+                "max_nodes": self.bounds.max_nodes,
+                "max_depth": self.bounds.max_depth,
+            },
+            ensure_ascii=True,
+            separators=(",", ":"),
+        ).encode("ascii")
+        if len(request) > REQUEST_LIMIT:
+            raise SqlRejected("invalid_sql")
+        return request
+
     def _run(self, data: bytes, deadline: float) -> bytes:
-        b = self.bounds
         try:
             self._process = subprocess.Popen(
-                (
-                    self.setpriv,
-                    "--pdeathsig",
-                    "KILL",
-                    "--no-new-privs",
-                    "--",
-                    self.prlimit,
-                    f"--as={b.memory_bytes}:{b.memory_bytes}",
-                    f"--cpu={b.cpu_seconds}:{b.cpu_seconds}",
-                    "--core=0:0",
-                    "--fsize=0:0",
-                    "--",
-                    self.python,
-                    "-I",
-                    "-B",
-                    "-m",
-                    "outage_explorer.infrastructure.sql_validation.parser_process",
-                    str(self._pid),
-                    str(self._ownership.fd),
-                ),
+                self._command(),
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -217,64 +203,36 @@ class SubprocessSqlInspector:
             raise RuntimeUnavailableError(
                 "Bounded SQL inspection unavailable"
             ) from None
-        p = self._process
-        assert p.stdin is not None and p.stdout is not None and p.stderr is not None
-        streams = (p.stdin, p.stdout, p.stderr)
-        buffers = {p.stdout: bytearray(), p.stderr: bytearray()}
-        offset = 0
-        try:
-            with selectors.DefaultSelector() as selector:
-                for stream in streams:
-                    os.set_blocking(stream.fileno(), False)
-                selector.register(p.stdin, selectors.EVENT_WRITE)
-                selector.register(p.stdout, selectors.EVENT_READ)
-                selector.register(p.stderr, selectors.EVENT_READ)
-                while selector.get_map():
-                    remaining = deadline - monotonic()
-                    if remaining <= 0 or self._cancel.is_set():
-                        raise AnalyticalTimeoutError("SQL inspection interrupted")
-                    for key, _ in selector.select(min(remaining, 0.05)):
-                        stream = cast(BinaryIO, key.fileobj)
-                        if stream is p.stdin:
-                            try:
-                                offset += os.write(
-                                    stream.fileno(), data[offset : offset + 65536]
-                                )
-                            except BrokenPipeError:
-                                offset = len(data)
-                            if offset == len(data):
-                                selector.unregister(stream)
-                                stream.close()
-                        else:
-                            chunk = os.read(stream.fileno(), 4096)
-                            if not chunk:
-                                selector.unregister(stream)
-                            else:
-                                limit = (
-                                    RESPONSE_LIMIT
-                                    if stream is p.stdout
-                                    else b.stderr_bytes
-                                )
-                                if len(buffers[stream]) + len(chunk) > limit:
-                                    raise AnalyticalResourceError(
-                                        "SQL inspection output limit exceeded"
-                                    )
-                                buffers[stream].extend(chunk)
-                remaining = deadline - monotonic()
-                if remaining <= 0 or self._cancel.is_set():
-                    raise AnalyticalTimeoutError("SQL inspection interrupted")
-                if p.wait(timeout=remaining) != 0 or buffers[p.stderr]:
-                    raise RuntimeUnavailableError("Bounded SQL inspection failed")
-            return bytes(buffers[p.stdout])
-        except subprocess.TimeoutExpired:
-            raise AnalyticalTimeoutError("SQL inspection interrupted") from None
-        except OSError:
-            raise RuntimeUnavailableError(
-                "Bounded SQL inspection unavailable"
-            ) from None
-        finally:
-            for stream in streams:
-                stream.close()
+        return exchange(
+            self._process,
+            data,
+            deadline=deadline,
+            stderr_bytes=self.bounds.stderr_bytes,
+            cancel=self._cancel,
+        )
+
+    def _command(self) -> tuple[str, ...]:
+        bounds = self.bounds
+        return (
+            self.setpriv,
+            "--pdeathsig",
+            "KILL",
+            "--no-new-privs",
+            "--",
+            self.prlimit,
+            f"--as={bounds.memory_bytes}:{bounds.memory_bytes}",
+            f"--cpu={bounds.cpu_seconds}:{bounds.cpu_seconds}",
+            "--core=0:0",
+            "--fsize=0:0",
+            "--",
+            self.python,
+            "-I",
+            "-B",
+            "-m",
+            "outage_explorer.infrastructure.sql_validation.parser_process",
+            str(self._pid),
+            str(self._ownership.fd),
+        )
 
     def _reap(self) -> None:
         p = self._process

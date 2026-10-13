@@ -24,7 +24,7 @@ from outage_explorer.application.errors import (
     UnauthenticatedError,
 )
 from outage_explorer.application.ports.execution import ExecutionBounds, PreviewRows
-from outage_explorer.application.services.catalog import CatalogService
+from outage_explorer.application.services.analytical.catalog import CatalogService
 from outage_explorer.domain.access import AnalyticalGrain, Role
 from outage_explorer.domain.datasets import PUBLIC_DATASETS
 from outage_explorer.domain.publication import (
@@ -53,7 +53,8 @@ from tests.integration import test_data_api_postgresql as coordination
 from tests.integration import test_refresh_execution as resource_refresh
 from tests.integration.preview_client import PreviewClient, synthetic_access
 from tests.integration.test_connector_cli import ARTIFACT, row
-from tests.integration.test_refresh_execution import RefreshS3, execute
+from tests.integration.test_refresh_execution import execute
+from tests.integration.test_s3_artifacts import ControlledS3
 
 database = coordination.database
 
@@ -101,7 +102,7 @@ class ControlledRuntime:
 
 @pytest.fixture
 def browsing(system, database, tmp_path):
-    client = RefreshS3()
+    client = ControlledS3()
     identifiers = ["001", "01", "1", "A", "Z", "a", "é", "😀"]
     values = {
         "national": [
@@ -577,7 +578,7 @@ def portable_selection():
     """
     from types import SimpleNamespace
 
-    from outage_explorer.application.services.access import AccessService
+    from outage_explorer.application.services.access.service import AccessService
     from outage_explorer.domain.access import SeededUser, Session
 
     clock = Clock()

@@ -55,7 +55,7 @@ for the current anomaly evidence, including investigations beyond this baseline.
 
 Sources: [observation policies](../../../src/outage_explorer/domain/observations.py),
 [refresh policies](../../../src/outage_explorer/domain/refresh.py),
-[baseline verifier](../../../src/outage_explorer/application/services/evidence.py),
+[baseline verifier](../../../src/outage_explorer/application/services/connector/evidence.py),
 [physical schemas](../../../src/outage_explorer/infrastructure/parquet/schemas.py),
 [national contract](../../specs/national-data-verification/contract.md),
 [detail contracts](../../specs/facility-generator-verification/contract.md).

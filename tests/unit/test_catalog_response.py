@@ -7,7 +7,10 @@ import pytest
 
 from outage_explorer.application.catalog_responses import CatalogResult
 from outage_explorer.application.errors import DataUnavailableError
-from outage_explorer.application.services.catalog import CatalogEntry, CatalogService
+from outage_explorer.application.services.analytical.catalog import (
+    CatalogEntry,
+    CatalogService,
+)
 from outage_explorer.domain.access import AnalyticalGrain
 from outage_explorer.domain.datasets import PUBLIC_DATASETS
 from outage_explorer.domain.publication import DatasetSummary

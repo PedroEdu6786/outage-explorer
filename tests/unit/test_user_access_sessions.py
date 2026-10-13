@@ -8,8 +8,8 @@ import pytest
 
 from outage_explorer.application.dto import VerifiedIdentity
 from outage_explorer.application.errors import AccessStoreError, UnauthenticatedError
-from outage_explorer.application.services.access import AccessService
-from outage_explorer.application.services.login import LoginService
+from outage_explorer.application.services.access.login import LoginService
+from outage_explorer.application.services.access.service import AccessService
 from outage_explorer.domain.access import (
     AccessTimestamp,
     LoginAttempt,

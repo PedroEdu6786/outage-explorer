@@ -1,7 +1,7 @@
 """Bounded parser protocol; no SQL echo or diagnostic text in child output."""
 
 import json
-from typing import cast
+from typing import NoReturn, cast
 
 from outage_explorer.application.ports.sql_inspection import InspectedSql, SqlRejected
 from outage_explorer.domain.observations import Grain
@@ -26,24 +26,35 @@ __all__ = [
 
 
 def decode_scope(raw: bytes, sql: str) -> InspectedSql:
+    response = _decode_response(raw)
+    if response.get("status") == "rejected":
+        _raise_rejection(response)
+    if response.get("status") != "ok":
+        raise ValueError("Invalid inspection response")
+    if set(response) != {"version", "status", "grains"}:
+        raise ValueError("Invalid inspection response")
+    scope = _decode_grains(response["grains"])
+    return InspectedSql(sql, scope, not scope)
+
+
+def _decode_response(raw: bytes) -> dict[str, object]:
     if len(raw) > RESPONSE_LIMIT:
         raise ValueError("Inspection response oversized")
-    value = json.loads(raw, object_pairs_hook=unique_object)
-    if not isinstance(value, dict) or type(value.get("version")) is not int:
+    response = json.loads(raw, object_pairs_hook=unique_object)
+    if not isinstance(response, dict) or type(response.get("version")) is not int:
         raise ValueError("Invalid inspection response")
-    if value["version"] != VERSION:
+    if response["version"] != VERSION:
         raise ValueError("Invalid inspection version")
-    if value.get("status") == "rejected":
-        if set(value) != {"version", "status", "code"} or value["code"] not in (
-            "invalid_sql",
-            "unsupported_sql",
-        ):
-            raise ValueError("Invalid inspection rejection")
-        raise SqlRejected(value["code"])
-    if set(value) != {"version", "status", "grains"} or value["status"] != "ok":
-        raise ValueError("Invalid inspection response")
-    scope = _decode_grains(value["grains"])
-    return InspectedSql(sql, scope, not scope)
+    return cast(dict[str, object], response)
+
+
+def _raise_rejection(response: dict[str, object]) -> NoReturn:
+    if set(response) != {"version", "status", "code"}:
+        raise ValueError("Invalid inspection rejection")
+    code = response.get("code")
+    if type(code) is not str or code not in ("invalid_sql", "unsupported_sql"):
+        raise ValueError("Invalid inspection rejection")
+    raise SqlRejected(code)
 
 
 def _decode_grains(value: object) -> frozenset[Grain]:

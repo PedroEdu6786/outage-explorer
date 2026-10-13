@@ -8,7 +8,7 @@ from unittest.mock import Mock
 import psycopg
 import pytest
 
-from outage_explorer.application.services.catalog import CatalogService
+from outage_explorer.application.services.analytical.catalog import CatalogService
 from outage_explorer.application.services.health import HealthService
 from outage_explorer.domain.access import Role
 from outage_explorer.entrypoints.http.app import create_app

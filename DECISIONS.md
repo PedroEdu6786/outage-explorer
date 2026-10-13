@@ -216,7 +216,7 @@ released; source inspection alone does not prove native isolation.
 **Basis:** [ADR-0043](docs/adr/0043-seeded-users-and-role-only-access.md),
 [ADR-0054](docs/adr/0054-bounded-subprocess-sql-inspection.md),
 [SQL inspector](src/outage_explorer/infrastructure/sql_validation/inspection.py),
-[query use case](src/outage_explorer/application/services/queries.py).
+[query use case](src/outage_explorer/application/services/analytical/queries.py).
 The [October 6 journal](docs/devlog/2026-10-06.md) records the accepted subprocess
 boundary and subsequent scoped runtime review/activation; broader evidence gates
 remain distinct from local activation.

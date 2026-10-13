@@ -17,8 +17,8 @@ from outage_explorer.application.catalog_responses import (
 from outage_explorer.application.dto import CatalogAccess, RequestAccess
 from outage_explorer.application.ports.sql_inspection import SqlRejected
 from outage_explorer.application.refresh_request import RefreshAdmissionRequest
-from outage_explorer.application.services.access import AccessService
-from outage_explorer.application.services.refresh import RefreshService
+from outage_explorer.application.services.access.service import AccessService
+from outage_explorer.application.services.refresh.admission import RefreshService
 from outage_explorer.domain.access import Role, SeededUser, Session
 from outage_explorer.domain.datasets import PUBLIC_DATASETS
 from outage_explorer.domain.publication import (

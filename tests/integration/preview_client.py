@@ -6,8 +6,8 @@ from unittest.mock import Mock
 from outage_explorer.application.dto import RequestAccess
 from outage_explorer.application.pagination.cursor import CursorPaginator
 from outage_explorer.application.preview_request import PreviewRequest
-from outage_explorer.application.services.access import AccessService
-from outage_explorer.application.services.preview import PreviewService
+from outage_explorer.application.services.access.service import AccessService
+from outage_explorer.application.services.analytical.preview import PreviewService
 from outage_explorer.domain.access import Role
 
 

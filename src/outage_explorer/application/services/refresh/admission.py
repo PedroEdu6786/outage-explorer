@@ -8,7 +8,7 @@ from outage_explorer.application.errors import InvalidRequestError, RefreshBusyE
 from outage_explorer.application.ports.access import SecurityMaterial
 from outage_explorer.application.ports.refresh import RefreshStore
 from outage_explorer.application.refresh_request import RefreshAdmissionRequest
-from outage_explorer.application.services.access import AccessService
+from outage_explorer.application.services.access.service import AccessService
 from outage_explorer.domain.publication import RefreshConfiguration, RefreshRun
 from outage_explorer.domain.publication_policy import (
     RefreshAdmissionSlotBusyError,

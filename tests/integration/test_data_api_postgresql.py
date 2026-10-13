@@ -25,8 +25,8 @@ from outage_explorer.application.errors import (
     UnsupportedPublicationLayoutError,
 )
 from outage_explorer.application.refresh_request import RefreshAdmissionRequest
-from outage_explorer.application.services.access import AccessService
-from outage_explorer.application.services.refresh import RefreshService
+from outage_explorer.application.services.access.service import AccessService
+from outage_explorer.application.services.refresh.admission import RefreshService
 from outage_explorer.domain.access import AnalyticalGrain, Role
 from outage_explorer.domain.publication import (
     INITIAL_END,

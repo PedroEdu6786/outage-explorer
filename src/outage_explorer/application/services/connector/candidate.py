@@ -4,6 +4,7 @@ from dataclasses import replace
 from functools import partial
 
 from outage_explorer.application.dto import (
+    ConnectorStage,
     ResourceReport,
     ResourceRequest,
     ResourceResult,
@@ -14,7 +15,11 @@ from outage_explorer.application.ports.artifacts import (
     ArtifactLimitError,
     RepresentationError,
 )
-from outage_explorer.application.ports.candidates import ResourceBuilder, TransientInput
+from outage_explorer.application.ports.candidates import (
+    CandidateResult,
+    ResourceBuilder,
+    TransientInput,
+)
 from outage_explorer.application.ports.connector import (
     ConnectorEvents,
     ConnectorSourceFactory,
@@ -71,14 +76,7 @@ class CreateResourceCandidate:
             report = replace(report, stage="retrieval")
             self.reports.progress(report)
             self._emit("resource_candidate_started", run=request.run_id)
-            tasks = tuple(
-                partial(self._collect_resource, request, grain) for grain in ROUTES
-            )
-            collected = (
-                tuple(task() for task in tasks)
-                if self.workers is None
-                else self.workers.run(tasks)
-            )
+            collected = self._collect_resources(request)
             report = replace(
                 report,
                 sources=tuple(quality for _, quality in collected),
@@ -93,18 +91,7 @@ class CreateResourceCandidate:
             )
             report = replace(report, stage="verification")
             self.reports.progress(report)
-            self.builder.verify_resources(candidate, request.bounds)
-            if (
-                candidate.generation_id != request.generation_id
-                or candidate.base_generation_id
-                != (None if request.prior is None else request.prior.generation_id)
-                or candidate.interval != request.interval
-                or candidate.contract_id != request.contract_id
-                or candidate.transformation_id != request.transformation_id
-            ):
-                raise ArtifactError("Resource candidate identity mismatch")
-            if self.workers is not None:
-                self.workers.run(())
+            self._verify_candidate(request, candidate)
             report = replace(
                 report,
                 stage="complete",
@@ -119,40 +106,53 @@ class CreateResourceCandidate:
             )
             return ResourceResult(report, True)
         except (Exception, KeyboardInterrupt) as error:
-            if isinstance(error, ConnectorReportError):
-                code: ConnectorFailure = "report"
-            elif isinstance(
-                error, (SourceLimitError, ArtifactLimitError, RefreshLimitError)
-            ):
-                code = "resource"
-            elif isinstance(error, RepresentationError):
-                code = "representation"
-            elif isinstance(error, SourceError):
-                code = "retrieval"
-            elif isinstance(error, (ArtifactError, OSError)):
-                code = (
-                    "prior_integrity"
-                    if report.stage == "prior"
-                    else "artifact_integrity"
-                )
-            elif isinstance(error, RefreshInputError):
-                code = "unusable_input"
-            elif isinstance(error, KeyboardInterrupt):
-                code = "interrupted"
-            else:
-                code = "internal"
-            report = replace(report, outcome="failed", error=code, candidate=None)
-            self._emit(
-                "resource_candidate_failed",
-                run=request.run_id,
-                stage=report.stage,
-                code=code,
-            )
-            try:
-                self.reports.finish(report)
-            except (Exception, KeyboardInterrupt):
-                return ResourceResult(replace(report, error="report"), False)
-            return ResourceResult(report, True)
+            return self._failed_result(request, report, error)
+
+    def _collect_resources(
+        self, request: ResourceRequest
+    ) -> tuple[tuple[TransientInput, SourceQuality], ...]:
+        tasks = tuple(
+            partial(self._collect_resource, request, grain) for grain in ROUTES
+        )
+        if self.workers is None:
+            return tuple(task() for task in tasks)
+        return self.workers.run(tasks)
+
+    def _verify_candidate(
+        self, request: ResourceRequest, candidate: CandidateResult
+    ) -> None:
+        self.builder.verify_resources(candidate, request.bounds)
+        expected_base = None if request.prior is None else request.prior.generation_id
+        if (
+            candidate.generation_id != request.generation_id
+            or candidate.base_generation_id != expected_base
+            or candidate.interval != request.interval
+            or candidate.contract_id != request.contract_id
+            or candidate.transformation_id != request.transformation_id
+        ):
+            raise ArtifactError("Resource candidate identity mismatch")
+        if self.workers is not None:
+            self.workers.run(())
+
+    def _failed_result(
+        self,
+        request: ResourceRequest,
+        report: ResourceReport,
+        error: Exception | KeyboardInterrupt,
+    ) -> ResourceResult:
+        code = _failure_code(error, report.stage)
+        failed = replace(report, outcome="failed", error=code, candidate=None)
+        self._emit(
+            "resource_candidate_failed",
+            run=request.run_id,
+            stage=failed.stage,
+            code=code,
+        )
+        try:
+            self.reports.finish(failed)
+        except (Exception, KeyboardInterrupt):
+            return ResourceResult(replace(failed, error="report"), False)
+        return ResourceResult(failed, True)
 
     def _collect_resource(
         self, request: ResourceRequest, grain: Grain
@@ -186,3 +186,23 @@ class CreateResourceCandidate:
         ):
             raise ArtifactError("Resource source identity mismatch")
         return item, quality
+
+
+def _failure_code(
+    error: Exception | KeyboardInterrupt, stage: ConnectorStage
+) -> ConnectorFailure:
+    if isinstance(error, ConnectorReportError):
+        return "report"
+    if isinstance(error, (SourceLimitError, ArtifactLimitError, RefreshLimitError)):
+        return "resource"
+    if isinstance(error, RepresentationError):
+        return "representation"
+    if isinstance(error, SourceError):
+        return "retrieval"
+    if isinstance(error, (ArtifactError, OSError)):
+        return "prior_integrity" if stage == "prior" else "artifact_integrity"
+    if isinstance(error, RefreshInputError):
+        return "unusable_input"
+    if isinstance(error, KeyboardInterrupt):
+        return "interrupted"
+    return "internal"

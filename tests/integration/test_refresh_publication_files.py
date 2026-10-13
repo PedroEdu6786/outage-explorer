@@ -12,12 +12,12 @@ from outage_explorer.application.errors import AccessStoreError, StaleRefreshOwn
 from outage_explorer.application.ports.candidates import ResourceBaseline
 from outage_explorer.application.ports.connector import DurableResourceReceipt
 from outage_explorer.application.ports.refresh_execution import RefreshPipeline
-from outage_explorer.application.services.refresh_baseline import RestoreRefreshBaseline
-from outage_explorer.application.services.refresh_candidate import (
+from outage_explorer.application.services.refresh.baseline import RestoreRefreshBaseline
+from outage_explorer.application.services.refresh.candidate import (
     PrepareRefreshCandidate,
 )
-from outage_explorer.application.services.refresh_execution import RefreshExecution
-from outage_explorer.application.services.refresh_publication import (
+from outage_explorer.application.services.refresh.execution import RefreshExecution
+from outage_explorer.application.services.refresh.publication import (
     PrepareRefreshPublication,
 )
 from outage_explorer.domain.access import AnalyticalGrain

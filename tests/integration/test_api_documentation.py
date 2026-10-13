@@ -5,9 +5,9 @@ from unittest.mock import Mock
 
 from jsonschema import Draft202012Validator
 
-from outage_explorer.application.services.access import AccessService
+from outage_explorer.application.services.access.login import LoginService
+from outage_explorer.application.services.access.service import AccessService
 from outage_explorer.application.services.health import HealthService
-from outage_explorer.application.services.login import LoginService
 from outage_explorer.entrypoints.http.app import create_app
 from outage_explorer.entrypoints.http.data_services import DataServices
 from outage_explorer.entrypoints.http.transport.auth import AuthTransport

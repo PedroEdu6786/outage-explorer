@@ -9,7 +9,7 @@ import pytest
 
 from outage_explorer.application.ports.artifacts import ArtifactLimitError
 from outage_explorer.application.refresh_request import RefreshAdmissionRequest
-from outage_explorer.application.services.refresh_recovery import RefreshRecovery
+from outage_explorer.application.services.refresh.recovery import RefreshRecovery
 from outage_explorer.bootstrap import build_http_app, build_refresh_worker
 from outage_explorer.domain.access import Role
 from outage_explorer.domain.publication import RunStatus
@@ -22,7 +22,7 @@ database = coordination.database
 
 @pytest.fixture
 def system(database):
-    from outage_explorer.application.services.refresh import RefreshService
+    from outage_explorer.application.services.refresh.admission import RefreshService
     from outage_explorer.infrastructure.postgresql.publication import (
         PostgresqlResourcePublicationStore,
     )
@@ -50,15 +50,6 @@ def system(database):
         yield store, refresh, tokens, users, pool
 
 
-class RefreshS3(ControlledS3):
-    def head_object(self, **kwargs):
-        key = kwargs["Key"]
-        self.calls.append(("head", key))
-        if key not in self.objects:
-            raise failure("NoSuchKey")
-        return {"ContentLength": len(self.objects[key])}
-
-
 def composition(database, root, wire=None, client=None):
     return build_refresh_worker(
         environment={
@@ -70,7 +61,7 @@ def composition(database, root, wire=None, client=None):
             "EIA_API_KEY": "synthetic-only-secret",
         },
         transport=Wire() if wire is None else wire,
-        client=RefreshS3() if client is None else client,
+        client=ControlledS3() if client is None else client,
     )
 
 
@@ -95,7 +86,7 @@ def execute(system, database, root, rows=None, client=None, key="a" * 16, **opti
 def test_all_grains_durably_publish_with_verified_real_artifacts(
     system, database, tmp_path
 ):
-    client = RefreshS3()
+    client = ControlledS3()
     result = execute(system, database, tmp_path, client=client)
     assert result.status is RunStatus.SUCCEEDED
     active = system[0].active_generation()
@@ -163,7 +154,7 @@ def test_subsequent_refresh_beyond_183_days_uses_frozen_source_model_span(
     from outage_explorer.bootstrap import build_data_services
     from outage_explorer.infrastructure.clock import SystemClock
 
-    client = RefreshS3()
+    client = ControlledS3()
     execute(system, database, tmp_path, client=client)
     store, service, tokens, _, _ = system
     monkeypatch.setattr(
@@ -203,7 +194,7 @@ def test_subsequent_refresh_beyond_183_days_uses_frozen_source_model_span(
 def test_all_excluded_retains_pointer_with_overlapping_reasons(
     system, database, tmp_path
 ):
-    client = RefreshS3()
+    client = ControlledS3()
     initial = execute(system, database, tmp_path, client=client)
     before = system[0].active_generation()
     calls = len(client.calls)
@@ -227,7 +218,7 @@ def test_all_excluded_retains_pointer_with_overlapping_reasons(
 def test_partial_exclusion_invalid_absent_and_duplicate_conservation(
     system, database, tmp_path
 ):
-    client = RefreshS3()
+    client = ControlledS3()
     original = {
         grain: [row(grain, period=f"2026-09-0{day}") for day in (1, 2, 3)]
         for grain in ("national", "facility", "generator")
@@ -271,7 +262,7 @@ def test_failure_never_publishes_partial_initial_generation(
     system, database, tmp_path, kind
 ):
     rows = {grain: [row(grain)] for grain in ("national", "facility", "generator")}
-    client = RefreshS3()
+    client = ControlledS3()
     options = {}
     if kind == "empty":
         rows["facility"] = []
@@ -371,7 +362,7 @@ def test_independent_worker_process_survives_api_process_restarts(
 def test_failed_refresh_preserves_prior_and_missing_base_fails_before_source(
     system, database, tmp_path
 ):
-    client = RefreshS3()
+    client = ControlledS3()
     first = execute(system, database, tmp_path, client=client)
     active = system[0].active_generation()
     wire = Wire(failure=("facility", 0))
@@ -414,15 +405,23 @@ def test_unmeasured_quality_counts_remain_null_and_worker_shutdown_is_explicit(
     assert process.closed
 
 
-def test_s3_metadata_is_bounded_and_not_a_verified_receipt():
-    from outage_explorer.infrastructure.s3.artifacts import S3ArtifactStore
+def test_s3_exact_descriptor_is_bounded_before_readback():
+    from outage_explorer.application.ports.artifacts import StoredObject
+    from outage_explorer.infrastructure.s3.resources import S3ResourceStore
     from tests.integration.test_connector_cli import ARTIFACT
 
-    client = RefreshS3()
-    client.head_object = lambda **kwargs: {"ContentLength": ARTIFACT.file_bytes + 1}
-    store = S3ArtifactStore(client, "test-bucket", "connector/", ARTIFACT)
+    client = ControlledS3()
+    store = S3ResourceStore(client, "test-bucket", "connector/", ARTIFACT)
     with pytest.raises(ArtifactLimitError):
-        store.reference("a" * 64, "a" * 64)
+        list(
+            store.read(
+                StoredObject(
+                    "connector/generations/example/national.parquet",
+                    "a" * 64,
+                    ARTIFACT.file_bytes + 1,
+                )
+            )
+        )
 
 
 def test_worker_construction_starts_no_io_or_jobs(tmp_path):
@@ -451,7 +450,7 @@ def test_frozen_transfer_workers_exact_descriptors_and_joined_staging_cleanup(
     import psycopg
 
     system[1]._configuration = lambda: replace(coordination.CONFIG, s3_workers=workers)
-    client = RefreshS3()
+    client = ControlledS3()
     result = execute(system, database, tmp_path, client=client)
     assert result.status is RunStatus.SUCCEEDED
     assert result.configuration.s3_workers == workers
@@ -499,7 +498,7 @@ def test_transfer_failure_keeps_exact_previous_publication_and_all_workers_join(
 
     from outage_explorer.infrastructure.s3.resources import S3ResourceStore
 
-    client = RefreshS3()
+    client = ControlledS3()
     first = execute(system, database, tmp_path, client=client)
     before = system[0].active_generation()
     original = S3ResourceStore.put_verified
@@ -540,7 +539,7 @@ def test_narrow_refresh_carries_outside_interval_and_replaces_valid_values(
 
     from outage_explorer.infrastructure.parquet.schemas import modeled_from_record
 
-    client = RefreshS3()
+    client = ControlledS3()
     values = {
         grain: [row(grain, period=f"2026-09-0{day}") for day in (1, 2, 3)]
         for grain in ("national", "facility", "generator")

@@ -40,20 +40,11 @@ src/outage_explorer/
     refresh.py                 # merge, retention and quality policies
   application/
     services/
-      login.py                 # login orchestration
-      access.py                # session/principal resolution and logout
-      connector.py             # build a resource candidate
-      resource_artifacts.py    # persist/recover exact resource files
-      catalog.py               # authorized dataset descriptions
-      preview.py               # approved snapshot reads and input lifecycle
-      queries.py               # inspect, authorize and execute SQL once
-      refresh.py               # refresh admission
-      refresh_execution.py     # coordinate run lifecycle and final publication
-      refresh_worker.py        # recover, claim and lease one run per tick
-      refresh_baseline.py      # restore and verify the pinned generation
-      refresh_candidate.py     # build candidates and validate their outcomes
-      refresh_publication.py   # persist resources and prepare publication metadata
-      refresh_recovery.py      # reconcile interrupted work
+      access/                  # login, sessions, role checks and user seeding
+      analytical/              # catalog, preview, SQL and retained-result paging
+      connector/               # candidate, durable resources and evidence
+      refresh/                 # admission, execution, publication and recovery
+      health.py                # health use case
     pagination/                # reusable cursor and numbered page contracts
     ports/                     # application-owned interfaces
   infrastructure/
@@ -68,7 +59,7 @@ src/outage_explorer/
     duckdb/                    # query engine adapter, used in workers
     local_cache/               # verified downloads, pins and eviction
     query_results/             # retained output and expiring metadata
-    worker_runtime/            # isolation, quotas, ownership and cleanup
+    worker_runtime/            # isolation, quotas, ownership, cleanup and bounded transport
   entrypoints/
     http/
       app.py                   # register injected services and routes
@@ -90,6 +81,11 @@ Split an oversized module into a package **within its existing layer**. Related
 features can be grouped inside each layer. Create files only when behavior needs
 them; do not add a parallel `modules/<feature>/{domain,application}` hierarchy,
 generic CRUD framework or repository for every analytical row type.
+
+`worker_runtime/decoding.py` keeps the parent-facing `WorkerTransport` adapter.
+`transport_requests.py` encodes approved inputs, while `transport_responses.py`
+checks worker envelopes and outcomes. `transport_values.py` decodes bounded query
+schemas and cells; `transport_validation.py` holds their shared checks.
 
 `bootstrap.py` validates refresh worker startup configuration and constructs the
 supervisor. Its focused composition helper `refresh_pipeline_composition.py`
@@ -125,6 +121,16 @@ callable. Restoration does not access the store's private locks or counters.
 input validation, grain construction, quality accounting and file verification.
 `evidence.py` collects bounded copied source rows; `source_evidence/` checks page
 and JSON shapes and matches transient request audits.
+
+`infrastructure/s3/resources.py` coordinates the resource transfer port.
+`resource_addresses.py` validates generation-scoped addresses and receipts;
+`resource_object_transfer.py` owns conditional S3 uploads and verified readback;
+`transfer_budget.py` shares request, byte, object, deadline, cancellation, and
+temporary-disk limits across concurrent transfers. Recovery uses supplied exact
+descriptors; there is no checksum-keyed S3 artifact store or metadata discovery.
+The synchronous `with_instance_lock` decorator in `infrastructure/synchronization.py`
+accepts the instance lock attribute name. Apply it to short atomic methods;
+context managers lock reservation and release separately so their body can do I/O.
 
 ## Dependency matrix
 

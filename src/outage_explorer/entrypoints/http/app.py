@@ -1,8 +1,8 @@
 from flask import Flask, Response, request
 
-from outage_explorer.application.services.access import AccessService
+from outage_explorer.application.services.access.login import LoginService
+from outage_explorer.application.services.access.service import AccessService
 from outage_explorer.application.services.health import HealthService
-from outage_explorer.application.services.login import LoginService
 from outage_explorer.entrypoints.http.data_services import DataServices
 from outage_explorer.entrypoints.http.requests.data import MAX_BODY_BYTES
 from outage_explorer.entrypoints.http.routes.access import create_access_blueprint

@@ -27,7 +27,9 @@ def resource_setup(prior=None):
         GrainSummary,
         TransientInput,
     )
-    from outage_explorer.application.services.connector import CreateResourceCandidate
+    from outage_explorer.application.services.connector.candidate import (
+        CreateResourceCandidate,
+    )
     from outage_explorer.domain.refresh import Quality
 
     qualities = tuple(

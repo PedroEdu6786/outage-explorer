@@ -12,10 +12,10 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 from outage_explorer.application.dto import SeedIdentity
-from outage_explorer.application.services.access import AccessService
+from outage_explorer.application.services.access.login import LoginService
+from outage_explorer.application.services.access.seed_users import SeedUsers
+from outage_explorer.application.services.access.service import AccessService
 from outage_explorer.application.services.health import HealthService
-from outage_explorer.application.services.login import LoginService
-from outage_explorer.application.services.seed_users import SeedUsers
 from outage_explorer.domain.access import Role
 from outage_explorer.entrypoints.http.app import create_app
 from outage_explorer.entrypoints.http.transport.auth import AuthTransport

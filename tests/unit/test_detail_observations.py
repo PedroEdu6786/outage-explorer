@@ -2,7 +2,7 @@
 
 import pytest
 
-from outage_explorer.application.services.evidence import VerifyBaseline
+from outage_explorer.application.services.connector.evidence import VerifyBaseline
 from outage_explorer.domain.observations import (
     SourceRecord,
     assess,

@@ -3,7 +3,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from threading import Event
 
-from outage_explorer.application.services.refresh_recovery import RefreshRecovery
+from outage_explorer.application.services.refresh.recovery import RefreshRecovery
 from outage_explorer.domain.access import Role
 from tests.integration import test_data_api_http as http
 from tests.integration.test_connector_cli import Wire, row

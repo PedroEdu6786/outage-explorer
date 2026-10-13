@@ -3,7 +3,7 @@ import sys
 from collections.abc import Sequence
 
 from outage_explorer.application.errors import VerificationError
-from outage_explorer.application.services.evidence import VerifyBaseline
+from outage_explorer.application.services.connector.evidence import VerifyBaseline
 
 
 def run(service: VerifyBaseline, argv: Sequence[str] | None = None) -> int:

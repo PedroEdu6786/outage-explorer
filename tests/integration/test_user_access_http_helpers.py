@@ -7,7 +7,7 @@ import pytest
 from flask import Flask, Response
 
 from outage_explorer.application.errors import ForbiddenError, UnauthenticatedError
-from outage_explorer.application.services.access import AccessService
+from outage_explorer.application.services.access.service import AccessService
 from outage_explorer.domain.access import AccessOperation, AnalyticalGrain, Role
 from outage_explorer.entrypoints.http.requests.auth import json_object, query_fields
 from outage_explorer.entrypoints.http.transport.auth import AuthTransport
