@@ -4,7 +4,9 @@ This is the October 13, 2026 **private smoke** deployment accepted in
 [ADR-0093](../adr/0093-private-ec2-analytical-smoke.md). It is running in AWS
 account `381999184392`, region `us-east-2`, using profile
 `outage-explorer-new`. It reuses the existing RDS, Cognito and S3 resources.
-It has no public application ingress or HTTPS endpoint.
+This guide records the original private smoke configuration. ADR-0094 later
+added a backend-only public HTTPS endpoint and disabled the EC2 web service.
+Use the public backend guide for the current ingress and auth settings.
 
 ## Current host
 

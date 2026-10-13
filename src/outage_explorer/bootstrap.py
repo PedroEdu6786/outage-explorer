@@ -1007,15 +1007,17 @@ def build_analytical_resources(
 def execute_analytical_http(
     config_path: str, host: str, port: int, inspection_path: str | None = None
 ) -> int:
-    """Explicit local lifecycle; no reloader or extra serving process is supported."""
+    """Explicit single-process lifecycle; no reloader or extra worker is supported."""
     from outage_explorer.infrastructure.worker_runtime.configuration import (
         read_runtime_config,
     )
 
+    http_server = os.environ.get("OUTAGE_HTTP_SERVER", "flask")
     if (
         host not in {"127.0.0.1", "localhost"}
         or type(port) is not int
         or not 1 <= port <= 65535
+        or http_server not in {"flask", "waitress"}
         or any(
             os.environ.get(name) not in (None, "", "0", "false")
             for name in ("WERKZEUG_RUN_MAIN", "FLASK_DEBUG")
@@ -1045,7 +1047,26 @@ def execute_analytical_http(
     try:
         app = build_http_app(data_resources=resources)
         resources.start()
-        app.run(host=host, port=port, debug=False, use_reloader=False, threaded=True)
+        if http_server == "waitress":
+            from waitress import serve
+
+            serve(
+                app,
+                host=host,
+                port=port,
+                threads=4,
+                connection_limit=100,
+                backlog=64,
+                channel_timeout=60,
+                max_request_header_size=16_384,
+                max_request_body_size=131_072,
+                url_scheme="https",
+                expose_tracebacks=False,
+            )
+        else:
+            app.run(
+                host=host, port=port, debug=False, use_reloader=False, threaded=True
+            )
     finally:
         try:
             if app is not None:

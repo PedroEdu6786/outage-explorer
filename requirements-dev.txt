@@ -79,3 +79,7 @@ annotated-types==0.8.0
 pydantic==2.14.0
 pydantic_core==2.50.0
 typing-inspection==0.4.4
+
+# Backend-only public EC2 serving (ADR-0094).
+waitress==3.0.2
+types-waitress==3.0.1.20260724

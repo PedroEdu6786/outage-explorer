@@ -204,10 +204,13 @@ See [ADR-0053](../adr/0053-local-single-owner-analytical-acceptance.md),
 [ADR-0055](../adr/0055-scoped-local-analytical-readiness.md) and
 [ADR-0056](../adr/0056-user-directed-local-api-activation.md).
 
-EC2 is the accepted deployment target, but final topology, ingress/TLS,
-supervision, storage provisioning and capacity are not settled by local
-acceptance. Local development does not require an EC2 instance
-([ADR-0038](../adr/0038-ec2-deployment-local-development.md)).
+EC2 is the accepted deployment target. The current smoke host has a
+backend-only CloudFront HTTPS endpoint; Nginx proxies `/api/` and `/health` to
+the loopback Waitress API, and the EC2 web service is disabled
+([ADR-0094](../adr/0094-public-backend-only-ec2-endpoint.md)). The existing
+Vercel frontend is separate. This deployment does not settle production
+capacity, availability or the full analytical checkpoints. Local development
+does not require EC2 ([ADR-0038](../adr/0038-ec2-deployment-local-development.md)).
 
 For dated results and remaining evidence, use the
 [runtime evidence map](../specs/data-api/runtime-evidence.md),
