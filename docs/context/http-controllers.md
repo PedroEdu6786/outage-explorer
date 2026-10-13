@@ -107,7 +107,7 @@ validation in its proper use case/domain layer.
 
 ## Response DTO contract
 
-`entrypoints/http/responses.py` owns `respond_with`, `ResponseDTO` and
+`entrypoints/http/responses/base.py` owns `respond_with`, `ResponseDTO` and
 `ResponseData`. A response DTO implements:
 
 - `from_result(result)`: construct public response data from the service result.
@@ -175,8 +175,10 @@ Session and logout use `empty_request`, rejecting unexpected query/body inputs.
 Public health/documentation routes retain their explicit access contracts.
 
 Auth and query transport Pydantic models have exact API/module allowances in
-[ADR-0076](../adr/0076-auth-and-query-transport-request-models.md). This adds no
-inner-layer framework allowance and does not move SQL inspection into HTTP.
+[ADR-0076](../adr/0076-auth-and-query-transport-request-models.md), with module
+locations updated by [ADR-0092](../adr/0092-group-http-transport-by-responsibility.md).
+This adds no inner-layer framework allowance and does not move SQL inspection
+into HTTP.
 
 Before finishing a controller change, verify guard-before-validation ordering,
 invalid-input rejection before service calls, exact response envelopes/statuses/

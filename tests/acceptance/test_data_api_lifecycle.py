@@ -168,7 +168,7 @@ def test_supervised_old_snapshots_across_publication(
 
     from outage_explorer.application.services.health import HealthService
     from outage_explorer.entrypoints.http.app import create_app
-    from outage_explorer.entrypoints.http.auth_transport import AuthTransport
+    from outage_explorer.entrypoints.http.transport.auth import AuthTransport
 
     supervisor, app, states, _ = supervised_http
     supervisor.start()

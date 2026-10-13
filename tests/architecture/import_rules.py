@@ -67,7 +67,7 @@ if __name__ == "__main__":
 """
 ANALYTICAL_STARTUP_SOURCE = """
 from outage_explorer.bootstrap import execute_analytical_http
-from outage_explorer.entrypoints.http.analytical_command import run
+from outage_explorer.entrypoints.cli.analytical_command import run
 
 def main() -> int:
     return run(execute_analytical_http)
@@ -135,7 +135,8 @@ ALLOWED = {
         "infrastructure",
     ),
     "entrypoints": ("application", "entrypoints"),
-    "settings": (),
+    "configuration": ("configuration",),
+    "settings": ("configuration",),
 }
 
 
@@ -214,7 +215,7 @@ def allowed_dependency(source: str, target: str) -> bool:
     if source == f"{ROOT}.application.data_payloads" and target == "json.loads":
         return True  # Pure durable-to-public DTO projection; no file readers.
     if (
-        source == f"{ROOT}.entrypoints.http.data_schemas"
+        source == f"{ROOT}.entrypoints.http.requests.data"
         and target == "urllib.parse.unquote_to_bytes"
     ):
         return True  # Pure bounded query decoding; no urllib network capability.
@@ -246,12 +247,12 @@ def allowed_dependency(source: str, target: str) -> bool:
         "pydantic.model_validator",
     }:
         return True  # ADR-0071: shared pagination request validation only.
-    if source == f"{ROOT}.entrypoints.http.schemas" and target in {
+    if source == f"{ROOT}.entrypoints.http.requests.auth" and target in {
         "pydantic.BaseModel",
         "pydantic.ConfigDict",
     }:
         return True  # ADR-0076: typed auth transport inputs only.
-    if source == f"{ROOT}.entrypoints.http.query_requests" and target in {
+    if source == f"{ROOT}.entrypoints.http.requests.query" and target in {
         "pydantic.BaseModel",
         "pydantic.ConfigDict",
         "pydantic.Field",
@@ -277,7 +278,7 @@ def allowed_dependency(source: str, target: str) -> bool:
             if source
             in {
                 f"{ROOT}.entrypoints.cli.command",
-                f"{ROOT}.entrypoints.http.analytical_command",
+                f"{ROOT}.entrypoints.cli.analytical_command",
                 f"{ROOT}.entrypoints.cli.connector",
                 f"{ROOT}.entrypoints.cli.access_setup",
             }
@@ -287,17 +288,17 @@ def allowed_dependency(source: str, target: str) -> bool:
             transport |= {"json", "pathlib"}
         if source == f"{ROOT}.entrypoints.query_worker":
             transport |= {"json"}  # Bounded internal response envelope only.
-        if source == f"{ROOT}.entrypoints.http.auth_transport":
+        if source == f"{ROOT}.entrypoints.http.transport.auth":
             transport |= {"logging"}
         if source in {
-            f"{ROOT}.entrypoints.http.schemas",
-            f"{ROOT}.entrypoints.http.data_schemas",
+            f"{ROOT}.entrypoints.http.requests.auth",
+            f"{ROOT}.entrypoints.http.requests.data",
         }:
             transport |= {"json"}  # Strict transport JSON decoding only.
-        if source == f"{ROOT}.entrypoints.http.errors":
+        if source == f"{ROOT}.entrypoints.http.transport.errors":
             transport |= {"werkzeug"}
         return external in PURE_IMPORTS | {"flask"} | transport
-    return layer in {"infrastructure", "settings"}
+    return layer in {"infrastructure", "configuration", "settings"}
 
 
 def cycle_errors(graph: dict[str, set[str]]) -> list[str]:

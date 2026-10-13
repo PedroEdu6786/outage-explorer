@@ -10,10 +10,30 @@ from outage_explorer.application.dto import VerifiedIdentity
 from outage_explorer.application.errors import AccessStoreError, UnauthenticatedError
 from outage_explorer.application.services.access import AccessService
 from outage_explorer.application.services.login import LoginService
-from outage_explorer.domain.access import Role, SeededUser, Session
+from outage_explorer.domain.access import (
+    AccessTimestamp,
+    LoginAttempt,
+    Role,
+    SeededUser,
+    Session,
+    SessionLease,
+)
 from outage_explorer.infrastructure.security import RandomSecurityMaterial
 
 NOW = datetime(2026, 10, 4, tzinfo=UTC)
+
+
+def test_access_models_require_aware_timestamps_and_valid_intervals():
+    naive = datetime(2026, 10, 4)
+    user = SeededUser("one", "issuer", "subject", "user@test", Role.VIEWER)
+    with pytest.raises(ValueError, match="timezone"):
+        AccessTimestamp(naive)
+    with pytest.raises(ValueError, match="timezone"):
+        Session("digest", user, naive, NOW + timedelta(hours=1))
+    with pytest.raises(ValueError, match="Invalid session interval"):
+        SessionLease(NOW, NOW)
+    with pytest.raises(ValueError, match="timezone"):
+        LoginAttempt("state", "binding", "verifier", "callback", "/", naive, NOW)
 
 
 class Clock:

@@ -9,8 +9,8 @@ import pytest
 from outage_explorer.application.services.access import AccessService
 from outage_explorer.domain.access import Role, SeededUser, Session
 from outage_explorer.entrypoints.http.app import create_app
-from outage_explorer.entrypoints.http.auth_transport import AuthTransport
 from outage_explorer.entrypoints.http.data_services import DataServices
+from outage_explorer.entrypoints.http.transport.auth import AuthTransport
 from tests.integration.test_data_api_http import ORIGIN
 
 

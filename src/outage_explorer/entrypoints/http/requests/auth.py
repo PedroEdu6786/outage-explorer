@@ -1,4 +1,4 @@
-"""Validate transport inputs and serialize the public identity allowlist."""
+"""Validate authentication transport inputs."""
 
 import json
 from collections.abc import Callable
@@ -6,7 +6,6 @@ from collections.abc import Callable
 from flask import request
 from pydantic import BaseModel, ConfigDict
 
-from outage_explorer.application.dto import CurrentIdentity
 from outage_explorer.application.errors import InvalidRequestError, UnauthenticatedError
 
 
@@ -103,15 +102,3 @@ def callback_query(*, binding: Callable[[], str] | None = None) -> CallbackQuery
         state=values.get("state", ""),
         browser_binding="" if binding is None else binding(),
     )
-
-
-def identity_payload(identity: CurrentIdentity) -> dict[str, object]:
-    return {
-        "user": {
-            "id": identity.user.id,
-            "email": identity.user.email,
-            "role": identity.user.role.value,
-        },
-        "expires_at": identity.expires_at.isoformat(),
-        "csrf_token": identity.csrf_token,
-    }

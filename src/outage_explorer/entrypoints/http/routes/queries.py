@@ -3,22 +3,25 @@
 from flask import Blueprint
 
 from outage_explorer.application.services.access import AccessService
-from outage_explorer.entrypoints.http.auth_helpers import (
+from outage_explorer.entrypoints.http.data_services import DataServices
+from outage_explorer.entrypoints.http.requests.data import (
+    query_page_request,
+    query_submission_request,
+)
+from outage_explorer.entrypoints.http.requests.query import (
+    QueryPageRequest,
+    QuerySubmissionRequest,
+)
+from outage_explorer.entrypoints.http.responses.base import (
+    JsonPayloadResponse,
+    respond_with,
+)
+from outage_explorer.entrypoints.http.transport.auth import AuthTransport
+from outage_explorer.entrypoints.http.transport.guards import (
     authenticated,
     csrf_protected,
     validated_request,
 )
-from outage_explorer.entrypoints.http.auth_transport import AuthTransport
-from outage_explorer.entrypoints.http.data_schemas import (
-    query_page_request,
-    query_submission_request,
-)
-from outage_explorer.entrypoints.http.data_services import DataServices
-from outage_explorer.entrypoints.http.query_requests import (
-    QueryPageRequest,
-    QuerySubmissionRequest,
-)
-from outage_explorer.entrypoints.http.responses import JsonPayloadResponse, respond_with
 
 
 def create_queries_blueprint(

@@ -12,7 +12,7 @@ from flask import Response
 from outage_explorer.application.dto import RequestAccess
 from outage_explorer.application.errors import UnauthenticatedError
 from outage_explorer.application.services.access import AccessService
-from outage_explorer.entrypoints.http.auth_transport import AuthTransport
+from outage_explorer.entrypoints.http.transport.auth import AuthTransport
 
 Handler = Callable[..., Response]
 

@@ -12,8 +12,8 @@ from outage_explorer.application.services.catalog import CatalogService
 from outage_explorer.application.services.health import HealthService
 from outage_explorer.domain.access import Role
 from outage_explorer.entrypoints.http.app import create_app
-from outage_explorer.entrypoints.http.auth_transport import AuthTransport
 from outage_explorer.entrypoints.http.data_services import DataServices
+from outage_explorer.entrypoints.http.transport.auth import AuthTransport
 from outage_explorer.infrastructure.query_results.preview_encoding import (
     PreviewEncoding,
 )

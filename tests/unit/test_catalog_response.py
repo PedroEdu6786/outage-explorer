@@ -11,7 +11,7 @@ from outage_explorer.application.services.catalog import CatalogEntry, CatalogSe
 from outage_explorer.domain.access import AnalyticalGrain
 from outage_explorer.domain.datasets import PUBLIC_DATASETS
 from outage_explorer.domain.publication import DatasetSummary
-from outage_explorer.entrypoints.http.catalog_responses import CatalogResponse
+from outage_explorer.entrypoints.http.responses.catalog import CatalogResponse
 
 
 def test_catalog_service_returns_typed_result_and_response_projects_coverage():

@@ -254,7 +254,9 @@ Use the refresh controller as the reference implementation.
   missing-result response branches, local exception handlers or preflight hooks
   in JSON controllers. The guide maps each old pattern to its required replacement.
 - Auth/query transport DTO Pydantic APIs are scoped to the exact modules in
-  [ADR-0076](docs/adr/0076-auth-and-query-transport-request-models.md). Catalog
+  [ADR-0076](docs/adr/0076-auth-and-query-transport-request-models.md), with
+  module locations updated by
+  [ADR-0092](docs/adr/0092-group-http-transport-by-responsibility.md). Catalog
   receives approved application-owned `CatalogAccess` under ADR-0083; query
   services retain application authorization. Auth redirects and bodyless
   logout use dedicated response decorators; session/logout reject nonempty inputs.

@@ -2,7 +2,10 @@
 
 from dataclasses import dataclass
 
-from outage_explorer.domain.observations import Grain
+from outage_explorer.domain.observations import IDENTITY_FIELDS, Grain
+
+PREVIEW_DATE_COLUMN = "period"
+PREVIEW_FACILITY_COLUMN = "facility"
 
 
 @dataclass(frozen=True)
@@ -29,15 +32,24 @@ class Dataset:
     columns: tuple[Column, ...]
     schema_version: str = "1"
 
+    @property
+    def preview_identity_columns(self) -> tuple[str, ...]:
+        return IDENTITY_FIELDS[self.grain]
+
+    def preview_exact_filters(
+        self, facility: str | None
+    ) -> tuple[tuple[str, str], ...]:
+        return () if facility is None else ((PREVIEW_FACILITY_COLUMN, facility),)
+
 
 _COMMON = (
-    Column("period", ValueType("date")),
+    Column(PREVIEW_DATE_COLUMN, ValueType("date")),
     Column("capacity_mw", ValueType("decimal", 38, 12), unit="MW"),
     Column("outage_mw", ValueType("decimal", 38, 12), unit="MW"),
     Column("reported_percentage", ValueType("decimal", 38, 12), unit="percent"),
 )
 _FACILITY = (
-    Column("facility", ValueType("string")),
+    Column(PREVIEW_FACILITY_COLUMN, ValueType("string")),
     Column("facility_name", ValueType("string")),
 )
 PUBLIC_DATASETS = (

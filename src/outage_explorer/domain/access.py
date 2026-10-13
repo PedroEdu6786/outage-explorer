@@ -21,11 +21,39 @@ class SeededUser:
 
 
 @dataclass(frozen=True)
+class AccessTimestamp:
+    value: datetime
+
+    def __post_init__(self) -> None:
+        if (
+            not isinstance(self.value, datetime)
+            or self.value.tzinfo is None
+            or self.value.utcoffset() is None
+        ):
+            raise ValueError("Access timestamps must include a timezone")
+
+
+@dataclass(frozen=True)
+class SessionLease:
+    established_at: datetime
+    expires_at: datetime
+
+    def __post_init__(self) -> None:
+        AccessTimestamp(self.established_at)
+        AccessTimestamp(self.expires_at)
+        if self.expires_at <= self.established_at:
+            raise ValueError("Invalid session interval")
+
+
+@dataclass(frozen=True)
 class Session:
     token_digest: str
     user: SeededUser
     established_at: datetime
     expires_at: datetime
+
+    def __post_init__(self) -> None:
+        SessionLease(self.established_at, self.expires_at)
 
 
 @dataclass(frozen=True)
@@ -37,6 +65,12 @@ class LoginAttempt:
     return_to: str
     created_at: datetime
     expires_at: datetime
+
+    def __post_init__(self) -> None:
+        AccessTimestamp(self.created_at)
+        AccessTimestamp(self.expires_at)
+        if self.expires_at <= self.created_at:
+            raise ValueError("Invalid login attempt interval")
 
 
 class AccessOperation(StrEnum):

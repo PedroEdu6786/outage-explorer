@@ -92,6 +92,23 @@ from outage_explorer.application.services.seed_users import (
     SeedUsers,
     validate_identities,
 )
+from outage_explorer.configuration.analytical import (
+    AnalyticalWorkerSettings,
+    data_http_settings,
+)
+from outage_explorer.configuration.artifact import artifact_settings
+from outage_explorer.configuration.auth import auth_settings
+from outage_explorer.configuration.connector import (
+    ArtifactSettings,
+    ModelSettings,
+    ResourceWorkerSettings,
+    SourceSettings,
+    connector_settings,
+    resource_worker_settings,
+)
+from outage_explorer.configuration.database import DatabaseSettings, database_settings
+from outage_explorer.configuration.refresh import refresh_settings
+from outage_explorer.configuration.s3 import S3Settings, s3_settings
 from outage_explorer.domain.publication import (
     RefreshConfiguration,
     RefreshOwner,
@@ -100,16 +117,14 @@ from outage_explorer.domain.publication import (
 from outage_explorer.domain.refresh import Interval, RefreshBounds
 from outage_explorer.entrypoints.cli.access_setup import read_manifest
 from outage_explorer.entrypoints.http.app import create_app
-from outage_explorer.entrypoints.http.auth_transport import (
+from outage_explorer.entrypoints.http.data_services import DataServices
+from outage_explorer.entrypoints.http.transport.auth import (
     AuthTransport,
     CallbackLogFilter,
 )
-from outage_explorer.entrypoints.http.data_services import DataServices
 from outage_explorer.infrastructure.clock import SystemClock
-from outage_explorer.infrastructure.cognito.identity import (
-    CognitoConfig,
-    CognitoIdentityProvider,
-)
+from outage_explorer.infrastructure.cognito.config import CognitoConfig
+from outage_explorer.infrastructure.cognito.identity import CognitoIdentityProvider
 from outage_explorer.infrastructure.connector_events import LoggingConnectorEvents
 from outage_explorer.infrastructure.connector_report import LocalConnectorReports
 from outage_explorer.infrastructure.connector_workers import BoundedConnectorWorkers
@@ -122,6 +137,9 @@ from outage_explorer.infrastructure.postgresql.access import PostgresqlAccessSto
 from outage_explorer.infrastructure.postgresql.credentials import (
     IAMCredentials,
     IAMTarget,
+)
+from outage_explorer.infrastructure.postgresql.login_attempt_repository import (
+    PostgresqlLoginAttemptRepository,
 )
 from outage_explorer.infrastructure.postgresql.migrations import run_migrations
 from outage_explorer.infrastructure.postgresql.pool import BoundedPostgresqlPool
@@ -136,6 +154,12 @@ from outage_explorer.infrastructure.postgresql.refresh_coordination_repository i
 )
 from outage_explorer.infrastructure.postgresql.refresh_run_repository import (
     PostgresqlRefreshRunRepository,
+)
+from outage_explorer.infrastructure.postgresql.session_repository import (
+    PostgresqlSessionRepository,
+)
+from outage_explorer.infrastructure.postgresql.user_repository import (
+    PostgresqlUserRepository,
 )
 from outage_explorer.infrastructure.query_results.cleanup import QueryCleanup
 from outage_explorer.infrastructure.query_results.encoding import EncodingBounds
@@ -172,23 +196,6 @@ from outage_explorer.infrastructure.worker_runtime.unavailable import (
     UnavailableInputs,
     UnavailableResults,
     UnavailableSequences,
-)
-from outage_explorer.settings import (
-    AnalyticalWorkerSettings,
-    ArtifactSettings,
-    DatabaseSettings,
-    ModelSettings,
-    ResourceWorkerSettings,
-    S3Settings,
-    SourceSettings,
-    artifact_settings,
-    auth_settings,
-    connector_settings,
-    data_http_settings,
-    database_settings,
-    refresh_settings,
-    resource_worker_settings,
-    s3_settings,
 )
 
 
@@ -353,7 +360,7 @@ def build_http_app(*, data_resources: DataHttpResources | None = None) -> Flask:
                     atexit.unregister(close)
 
     try:
-        store = PostgresqlAccessStore(pool, attempt_limit=settings.attempt_limit)
+        store = _access_store(pool, attempt_limit=settings.attempt_limit)
         security = RandomSecurityMaterial()
         login = LoginService(
             provider,
@@ -699,6 +706,18 @@ def execute_connector_to_s3(
     return service.execute(inputs)
 
 
+def _access_store(
+    pool: BoundedPostgresqlPool, *, attempt_limit: int = 1000
+) -> PostgresqlAccessStore:
+    return PostgresqlAccessStore(
+        pool,
+        attempt_limit=attempt_limit,
+        users=PostgresqlUserRepository(pool),
+        sessions=PostgresqlSessionRepository(pool),
+        attempts=PostgresqlLoginAttemptRepository(pool, attempt_limit=attempt_limit),
+    )
+
+
 def execute_access_setup(inputs: AccessSetupInput) -> int | tuple[int, int] | None:
     """Connect only on explicit operator command; never migrate during startup."""
     try:
@@ -721,7 +740,7 @@ def execute_access_setup(inputs: AccessSetupInput) -> int | tuple[int, int] | No
         raise AccessConfigurationError("Invalid setup operation")
     pool = _access_pool(database)
     try:
-        store = PostgresqlAccessStore(pool)
+        store = _access_store(pool)
         if identities is not None:
             return SeedUsers(store).execute(identities)
         return store.cleanup(SystemClock().now())
@@ -1009,7 +1028,6 @@ def build_query_worker(
         DuckdbSqlInspector,
     )
     from outage_explorer.infrastructure.worker_runtime.protocol import AnalyticalWorker
-    from outage_explorer.settings import AnalyticalWorkerSettings
 
     settings = AnalyticalWorkerSettings() if settings is None else settings
     if settings != AnalyticalWorkerSettings():

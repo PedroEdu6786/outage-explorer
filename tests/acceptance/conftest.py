@@ -18,7 +18,7 @@ from outage_explorer.application.services.login import LoginService
 from outage_explorer.application.services.seed_users import SeedUsers
 from outage_explorer.domain.access import Role
 from outage_explorer.entrypoints.http.app import create_app
-from outage_explorer.entrypoints.http.auth_transport import AuthTransport
+from outage_explorer.entrypoints.http.transport.auth import AuthTransport
 from outage_explorer.infrastructure.cognito.identity import (
     CognitoConfig,
     CognitoIdentityProvider,

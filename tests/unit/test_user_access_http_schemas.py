@@ -4,7 +4,7 @@ import pytest
 from flask import Flask
 
 from outage_explorer.application.errors import InvalidRequestError, UnauthenticatedError
-from outage_explorer.entrypoints.http.schemas import (
+from outage_explorer.entrypoints.http.requests.auth import (
     CallbackQuery,
     LoginQuery,
     callback_query,

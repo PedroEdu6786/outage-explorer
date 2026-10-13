@@ -101,7 +101,7 @@ def test_invalid_profile_no_supplied_values(tmp_path, field, value):
 
 
 def test_cli_forwards_separate_config_without_starting_api():
-    from outage_explorer.entrypoints.http.analytical_command import run
+    from outage_explorer.entrypoints.cli.analytical_command import run
 
     execute = Mock(return_value=0)
     assert (

@@ -22,9 +22,12 @@ def test_application_obeys_import_boundaries():
 
 @pytest.mark.parametrize(
     ("module", "symbol"),
-    [("entrypoints/http/schemas.py", symbol) for symbol in ("BaseModel", "ConfigDict")]
+    [
+        ("entrypoints/http/requests/auth.py", symbol)
+        for symbol in ("BaseModel", "ConfigDict")
+    ]
     + [
-        ("entrypoints/http/query_requests.py", symbol)
+        ("entrypoints/http/requests/query.py", symbol)
         for symbol in (
             "BaseModel",
             "ConfigDict",
@@ -62,8 +65,8 @@ def test_preview_request_validation_imports_are_reviewed(tmp_path, module, symbo
 @pytest.mark.parametrize(
     "module",
     [
-        "entrypoints/http/schemas.py",
-        "entrypoints/http/query_requests.py",
+        "entrypoints/http/requests/auth.py",
+        "entrypoints/http/requests/query.py",
         "entrypoints/http/routes/queries.py",
         "application/preview_request.py",
         "application/pagination/request.py",
@@ -130,6 +133,10 @@ def test_query_worker_startup_exception_remains_exact(tmp_path, addition):
         ("application/services/bad.py", "import outage_explorer.infrastructure.clock"),
         ("application/services/bad.py", "from ...infrastructure import clock"),
         ("application/services/bad.py", "from outage_explorer import settings"),
+        (
+            "application/services/bad.py",
+            "from outage_explorer.configuration import refresh",
+        ),
         ("application/services/bad.py", "from flask import current_app"),
         ("application/services/bad.py", "import sqlite3"),
         ("application/refresh_outcomes.py", "from json import load"),
@@ -150,7 +157,7 @@ def test_query_worker_startup_exception_remains_exact(tmp_path, addition):
         ),
         (
             "application/services/bad.py",
-            "from outage_explorer.entrypoints.http.auth_helpers import authenticated",
+            "from outage_explorer.entrypoints.http.transport.guards import authenticated",
         ),
         (
             "domain/policy.py",
@@ -426,9 +433,9 @@ def test_auth_routes_allow_only_inward_services_and_transport_helpers(tmp_path):
     root = source_tree(
         tmp_path,
         {
-            "entrypoints/http/routes/access.py": "from ....application.services.access import AccessService\nfrom ..auth_transport import AuthTransport",
-            "entrypoints/http/auth_transport.py": "import logging\nimport re\nfrom flask import request",
-            "entrypoints/http/errors.py": "from werkzeug.exceptions import HTTPException\nfrom ...application.errors import UnauthenticatedError",
+            "entrypoints/http/routes/access.py": "from ....application.services.access import AccessService\nfrom ..transport.auth import AuthTransport",
+            "entrypoints/http/transport/auth.py": "import logging\nimport re\nfrom flask import request",
+            "entrypoints/http/transport/errors.py": "from werkzeug.exceptions import HTTPException\nfrom ....application.errors import UnauthenticatedError",
             "infrastructure/security.py": "import hmac\nimport secrets\nimport hashlib",
             "infrastructure/cognito/identity.py": "import jwt\nimport httpx",
             "entrypoints/http/startup.py": STARTUP_SOURCE,
@@ -481,7 +488,7 @@ def test_query_decoder_exception_does_not_allow_network_or_broad_urllib(
     tmp_path, dependency
 ):
     root = source_tree(
-        tmp_path, {"entrypoints/http/data_schemas.py": f"import {dependency}"}
+        tmp_path, {"entrypoints/http/requests/data.py": f"import {dependency}"}
     )
     assert violations(root)
 
@@ -490,7 +497,7 @@ def test_query_decoder_may_decode_percent_bytes_only(tmp_path):
     root = source_tree(
         tmp_path,
         {
-            "entrypoints/http/data_schemas.py": "from urllib.parse import unquote_to_bytes"
+            "entrypoints/http/requests/data.py": "from urllib.parse import unquote_to_bytes"
         },
     )
     assert violations(root) == []

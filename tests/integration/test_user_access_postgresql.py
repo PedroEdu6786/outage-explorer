@@ -218,7 +218,7 @@ def test_sessions_reject_raw_tokens_and_invalid_expiry(store):
     user = store.find_user(PERSONAS[0].identity_issuer, "viewer")
     with pytest.raises(AccessStoreError):
         store.create_session("raw-token", user.id, NOW, NOW + timedelta(hours=1))
-    with pytest.raises(AccessStoreError):
+    with pytest.raises(AccessConfigurationError, match="Invalid session interval"):
         store.create_session("a" * 64, user.id, NOW, NOW)
 
 

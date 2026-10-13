@@ -17,7 +17,7 @@ from outage_explorer.application.services.login import LoginService
 from outage_explorer.bootstrap import build_http_app
 from outage_explorer.domain.access import Role
 from outage_explorer.entrypoints.http.app import create_app
-from outage_explorer.entrypoints.http.auth_transport import (
+from outage_explorer.entrypoints.http.transport.auth import (
     AuthTransport,
     CallbackLogFilter,
 )

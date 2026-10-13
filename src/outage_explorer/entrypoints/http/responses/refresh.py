@@ -4,7 +4,7 @@ from outage_explorer.application.refresh_responses import (
     RefreshAdmissionResult,
     RefreshRunResult,
 )
-from outage_explorer.entrypoints.http.responses import ResponseData
+from outage_explorer.entrypoints.http.responses.base import ResponseData
 
 
 class RefreshAdmissionResponse(RefreshAdmissionResult):

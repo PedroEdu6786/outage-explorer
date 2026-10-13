@@ -12,9 +12,20 @@ from outage_explorer.application.dto import (
     EstablishedSession,
     LoginRedirect,
 )
-from outage_explorer.entrypoints.http.auth_transport import AuthTransport
-from outage_explorer.entrypoints.http.responses import ResponseData
-from outage_explorer.entrypoints.http.schemas import identity_payload
+from outage_explorer.entrypoints.http.responses.base import ResponseData
+from outage_explorer.entrypoints.http.transport.auth import AuthTransport
+
+
+def identity_payload(identity: CurrentIdentity) -> dict[str, object]:
+    return {
+        "user": {
+            "id": identity.user.id,
+            "email": identity.user.email,
+            "role": identity.user.role.value,
+        },
+        "expires_at": identity.expires_at.isoformat(),
+        "csrf_token": identity.csrf_token,
+    }
 
 
 @dataclass(frozen=True)

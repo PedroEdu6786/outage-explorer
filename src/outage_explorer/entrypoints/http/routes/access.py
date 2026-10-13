@@ -7,27 +7,27 @@ from flask import Blueprint
 from outage_explorer.application.dto import CurrentIdentity
 from outage_explorer.application.services.access import AccessService
 from outage_explorer.application.services.login import LoginService
-from outage_explorer.entrypoints.http.access_responses import (
+from outage_explorer.entrypoints.http.requests.auth import (
+    CallbackQuery,
+    LoginQuery,
+    callback_query,
+    login_query,
+)
+from outage_explorer.entrypoints.http.requests.data import empty_request
+from outage_explorer.entrypoints.http.responses.access import (
     CallbackResponse,
     LoginResponse,
     LogoutResponse,
     SessionResponse,
     respond_with_auth,
 )
-from outage_explorer.entrypoints.http.auth_helpers import (
+from outage_explorer.entrypoints.http.responses.base import respond_with
+from outage_explorer.entrypoints.http.transport.auth import AuthTransport
+from outage_explorer.entrypoints.http.transport.guards import (
     authenticated,
     csrf_protected,
     logout_if_authenticated,
     validated_request,
-)
-from outage_explorer.entrypoints.http.auth_transport import AuthTransport
-from outage_explorer.entrypoints.http.data_schemas import empty_request
-from outage_explorer.entrypoints.http.responses import respond_with
-from outage_explorer.entrypoints.http.schemas import (
-    CallbackQuery,
-    LoginQuery,
-    callback_query,
-    login_query,
 )
 
 

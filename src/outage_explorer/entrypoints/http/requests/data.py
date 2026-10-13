@@ -10,7 +10,7 @@ from flask import request
 from outage_explorer.application.errors import InvalidRequestError
 from outage_explorer.application.preview_request import PreviewRequest
 from outage_explorer.application.refresh_request import RefreshAdmissionRequest
-from outage_explorer.entrypoints.http.query_requests import (
+from outage_explorer.entrypoints.http.requests.query import (
     QueryPageRequest,
     QuerySubmissionRequest,
 )

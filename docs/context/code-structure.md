@@ -21,7 +21,8 @@ ADRs and devlogs rather than in this directory guide.
 | `infrastructure/` | Concrete implementations of those interfaces. | PostgreSQL, Cognito, EIA, S3, Parquet, cache and worker runtime. |
 | `entrypoints/` | Translate HTTP, CLI and worker inputs/outputs. | Flask routes, command arguments and worker protocols. |
 | `bootstrap.py` | Construct dependencies and inject them at explicit startup. | Connect a use case to PostgreSQL/S3/worker adapters. |
-| `settings.py` | Read and validate startup configuration. | Environment values and enabled features. |
+| `configuration/` | Read and validate startup configuration by consumer. | Connector, artifact, S3, database, auth, refresh and analytical settings. |
+| `settings.py` | Preserve existing configuration imports while callers migrate. | Re-exports only; no validation or I/O. |
 
 Selected existing files and packages:
 
@@ -29,6 +30,7 @@ Selected existing files and packages:
 src/outage_explorer/
   bootstrap.py
   settings.py
+  configuration/             # focused startup settings and loaders
   domain/
     access.py                  # roles and access policy
     datasets.py                # public dataset contracts
@@ -67,11 +69,14 @@ src/outage_explorer/
   entrypoints/
     http/
       app.py                   # register injected services and routes
-      data_schemas.py          # data HTTP input/output handling
+      data_services.py         # injected HTTP service bundle
+      requests/                # auth, data and query decoding/validation
+      responses/               # shared and endpoint response DTOs
+      transport/               # guards, cookies, errors and preflight
       routes/                  # health, auth, datasets, queries, refresh, docs
       openapi.json             # packaged HTTP contract
       analytical_startup.py    # explicit analytical API startup
-    cli/                       # connector, setup and offline verification
+    cli/                       # connector, setup, offline verification and analytical CLI parsing
     refresh_worker.py          # independent refresh worker loop
     query_worker.py            # restricted analytical worker protocol
     refresh_worker_startup.py  # refresh process composition seam
@@ -82,6 +87,15 @@ Split an oversized module into a package **within its existing layer**. Related
 features can be grouped inside each layer. Create files only when behavior needs
 them; do not add a parallel `modules/<feature>/{domain,application}` hierarchy,
 generic CRUD framework or repository for every analytical row type.
+
+Within `entrypoints/http/`, `routes/` owns controllers, `requests/` owns
+decoding and request DTOs, `responses/` owns public response mapping, and
+`transport/` owns guards, browser cookies, errors and preflight. `app.py`,
+startup files and the injected `DataServices` bundle stay at the HTTP root.
+The analytical API's argument parser lives in
+`entrypoints/cli/analytical_command.py`; its process startup stays in HTTP.
+ADR-0092 relocates ADR-0076's exact request-model import allowances to the
+`requests/` package without widening them.
 
 For local Parquet restoration, `LocalConnectorEvidence` delegates to
 `ResourceRestorer` in `infrastructure/parquet/resource_restoration.py`.
@@ -101,6 +115,8 @@ Runtime calls through a port do not permit importing its concrete implementation
 | `application` | Domain; application services, DTOs, errors and ports. | Infrastructure, entrypoints, bootstrap and settings. |
 | `infrastructure` | Domain; application ports/DTOs/errors; cohesive infrastructure helpers. | Entrypoints, bootstrap and application service orchestration. |
 | `entrypoints` handlers | Application services/DTOs/errors; entrypoint schemas/helpers. | Concrete infrastructure, direct domain policy execution and runtime wiring. |
+| `configuration` | Other focused configuration modules. | Application, infrastructure, entrypoints and bootstrap. |
+| `settings.py` | Focused configuration modules for compatibility imports. | Validation logic and process I/O. |
 | `bootstrap` | All layers and settings, for construction and injection. | Business rules and request orchestration. |
 
 Database drivers, SDKs, engine calls and file/network I/O belong in infrastructure.
@@ -290,7 +306,7 @@ controller refactors; existing legacy route code is not a precedent.
 
 Use `@respond_with(ResponseDto)` inside authorization and request-validation
 guards. The handler returns its service result. The generic decorator in
-`entrypoints/http/responses.py` passes it to `ResponseDto.from_result`, calls
+`entrypoints/http/responses/base.py` passes it to `ResponseDto.from_result`, calls
 `build()` for `ResponseData`, and serializes the body, status (default `200`)
 and optional headers. Exceptions reach existing error handlers; transport
 finalization still applies shared security and CORS headers. This contract is
@@ -298,7 +314,7 @@ for JSON endpoints; redirects, streaming and bodyless responses retain their
 existing transport handling.
 
 Refresh uses `RefreshAdmissionResponse`, `RefreshLatestResponse` and
-`RefreshStatusResponse` in `entrypoints/http/refresh_responses.py`. These DTOs
+`RefreshStatusResponse` in `entrypoints/http/responses/refresh.py`. These DTOs
 specify public envelopes, status codes, headers and missing-run responses without
 constructing Flask responses. Application result bases in
 `application/refresh_responses.py` map runs to public data without Flask.
@@ -402,7 +418,9 @@ Read-path acceptance is defined in the [pilot specification](../specs/refresh-ru
 
 
 Auth and query request DTOs also use narrowly allowed Pydantic APIs in the HTTP
-layer under [ADR-0076](../adr/0076-auth-and-query-transport-request-models.md).
+layer under [ADR-0076](../adr/0076-auth-and-query-transport-request-models.md),
+with request module locations updated by
+[ADR-0092](../adr/0092-group-http-transport-by-responsibility.md).
 Query services retain their existing scalar arguments and fresh authorization.
 Catalog uses a typed `CatalogResult` with `CatalogResponse` to build its public
 dataset envelope. Preview/query public payloads use `JsonPayloadResponse`; auth

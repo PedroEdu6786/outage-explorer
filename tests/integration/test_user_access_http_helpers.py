@@ -9,14 +9,14 @@ from flask import Flask, Response
 from outage_explorer.application.errors import ForbiddenError, UnauthenticatedError
 from outage_explorer.application.services.access import AccessService
 from outage_explorer.domain.access import AccessOperation, AnalyticalGrain, Role
-from outage_explorer.entrypoints.http.auth_helpers import (
+from outage_explorer.entrypoints.http.requests.auth import json_object, query_fields
+from outage_explorer.entrypoints.http.transport.auth import AuthTransport
+from outage_explorer.entrypoints.http.transport.errors import error_response
+from outage_explorer.entrypoints.http.transport.guards import (
     authenticated,
     csrf_protected,
     validated_request,
 )
-from outage_explorer.entrypoints.http.auth_transport import AuthTransport
-from outage_explorer.entrypoints.http.errors import error_response
-from outage_explorer.entrypoints.http.schemas import json_object, query_fields
 from outage_explorer.infrastructure.security import RandomSecurityMaterial
 from tests.unit.test_user_access_sessions import Clock, Store
 

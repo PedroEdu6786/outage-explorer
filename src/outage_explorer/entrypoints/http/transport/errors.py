@@ -8,7 +8,7 @@ from outage_explorer.application.errors import (
     InvalidRequestError,
     UnauthenticatedError,
 )
-from outage_explorer.entrypoints.http.auth_transport import AuthTransport
+from outage_explorer.entrypoints.http.transport.auth import AuthTransport
 
 
 def error_response(error: Exception, *, login: bool = False) -> Response:

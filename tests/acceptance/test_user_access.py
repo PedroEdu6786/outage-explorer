@@ -12,8 +12,8 @@ from outage_explorer.application.errors import (
     UnauthenticatedError,
 )
 from outage_explorer.domain.access import AccessOperation, AnalyticalGrain, Role
-from outage_explorer.entrypoints.http.auth_helpers import authenticated
-from outage_explorer.entrypoints.http.auth_transport import AuthTransport
+from outage_explorer.entrypoints.http.transport.auth import AuthTransport
+from outage_explorer.entrypoints.http.transport.guards import authenticated
 
 pytestmark = pytest.mark.acceptance
 

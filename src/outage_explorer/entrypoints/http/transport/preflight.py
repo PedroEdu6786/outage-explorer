@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from flask import Flask, Response, request
 
-from outage_explorer.entrypoints.http.auth_transport import AuthTransport
+from outage_explorer.entrypoints.http.transport.auth import AuthTransport
 
 
 @dataclass(frozen=True)

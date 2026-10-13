@@ -12,7 +12,7 @@ import pytest
 from outage_explorer.application.errors import RuntimeUnavailableError
 from outage_explorer.bootstrap import build_analytical_resources
 from outage_explorer.domain.datasets import PUBLIC_DATASETS
-from outage_explorer.entrypoints.http.analytical_command import run
+from outage_explorer.entrypoints.cli.analytical_command import run
 from outage_explorer.infrastructure.query_results.previews import (
     BoundedPreviewSequences,
     PreviewBounds,

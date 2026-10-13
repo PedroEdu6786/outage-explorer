@@ -9,8 +9,8 @@ import pytest
 from outage_explorer.application.pagination.query_results import QueryResultPager
 from outage_explorer.application.services.queries import QueryService
 from outage_explorer.entrypoints.http.app import create_app
-from outage_explorer.entrypoints.http.auth_transport import AuthTransport
 from outage_explorer.entrypoints.http.data_services import DataServices
+from outage_explorer.entrypoints.http.transport.auth import AuthTransport
 from outage_explorer.infrastructure.query_results.store import BoundedQueryResults
 from outage_explorer.infrastructure.sql_validation.inspection import DuckdbSqlInspector
 from outage_explorer.infrastructure.worker_runtime.configuration import RuntimeProfile

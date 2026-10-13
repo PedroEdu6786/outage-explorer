@@ -3,20 +3,20 @@ from flask import Flask, Response, request
 from outage_explorer.application.services.access import AccessService
 from outage_explorer.application.services.health import HealthService
 from outage_explorer.application.services.login import LoginService
-from outage_explorer.entrypoints.http.auth_transport import AuthTransport
-from outage_explorer.entrypoints.http.data_schemas import MAX_BODY_BYTES
 from outage_explorer.entrypoints.http.data_services import DataServices
-from outage_explorer.entrypoints.http.errors import register_error_handlers
-from outage_explorer.entrypoints.http.preflight import (
-    PREFLIGHT_POLICIES,
-    register_preflight_handler,
-)
+from outage_explorer.entrypoints.http.requests.data import MAX_BODY_BYTES
 from outage_explorer.entrypoints.http.routes.access import create_access_blueprint
 from outage_explorer.entrypoints.http.routes.datasets import create_datasets_blueprint
 from outage_explorer.entrypoints.http.routes.documentation import register_documentation
 from outage_explorer.entrypoints.http.routes.health import create_health_blueprint
 from outage_explorer.entrypoints.http.routes.queries import create_queries_blueprint
 from outage_explorer.entrypoints.http.routes.refresh import create_refresh_blueprint
+from outage_explorer.entrypoints.http.transport.auth import AuthTransport
+from outage_explorer.entrypoints.http.transport.errors import register_error_handlers
+from outage_explorer.entrypoints.http.transport.preflight import (
+    PREFLIGHT_POLICIES,
+    register_preflight_handler,
+)
 
 
 def create_app(

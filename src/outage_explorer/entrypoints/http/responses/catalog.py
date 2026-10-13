@@ -7,7 +7,7 @@ from outage_explorer.application.catalog_responses import (
     CatalogDatasetResult,
     CatalogResult,
 )
-from outage_explorer.entrypoints.http.responses import ResponseData
+from outage_explorer.entrypoints.http.responses.base import ResponseData
 
 
 @dataclass(frozen=True)

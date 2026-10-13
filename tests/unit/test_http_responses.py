@@ -4,7 +4,7 @@ from typing import Self
 import pytest
 from flask import Flask
 
-from outage_explorer.entrypoints.http.responses import ResponseData, respond_with
+from outage_explorer.entrypoints.http.responses.base import ResponseData, respond_with
 
 
 @dataclass

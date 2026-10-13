@@ -42,12 +42,6 @@ def verify_approved_file(file: ApprovedFile, dataset: Dataset) -> None:
         raise DataUnavailableError("Approved input file integrity mismatch")
 
 
-def _literal(path: str) -> str:
-    if "\x00" in path:
-        raise DataUnavailableError("Invalid approved input path")
-    return "'" + path.replace("'", "''") + "'"
-
-
 def open_restricted(
     bounds: ExecutionBounds,
     relations: Sequence[tuple[str, Dataset, Sequence[ApprovedFile]]],
@@ -70,9 +64,9 @@ def open_restricted(
         }
     )
     try:
-        connection.execute(
-            "SET allowed_paths = [" + ",".join(_literal(p) for p in paths) + "]"
-        )
+        if any("\x00" in path for path in paths):
+            raise DataUnavailableError("Invalid approved input path")
+        connection.execute("SET allowed_paths = ?", [paths])
         for name, dataset, approved in relations:
             connection.read_parquet([file.path for file in approved]).project(
                 ", ".join(f'"{column.name}"' for column in dataset.columns)
