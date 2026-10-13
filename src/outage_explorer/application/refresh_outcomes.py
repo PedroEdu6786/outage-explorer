@@ -15,9 +15,10 @@ from outage_explorer.application.ports.artifacts import (
     ArtifactLimitError,
     RepresentationError,
 )
-from outage_explorer.application.ports.source import ROUTES
+from outage_explorer.application.ports.candidates import GrainSummary
+from outage_explorer.application.ports.source import ROUTES, SourceQuality
 from outage_explorer.domain.observations import Grain
-from outage_explorer.domain.refresh import RefreshInputError, RefreshLimitError
+from outage_explorer.domain.refresh import Quality, RefreshInputError, RefreshLimitError
 
 
 def safe_failure(error: Exception) -> ConnectorFailure:
@@ -34,6 +35,67 @@ def safe_failure(error: Exception) -> ConnectorFailure:
     return "internal"
 
 
+def _require_consistent_counts(
+    quality: Quality | None, source: SourceQuality | None
+) -> None:
+    if quality is None:
+        return
+    dispositions = (
+        quality.selected + quality.excluded + quality.duplicate + quality.superseded
+    )
+    if quality.received != dispositions:
+        raise ArtifactError("Disposition conservation failed")
+    if source is not None and quality.received != source.received:
+        raise ArtifactError("Source and model counts differ")
+
+
+def _exclusion_reasons(quality: Quality | None) -> dict[str, int] | None:
+    if quality is None:
+        return None
+    reasons: Counter[str] = Counter()
+    for reason, count in quality.reason_counts:
+        reasons[reason.code] += count
+    return dict(reasons)
+
+
+def _coverage_payload(
+    grain: Grain, coverage: Mapping[Grain, tuple[date, date]] | None
+) -> dict[str, str] | None:
+    if coverage is None or grain not in coverage:
+        return None
+    start, end = coverage[grain]
+    return {"start_date": start.isoformat(), "end_date": end.isoformat()}
+
+
+def _dataset_payload(
+    grain: Grain,
+    model: GrainSummary | None,
+    source: SourceQuality | None,
+    coverage: Mapping[Grain, tuple[date, date]] | None,
+) -> dict[str, object]:
+    quality = None if model is None else model.quality
+    _require_consistent_counts(quality, source)
+    return {
+        "dataset": grain,
+        "coverage": _coverage_payload(grain, coverage),
+        "received": None if source is None else source.received,
+        "selected": None if quality is None else quality.selected,
+        "excluded": None if quality is None else quality.excluded,
+        "duplicate": None if quality is None else quality.duplicate,
+        "superseded": None if quality is None else quality.superseded,
+        "exclusion_reasons": _exclusion_reasons(quality),
+        "retained_invalid": None if model is None else model.retained_invalid,
+        "retained_absent": None if model is None else model.retained_absent,
+        "carried_outside_interval": None
+        if model is None
+        else model.carried_outside_interval,
+        "output": None if model is None else model.candidate_count,
+        "observed_entities": None if model is None else model.observed_entities,
+        "observed_dates": None if model is None else model.observed_dates,
+        "usable_dates": None if model is None else model.usable_dates,
+    }
+
+
 def quality_json(
     report: ResourceReport,
     coverage: Mapping[Grain, tuple[date, date]] | None = None,
@@ -41,50 +103,10 @@ def quality_json(
     summaries = () if report.candidate is None else report.candidate.summaries
     models = {item.grain: item for item in summaries}
     sources = {item.grain: item for item in report.sources}
-    datasets: list[dict[str, object]] = []
-    for grain in ROUTES:
-        model, source = models.get(grain), sources.get(grain)
-        quality = None if model is None else model.quality
-        if quality is not None and quality.received != (
-            quality.selected + quality.excluded + quality.duplicate + quality.superseded
-        ):
-            raise ArtifactError("Disposition conservation failed")
-        if (
-            quality is not None
-            and source is not None
-            and quality.received != source.received
-        ):
-            raise ArtifactError("Source and model counts differ")
-        reasons: Counter[str] = Counter()
-        if quality is not None:
-            for reason, count in quality.reason_counts:
-                reasons[reason.code] += count
-        datasets.append(
-            {
-                "dataset": grain,
-                "coverage": None
-                if coverage is None or grain not in coverage
-                else {
-                    "start_date": coverage[grain][0].isoformat(),
-                    "end_date": coverage[grain][1].isoformat(),
-                },
-                "received": None if source is None else source.received,
-                "selected": None if quality is None else quality.selected,
-                "excluded": None if quality is None else quality.excluded,
-                "duplicate": None if quality is None else quality.duplicate,
-                "superseded": None if quality is None else quality.superseded,
-                "exclusion_reasons": None if quality is None else dict(reasons),
-                "retained_invalid": None if model is None else model.retained_invalid,
-                "retained_absent": None if model is None else model.retained_absent,
-                "carried_outside_interval": None
-                if model is None
-                else model.carried_outside_interval,
-                "output": None if model is None else model.candidate_count,
-                "observed_entities": None if model is None else model.observed_entities,
-                "observed_dates": None if model is None else model.observed_dates,
-                "usable_dates": None if model is None else model.usable_dates,
-            }
-        )
+    datasets = [
+        _dataset_payload(grain, models.get(grain), sources.get(grain), coverage)
+        for grain in ROUTES
+    ]
     result = dumps({"datasets": datasets}, separators=(",", ":"), sort_keys=True)
     if len(result.encode()) > 65536:
         raise ArtifactLimitError("Refresh quality report bound exceeded")
