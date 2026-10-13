@@ -1,122 +1,24 @@
-"""Decode bounded query schemas and cell values from worker responses."""
+"""Decode bounded cell and row values from worker responses."""
 
 import base64
 import math
 import re
 from datetime import date, datetime, time
 from decimal import Decimal
-from typing import cast
 
 from outage_explorer.domain.datasets import Column, ValueType
 from outage_explorer.infrastructure.query_results.encoding import (
     canonical_json,
     encode_cell,
-    type_descriptor,
 )
 from outage_explorer.infrastructure.worker_runtime.configuration import RuntimeProfile
-from outage_explorer.infrastructure.worker_runtime.transport_validation import (
-    _Invalid,
-    _object,
-)
+from outage_explorer.infrastructure.worker_runtime.transport_validation import _Invalid
 
 
 class ValueDecoder:
     def __init__(self, profile: RuntimeProfile) -> None:
         self.profile = profile
         self.bounds = profile.encoding_bounds
-
-    def _type(self, value: dict[str, object], depth: int = 0) -> ValueType:
-        if depth > self.bounds.max_depth:
-            raise _Invalid()
-        kind = value.get("type")
-        if not isinstance(kind, str):
-            raise _Invalid()
-        fields = {"type", "encoding"}
-        precision = scale = None
-        children: tuple[tuple[str, ValueType], ...] = ()
-        if kind == "decimal":
-            fields |= {"precision", "scale"}
-            precision, scale = value.get("precision"), value.get("scale")
-            if (
-                type(precision) is not int
-                or type(scale) is not int
-                or not 0 <= scale <= precision <= 38
-            ):
-                raise _Invalid()
-        if kind in {"list", "map", "struct"}:
-            values = value.get("children", [])
-            if (
-                not isinstance(values, list)
-                or len(values) > self.bounds.max_nested_items
-            ):
-                raise _Invalid()
-            if values:
-                fields.add("children")
-            parsed = []
-            for child in values:
-                if not isinstance(child, dict) or not isinstance(
-                    child.get("name"), str
-                ):
-                    raise _Invalid()
-                parsed.append(
-                    (
-                        child["name"],
-                        self._type(
-                            {k: v for k, v in child.items() if k != "name"}, depth + 1
-                        ),
-                    )
-                )
-            children = tuple(parsed)
-            if (
-                kind == "list"
-                and len(children) != 1
-                or kind == "map"
-                and len(children) != 2
-            ):
-                raise _Invalid()
-            if kind == "struct" and len({n for n, _ in children}) != len(children):
-                raise _Invalid()
-        _object(value, fields)
-        result = ValueType(
-            kind, cast(int | None, precision), cast(int | None, scale), children
-        )
-        if value != type_descriptor(result):
-            raise _Invalid()
-        return result
-
-    def _columns(self, value: object) -> tuple[Column, ...]:
-        if (
-            not isinstance(value, list)
-            or len(value) > self.bounds.max_columns
-            or len(canonical_json(value)) > self.bounds.max_schema_bytes
-        ):
-            raise _Invalid()
-        columns = []
-        for index, raw in enumerate(value):
-            if (
-                not isinstance(raw, dict)
-                or type(raw.get("index")) is not int
-                or raw["index"] != index
-                or not isinstance(raw.get("name"), str)
-            ):
-                raise _Invalid()
-            if (
-                not {"nullable", "unit"} <= set(raw)
-                or raw["nullable"] is not None
-                and type(raw["nullable"]) is not bool
-                or raw["unit"] is not None
-                and not isinstance(raw["unit"], str)
-            ):
-                raise _Invalid()
-            kind = self._type(
-                {
-                    k: v
-                    for k, v in raw.items()
-                    if k not in {"index", "name", "nullable", "unit"}
-                }
-            )
-            columns.append(Column(raw["name"], kind, raw["nullable"], raw["unit"]))
-        return tuple(columns)
 
     def _cell(self, value: object, kind: ValueType, depth: int = 0) -> object:
         if (

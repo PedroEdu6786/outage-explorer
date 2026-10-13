@@ -25,6 +25,7 @@ from outage_explorer.infrastructure.query_results.encoding import (
 from outage_explorer.infrastructure.worker_runtime.configuration import (
     WORKER_PROTOCOL_VERSION,
 )
+from outage_explorer.infrastructure.worker_runtime.transport_schema import SchemaDecoder
 from outage_explorer.infrastructure.worker_runtime.transport_validation import (
     _Invalid,
     _object,
@@ -186,7 +187,7 @@ class ResponseDecoder(ValueDecoder):
                 "limits",
             },
         )
-        columns = self._columns(result["columns"])
+        columns = SchemaDecoder(self.profile).columns(result["columns"])
         rows = self._rows(result["rows"], columns, 1000)
         count, reason = result["retained_row_count"], result["truncation_reason"]
         limits = _object(result["limits"], {"max_rows", "max_bytes"})

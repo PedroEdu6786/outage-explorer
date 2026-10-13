@@ -24,21 +24,21 @@ def validate_native_daemon(profile: RuntimeProfile, raw: bytes) -> None:
         endpoint = Path(profile.daemon_endpoint.removeprefix("unix://"))
         info = endpoint.stat()
         architecture = {"x86_64": "amd64", "aarch64": "arm64"}[platform.machine()]
+        expected_facts = {
+            "version": profile.daemon_version,
+            "os": "linux",
+            "kernel": platform.release(),
+            "name": socket.gethostname(),
+            "architecture": platform.machine(),
+        }
         if (
             platform.system() != "Linux"
             or str(endpoint.resolve()) != "/run/docker.sock"
-            or not stat.S_ISSOCK(info.st_mode)
-            or info.st_uid != 0
-            or value
-            != {
-                "version": profile.daemon_version,
-                "os": "linux",
-                "kernel": platform.release(),
-                "name": socket.gethostname(),
-                "architecture": platform.machine(),
-            }
-            or profile.platform != "linux/" + architecture
         ):
+            raise ValueError()
+        if not stat.S_ISSOCK(info.st_mode) or info.st_uid != 0:
+            raise ValueError()
+        if value != expected_facts or profile.platform != "linux/" + architecture:
             raise ValueError()
     except (OSError, ValueError, TypeError, KeyError):
         raise RuntimeUnavailableError("Native analytical daemon unavailable") from None
@@ -85,14 +85,14 @@ def _mount(root: Path) -> tuple[str, ...]:
             raise ValueError("Nested spill mount")
         if mountpoint == str(root):
             options = set(fields[5].split(","))
-            if (
-                fields[3] != "/"
-                or filesystem[0] != "ext4"
-                or not filesystem[1].startswith("/dev/")
-                or not {"rw", "noexec", "nosuid", "nodev"} <= options
-                or "ro" in options
-                or "rw" not in filesystem[2].split(",")
-            ):
+            if fields[3] != "/" or filesystem[0] != "ext4":
+                raise ValueError("Unsupported spill filesystem")
+            if not filesystem[1].startswith("/dev/"):
+                raise ValueError("Unsupported spill filesystem")
+            required_options = {"rw", "noexec", "nosuid", "nodev"}
+            if not required_options <= options or "ro" in options:
+                raise ValueError("Unsupported spill filesystem")
+            if "rw" not in filesystem[2].split(","):
                 raise ValueError("Unsupported spill filesystem")
             matches.append((fields[0], fields[2], filesystem[1]))
     if len(matches) != 1:
@@ -131,8 +131,9 @@ class DiskSpill:
             or p.temporary_backend != "quota-disk"
             or os.getuid() != p.uid
             or os.getgid() != p.gid
-            or any(c in str(self.root) for c in (",", "\\", " ", "\n", "\t"))
         ):
+            raise RuntimeUnavailableError("Analytical spill host unavailable")
+        if any(char in str(self.root) for char in (",", "\\", " ", "\n", "\t")):
             raise RuntimeUnavailableError("Analytical spill host unavailable")
         fd = _open_directory(self.root)
         try:
@@ -143,21 +144,29 @@ class DiskSpill:
                 f"{os.major(info.st_dev)}:{os.minor(info.st_dev)}:{capacity.f_fsid}"
             )
             capacity_identity = (capacity.f_blocks, capacity.f_frsize, capacity.f_files)
+            capacity_bytes = capacity.f_blocks * capacity.f_frsize
             if (
                 info.st_uid != p.uid
                 or info.st_gid != p.gid
                 or stat.S_IMODE(info.st_mode) != 0o700
-                or filesystem_identity != p.temporary_filesystem_identity
-                or not 0
-                < capacity.f_blocks * capacity.f_frsize
-                <= p.worker.temporary_bytes
+            ):
+                raise ValueError()
+            if (
+                filesystem_identity != p.temporary_filesystem_identity
+                or not 0 < capacity_bytes <= p.worker.temporary_bytes
                 or not 0 < capacity.f_files <= p.temporary_inodes
                 or capacity.f_flag & os.ST_RDONLY
-                or self._identity is not None
-                and identity != self._identity
-                or self._mount_identity is not None
+            ):
+                raise ValueError()
+            if self._identity is not None and identity != self._identity:
+                raise ValueError()
+            if (
+                self._mount_identity is not None
                 and mount_identity != self._mount_identity
-                or self._capacity_identity is not None
+            ):
+                raise ValueError()
+            if (
+                self._capacity_identity is not None
                 and capacity_identity != self._capacity_identity
             ):
                 raise ValueError()
@@ -217,9 +226,12 @@ class DiskSpill:
             not stat.S_ISDIR(info.st_mode)
             or info.st_uid != self.profile.uid
             or info.st_gid != self.profile.gid
-            or self._identity is None
-            or info.st_dev != self._identity[0]
-            or self._directory_identity is not None
+        ):
+            raise RuntimeUnavailableError("Analytical spill identity changed")
+        if self._identity is None or info.st_dev != self._identity[0]:
+            raise RuntimeUnavailableError("Analytical spill identity changed")
+        if (
+            self._directory_identity is not None
             and identity != self._directory_identity
         ):
             raise RuntimeUnavailableError("Analytical spill identity changed")
