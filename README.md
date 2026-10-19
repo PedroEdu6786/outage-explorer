@@ -102,6 +102,13 @@ See the [architecture overview](docs/context/architecture.md),
 
 ## Findings and engineering notes
 
+For a module-by-module interview walkthrough, open the
+[backend guide](study-guide/code-map/index.html) or
+[frontend guide](study-guide/code-map/frontend.html) in a browser. Both include
+clickable flows, actual source excerpts and VS Code file/line links. The frontend
+guide covers Atomic Design and each main page, with local Storybook demos. See
+[usage and rebuilding](study-guide/code-map/README.md) to refresh its offline snapshots.
+
 [Reconciliation](docs/challenge/reconciliation.md) covers a 30-day baseline plus
 historical samples: **182 sampled dates and 11,182 facility/day groups**.
 It includes seven analytical discussion points and offline reproduction commands.

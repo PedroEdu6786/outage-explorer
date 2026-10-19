@@ -1,0 +1,210 @@
+{
+  "module": {
+    "id": "frontend-queries",
+    "label": "SQL Workspace",
+    "source": "frontend",
+    "status": "Source linked"
+  },
+  "presentation": {
+    "route": "/query",
+    "audience": "Analyst · Admin",
+    "pitch": "A page for writing a SQL query, running it and viewing the results.",
+    "focus": [
+      "Point out the schema browser and SQL editor.",
+      "Run the example and show the status and results table."
+    ],
+    "stories": [
+      {
+        "id": "pages-query--ready",
+        "label": "SQL Workspace page",
+        "detail": "See the editor beside the schema browser."
+      },
+      {
+        "id": "features-queries--results-and-duplicates",
+        "label": "Query results",
+        "detail": "Show the result table after running the example."
+      }
+    ],
+    "storyNote": ""
+  },
+  "nodes": {
+    "page": {
+      "file": "src/app/(protected)/query/page.tsx",
+      "symbol": "QueryPage",
+      "layer": "Page",
+      "title": "SQL Workspace page",
+      "summary": "The entry point for the query screen.",
+      "talk": [
+        "The entry point for the query screen."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "feature": {
+      "file": "src/features/queries/QueriesFeature.tsx",
+      "symbol": "QueriesFeature",
+      "layer": "Feature",
+      "title": "SQL Workspace",
+      "summary": "Combines dataset information, a query editor and results.",
+      "talk": [
+        "Combines dataset information, a query editor and results."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "editor": {
+      "file": "src/features/queries/SqlEditorPanel.tsx",
+      "symbol": "SqlEditorPanel",
+      "layer": "Feature",
+      "title": "SQL editor",
+      "summary": "Lets the user write or edit SQL and choose Run.",
+      "talk": [
+        "Lets the user write or edit SQL and choose Run."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "results": {
+      "file": "src/features/queries/QueryResults.tsx",
+      "symbol": "QueryResults",
+      "layer": "Feature",
+      "title": "Results table",
+      "summary": "Displays the returned rows with page controls.",
+      "talk": [
+        "Displays the returned rows with page controls."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "schema": {
+      "file": "src/features/queries/SchemaBrowser.tsx",
+      "symbol": "SchemaBrowser",
+      "layer": "Feature",
+      "title": "Schema browser",
+      "summary": "Lists datasets and columns to help the user write a query.",
+      "talk": [
+        "Lists datasets and columns to help the user write a query."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "status": {
+      "file": "src/features/queries/QueryStatus.tsx",
+      "symbol": "QueryStatus",
+      "layer": "Feature",
+      "title": "Query status",
+      "summary": "Shows whether the query is running, completed or needs attention.",
+      "talk": [
+        "Shows whether the query is running, completed or needs attention."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    }
+  },
+  "flows": [
+    {
+      "id": "high-level",
+      "title": "Page & components",
+      "endpoint": "Frontend / /query",
+      "lead": "A page for writing a SQL query, running it and viewing the results.",
+      "heading": "What is on this page?",
+      "layout": "conceptual",
+      "componentOverview": true,
+      "group": "Start here",
+      "nodes": [],
+      "edges": [],
+      "lanes": [
+        {
+          "title": "Main page and components",
+          "caption": "Each card describes a visible part of the screen. Click a card to see its component code.",
+          "view": "overview",
+          "steps": [
+            {
+              "actor": "Page",
+              "title": "SQL Workspace",
+              "text": "Combines dataset information, a query editor and results.",
+              "code": {
+                "module": "frontend-queries",
+                "view": "overview",
+                "node": "feature"
+              }
+            },
+            {
+              "actor": "Component",
+              "title": "SQL editor",
+              "text": "Lets the user write or edit SQL and choose Run.",
+              "code": {
+                "module": "frontend-queries",
+                "view": "overview",
+                "node": "editor"
+              }
+            },
+            {
+              "actor": "Component",
+              "title": "Results table",
+              "text": "Displays the returned rows with page controls.",
+              "code": {
+                "module": "frontend-queries",
+                "view": "overview",
+                "node": "results"
+              }
+            },
+            {
+              "actor": "Component",
+              "title": "Schema browser",
+              "text": "Lists datasets and columns to help the user write a query.",
+              "code": {
+                "module": "frontend-queries",
+                "view": "overview",
+                "node": "schema"
+              }
+            },
+            {
+              "actor": "Component",
+              "title": "Query status",
+              "text": "Shows whether the query is running, completed or needs attention.",
+              "code": {
+                "module": "frontend-queries",
+                "view": "overview",
+                "node": "status"
+              }
+            }
+          ]
+        }
+      ],
+      "boundaries": [
+        [
+          "What to explain",
+          "Use the schema to understand the data, write a query in the editor, then inspect its results."
+        ]
+      ],
+      "note": "",
+      "outcomes": []
+    },
+    {
+      "id": "overview",
+      "title": "Component code",
+      "endpoint": "/query",
+      "lead": "Optional: open the page or one of its visible components.",
+      "group": "Examples",
+      "layout": "catalog",
+      "nodes": [
+        "page",
+        "feature",
+        "editor",
+        "results",
+        "schema",
+        "status"
+      ],
+      "edges": [],
+      "note": "These are the page and UI components shown in the overview.",
+      "outcomes": []
+    }
+  ]
+}

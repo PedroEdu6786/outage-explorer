@@ -1,0 +1,543 @@
+{
+  "module": {
+    "id": "refresh-worker",
+    "label": "Refresh worker",
+    "status": "Demo walkthrough"
+  },
+  "nodes": {
+    "startup": {
+      "file": "src/outage_explorer/bootstrap.py",
+      "symbol": "build_refresh_worker",
+      "title": "Compose the process",
+      "summary": "Build dedicated worker dependencies and per-run connector composition at explicit startup.",
+      "talk": [
+        "Build dedicated worker dependencies and per-run connector composition at explicit startup."
+      ],
+      "layer": "Composition",
+      "types": [],
+      "links": [],
+      "views": [
+        "startup"
+      ]
+    },
+    "process": {
+      "file": "src/outage_explorer/infrastructure/refresh_worker.py",
+      "symbol": "SupervisedRefreshProcess.run",
+      "title": "Poll independently",
+      "summary": "A supervised loop invokes tick, handles ownership/store uncertainty and observes stop signals.",
+      "talk": [
+        "A supervised loop invokes tick, handles ownership/store uncertainty and observes stop signals."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [
+        "close"
+      ],
+      "views": []
+    },
+    "tick": {
+      "file": "src/outage_explorer/application/services/refresh_execution.py",
+      "symbol": "RefreshWorker.tick",
+      "title": "Recover, then claim",
+      "summary": "Reconcile nonterminal work, claim a run, enter the renewable lease and execute.",
+      "talk": [
+        "Reconcile nonterminal work, claim a run, enter the renewable lease and execute."
+      ],
+      "layer": "Application",
+      "types": [
+        "owner"
+      ],
+      "links": [],
+      "views": [
+        "claim",
+        "recovery"
+      ],
+      "handoffs": [
+        {
+          "module": "refresh-http",
+          "view": "admission",
+          "label": "Return to admission"
+        }
+      ]
+    },
+    "recovery": {
+      "file": "src/outage_explorer/application/services/refresh_recovery.py",
+      "symbol": "RefreshRecovery.execute",
+      "title": "Reconcile durable outcome",
+      "summary": "Delegate to the store to determine publication outcome before permitting replacement work.",
+      "talk": [
+        "Delegate to the store to determine publication outcome before permitting replacement work."
+      ],
+      "layer": "Application",
+      "types": [],
+      "links": [
+        "recoverStore"
+      ],
+      "views": []
+    },
+    "recoverStore": {
+      "file": "src/outage_explorer/infrastructure/postgresql/publication.py",
+      "symbol": "PostgresqlResourcePublicationStore.recover",
+      "title": "Recover lost work",
+      "summary": "Coordinate recovery through the publication store.",
+      "talk": [
+        "Coordinate recovery through the publication store."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [
+        "reconcile"
+      ],
+      "views": []
+    },
+    "reconcile": {
+      "file": "src/outage_explorer/infrastructure/postgresql/publication.py",
+      "symbol": "PostgresqlResourcePublicationStore._reconcile",
+      "title": "Inspect publication history",
+      "summary": "Resolve committed publication before declaring unpublished lost work interrupted.",
+      "talk": [
+        "A healthy lease prevents an ordinary recovery pass from interrupting its owner. Unpublished interrupted runs need explicit Admin retry."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [
+        "releaseOwner"
+      ],
+      "views": []
+    },
+    "claim": {
+      "file": "src/outage_explorer/infrastructure/postgresql/publication.py",
+      "symbol": "PostgresqlResourcePublicationStore.claim",
+      "title": "Commit a fenced claim",
+      "summary": "Claim accepted work with an owner identity, epoch and bounded lease.",
+      "talk": [
+        "Claim accepted work with an owner identity, epoch and bounded lease."
+      ],
+      "layer": "Infrastructure",
+      "types": [
+        "owner"
+      ],
+      "links": [],
+      "views": []
+    },
+    "lease": {
+      "file": "src/outage_explorer/infrastructure/refresh_worker.py",
+      "symbol": "RenewableRefreshLease.__call__",
+      "title": "Renew alongside execution",
+      "summary": "A background thread periodically extends the worker\u2019s temporary ownership while the main thread processes the refresh.",
+      "talk": [
+        "The current constructor defaults to a heartbeat every 10 seconds and a 60-second lease. These are code defaults, not measured runtime settings.",
+        "Renewal runs separately so a long retrieval or modeling step does not prevent heartbeats.",
+        "A renewal error is saved and raised by the pipeline\u2019s ownership checks. Publication independently requires a matching live owner.",
+        "When execution leaves the lease context, it stops and joins the renewal thread."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [
+        "heartbeat",
+        "check"
+      ],
+      "views": []
+    },
+    "heartbeat": {
+      "file": "src/outage_explorer/infrastructure/postgresql/publication.py",
+      "symbol": "PostgresqlResourcePublicationStore.heartbeat",
+      "title": "Renew ownership",
+      "summary": "Check the live owner fence and extend its lease using database time.",
+      "talk": [
+        "Check the live owner fence and extend its lease using database time."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "check": {
+      "file": "src/outage_explorer/infrastructure/refresh_worker.py",
+      "symbol": "RenewableRefreshLease.check",
+      "title": "Surface lost renewal",
+      "summary": "Propagate a failed renewal to the per-run connector checks.",
+      "talk": [
+        "Propagate a failed renewal to the per-run connector checks."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "execute": {
+      "file": "src/outage_explorer/application/services/refresh_execution.py",
+      "symbol": "RefreshExecution.execute",
+      "title": "Execute committed work",
+      "summary": "Validate the claim and frozen run before source or baseline work.",
+      "talk": [
+        "Validate the claim and frozen run before source or baseline work."
+      ],
+      "layer": "Application",
+      "types": [],
+      "links": [],
+      "views": [],
+      "handoffs": [
+        {
+          "module": "refresh-execution",
+          "view": "pipeline",
+          "label": "Follow the refresh pipeline"
+        }
+      ]
+    },
+    "close": {
+      "file": "src/outage_explorer/infrastructure/refresh_worker.py",
+      "symbol": "SupervisedRefreshProcess.close",
+      "title": "Close owned dependencies",
+      "summary": "Stop polling and close explicitly constructed resources once.",
+      "talk": [
+        "Stop polling and close explicitly constructed resources once."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "owner": {
+      "file": "src/outage_explorer/domain/publication.py",
+      "symbol": "RefreshOwner",
+      "title": "RefreshOwner",
+      "summary": "The fence combines run, process identity and epoch.",
+      "talk": [
+        "The fence combines run, process identity and epoch."
+      ],
+      "layer": "Domain",
+      "types": [],
+      "links": [],
+      "views": [],
+      "example": {
+        "run_id": "<run id>",
+        "identity": "<worker identity>",
+        "epoch": 7
+      }
+    },
+    "releaseOwner": {
+      "file": "src/outage_explorer/infrastructure/postgresql/publication.py",
+      "symbol": "PostgresqlResourcePublicationStore._release",
+      "title": "Invalidate the old owner",
+      "summary": "Release occupied coordination and advance the epoch inside the recovery or completion transaction.",
+      "talk": [
+        "Release occupied coordination and advance the epoch inside the recovery or completion transaction."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": []
+    }
+  },
+  "flows": [
+    {
+      "id": "high-level",
+      "title": "High-level diagram",
+      "endpoint": "The big picture",
+      "lead": "The independently supervised worker recovers unfinished state, claims accepted work and maintains a renewable ownership lease while executing it.",
+      "heading": "One committed owner carries a run to completion.",
+      "layout": "conceptual",
+      "group": "Start here",
+      "nodes": [],
+      "edges": [],
+      "lanes": [
+        {
+          "title": "Process an accepted run",
+          "caption": "The worker polls PostgreSQL. The heartbeat continues throughout pipeline execution, independently of the browser and API request.",
+          "view": "claim",
+          "steps": [
+            {
+              "actor": "Worker \u2192 PostgreSQL",
+              "title": "Reconcile unfinished work",
+              "text": "Check whether earlier work already published or still has a healthy owner.",
+              "code": {
+                "module": "refresh-worker",
+                "view": "recovery",
+                "node": "recovery"
+              }
+            },
+            {
+              "actor": "Worker \u2194 PostgreSQL",
+              "title": "Claim accepted work",
+              "text": "Commit the run\u2019s owner, lease and ownership version before source retrieval.",
+              "code": {
+                "module": "refresh-worker",
+                "view": "claim",
+                "node": "claim"
+              }
+            },
+            {
+              "actor": "Worker \u2192 PostgreSQL",
+              "title": "Send a heartbeat while processing",
+              "text": "A background thread tells PostgreSQL the worker is still active while the refresh pipeline runs.",
+              "code": {
+                "module": "refresh-worker",
+                "view": "lease",
+                "node": "lease"
+              }
+            },
+            {
+              "actor": "Refresh pipeline",
+              "title": "Build and publish safely",
+              "text": "Execute using the admitted configuration and current owner checks.",
+              "code": {
+                "module": "refresh-execution",
+                "view": "pipeline",
+                "node": "execute"
+              }
+            },
+            {
+              "actor": "Worker supervisor",
+              "title": "Return to polling",
+              "text": "Finish the execution lifetime, join renewal and wait for more work.",
+              "code": {
+                "module": "refresh-worker",
+                "view": "startup",
+                "node": "process"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Recover after owner loss",
+          "caption": "Recovery checks publication history before deciding what happened; it never guesses the outcome of an uncertain commit.",
+          "view": "recovery",
+          "steps": [
+            {
+              "actor": "Worker \u2192 PostgreSQL",
+              "title": "Check durable history",
+              "text": "Serialize recovery and inspect ownership and prior publication.",
+              "code": {
+                "module": "refresh-worker",
+                "view": "recovery",
+                "node": "reconcile"
+              }
+            },
+            {
+              "actor": "Publication exists",
+              "title": "Recover success",
+              "text": "Recognize the committed generation without retrieving the source again.",
+              "code": {
+                "module": "refresh-worker",
+                "view": "recovery",
+                "node": "reconcile"
+              }
+            }
+          ]
+        },
+        {
+          "title": "If no publication exists and the owner is lost",
+          "caption": "This is the alternative recovery outcome, not a step after successful recovery.",
+          "view": "recovery",
+          "steps": [
+            {
+              "actor": "PostgreSQL coordination",
+              "title": "Invalidate the old owner",
+              "text": "Advance the ownership version so stale work cannot publish.",
+              "code": {
+                "module": "refresh-worker",
+                "view": "recovery",
+                "node": "releaseOwner"
+              }
+            },
+            {
+              "actor": "Durable run state",
+              "title": "Mark interrupted",
+              "text": "Record the unpublished interruption and release occupied coordination.",
+              "code": {
+                "module": "refresh-worker",
+                "view": "recovery",
+                "node": "reconcile"
+              }
+            },
+            {
+              "actor": "Admin",
+              "title": "Retry explicitly",
+              "text": "An Admin must submit a new request. Open the endpoint that accepts that explicit retry.",
+              "code": {
+                "module": "refresh-http",
+                "view": "admission",
+                "node": "route"
+              }
+            }
+          ]
+        }
+      ],
+      "boundaries": [
+        [
+          "Independent lifetime",
+          "An API-only restart does not stop a healthy refresh worker."
+        ],
+        [
+          "Temporary ownership",
+          "The claim expires unless renewed. Every protected write checks the run, worker identity, ownership version and live lease."
+        ],
+        [
+          "Shutdown and uncertainty",
+          "The worker closes its own resources. Database or ownership uncertainty must be reconciled before claiming a new outcome."
+        ]
+      ],
+      "note": "",
+      "outcomes": []
+    },
+    {
+      "id": "overview",
+      "title": "Refresh process at a glance",
+      "endpoint": "Independent supervisor",
+      "lead": "The worker shares the monolith codebase and owns a separate lifecycle.",
+      "nodes": [
+        "startup",
+        "process",
+        "tick",
+        "lease",
+        "execute",
+        "recovery"
+      ],
+      "edges": [],
+      "group": "Orientation",
+      "layout": "catalog",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": []
+    },
+    {
+      "id": "startup",
+      "title": "Explicit startup and shutdown",
+      "endpoint": "Process lifetime",
+      "lead": "Construction and shutdown belong outside HTTP and import lifecycles.",
+      "nodes": [
+        "startup",
+        "process",
+        "close"
+      ],
+      "edges": [
+        [
+          "startup",
+          "process",
+          "read next"
+        ],
+        [
+          "process",
+          "close",
+          "read next"
+        ]
+      ],
+      "group": "Walkthrough",
+      "layout": "sequence",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": []
+    },
+    {
+      "id": "claim",
+      "title": "Claim and execute",
+      "endpoint": "One worker tick",
+      "lead": "The claim commits before renewal and source work begin.",
+      "nodes": [
+        "tick",
+        "recovery",
+        "claim",
+        "lease",
+        "execute"
+      ],
+      "edges": [
+        [
+          "tick",
+          "recovery",
+          "read next"
+        ],
+        [
+          "recovery",
+          "claim",
+          "read next"
+        ],
+        [
+          "claim",
+          "lease",
+          "read next"
+        ],
+        [
+          "lease",
+          "execute",
+          "read next"
+        ]
+      ],
+      "group": "Walkthrough",
+      "layout": "sequence",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": [
+        "The renewal thread runs concurrently with execution."
+      ]
+    },
+    {
+      "id": "recovery",
+      "title": "Lost-worker recovery",
+      "endpoint": "Publication reconciliation",
+      "lead": "Decide what became durable before exposing interrupted status.",
+      "nodes": [
+        "recovery",
+        "recoverStore",
+        "reconcile"
+      ],
+      "edges": [
+        [
+          "recovery",
+          "recoverStore",
+          "read next"
+        ],
+        [
+          "recoverStore",
+          "reconcile",
+          "read next"
+        ]
+      ],
+      "group": "Walkthrough",
+      "layout": "sequence",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": [
+        "No automatic source rerun.",
+        "Stale owners cannot publish after their fence changes."
+      ]
+    },
+    {
+      "id": "lease",
+      "title": "Renewal and ownership",
+      "endpoint": "Independent heartbeat thread",
+      "lead": "Open the lease context to see thread startup, stop and join.",
+      "nodes": [
+        "lease",
+        "heartbeat",
+        "check"
+      ],
+      "edges": [
+        [
+          "lease",
+          "heartbeat",
+          "read next"
+        ],
+        [
+          "heartbeat",
+          "check",
+          "read next"
+        ]
+      ],
+      "group": "Walkthrough",
+      "layout": "sequence",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": []
+    },
+    {
+      "id": "types",
+      "title": "Ownership type",
+      "endpoint": "Illustrative object shape",
+      "lead": "Use the epoch to explain fencing against stale work.",
+      "nodes": [
+        "owner"
+      ],
+      "edges": [],
+      "group": "Types",
+      "layout": "catalog",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": []
+    }
+  ]
+}

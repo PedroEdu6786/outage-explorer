@@ -1,0 +1,210 @@
+{
+  "module": {
+    "id": "frontend-overview",
+    "label": "Overview",
+    "source": "frontend",
+    "status": "Source linked"
+  },
+  "presentation": {
+    "route": "/overview",
+    "audience": "Viewer · Analyst · Admin",
+    "pitch": "The main dashboard shows summary numbers, a trend chart and daily observations for a selected date range.",
+    "focus": [
+      "Choose dates and point out the summary cards.",
+      "Show the chart and the daily observations table."
+    ],
+    "stories": [
+      {
+        "id": "pages-overview--ready",
+        "label": "Overview page",
+        "detail": "See the complete dashboard."
+      },
+      {
+        "id": "features-overview--two-year-zoom",
+        "label": "Interactive chart",
+        "detail": "Try zoom and compare on a longer date range."
+      }
+    ],
+    "storyNote": ""
+  },
+  "nodes": {
+    "page": {
+      "file": "src/app/(protected)/overview/page.tsx",
+      "symbol": "OverviewPage",
+      "layer": "Page",
+      "title": "Overview page",
+      "summary": "The entry point for the dashboard.",
+      "talk": [
+        "The entry point for the dashboard."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "feature": {
+      "file": "src/features/overview/OverviewFeature.tsx",
+      "symbol": "OverviewFeature",
+      "layer": "Feature",
+      "title": "Overview dashboard",
+      "summary": "Brings the date filter, summary cards, chart and table together.",
+      "talk": [
+        "Brings the date filter, summary cards, chart and table together."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "metrics": {
+      "file": "src/features/overview/NationalMetricCards.tsx",
+      "symbol": "NationalMetricCards",
+      "layer": "Feature",
+      "title": "Summary cards",
+      "summary": "Highlight the main numbers for the selected dates.",
+      "talk": [
+        "Highlight the main numbers for the selected dates."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "chart": {
+      "file": "src/features/overview/NationalTrend.tsx",
+      "symbol": "NationalTrend",
+      "layer": "Feature",
+      "title": "Trend chart",
+      "summary": "Shows how observations change over time, with zoom and comparison controls.",
+      "talk": [
+        "Shows how observations change over time, with zoom and comparison controls."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "table": {
+      "file": "src/features/overview/DailyObservations.tsx",
+      "symbol": "DailyObservations",
+      "layer": "Feature",
+      "title": "Daily observations",
+      "summary": "Lists the daily values in a table with page controls.",
+      "talk": [
+        "Lists the daily values in a table with page controls."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "dates": {
+      "file": "src/components/molecules/DateRangeField.tsx",
+      "symbol": "DateRangeField",
+      "layer": "Molecule",
+      "title": "Date filter",
+      "summary": "Lets the user choose the start and end dates.",
+      "talk": [
+        "Lets the user choose the start and end dates."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    }
+  },
+  "flows": [
+    {
+      "id": "high-level",
+      "title": "Page & components",
+      "endpoint": "Frontend / /overview",
+      "lead": "The main dashboard shows summary numbers, a trend chart and daily observations for a selected date range.",
+      "heading": "What is on this page?",
+      "layout": "conceptual",
+      "componentOverview": true,
+      "group": "Start here",
+      "nodes": [],
+      "edges": [],
+      "lanes": [
+        {
+          "title": "Main page and components",
+          "caption": "Each card describes a visible part of the screen. Click a card to see its component code.",
+          "view": "overview",
+          "steps": [
+            {
+              "actor": "Page",
+              "title": "Overview dashboard",
+              "text": "Brings the date filter, summary cards, chart and table together.",
+              "code": {
+                "module": "frontend-overview",
+                "view": "overview",
+                "node": "feature"
+              }
+            },
+            {
+              "actor": "Component",
+              "title": "Summary cards",
+              "text": "Highlight the main numbers for the selected dates.",
+              "code": {
+                "module": "frontend-overview",
+                "view": "overview",
+                "node": "metrics"
+              }
+            },
+            {
+              "actor": "Component",
+              "title": "Trend chart",
+              "text": "Shows how observations change over time, with zoom and comparison controls.",
+              "code": {
+                "module": "frontend-overview",
+                "view": "overview",
+                "node": "chart"
+              }
+            },
+            {
+              "actor": "Component",
+              "title": "Daily observations",
+              "text": "Lists the daily values in a table with page controls.",
+              "code": {
+                "module": "frontend-overview",
+                "view": "overview",
+                "node": "table"
+              }
+            },
+            {
+              "actor": "Component",
+              "title": "Date filter",
+              "text": "Lets the user choose the start and end dates.",
+              "code": {
+                "module": "frontend-overview",
+                "view": "overview",
+                "node": "dates"
+              }
+            }
+          ]
+        }
+      ],
+      "boundaries": [
+        [
+          "What to explain",
+          "Start with the summary, use the chart to see a trend, then use the table to inspect individual days."
+        ]
+      ],
+      "note": "",
+      "outcomes": []
+    },
+    {
+      "id": "overview",
+      "title": "Component code",
+      "endpoint": "/overview",
+      "lead": "Optional: open the page or one of its visible components.",
+      "group": "Examples",
+      "layout": "catalog",
+      "nodes": [
+        "page",
+        "feature",
+        "metrics",
+        "chart",
+        "table",
+        "dates"
+      ],
+      "edges": [],
+      "note": "These are the page and UI components shown in the overview.",
+      "outcomes": []
+    }
+  ]
+}

@@ -1,0 +1,862 @@
+{
+  "module": {
+    "id": "datasets",
+    "label": "Datasets and preview",
+    "status": "Demo walkthrough"
+  },
+  "nodes": {
+    "catalogRoute": {
+      "file": "src/outage_explorer/entrypoints/http/routes/datasets.py",
+      "symbol": "create_datasets_blueprint.catalog",
+      "title": "List datasets",
+      "summary": "Reject unsupported query parameters, then request an authorized catalog payload.",
+      "talk": [
+        "Reject unsupported query parameters, then request an authorized catalog payload."
+      ],
+      "layer": "HTTP",
+      "types": [],
+      "links": [],
+      "views": [
+        "catalog"
+      ]
+    },
+    "catalog": {
+      "file": "src/outage_explorer/application/services/catalog.py",
+      "symbol": "CatalogService.list",
+      "title": "Authorize catalog access",
+      "summary": "Resolve the role, select permitted datasets, authorize their grains, then read publication metadata.",
+      "talk": [
+        "Resolve the role, select permitted datasets, authorize their grains, then read publication metadata."
+      ],
+      "layer": "Application",
+      "types": [
+        "dataset"
+      ],
+      "links": [
+        "active"
+      ],
+      "views": []
+    },
+    "payload": {
+      "file": "src/outage_explorer/application/services/catalog.py",
+      "symbol": "CatalogService.payload",
+      "title": "Build catalog payload",
+      "summary": "Encode the public schema, supported filters and coverage. No publication produces unavailable status.",
+      "talk": [
+        "Encode the public schema, supported filters and coverage. No publication produces unavailable status."
+      ],
+      "layer": "Application",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "route": {
+      "file": "src/outage_explorer/entrypoints/http/routes/datasets.py",
+      "symbol": "create_datasets_blueprint.preview",
+      "title": "Preview endpoint",
+      "summary": "Translate query parameters and call PreviewService.page.",
+      "talk": [
+        "Translate query parameters and call PreviewService.page."
+      ],
+      "layer": "HTTP",
+      "types": [],
+      "links": [],
+      "views": [
+        "initial",
+        "continuation"
+      ]
+    },
+    "page": {
+      "file": "src/outage_explorer/application/services/preview.py",
+      "symbol": "PreviewService.page",
+      "title": "Orchestrate a preview",
+      "summary": "Authorize before publication/files, validate filters, reserve execution and return bounded complete rows.",
+      "talk": [
+        "This checkout keeps initial reads, continuation, response encoding and cleanup in one method. Use Full source to see their relationship."
+      ],
+      "layer": "Application",
+      "types": [
+        "read",
+        "rows",
+        "sequence"
+      ],
+      "links": [
+        "access",
+        "reserve",
+        "prepare",
+        "create",
+        "cursor"
+      ],
+      "views": [
+        "initial",
+        "continuation",
+        "worker",
+        "cleanup"
+      ]
+    },
+    "access": {
+      "file": "src/outage_explorer/application/services/access.py",
+      "symbol": "AccessService.authorize",
+      "title": "Authorize the selected grain",
+      "summary": "Fresh role checks apply to first reads and continuation requests.",
+      "talk": [
+        "Fresh role checks apply to first reads and continuation requests."
+      ],
+      "layer": "Application",
+      "types": [],
+      "links": [],
+      "views": [],
+      "handoffs": [
+        {
+          "module": "auth",
+          "view": "authorization",
+          "label": "Inspect role authorization"
+        }
+      ]
+    },
+    "reserve": {
+      "file": "src/outage_explorer/infrastructure/worker_runtime/launcher.py",
+      "symbol": "VerifiedLauncher.reserve",
+      "title": "Reserve execution capacity",
+      "summary": "Acquire the bounded analytical slot before initial publication lookup or file downloads.",
+      "talk": [
+        "Acquire the bounded analytical slot before initial publication lookup or file downloads."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [
+        "forward"
+      ],
+      "views": [
+        "cleanup"
+      ]
+    },
+    "forward": {
+      "file": "src/outage_explorer/infrastructure/worker_runtime/supervisor.py",
+      "symbol": "ForwardExecution.reserve",
+      "title": "Delegate to the active runtime",
+      "summary": "The supervisor forwards the application execution port to the currently active launcher.",
+      "talk": [
+        "The supervisor forwards the application execution port to the currently active launcher."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "active": {
+      "file": "src/outage_explorer/infrastructure/postgresql/publication.py",
+      "symbol": "PostgresqlResourcePublicationStore.active_generation",
+      "title": "Select a generation",
+      "summary": "Read exact published resource descriptors from PostgreSQL.",
+      "talk": [
+        "Read exact published resource descriptors from PostgreSQL."
+      ],
+      "layer": "Infrastructure",
+      "types": [
+        "generation"
+      ],
+      "links": [],
+      "views": []
+    },
+    "prepare": {
+      "file": "src/outage_explorer/infrastructure/local_cache/modeled.py",
+      "symbol": "VerifiedResourceCache.prepare",
+      "title": "Verify and pin inputs",
+      "summary": "Prepare the selected resource with admission limits and verified cached/staged files.",
+      "talk": [
+        "Prepare the selected resource with admission limits and verified cached/staged files."
+      ],
+      "layer": "Infrastructure",
+      "types": [
+        "generation"
+      ],
+      "links": [
+        "load"
+      ],
+      "views": []
+    },
+    "load": {
+      "file": "src/outage_explorer/infrastructure/local_cache/modeled.py",
+      "symbol": "VerifiedResourceCache._load",
+      "title": "Load a resource on cache miss",
+      "summary": "Inspect durable resource readback, physical verification and coverage before exposing a pinned file.",
+      "talk": [
+        "Inspect durable resource readback, physical verification and coverage before exposing a pinned file."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "create": {
+      "file": "src/outage_explorer/infrastructure/query_results/previews.py",
+      "symbol": "BoundedPreviewSequences.create",
+      "title": "Keep the preview snapshot",
+      "summary": "Bind owner, filters, page size and pinned generation to an expiring sequence.",
+      "talk": [
+        "Bind owner, filters, page size and pinned generation to an expiring sequence."
+      ],
+      "layer": "Infrastructure",
+      "types": [
+        "sequence"
+      ],
+      "links": [],
+      "views": []
+    },
+    "acquire": {
+      "file": "src/outage_explorer/infrastructure/query_results/previews.py",
+      "symbol": "BoundedPreviewSequences.acquire",
+      "title": "Acquire a continuation",
+      "summary": "Validate the cursor and owner/dataset, then acquire the existing sequence.",
+      "talk": [
+        "Continuation accepts only the cursor. Original filters, page size and generation are preserved."
+      ],
+      "layer": "Infrastructure",
+      "types": [
+        "sequence"
+      ],
+      "links": [],
+      "views": []
+    },
+    "run": {
+      "file": "src/outage_explorer/infrastructure/worker_runtime/launcher.py",
+      "symbol": "_Reservation.preview",
+      "title": "Cross the execution boundary",
+      "summary": "Use the reserved runtime to execute a bounded preview with approved inputs.",
+      "talk": [
+        "Use the reserved runtime to execute a bounded preview with approved inputs."
+      ],
+      "layer": "Infrastructure",
+      "types": [
+        "read",
+        "rows"
+      ],
+      "links": [],
+      "views": []
+    },
+    "scan": {
+      "file": "src/outage_explorer/infrastructure/duckdb/previews.py",
+      "symbol": "execute_preview",
+      "title": "Scan the public projection",
+      "summary": "Apply inclusive date filters and deterministic keyset ordering inside the isolated worker.",
+      "talk": [
+        "Order is period descending, then facility/generator identity ascending where present. One extra row establishes has_more."
+      ],
+      "layer": "Infrastructure",
+      "types": [
+        "read",
+        "rows"
+      ],
+      "links": [
+        "views"
+      ],
+      "views": []
+    },
+    "views": {
+      "file": "src/outage_explorer/infrastructure/duckdb/views.py",
+      "symbol": "open_restricted",
+      "title": "Open exact staged Parquet",
+      "summary": "Construct restricted views over approved files and explicitly project public columns.",
+      "talk": [
+        "Construct restricted views over approved files and explicitly project public columns."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "cursor": {
+      "file": "src/outage_explorer/infrastructure/query_results/previews.py",
+      "symbol": "BoundedPreviewSequences.cursor",
+      "title": "Encode the continuation",
+      "summary": "Encode the sequence and last returned key in a signed cursor.",
+      "talk": [
+        "PreviewService.page shrinks whole rows to fit its byte envelope and uses the last included key for next_cursor."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": [],
+      "handoffs": [
+        {
+          "module": "queries",
+          "view": "paging",
+          "label": "Compare with retained SQL pagination"
+        }
+      ]
+    },
+    "close": {
+      "file": "src/outage_explorer/infrastructure/worker_runtime/launcher.py",
+      "symbol": "_Reservation.close",
+      "title": "Confirm worker termination",
+      "summary": "Release runtime capacity only after termination/reaping is confirmed.",
+      "talk": [
+        "Release runtime capacity only after termination/reaping is confirmed."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [
+        "handoff"
+      ],
+      "views": []
+    },
+    "handoff": {
+      "file": "src/outage_explorer/infrastructure/worker_runtime/launcher.py",
+      "symbol": "_Reservation.handoff",
+      "title": "Retain uncertain ownership",
+      "summary": "Transfer leases to supervisor recovery when termination cannot be proved.",
+      "talk": [
+        "Transfer leases to supervisor recovery when termination cannot be proved."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "release": {
+      "file": "src/outage_explorer/infrastructure/query_results/previews.py",
+      "symbol": "BoundedPreviewSequences.release",
+      "title": "Release the active reader",
+      "summary": "Release the current read; sequence lifetime and pins are managed separately.",
+      "talk": [
+        "Release the current read; sequence lifetime and pins are managed separately."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [
+        "discard"
+      ],
+      "views": []
+    },
+    "discard": {
+      "file": "src/outage_explorer/infrastructure/query_results/previews.py",
+      "symbol": "BoundedPreviewSequences.discard",
+      "title": "Discard a failed initial sequence",
+      "summary": "Retire a failed new sequence without prematurely freeing a live worker\u2019s files.",
+      "talk": [
+        "Retire a failed new sequence without prematurely freeing a live worker\u2019s files."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "dataset": {
+      "file": "src/outage_explorer/domain/datasets.py",
+      "symbol": "Dataset",
+      "title": "Dataset",
+      "summary": "The public dataset definition supplies its grain, columns and schema version.",
+      "talk": [
+        "The public dataset definition supplies its grain, columns and schema version."
+      ],
+      "layer": "Domain",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "read": {
+      "file": "src/outage_explorer/application/ports/execution.py",
+      "symbol": "PreviewRead",
+      "title": "PreviewRead",
+      "summary": "Worker input contains approved files, fixed filters and an optional continuation key.",
+      "talk": [
+        "Worker input contains approved files, fixed filters and an optional continuation key."
+      ],
+      "layer": "Application",
+      "types": [],
+      "links": [],
+      "views": [],
+      "example": {
+        "dataset": "Dataset(facilities)",
+        "files": [
+          "ApprovedFile(...)"
+        ],
+        "start": "date: 2026-10-01",
+        "end": "date: 2026-10-10",
+        "after": null,
+        "size": 100,
+        "facility": null
+      }
+    },
+    "rows": {
+      "file": "src/outage_explorer/application/ports/execution.py",
+      "symbol": "PreviewRows",
+      "title": "PreviewRows",
+      "summary": "Rows and continuation keys must align. Partial data values here illustrate transport structure.",
+      "talk": [
+        "Rows and continuation keys must align. Partial data values here illustrate transport structure."
+      ],
+      "layer": "Application",
+      "types": [],
+      "links": [],
+      "views": [],
+      "example": {
+        "rows": [
+          [
+            "<public column values>"
+          ]
+        ],
+        "keys": [
+          [
+            "2026-10-10",
+            "<facility id>"
+          ]
+        ],
+        "has_more": true
+      }
+    },
+    "sequence": {
+      "file": "src/outage_explorer/application/ports/preview_sequences.py",
+      "symbol": "PreviewSequence",
+      "title": "PreviewSequence",
+      "summary": "Ephemeral snapshot metadata owns the prepared inputs across page reads.",
+      "talk": [
+        "Ephemeral snapshot metadata owns the prepared inputs across page reads."
+      ],
+      "layer": "Application",
+      "types": [],
+      "links": [],
+      "views": [],
+      "example": {
+        "id": "<sequence id>",
+        "user_id": "demo-user",
+        "dataset": "Dataset(facilities)",
+        "generation": "ResourcePublishedGeneration(...)",
+        "start": null,
+        "end": null,
+        "size": 100,
+        "expires_at": "<fixed expiry>",
+        "inputs": "PinnedInputs(...)",
+        "facility": null
+      }
+    },
+    "generation": {
+      "file": "src/outage_explorer/domain/publication.py",
+      "symbol": "ResourcePublishedGeneration",
+      "title": "Published generation",
+      "summary": "Exactly three resource descriptors identify the published national, facilities and generators files.",
+      "talk": [
+        "Exactly three resource descriptors identify the published national, facilities and generators files."
+      ],
+      "layer": "Domain",
+      "types": [],
+      "links": [],
+      "views": []
+    }
+  },
+  "flows": [
+    {
+      "id": "high-level",
+      "title": "High-level diagram",
+      "endpoint": "The big picture",
+      "lead": "The catalog describes what you can read. A preview returns a small page from a verified, fixed data snapshot; later pages keep that same snapshot.",
+      "heading": "Browse one published version of the data.",
+      "layout": "conceptual",
+      "group": "Start here",
+      "nodes": [],
+      "edges": [],
+      "lanes": [
+        {
+          "title": "Discover available datasets",
+          "caption": "Metadata only: this path does not start an analytical worker.",
+          "view": "catalog",
+          "steps": [
+            {
+              "actor": "Browser \u2192 API",
+              "title": "Ask for datasets",
+              "text": "Send the current application session.",
+              "code": {
+                "module": "datasets",
+                "view": "catalog",
+                "node": "catalogRoute"
+              }
+            },
+            {
+              "actor": "API \u2194 PostgreSQL",
+              "title": "Check role and publication",
+              "text": "Select permitted datasets and read the published generation\u2019s metadata.",
+              "code": {
+                "module": "datasets",
+                "view": "catalog",
+                "node": "catalog"
+              }
+            },
+            {
+              "actor": "API \u2192 Browser",
+              "title": "Show the catalog",
+              "text": "Return public columns, supported filters and date coverage.",
+              "code": {
+                "module": "datasets",
+                "view": "catalog",
+                "node": "payload"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Read the first preview page",
+          "caption": "Reserve execution capacity before downloading files. S3 is read only when the verified cache needs it.",
+          "view": "initial",
+          "steps": [
+            {
+              "actor": "Browser \u2192 API",
+              "title": "Choose data and filters",
+              "text": "Authorize the selected dataset and validate dates, facility and page size.",
+              "code": {
+                "module": "datasets",
+                "view": "initial",
+                "node": "page"
+              }
+            },
+            {
+              "actor": "API \u2194 PostgreSQL",
+              "title": "Select a snapshot",
+              "text": "Reserve capacity and select the current published generation.",
+              "code": {
+                "module": "datasets",
+                "view": "initial",
+                "node": "page"
+              }
+            },
+            {
+              "actor": "API \u2194 Cache / S3",
+              "title": "Prepare verified files",
+              "text": "Verify and pin the exact resource; keep the snapshot and filters for later pages.",
+              "code": {
+                "module": "datasets",
+                "view": "initial",
+                "node": "prepare"
+              }
+            },
+            {
+              "actor": "Isolated worker",
+              "title": "Read a small page",
+              "text": "Scan only approved files and public columns in a stable order.",
+              "code": {
+                "module": "datasets",
+                "view": "worker",
+                "node": "scan"
+              }
+            },
+            {
+              "actor": "API \u2192 Browser",
+              "title": "Return rows and cursors",
+              "text": "Fit complete rows into the response and include the next-page cursor when needed.",
+              "code": {
+                "module": "datasets",
+                "view": "worker",
+                "node": "page"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Continue with a cursor",
+          "caption": "A refresh may publish newer data while this sequence continues reading the original version.",
+          "view": "continuation",
+          "steps": [
+            {
+              "actor": "Browser \u2192 API",
+              "title": "Send the cursor",
+              "text": "Recheck the user\u2019s access; do not accept replacement filters.",
+              "code": {
+                "module": "datasets",
+                "view": "continuation",
+                "node": "page"
+              }
+            },
+            {
+              "actor": "API / sequence store",
+              "title": "Recover the same snapshot",
+              "text": "Validate the cursor and owner, then acquire the pinned files and original filters.",
+              "code": {
+                "module": "datasets",
+                "view": "continuation",
+                "node": "acquire"
+              }
+            },
+            {
+              "actor": "Isolated worker",
+              "title": "Read after the last row",
+              "text": "Reserve execution and scan the same snapshot using the continuation position.",
+              "code": {
+                "module": "datasets",
+                "view": "worker",
+                "node": "scan"
+              }
+            },
+            {
+              "actor": "API \u2192 Browser",
+              "title": "Return the next page",
+              "text": "Return a fresh cursor or indicate the end of the sequence.",
+              "code": {
+                "module": "datasets",
+                "view": "continuation",
+                "node": "page"
+              }
+            }
+          ]
+        }
+      ],
+      "boundaries": [
+        [
+          "PostgreSQL",
+          "Owns sessions, roles and which generation is published."
+        ],
+        [
+          "S3 and local cache",
+          "S3 holds the resource files; the cache verifies and pins the selected inputs."
+        ],
+        [
+          "Lifecycle",
+          "Expired cursors cannot continue. Failed initial reads discard their sequence; uncertain worker termination keeps inputs protected."
+        ]
+      ],
+      "note": "",
+      "outcomes": []
+    },
+    {
+      "id": "overview",
+      "title": "Datasets at a glance",
+      "endpoint": "Catalog + snapshot-bound preview",
+      "lead": "Separate metadata discovery from isolated data reads.",
+      "nodes": [
+        "catalogRoute",
+        "route",
+        "page",
+        "prepare",
+        "scan",
+        "sequence"
+      ],
+      "edges": [],
+      "group": "Orientation",
+      "layout": "catalog",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": []
+    },
+    {
+      "id": "catalog",
+      "title": "Authorized catalog",
+      "endpoint": "GET /api/datasets",
+      "lead": "The application checks access before reading the active publication.",
+      "nodes": [
+        "catalogRoute",
+        "catalog",
+        "active",
+        "payload"
+      ],
+      "edges": [
+        [
+          "catalogRoute",
+          "catalog",
+          "read next"
+        ],
+        [
+          "catalog",
+          "active",
+          "read next"
+        ],
+        [
+          "active",
+          "payload",
+          "read next"
+        ]
+      ],
+      "group": "Walkthrough",
+      "layout": "sequence",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": []
+    },
+    {
+      "id": "initial",
+      "title": "First preview",
+      "endpoint": "GET /api/datasets/{dataset}/preview",
+      "lead": "Reserve capacity before preparing files; bind the selected generation to a sequence.",
+      "nodes": [
+        "route",
+        "page",
+        "reserve",
+        "active",
+        "prepare",
+        "create"
+      ],
+      "edges": [
+        [
+          "route",
+          "page",
+          "read next"
+        ],
+        [
+          "page",
+          "reserve",
+          "read next"
+        ],
+        [
+          "reserve",
+          "active",
+          "read next"
+        ],
+        [
+          "active",
+          "prepare",
+          "read next"
+        ],
+        [
+          "prepare",
+          "create",
+          "read next"
+        ]
+      ],
+      "group": "Walkthrough",
+      "layout": "sequence",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": [
+        "Next: Worker scan shows execution and cursor creation.",
+        "If initial work fails, discard the newly created sequence."
+      ]
+    },
+    {
+      "id": "worker",
+      "title": "Worker scan and response",
+      "endpoint": "Isolated preview execution",
+      "lead": "The reservation invokes the isolated runtime; the service encodes complete rows and creates cursors.",
+      "nodes": [
+        "run",
+        "views",
+        "scan",
+        "page",
+        "cursor"
+      ],
+      "edges": [
+        [
+          "run",
+          "views",
+          "read next"
+        ],
+        [
+          "views",
+          "scan",
+          "read next"
+        ],
+        [
+          "scan",
+          "page",
+          "read next"
+        ],
+        [
+          "page",
+          "cursor",
+          "read next"
+        ]
+      ],
+      "group": "Walkthrough",
+      "layout": "sequence",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": [
+        "Preview scans the fixed generation for each page; it does not retain a complete SQL result."
+      ]
+    },
+    {
+      "id": "continuation",
+      "title": "Continue a snapshot",
+      "endpoint": "GET /api/datasets/{dataset}/preview?cursor=\u2026",
+      "lead": "Acquire the existing cursor before execution admission; do not select a new generation.",
+      "nodes": [
+        "route",
+        "page",
+        "acquire",
+        "reserve",
+        "run",
+        "cursor"
+      ],
+      "edges": [
+        [
+          "route",
+          "page",
+          "read next"
+        ],
+        [
+          "page",
+          "acquire",
+          "read next"
+        ],
+        [
+          "acquire",
+          "reserve",
+          "read next"
+        ],
+        [
+          "reserve",
+          "run",
+          "read next"
+        ],
+        [
+          "run",
+          "cursor",
+          "read next"
+        ]
+      ],
+      "group": "Walkthrough",
+      "layout": "sequence",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": [
+        "Reauthorize every continuation.",
+        "A cursor cannot be combined with new date, size or facility filters."
+      ]
+    },
+    {
+      "id": "cleanup",
+      "title": "Lifetime and cleanup",
+      "endpoint": "Finally / failure paths",
+      "lead": "Execution reservation, active reader and sequence pin have different lifetimes.",
+      "nodes": [
+        "page",
+        "close",
+        "release",
+        "handoff"
+      ],
+      "edges": [
+        [
+          "page",
+          "close",
+          "read next"
+        ],
+        [
+          "close",
+          "release",
+          "read next"
+        ],
+        [
+          "release",
+          "handoff",
+          "read next"
+        ]
+      ],
+      "group": "Walkthrough",
+      "layout": "sequence",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": [
+        "Handoff is the exceptional path when close cannot prove termination."
+      ]
+    },
+    {
+      "id": "types",
+      "title": "Preview types",
+      "endpoint": "Illustrative object shapes",
+      "lead": "Follow the values from public schema to pinned inputs and keyset results.",
+      "nodes": [
+        "dataset",
+        "generation",
+        "sequence",
+        "read",
+        "rows"
+      ],
+      "edges": [],
+      "group": "Types",
+      "layout": "catalog",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": []
+    }
+  ]
+}

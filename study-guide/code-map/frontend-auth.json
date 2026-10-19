@@ -1,0 +1,176 @@
+{
+  "module": {
+    "id": "frontend-auth",
+    "label": "Sign-in",
+    "source": "frontend",
+    "status": "Source linked"
+  },
+  "presentation": {
+    "route": "/sign-in + protected layout",
+    "audience": "All users",
+    "pitch": "The entry screen where users sign in and see clear messages when they need to wait or try again.",
+    "focus": [
+      "Show the sign-in screen.",
+      "Point out the main button and feedback message."
+    ],
+    "stories": [
+      {
+        "id": "pages-sign-in--signed-out",
+        "label": "Sign-in page",
+        "detail": "Show the welcome screen and main action."
+      },
+      {
+        "id": "pages-sign-in--pending",
+        "label": "Loading state",
+        "detail": "Show the message while the user waits."
+      }
+    ],
+    "storyNote": ""
+  },
+  "nodes": {
+    "page": {
+      "file": "src/app/sign-in/page.tsx",
+      "symbol": "SignInPage",
+      "layer": "Page",
+      "title": "Sign-in page",
+      "summary": "The entry point for the sign-in screen.",
+      "talk": [
+        "The entry point for the sign-in screen."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "panel": {
+      "file": "src/features/auth/SignInPanel.tsx",
+      "symbol": "SignInPanel",
+      "layer": "Feature",
+      "title": "Sign-in screen",
+      "summary": "Shows a welcome message, the sign-in action and any feedback.",
+      "talk": [
+        "Shows a welcome message, the sign-in action and any feedback."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "button": {
+      "file": "src/components/atoms/Button.tsx",
+      "symbol": "Button",
+      "layer": "Atom",
+      "title": "Sign-in button",
+      "summary": "The main action lets the user continue to sign in.",
+      "talk": [
+        "The main action lets the user continue to sign in."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "message": {
+      "file": "src/components/molecules/StatusMessage.tsx",
+      "symbol": "StatusMessage",
+      "layer": "Molecule",
+      "title": "Feedback message",
+      "summary": "Explains when sign-in is loading, unavailable or needs another attempt.",
+      "talk": [
+        "Explains when sign-in is loading, unavailable or needs another attempt."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "template": {
+      "file": "src/components/templates/AuthTemplate.tsx",
+      "symbol": "AuthTemplate",
+      "layer": "Template",
+      "title": "Sign-in layout",
+      "summary": "Arranges the title, description, action and feedback in one screen.",
+      "talk": [
+        "Arranges the title, description, action and feedback in one screen."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    }
+  },
+  "flows": [
+    {
+      "id": "high-level",
+      "title": "Page & components",
+      "endpoint": "Frontend / /sign-in + protected layout",
+      "lead": "The entry screen where users sign in and see clear messages when they need to wait or try again.",
+      "heading": "What is on this page?",
+      "layout": "conceptual",
+      "componentOverview": true,
+      "group": "Start here",
+      "nodes": [],
+      "edges": [],
+      "lanes": [
+        {
+          "title": "Main page and components",
+          "caption": "Each card describes a visible part of the screen. Click a card to see its component code.",
+          "view": "overview",
+          "steps": [
+            {
+              "actor": "Page",
+              "title": "Sign-in screen",
+              "text": "Shows a welcome message, the sign-in action and any feedback.",
+              "code": {
+                "module": "frontend-auth",
+                "view": "overview",
+                "node": "panel"
+              }
+            },
+            {
+              "actor": "Component",
+              "title": "Sign-in button",
+              "text": "The main action lets the user continue to sign in.",
+              "code": {
+                "module": "frontend-auth",
+                "view": "overview",
+                "node": "button"
+              }
+            },
+            {
+              "actor": "Component",
+              "title": "Feedback message",
+              "text": "Explains when sign-in is loading, unavailable or needs another attempt.",
+              "code": {
+                "module": "frontend-auth",
+                "view": "overview",
+                "node": "message"
+              }
+            }
+          ]
+        }
+      ],
+      "boundaries": [
+        [
+          "What to explain",
+          "This page helps the user enter the application. The button starts sign-in, and the message explains what is happening."
+        ]
+      ],
+      "note": "",
+      "outcomes": []
+    },
+    {
+      "id": "overview",
+      "title": "Component code",
+      "endpoint": "/sign-in + protected layout",
+      "lead": "Optional: open the page or one of its visible components.",
+      "group": "Examples",
+      "layout": "catalog",
+      "nodes": [
+        "page",
+        "panel",
+        "button",
+        "message",
+        "template"
+      ],
+      "edges": [],
+      "note": "These are the page and UI components shown in the overview.",
+      "outcomes": []
+    }
+  ]
+}

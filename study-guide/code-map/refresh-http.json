@@ -1,0 +1,478 @@
+{
+  "module": {
+    "id": "refresh-http",
+    "label": "Refresh endpoints",
+    "status": "Demo walkthrough"
+  },
+  "nodes": {
+    "route": {
+      "file": "src/outage_explorer/entrypoints/http/routes/refresh.py",
+      "symbol": "create_refresh_blueprint.admit",
+      "title": "Admit a refresh",
+      "summary": "Validate CSRF, an empty body and the idempotency header; return a durable receipt.",
+      "talk": [
+        "Validate CSRF, an empty body and the idempotency header; return a durable receipt."
+      ],
+      "layer": "HTTP",
+      "types": [],
+      "links": [],
+      "views": [
+        "admission"
+      ]
+    },
+    "admit": {
+      "file": "src/outage_explorer/application/services/refresh.py",
+      "symbol": "RefreshService.admit",
+      "title": "Authorize and replay",
+      "summary": "Require Admin, validate the key/body and look up a requester-scoped replay before resolving configuration.",
+      "talk": [
+        "Require Admin, validate the key/body and look up a requester-scoped replay before resolving configuration."
+      ],
+      "layer": "Application",
+      "types": [
+        "run"
+      ],
+      "links": [
+        "authorize",
+        "replay",
+        "config"
+      ],
+      "views": []
+    },
+    "authorize": {
+      "file": "src/outage_explorer/application/services/access.py",
+      "symbol": "AccessService.authorize",
+      "title": "Enforce Admin access",
+      "summary": "Refresh initiation and outcome operations are checked in the application.",
+      "talk": [
+        "Refresh initiation and outcome operations are checked in the application."
+      ],
+      "layer": "Application",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "replay": {
+      "file": "src/outage_explorer/infrastructure/postgresql/publication.py",
+      "symbol": "PostgresqlResourcePublicationStore.replay",
+      "title": "Find the original request",
+      "summary": "Look up the requester and key digest. Replays preserve the original admitted configuration.",
+      "talk": [
+        "Look up the requester and key digest. Replays preserve the original admitted configuration."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "config": {
+      "file": "src/outage_explorer/bootstrap.py",
+      "symbol": "build_data_services.refresh_configuration",
+      "title": "Freeze the effective interval",
+      "summary": "Resolve configured start through today\u2019s UTC date and the resource budgets at admission.",
+      "talk": [
+        "Resolve configured start through today\u2019s UTC date and the resource budgets at admission."
+      ],
+      "layer": "Composition",
+      "types": [
+        "configuration"
+      ],
+      "links": [],
+      "views": []
+    },
+    "transaction": {
+      "file": "src/outage_explorer/infrastructure/postgresql/publication.py",
+      "symbol": "PostgresqlResourcePublicationStore.admit",
+      "title": "Commit admission atomically",
+      "summary": "Lock coordination, check replay again, reject concurrent work, validate the base and commit the accepted run.",
+      "talk": [
+        "Lock coordination, check replay again, reject concurrent work, validate the base and commit the accepted run."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [
+        "lock",
+        "base"
+      ],
+      "views": [],
+      "handoffs": [
+        {
+          "module": "refresh-worker",
+          "view": "claim",
+          "label": "Follow the committed run into the worker"
+        }
+      ]
+    },
+    "lock": {
+      "file": "src/outage_explorer/infrastructure/postgresql/publication.py",
+      "symbol": "PostgresqlResourcePublicationStore._lock",
+      "title": "Serialize coordination",
+      "summary": "Lock the singleton coordination row with SELECT FOR UPDATE.",
+      "talk": [
+        "Lock the singleton coordination row with SELECT FOR UPDATE."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "base": {
+      "file": "src/outage_explorer/infrastructure/postgresql/publication.py",
+      "symbol": "PostgresqlResourcePublicationStore._check_base",
+      "title": "Validate the active base",
+      "summary": "Reject unsupported or incomplete publication descriptors before admitting work.",
+      "talk": [
+        "Reject unsupported or incomplete publication descriptors before admitting work."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "latestRoute": {
+      "file": "src/outage_explorer/entrypoints/http/routes/refresh.py",
+      "symbol": "create_refresh_blueprint.latest",
+      "title": "Read latest status",
+      "summary": "Translate the latest authorized run into the HTTP payload.",
+      "talk": [
+        "Translate the latest authorized run into the HTTP payload."
+      ],
+      "layer": "HTTP",
+      "types": [],
+      "links": [],
+      "views": [
+        "status"
+      ]
+    },
+    "latest": {
+      "file": "src/outage_explorer/application/services/refresh.py",
+      "symbol": "RefreshService.latest",
+      "title": "Authorize latest lookup",
+      "summary": "Require outcome access before reading durable run state.",
+      "talk": [
+        "Require outcome access before reading durable run state."
+      ],
+      "layer": "Application",
+      "types": [],
+      "links": [
+        "latestStore"
+      ],
+      "views": []
+    },
+    "latestStore": {
+      "file": "src/outage_explorer/infrastructure/postgresql/publication.py",
+      "symbol": "PostgresqlResourcePublicationStore.latest",
+      "title": "Select current/latest run",
+      "summary": "Prefer the active coordinated run, then order by admission time and ID.",
+      "talk": [
+        "Prefer the active coordinated run, then order by admission time and ID."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "statusRoute": {
+      "file": "src/outage_explorer/entrypoints/http/routes/refresh.py",
+      "symbol": "create_refresh_blueprint.status",
+      "title": "Read one run",
+      "summary": "Validate a run ID and return status or the unavailable response.",
+      "talk": [
+        "Validate a run ID and return status or the unavailable response."
+      ],
+      "layer": "HTTP",
+      "types": [],
+      "links": [],
+      "views": [
+        "status"
+      ]
+    },
+    "status": {
+      "file": "src/outage_explorer/application/services/refresh.py",
+      "symbol": "RefreshService.status",
+      "title": "Authorize per-run lookup",
+      "summary": "Authorize outcome access before validating and reading the run ID.",
+      "talk": [
+        "Authorize outcome access before validating and reading the run ID."
+      ],
+      "layer": "Application",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "run": {
+      "file": "src/outage_explorer/domain/publication.py",
+      "symbol": "RefreshRun",
+      "title": "RefreshRun",
+      "summary": "Durable admission, execution and publication state live in PostgreSQL.",
+      "talk": [
+        "Durable admission, execution and publication state live in PostgreSQL."
+      ],
+      "layer": "Domain",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "configuration": {
+      "file": "src/outage_explorer/domain/publication.py",
+      "symbol": "RefreshConfiguration",
+      "title": "RefreshConfiguration",
+      "summary": "The admitted dates and limits do not change when settings change later.",
+      "talk": [
+        "The admitted dates and limits do not change when settings change later."
+      ],
+      "layer": "Domain",
+      "types": [],
+      "links": [],
+      "views": []
+    }
+  },
+  "flows": [
+    {
+      "id": "high-level",
+      "title": "High-level diagram",
+      "endpoint": "The big picture",
+      "lead": "An Admin requests a refresh. The API commits a durable run and returns a receipt, while a separate worker performs retrieval and publication.",
+      "heading": "Accept the request. Let the worker do the work.",
+      "layout": "conceptual",
+      "group": "Start here",
+      "nodes": [],
+      "edges": [],
+      "lanes": [
+        {
+          "title": "Admit or replay a request",
+          "caption": "Repeated requests from the same user with the same key return the original run.",
+          "view": "admission",
+          "steps": [
+            {
+              "actor": "Admin browser \u2192 API",
+              "title": "Request a refresh",
+              "text": "Send the session, mutation protection and an idempotency key with an empty body.",
+              "code": {
+                "module": "refresh-http",
+                "view": "admission",
+                "node": "route"
+              }
+            },
+            {
+              "actor": "Application",
+              "title": "Check Admin access",
+              "text": "Reject unsupported inputs and check for an existing matching request.",
+              "code": {
+                "module": "refresh-http",
+                "view": "admission",
+                "node": "admit"
+              }
+            },
+            {
+              "actor": "API \u2194 PostgreSQL",
+              "title": "Commit new work if needed",
+              "text": "Lock admission, recheck replay and availability, and freeze dates, limits and the base generation.",
+              "code": {
+                "module": "refresh-http",
+                "view": "transaction",
+                "node": "transaction"
+              }
+            },
+            {
+              "actor": "API \u2192 Admin browser",
+              "title": "Return a run receipt",
+              "text": "Return the run ID, effective interval and a status link; the request does no source retrieval.",
+              "code": {
+                "module": "refresh-http",
+                "view": "admission",
+                "node": "route"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Track the outcome",
+          "caption": "The browser can read the latest run or a specific run. Status reads require Admin access too.",
+          "view": "status",
+          "steps": [
+            {
+              "actor": "Independent worker",
+              "title": "Update durable progress",
+              "text": "The worker records stages, outcomes and publication state in PostgreSQL.",
+              "code": {
+                "module": "refresh-execution",
+                "view": "outcomes",
+                "node": "progress"
+              }
+            },
+            {
+              "actor": "Admin browser \u2192 API",
+              "title": "Ask for status",
+              "text": "The API rechecks current access before reading run state.",
+              "code": {
+                "module": "refresh-http",
+                "view": "status",
+                "node": "status"
+              }
+            },
+            {
+              "actor": "API \u2194 PostgreSQL",
+              "title": "Read the run",
+              "text": "Read committed progress and the known publication outcome.",
+              "code": {
+                "module": "refresh-http",
+                "view": "status",
+                "node": "latestStore"
+              }
+            },
+            {
+              "actor": "API \u2192 Admin browser",
+              "title": "Show progress or outcome",
+              "text": "Return current state without starting or repeating the source work.",
+              "code": {
+                "module": "refresh-http",
+                "view": "status",
+                "node": "statusRoute"
+              }
+            }
+          ]
+        }
+      ],
+      "boundaries": [
+        [
+          "Date range",
+          "New HTTP runs freeze the configured start through today\u2019s UTC date; callers do not override the dates."
+        ],
+        [
+          "Admission",
+          "An existing request replays its original configuration. Competing new work is rejected while a run occupies admission."
+        ],
+        [
+          "Ownership",
+          "PostgreSQL stores the durable run. HTTP does not own the independent worker\u2019s lifetime."
+        ]
+      ],
+      "note": "",
+      "outcomes": []
+    },
+    {
+      "id": "overview",
+      "title": "Refresh HTTP at a glance",
+      "endpoint": "Admission + progress reads",
+      "lead": "HTTP commits work for an independent worker to claim.",
+      "nodes": [
+        "route",
+        "admit",
+        "transaction",
+        "latestRoute",
+        "statusRoute",
+        "configuration"
+      ],
+      "edges": [],
+      "group": "Orientation",
+      "layout": "catalog",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": []
+    },
+    {
+      "id": "admission",
+      "title": "Admit or replay",
+      "endpoint": "POST /api/refresh",
+      "lead": "A repeated requester/key returns its existing run; new work freezes configuration.",
+      "nodes": [
+        "route",
+        "admit",
+        "replay",
+        "config",
+        "transaction"
+      ],
+      "edges": [
+        [
+          "route",
+          "admit",
+          "read next"
+        ],
+        [
+          "admit",
+          "replay",
+          "read next"
+        ],
+        [
+          "replay",
+          "config",
+          "read next"
+        ],
+        [
+          "config",
+          "transaction",
+          "read next"
+        ]
+      ],
+      "group": "Walkthrough",
+      "layout": "sequence",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": [
+        "No EIA retrieval happens inside this request.",
+        "Nonterminal receipts use 202; terminal replay uses 200."
+      ]
+    },
+    {
+      "id": "transaction",
+      "title": "Admission transaction",
+      "endpoint": "PostgreSQL coordination",
+      "lead": "The second replay check closes concurrent admission races.",
+      "nodes": [
+        "transaction",
+        "lock",
+        "base"
+      ],
+      "edges": [
+        [
+          "transaction",
+          "lock",
+          "read next"
+        ],
+        [
+          "lock",
+          "base",
+          "read next"
+        ]
+      ],
+      "group": "Walkthrough",
+      "layout": "sequence",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": [
+        "An incompatible active generation fails closed."
+      ]
+    },
+    {
+      "id": "status",
+      "title": "Read progress",
+      "endpoint": "GET /api/refresh/latest \u00b7 GET /api/refresh/{run_id}",
+      "lead": "Two independent read paths; select each route to inspect its application check.",
+      "nodes": [
+        "latestRoute",
+        "latest",
+        "latestStore",
+        "statusRoute",
+        "status"
+      ],
+      "edges": [],
+      "group": "Walkthrough",
+      "layout": "catalog",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": []
+    },
+    {
+      "id": "types",
+      "title": "Refresh state",
+      "endpoint": "Durable types",
+      "lead": "Explain the separation of status, stage, publication and frozen configuration.",
+      "nodes": [
+        "run",
+        "configuration"
+      ],
+      "edges": [],
+      "group": "Types",
+      "layout": "catalog",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": []
+    }
+  ]
+}

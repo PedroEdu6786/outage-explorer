@@ -1,0 +1,243 @@
+{
+  "module": {
+    "id": "frontend-architecture",
+    "label": "Atomic Design",
+    "source": "frontend",
+    "status": "Source linked"
+  },
+  "presentation": {
+    "route": "All frontend pages",
+    "audience": "UI building blocks",
+    "pitch": "Atomic Design organizes an interface into five levels: small elements, useful groups, complete sections, page layouts and finished screens.",
+    "focus": [
+      "Explain what each of the five levels represents.",
+      "Use a button, a labeled field, a table and Overview as familiar examples.",
+      "Show how reusable pieces become a complete screen."
+    ],
+    "stories": [
+      {
+        "id": "atoms-actions--primary",
+        "label": "Atoms · Button",
+        "detail": "See the button example."
+      },
+      {
+        "id": "molecules-fields--labeled-fields",
+        "label": "Molecules · Labeled field",
+        "detail": "See the labeled field example."
+      },
+      {
+        "id": "organisms-data-table--typed-values",
+        "label": "Organisms · Data table",
+        "detail": "See the data table example."
+      },
+      {
+        "id": "templates-analytical--overview",
+        "label": "Templates · Overview layout",
+        "detail": "See the overview layout example."
+      },
+      {
+        "id": "pages-overview--ready",
+        "label": "Pages · Overview page",
+        "detail": "See the overview page example."
+      }
+    ],
+    "storyNote": ""
+  },
+  "nodes": {
+    "atom": {
+      "file": "src/components/atoms/Button.tsx",
+      "symbol": "Button",
+      "layer": "Atom",
+      "title": "Atoms · Button",
+      "summary": "A single interface element, such as a button, an input or a label. Each has one simple purpose.",
+      "talk": [
+        "A single interface element, such as a button, an input or a label. Each has one simple purpose.",
+        "Example in this frontend: Button."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "molecule": {
+      "file": "src/components/molecules/FormField.tsx",
+      "symbol": "FormField",
+      "layer": "Molecule",
+      "title": "Molecules · Labeled field",
+      "summary": "A few atoms working together, such as an input with its label and help text.",
+      "talk": [
+        "A few atoms working together, such as an input with its label and help text.",
+        "Example in this frontend: Labeled field."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "organism": {
+      "file": "src/components/organisms/DataTable.tsx",
+      "symbol": "DataTable",
+      "layer": "Organism",
+      "title": "Organisms · Data table",
+      "summary": "A larger group of components that forms a useful section, such as a data table or navigation header.",
+      "talk": [
+        "A larger group of components that forms a useful section, such as a data table or navigation header.",
+        "Example in this frontend: Data table."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "template": {
+      "file": "src/components/templates/OverviewTemplate.tsx",
+      "symbol": "OverviewTemplate",
+      "layer": "Template",
+      "title": "Templates · Overview layout",
+      "summary": "A reusable arrangement of sections. It defines where the heading, metrics, chart and table belong.",
+      "talk": [
+        "A reusable arrangement of sections. It defines where the heading, metrics, chart and table belong.",
+        "Example in this frontend: Overview layout."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "page": {
+      "file": "src/app/(protected)/overview/page.tsx",
+      "symbol": "OverviewPage",
+      "layer": "Page",
+      "title": "Pages · Overview page",
+      "summary": "A template filled with content and data that people can use, such as the Overview screen showing observations.",
+      "talk": [
+        "A template filled with content and data that people can use, such as the Overview screen showing observations.",
+        "Example in this frontend: Overview page.",
+        "This file is the entry point for the Overview page; it opens the assembled screen."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    }
+  },
+  "flows": [
+    {
+      "id": "high-level",
+      "title": "High-level diagram",
+      "endpoint": "Frontend / All frontend pages",
+      "lead": "Atomic Design organizes an interface into five levels: small elements, useful groups, complete sections, page layouts and finished screens.",
+      "heading": "From small pieces to a complete screen",
+      "layout": "conceptual",
+      "group": "Start here",
+      "nodes": [],
+      "edges": [],
+      "lanes": [
+        {
+          "title": "The five levels of Atomic Design",
+          "caption": "Each level combines smaller pieces into something more complete.",
+          "view": "atomic",
+          "steps": [
+            {
+              "actor": "Atoms",
+              "title": "The smallest building blocks",
+              "text": "A single interface element, such as a button, an input or a label. Each has one simple purpose.",
+              "code": {
+                "node": "atom",
+                "view": "atomic",
+                "module": "frontend-architecture"
+              }
+            },
+            {
+              "actor": "Molecules",
+              "title": "Small groups with one job",
+              "text": "A few atoms working together, such as an input with its label and help text.",
+              "code": {
+                "node": "molecule",
+                "view": "atomic",
+                "module": "frontend-architecture"
+              }
+            },
+            {
+              "actor": "Organisms",
+              "title": "Complete sections of an interface",
+              "text": "A larger group of components that forms a useful section, such as a data table or navigation header.",
+              "code": {
+                "node": "organism",
+                "view": "atomic",
+                "module": "frontend-architecture"
+              }
+            },
+            {
+              "actor": "Templates",
+              "title": "The layout of a page",
+              "text": "A reusable arrangement of sections. It defines where the heading, metrics, chart and table belong.",
+              "code": {
+                "node": "template",
+                "view": "atomic",
+                "module": "frontend-architecture"
+              }
+            },
+            {
+              "actor": "Pages",
+              "title": "The finished screen",
+              "text": "A template filled with content and data that people can use, such as the Overview screen showing observations.",
+              "code": {
+                "node": "page",
+                "view": "atomic",
+                "module": "frontend-architecture"
+              }
+            }
+          ]
+        }
+      ],
+      "boundaries": [
+        [
+          "Reuse the pieces",
+          "Use the same buttons, fields and sections across different screens."
+        ],
+        [
+          "Keep the experience consistent",
+          "Shared components make appearance and interaction feel familiar."
+        ],
+        [
+          "Layout becomes a page",
+          "A template provides the arrangement. A page fills it with content and data."
+        ]
+      ],
+      "note": "",
+      "outcomes": []
+    },
+    {
+      "id": "overview",
+      "title": "Component examples",
+      "endpoint": "Frontend implementation",
+      "lead": "Optional: open a real example of each Atomic Design level.",
+      "group": "Examples",
+      "layout": "catalog",
+      "nodes": [
+        "atom",
+        "molecule",
+        "organism",
+        "template",
+        "page"
+      ],
+      "edges": [],
+      "note": "These examples illustrate the five levels, from an individual element to a finished screen.",
+      "outcomes": []
+    },
+    {
+      "id": "atomic",
+      "title": "Examples in code",
+      "endpoint": "Frontend implementation",
+      "lead": "Optional: open a real example of each Atomic Design level.",
+      "group": "Examples",
+      "layout": "catalog",
+      "nodes": [
+        "atom",
+        "molecule",
+        "organism",
+        "template",
+        "page"
+      ],
+      "edges": [],
+      "note": "These examples illustrate the five levels, from an individual element to a finished screen.",
+      "outcomes": []
+    }
+  ]
+}

@@ -1,0 +1,143 @@
+{
+  "module": {
+    "id": "frontend-refresh",
+    "label": "Admin Refresh",
+    "source": "frontend",
+    "status": "Source linked"
+  },
+  "presentation": {
+    "route": "Inside /overview · no separate route",
+    "audience": "Admin",
+    "pitch": "A small Admin section within Overview for starting a data refresh and checking its progress.",
+    "focus": [
+      "Locate the refresh controls on Overview.",
+      "Point out Refresh data, Check refresh status and the progress message."
+    ],
+    "stories": [
+      {
+        "id": "pages-overview--ready",
+        "label": "Surrounding Overview page",
+        "detail": "Shows the dashboard layout; this story does not include the Admin controls."
+      }
+    ],
+    "storyNote": "There is no dedicated Admin Refresh story yet. The linked Overview story shows the surrounding page with an Analyst account, so the Admin controls are not visible there."
+  },
+  "nodes": {
+    "feature": {
+      "file": "src/features/overview/OverviewFeature.tsx",
+      "symbol": "OverviewFeature",
+      "layer": "Feature",
+      "title": "Overview page",
+      "summary": "The dashboard contains the Admin refresh section.",
+      "talk": [
+        "The dashboard contains the Admin refresh section."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "control": {
+      "file": "src/features/overview/RefreshControl.tsx",
+      "symbol": "RefreshControl",
+      "layer": "Feature",
+      "title": "Refresh controls",
+      "summary": "Provides Refresh data and Check refresh status buttons for Admin users.",
+      "talk": [
+        "Provides Refresh data and Check refresh status buttons for Admin users."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "message": {
+      "file": "src/components/molecules/StatusMessage.tsx",
+      "symbol": "StatusMessage",
+      "layer": "Molecule",
+      "title": "Progress message",
+      "summary": "Shows the current refresh state and any message that needs attention.",
+      "talk": [
+        "Shows the current refresh state and any message that needs attention."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    }
+  },
+  "flows": [
+    {
+      "id": "high-level",
+      "title": "Page & components",
+      "endpoint": "Frontend / Inside /overview · no separate route",
+      "lead": "A small Admin section within Overview for starting a data refresh and checking its progress.",
+      "heading": "What is on this page?",
+      "layout": "conceptual",
+      "componentOverview": true,
+      "group": "Start here",
+      "nodes": [],
+      "edges": [],
+      "lanes": [
+        {
+          "title": "Main page and components",
+          "caption": "Each card describes a visible part of the screen. Click a card to see its component code.",
+          "view": "overview",
+          "steps": [
+            {
+              "actor": "Page",
+              "title": "Overview page",
+              "text": "The dashboard contains the Admin refresh section.",
+              "code": {
+                "module": "frontend-refresh",
+                "view": "overview",
+                "node": "feature"
+              }
+            },
+            {
+              "actor": "Component",
+              "title": "Refresh controls",
+              "text": "Provides Refresh data and Check refresh status buttons for Admin users.",
+              "code": {
+                "module": "frontend-refresh",
+                "view": "overview",
+                "node": "control"
+              }
+            },
+            {
+              "actor": "Component",
+              "title": "Progress message",
+              "text": "Shows the current refresh state and any message that needs attention.",
+              "code": {
+                "module": "frontend-refresh",
+                "view": "overview",
+                "node": "message"
+              }
+            }
+          ]
+        }
+      ],
+      "boundaries": [
+        [
+          "Where to find it",
+          "Admin Refresh is part of Overview. It is not a separate application page."
+        ]
+      ],
+      "note": "",
+      "outcomes": []
+    },
+    {
+      "id": "overview",
+      "title": "Component code",
+      "endpoint": "Inside /overview · no separate route",
+      "lead": "Optional: open the page or one of its visible components.",
+      "group": "Examples",
+      "layout": "catalog",
+      "nodes": [
+        "feature",
+        "control",
+        "message"
+      ],
+      "edges": [],
+      "note": "These are the page and UI components shown in the overview.",
+      "outcomes": []
+    }
+  ]
+}

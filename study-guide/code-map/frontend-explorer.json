@@ -1,0 +1,210 @@
+{
+  "module": {
+    "id": "frontend-explorer",
+    "label": "Dataset Explorer",
+    "source": "frontend",
+    "status": "Source linked"
+  },
+  "presentation": {
+    "route": "/datasets",
+    "audience": "Analyst · Admin",
+    "pitch": "A page for choosing a dataset, filtering its rows and understanding its columns.",
+    "focus": [
+      "Select a dataset from the catalog.",
+      "Show the filters, preview table and schema tab."
+    ],
+    "stories": [
+      {
+        "id": "pages-explorer--ready",
+        "label": "Dataset Explorer page",
+        "detail": "See the catalog, filters and dataset details."
+      },
+      {
+        "id": "features-explorer--paging",
+        "label": "Preview table",
+        "detail": "Try moving between pages of rows."
+      }
+    ],
+    "storyNote": ""
+  },
+  "nodes": {
+    "page": {
+      "file": "src/app/(protected)/datasets/page.tsx",
+      "symbol": "DatasetsPage",
+      "layer": "Page",
+      "title": "Dataset Explorer page",
+      "summary": "The entry point for browsing datasets.",
+      "talk": [
+        "The entry point for browsing datasets."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "feature": {
+      "file": "src/features/explorer/ExplorerFeature.tsx",
+      "symbol": "ExplorerFeature",
+      "layer": "Feature",
+      "title": "Dataset Explorer",
+      "summary": "Combines a dataset list with details for the selected dataset.",
+      "talk": [
+        "Combines a dataset list with details for the selected dataset."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "catalog": {
+      "file": "src/features/explorer/DatasetCatalog.tsx",
+      "symbol": "DatasetCatalog",
+      "layer": "Feature",
+      "title": "Dataset list",
+      "summary": "Lets the user choose which dataset to explore.",
+      "talk": [
+        "Lets the user choose which dataset to explore."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "preview": {
+      "file": "src/features/explorer/DatasetPreview.tsx",
+      "symbol": "DatasetPreview",
+      "layer": "Feature",
+      "title": "Preview table",
+      "summary": "Shows sample rows with previous and next page controls.",
+      "talk": [
+        "Shows sample rows with previous and next page controls."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "schema": {
+      "file": "src/features/explorer/DatasetSchema.tsx",
+      "symbol": "DatasetSchema",
+      "layer": "Feature",
+      "title": "Schema tab",
+      "summary": "Describes the dataset columns and their types.",
+      "talk": [
+        "Describes the dataset columns and their types."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "filters": {
+      "file": "src/features/explorer/PreviewFilters.tsx",
+      "symbol": "PreviewFilters",
+      "layer": "Feature",
+      "title": "Preview filters",
+      "summary": "Lets the user narrow the preview by dates and, where available, facility.",
+      "talk": [
+        "Lets the user narrow the preview by dates and, where available, facility."
+      ],
+      "types": [],
+      "links": [],
+      "views": []
+    }
+  },
+  "flows": [
+    {
+      "id": "high-level",
+      "title": "Page & components",
+      "endpoint": "Frontend / /datasets",
+      "lead": "A page for choosing a dataset, filtering its rows and understanding its columns.",
+      "heading": "What is on this page?",
+      "layout": "conceptual",
+      "componentOverview": true,
+      "group": "Start here",
+      "nodes": [],
+      "edges": [],
+      "lanes": [
+        {
+          "title": "Main page and components",
+          "caption": "Each card describes a visible part of the screen. Click a card to see its component code.",
+          "view": "overview",
+          "steps": [
+            {
+              "actor": "Page",
+              "title": "Dataset Explorer",
+              "text": "Combines a dataset list with details for the selected dataset.",
+              "code": {
+                "module": "frontend-explorer",
+                "view": "overview",
+                "node": "feature"
+              }
+            },
+            {
+              "actor": "Component",
+              "title": "Dataset list",
+              "text": "Lets the user choose which dataset to explore.",
+              "code": {
+                "module": "frontend-explorer",
+                "view": "overview",
+                "node": "catalog"
+              }
+            },
+            {
+              "actor": "Component",
+              "title": "Preview table",
+              "text": "Shows sample rows with previous and next page controls.",
+              "code": {
+                "module": "frontend-explorer",
+                "view": "overview",
+                "node": "preview"
+              }
+            },
+            {
+              "actor": "Component",
+              "title": "Schema tab",
+              "text": "Describes the dataset columns and their types.",
+              "code": {
+                "module": "frontend-explorer",
+                "view": "overview",
+                "node": "schema"
+              }
+            },
+            {
+              "actor": "Component",
+              "title": "Preview filters",
+              "text": "Lets the user narrow the preview by dates and, where available, facility.",
+              "code": {
+                "module": "frontend-explorer",
+                "view": "overview",
+                "node": "filters"
+              }
+            }
+          ]
+        }
+      ],
+      "boundaries": [
+        [
+          "What to explain",
+          "Choose a dataset on the left, then inspect its data or column definitions on the right."
+        ]
+      ],
+      "note": "",
+      "outcomes": []
+    },
+    {
+      "id": "overview",
+      "title": "Component code",
+      "endpoint": "/datasets",
+      "lead": "Optional: open the page or one of its visible components.",
+      "group": "Examples",
+      "layout": "catalog",
+      "nodes": [
+        "page",
+        "feature",
+        "catalog",
+        "preview",
+        "schema",
+        "filters"
+      ],
+      "edges": [],
+      "note": "These are the page and UI components shown in the overview.",
+      "outcomes": []
+    }
+  ]
+}

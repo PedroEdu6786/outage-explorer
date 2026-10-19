@@ -1,0 +1,661 @@
+{
+  "module": {
+    "id": "queries",
+    "label": "SQL queries",
+    "status": "Demo walkthrough"
+  },
+  "nodes": {
+    "route": {
+      "file": "src/outage_explorer/entrypoints/http/routes/queries.py",
+      "symbol": "create_queries_blueprint.execute",
+      "title": "Submit SQL",
+      "summary": "Validate CSRF and request fields, then invoke the query use case.",
+      "talk": [
+        "Validate CSRF and request fields, then invoke the query use case."
+      ],
+      "layer": "HTTP",
+      "types": [],
+      "links": [],
+      "views": [
+        "submit"
+      ]
+    },
+    "execute": {
+      "file": "src/outage_explorer/application/services/queries.py",
+      "symbol": "QueryService.execute",
+      "title": "Execute once",
+      "summary": "Resolve identity, inspect references, authorize scope, reserve resources and execute unchanged SQL.",
+      "talk": [
+        "After confirmed worker termination, release input pins and retain the result. Return its first page through the same authorized paging path."
+      ],
+      "layer": "Application",
+      "types": [
+        "query",
+        "identity"
+      ],
+      "links": [
+        "inspect",
+        "authorize",
+        "reserve",
+        "inputs",
+        "close"
+      ],
+      "views": [
+        "inspection",
+        "execution",
+        "paging"
+      ]
+    },
+    "inspect": {
+      "file": "src/outage_explorer/infrastructure/sql_validation/subprocess_inspection.py",
+      "symbol": "SubprocessSqlInspector.inspect",
+      "title": "Inspect in a subprocess",
+      "summary": "Parse and inspect SQL behind a bounded subprocess boundary. No API-process parser fallback.",
+      "talk": [
+        "Parse and inspect SQL behind a bounded subprocess boundary. No API-process parser fallback."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [
+        "parserRun"
+      ],
+      "views": []
+    },
+    "parserRun": {
+      "file": "src/outage_explorer/infrastructure/sql_validation/subprocess_inspection.py",
+      "symbol": "SubprocessSqlInspector._run",
+      "title": "Bound parser lifetime",
+      "summary": "Inspect admission, transport, deadlines and process termination in the concrete adapter.",
+      "talk": [
+        "Inspect admission, transport, deadlines and process termination in the concrete adapter."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "authorize": {
+      "file": "src/outage_explorer/application/services/queries.py",
+      "symbol": "QueryService._authorize",
+      "title": "Authorize all references",
+      "summary": "Derive grains from inspected SQL. Reference-free expressions use their distinct access operation.",
+      "talk": [
+        "Derive grains from inspected SQL. Reference-free expressions use their distinct access operation."
+      ],
+      "layer": "Application",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "resultReserve": {
+      "file": "src/outage_explorer/infrastructure/query_results/store.py",
+      "symbol": "BoundedQueryResults.reserve",
+      "title": "Reserve result capacity",
+      "summary": "Admit retained output capacity for the authenticated owner before execution.",
+      "talk": [
+        "Admit retained output capacity for the authenticated owner before execution."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "reserve": {
+      "file": "src/outage_explorer/infrastructure/worker_runtime/launcher.py",
+      "symbol": "VerifiedLauncher.reserve",
+      "title": "Reserve analytical execution",
+      "summary": "Execution capacity includes preparation and confirmed worker cleanup.",
+      "talk": [
+        "Execution capacity includes preparation and confirmed worker cleanup."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "inputs": {
+      "file": "src/outage_explorer/infrastructure/local_cache/modeled.py",
+      "symbol": "VerifiedResourceCache.prepare",
+      "title": "Pin approved inputs",
+      "summary": "Prepare only referenced datasets from one published generation.",
+      "talk": [
+        "Prepare only referenced datasets from one published generation."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": [],
+      "handoffs": [
+        {
+          "module": "datasets",
+          "view": "initial",
+          "label": "Inspect verified input preparation"
+        }
+      ]
+    },
+    "run": {
+      "file": "src/outage_explorer/infrastructure/worker_runtime/launcher.py",
+      "symbol": "_Reservation.query",
+      "title": "Invoke the isolated query",
+      "summary": "Pass unchanged SQL and approved relations through the reserved runtime.",
+      "talk": [
+        "Pass unchanged SQL and approved relations through the reserved runtime."
+      ],
+      "layer": "Infrastructure",
+      "types": [
+        "query"
+      ],
+      "links": [],
+      "views": []
+    },
+    "engine": {
+      "file": "src/outage_explorer/infrastructure/duckdb/queries.py",
+      "symbol": "execute_query",
+      "title": "Run SQL in the worker",
+      "summary": "Execute within the restricted engine and bounded output protocol. Pagination does not rewrite user SQL.",
+      "talk": [
+        "Execute within the restricted engine and bounded output protocol. Pagination does not rewrite user SQL."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "close": {
+      "file": "src/outage_explorer/infrastructure/worker_runtime/launcher.py",
+      "symbol": "_Reservation.close",
+      "title": "Prove termination",
+      "summary": "Close the execution before releasing input pins or accepting retained success.",
+      "talk": [
+        "Close the execution before releasing input pins or accepting retained success."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "retain": {
+      "file": "src/outage_explorer/infrastructure/query_results/store.py",
+      "symbol": "BoundedQueryResults._complete",
+      "title": "Retain the bounded result",
+      "summary": "Materialize the accepted output under a fixed result identity and expiry.",
+      "talk": [
+        "Materialize the accepted output under a fixed result identity and expiry."
+      ],
+      "layer": "Infrastructure",
+      "types": [
+        "identity"
+      ],
+      "links": [],
+      "views": []
+    },
+    "pageRoute": {
+      "file": "src/outage_explorer/entrypoints/http/routes/queries.py",
+      "symbol": "create_queries_blueprint.page",
+      "title": "Read a result page",
+      "summary": "Parse query ID and page options and ask the application for the retained page.",
+      "talk": [
+        "Parse query ID and page options and ask the application for the retained page."
+      ],
+      "layer": "HTTP",
+      "types": [],
+      "links": [],
+      "views": [
+        "paging"
+      ]
+    },
+    "page": {
+      "file": "src/outage_explorer/application/services/queries.py",
+      "symbol": "QueryService.page",
+      "title": "Reauthorize retained reads",
+      "summary": "Resolve the user, acquire their result, authorize its grains and enforce the original page size.",
+      "talk": [
+        "Resolve the user, acquire their result, authorize its grains and enforce the original page size."
+      ],
+      "layer": "Application",
+      "types": [
+        "identity"
+      ],
+      "links": [
+        "acquire",
+        "position",
+        "storedPage"
+      ],
+      "views": []
+    },
+    "acquire": {
+      "file": "src/outage_explorer/infrastructure/query_results/store.py",
+      "symbol": "BoundedQueryResults.acquire",
+      "title": "Acquire an owned result",
+      "summary": "Enforce result ownership and expiry before reading stored output.",
+      "talk": [
+        "Enforce result ownership and expiry before reading stored output."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "position": {
+      "file": "src/outage_explorer/domain/query_results.py",
+      "symbol": "ResultIdentity.position",
+      "title": "Select a stable slice",
+      "summary": "Calculate boundaries within the same retained result; no SQL rerun.",
+      "talk": [
+        "Calculate boundaries within the same retained result; no SQL rerun."
+      ],
+      "layer": "Domain",
+      "types": [],
+      "links": [
+        "total"
+      ],
+      "views": []
+    },
+    "total": {
+      "file": "src/outage_explorer/domain/query_results.py",
+      "symbol": "ResultIdentity.total_pages",
+      "title": "Count retained pages",
+      "summary": "Ceiling division of retained rows by fixed page size, with at least one page.",
+      "talk": [
+        "Ceiling division of retained rows by fixed page size, with at least one page."
+      ],
+      "layer": "Domain",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "query": {
+      "file": "src/outage_explorer/application/ports/execution.py",
+      "symbol": "QueryRead",
+      "title": "QueryRead",
+      "summary": "SQL text and approved dataset/file relations cross the isolated boundary.",
+      "talk": [
+        "SQL text and approved dataset/file relations cross the isolated boundary."
+      ],
+      "layer": "Application",
+      "types": [],
+      "links": [],
+      "views": [],
+      "example": {
+        "sql": "SELECT period FROM national ORDER BY period DESC",
+        "relations": [
+          [
+            "Dataset(national)",
+            [
+              "ApprovedFile(...)"
+            ]
+          ]
+        ]
+      }
+    },
+    "identity": {
+      "file": "src/outage_explorer/domain/query_results.py",
+      "symbol": "ResultIdentity",
+      "title": "ResultIdentity",
+      "summary": "Process-owned, expiring result metadata. Partial shape illustrates stable pagination.",
+      "talk": [
+        "Process-owned, expiring result metadata. Partial shape illustrates stable pagination."
+      ],
+      "layer": "Domain",
+      "types": [],
+      "links": [],
+      "views": [],
+      "example": {
+        "id": "<query id>",
+        "owner": "demo-user",
+        "generation_id": "<generation id>",
+        "page_size": 100,
+        "retained_row_count": 201,
+        "completed_at": "<completion instant>",
+        "expires_at": "<fixed expiry>",
+        "truncation_reason": null
+      }
+    },
+    "storedPage": {
+      "file": "src/outage_explorer/infrastructure/query_results/store.py",
+      "symbol": "_Reader.page",
+      "title": "Read retained rows",
+      "summary": "Verify the retained output file and select rows at stable page offsets without executing SQL again.",
+      "talk": [
+        "Verify the retained output file and select rows at stable page offsets without executing SQL again."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": []
+    }
+  },
+  "flows": [
+    {
+      "id": "high-level",
+      "title": "High-level diagram",
+      "endpoint": "The big picture",
+      "lead": "The API inspects and authorizes SQL before isolated execution. It retains a bounded result so later pages do not rerun the query.",
+      "heading": "Run SQL once. Browse the saved result.",
+      "layout": "conceptual",
+      "group": "Start here",
+      "nodes": [],
+      "edges": [],
+      "lanes": [
+        {
+          "title": "Submit a query",
+          "caption": "The initial response already includes a page and a result ID. Reference-free expressions need no published dataset files.",
+          "view": "submit",
+          "steps": [
+            {
+              "actor": "Browser \u2192 API",
+              "title": "Submit SQL",
+              "text": "Verify the session and browser mutation protection.",
+              "code": {
+                "module": "queries",
+                "view": "submit",
+                "node": "route"
+              }
+            },
+            {
+              "actor": "Separate parser",
+              "title": "Inspect the request",
+              "text": "Identify referenced datasets and reject unsupported SQL within resource limits.",
+              "code": {
+                "module": "queries",
+                "view": "inspection",
+                "node": "inspect"
+              }
+            },
+            {
+              "actor": "API \u2194 PostgreSQL / cache",
+              "title": "Authorize and prepare",
+              "text": "Authorize every referenced grain, reserve capacity and pin one published generation.",
+              "code": {
+                "module": "queries",
+                "view": "execution",
+                "node": "execute"
+              }
+            },
+            {
+              "actor": "Isolated worker",
+              "title": "Execute unchanged SQL",
+              "text": "Read approved files only and produce bounded output.",
+              "code": {
+                "module": "queries",
+                "view": "execution",
+                "node": "engine"
+              }
+            },
+            {
+              "actor": "API / result storage",
+              "title": "Retain and return",
+              "text": "Confirm worker termination, retain the result and return an authorized page with its ID.",
+              "code": {
+                "module": "queries",
+                "view": "execution",
+                "node": "execute"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Read another result page",
+          "caption": "This path uses saved rows; it does not start a SQL execution or select a newer generation.",
+          "view": "paging",
+          "steps": [
+            {
+              "actor": "Browser \u2192 API",
+              "title": "Choose a result page",
+              "text": "Send the result ID, page number and session.",
+              "code": {
+                "module": "queries",
+                "view": "paging",
+                "node": "pageRoute"
+              }
+            },
+            {
+              "actor": "API / result metadata",
+              "title": "Check ownership and access",
+              "text": "Require a live result belonging to the user and recheck access to its datasets.",
+              "code": {
+                "module": "queries",
+                "view": "paging",
+                "node": "page"
+              }
+            },
+            {
+              "actor": "Private result storage",
+              "title": "Read the saved slice",
+              "text": "Use the original page size and stable retained-row boundaries.",
+              "code": {
+                "module": "queries",
+                "view": "paging",
+                "node": "storedPage"
+              }
+            },
+            {
+              "actor": "API \u2192 Browser",
+              "title": "Return the page",
+              "text": "Return rows from the same execution with pagination metadata.",
+              "code": {
+                "module": "queries",
+                "view": "paging",
+                "node": "page"
+              }
+            }
+          ]
+        }
+      ],
+      "boundaries": [
+        [
+          "Isolation",
+          "The parser and query engine run outside the API process with bounded resources."
+        ],
+        [
+          "Two kinds of state",
+          "PostgreSQL owns application access and publication. Query IDs and retained output have a bounded, process-owned lifetime."
+        ],
+        [
+          "Unavailable result",
+          "Expired or missing results are reported as unavailable; the application does not silently rerun the SQL."
+        ]
+      ],
+      "note": "",
+      "outcomes": []
+    },
+    {
+      "id": "overview",
+      "title": "Queries at a glance",
+      "endpoint": "Inspect \u2192 authorize \u2192 execute \u2192 retain",
+      "lead": "Explain the distinction between user SQL execution and later result paging.",
+      "nodes": [
+        "route",
+        "inspect",
+        "execute",
+        "retain",
+        "pageRoute",
+        "identity"
+      ],
+      "edges": [],
+      "group": "Orientation",
+      "layout": "catalog",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": []
+    },
+    {
+      "id": "submit",
+      "title": "SQL admission",
+      "endpoint": "POST /api/query",
+      "lead": "Identity precedes parsing; authorized reference scope precedes analytical inputs.",
+      "nodes": [
+        "route",
+        "execute",
+        "inspect",
+        "authorize",
+        "resultReserve",
+        "reserve"
+      ],
+      "edges": [
+        [
+          "route",
+          "execute",
+          "read next"
+        ],
+        [
+          "execute",
+          "inspect",
+          "read next"
+        ],
+        [
+          "inspect",
+          "authorize",
+          "read next"
+        ],
+        [
+          "authorize",
+          "resultReserve",
+          "read next"
+        ],
+        [
+          "resultReserve",
+          "reserve",
+          "read next"
+        ]
+      ],
+      "group": "Walkthrough",
+      "layout": "sequence",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": []
+    },
+    {
+      "id": "inspection",
+      "title": "Bounded SQL inspection",
+      "endpoint": "Separate parser process",
+      "lead": "Open the adapter to explain admission, bounded protocol and confirmed termination.",
+      "nodes": [
+        "inspect",
+        "parserRun",
+        "authorize"
+      ],
+      "edges": [
+        [
+          "inspect",
+          "parserRun",
+          "read next"
+        ],
+        [
+          "parserRun",
+          "authorize",
+          "read next"
+        ]
+      ],
+      "group": "Walkthrough",
+      "layout": "sequence",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": [
+        "The parser runs separately from the API process."
+      ]
+    },
+    {
+      "id": "execution",
+      "title": "One isolated execution",
+      "endpoint": "Worker \u2192 retained output",
+      "lead": "Nested work is coordinated by QueryService.execute.",
+      "nodes": [
+        "execute",
+        "inputs",
+        "run",
+        "engine",
+        "close",
+        "retain"
+      ],
+      "edges": [
+        [
+          "execute",
+          "inputs",
+          "read next"
+        ],
+        [
+          "inputs",
+          "run",
+          "read next"
+        ],
+        [
+          "run",
+          "engine",
+          "read next"
+        ],
+        [
+          "engine",
+          "close",
+          "read next"
+        ],
+        [
+          "close",
+          "retain",
+          "read next"
+        ]
+      ],
+      "group": "Walkthrough",
+      "layout": "sequence",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": [
+        "One fixed generation supplies all referenced dataset inputs.",
+        "A retained result is accepted after worker termination is confirmed."
+      ]
+    },
+    {
+      "id": "paging",
+      "title": "Page the retained result",
+      "endpoint": "GET /api/query",
+      "lead": "Fresh ownership and role checks apply without executing SQL again.",
+      "nodes": [
+        "pageRoute",
+        "page",
+        "acquire",
+        "authorize",
+        "position"
+      ],
+      "edges": [
+        [
+          "pageRoute",
+          "page",
+          "read next"
+        ],
+        [
+          "page",
+          "acquire",
+          "read next"
+        ],
+        [
+          "acquire",
+          "authorize",
+          "read next"
+        ],
+        [
+          "authorize",
+          "position",
+          "read next"
+        ]
+      ],
+      "group": "Walkthrough",
+      "layout": "sequence",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": [
+        "Page size is fixed for the result.",
+        "Expired or unavailable metadata cannot be recovered by silently rerunning SQL."
+      ]
+    },
+    {
+      "id": "types",
+      "title": "Query types",
+      "endpoint": "Illustrative object shapes",
+      "lead": "Compare execution input with retained result metadata.",
+      "nodes": [
+        "query",
+        "identity"
+      ],
+      "edges": [],
+      "group": "Types",
+      "layout": "catalog",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": []
+    }
+  ]
+}

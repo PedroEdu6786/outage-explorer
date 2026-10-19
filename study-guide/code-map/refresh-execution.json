@@ -1,0 +1,652 @@
+{
+  "module": {
+    "id": "refresh-execution",
+    "label": "Refresh execution",
+    "status": "Demo walkthrough"
+  },
+  "nodes": {
+    "execute": {
+      "file": "src/outage_explorer/application/services/refresh_execution.py",
+      "symbol": "RefreshExecution.execute",
+      "title": "Orchestrate the pipeline",
+      "summary": "Validate committed ownership, restore the admitted base, build, verify, persist and publish.",
+      "talk": [
+        "This checkout keeps these phases in one method. The linked adapters expose the actual I/O.",
+        "A retained-all-excluded outcome finishes without publishing a replacement generation."
+      ],
+      "layer": "Application",
+      "types": [
+        "connector",
+        "receipt"
+      ],
+      "links": [],
+      "views": [
+        "pipeline",
+        "durability",
+        "publication"
+      ],
+      "handoffs": [
+        {
+          "module": "refresh-worker",
+          "view": "claim",
+          "label": "Return to worker ownership"
+        }
+      ]
+    },
+    "factory": {
+      "file": "src/outage_explorer/bootstrap.py",
+      "symbol": "build_refresh_worker.connector",
+      "title": "Compose one admitted run",
+      "summary": "Build per-run connector dependencies, cancellation checks and bounded resources.",
+      "talk": [
+        "Build per-run connector dependencies, cancellation checks and bounded resources."
+      ],
+      "layer": "Composition",
+      "types": [
+        "connector"
+      ],
+      "links": [],
+      "views": []
+    },
+    "restore": {
+      "file": "src/outage_explorer/application/services/resource_artifacts.py",
+      "symbol": "RecoverResourceArtifacts.execute",
+      "title": "Restore the exact baseline",
+      "summary": "Validate the durable receipt and restore its three exact resources for retention-aware modeling.",
+      "talk": [
+        "Validate the durable receipt and restore its three exact resources for retention-aware modeling."
+      ],
+      "layer": "Application",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "candidate": {
+      "file": "src/outage_explorer/application/services/connector.py",
+      "symbol": "CreateResourceCandidate.run",
+      "title": "Retrieve and model",
+      "summary": "Coordinate bounded source work, model construction and candidate verification.",
+      "talk": [
+        "Coordinate bounded source work, model construction and candidate verification."
+      ],
+      "layer": "Application",
+      "types": [
+        "candidateType"
+      ],
+      "links": [
+        "build"
+      ],
+      "views": []
+    },
+    "build": {
+      "file": "src/outage_explorer/infrastructure/parquet/candidates.py",
+      "symbol": "ParquetResourceBuilder.build_resources",
+      "title": "Build three unified resources",
+      "summary": "Produce one resource file per grain, preserving the evidence needed to retain valid baseline rows.",
+      "talk": [
+        "Produce one resource file per grain, preserving the evidence needed to retain valid baseline rows."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [
+        "verify"
+      ],
+      "views": []
+    },
+    "verify": {
+      "file": "src/outage_explorer/infrastructure/parquet/candidates.py",
+      "symbol": "ParquetResourceBuilder.verify_resources",
+      "title": "Verify modeled resources",
+      "summary": "Verify exact physical resources against the candidate and configured bounds.",
+      "talk": [
+        "Verify exact physical resources against the candidate and configured bounds."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "coverage": {
+      "file": "src/outage_explorer/application/services/refresh_execution.py",
+      "symbol": "_coverage",
+      "title": "Check candidate coverage",
+      "summary": "Require three matching resources with consistent row counts and usable coverage.",
+      "talk": [
+        "Require three matching resources with consistent row counts and usable coverage."
+      ],
+      "layer": "Application",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "persist": {
+      "file": "src/outage_explorer/application/services/resource_artifacts.py",
+      "symbol": "PersistResourceArtifacts.execute",
+      "title": "Persist verified files",
+      "summary": "Verify locally, determine generation-prefixed destinations and transfer exactly three resources.",
+      "talk": [
+        "Verify locally, determine generation-prefixed destinations and transfer exactly three resources."
+      ],
+      "layer": "Application",
+      "types": [
+        "receipt"
+      ],
+      "links": [
+        "transfer"
+      ],
+      "views": []
+    },
+    "transfer": {
+      "file": "src/outage_explorer/application/services/resource_artifacts.py",
+      "symbol": "PersistResourceArtifacts._transfer",
+      "title": "Transfer and verify",
+      "summary": "Stream local bytes into the durable verified-transfer port and close the input stream.",
+      "talk": [
+        "Stream local bytes into the durable verified-transfer port and close the input stream."
+      ],
+      "layer": "Application",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "s3": {
+      "file": "src/outage_explorer/infrastructure/s3/resources.py",
+      "symbol": "S3ResourceStore.put_verified",
+      "title": "Verify durable S3 bytes",
+      "summary": "Upload and verify the exact resource object through the S3 adapter. A durable receipt is not publication.",
+      "talk": [
+        "Upload and verify the exact resource object through the S3 adapter. A durable receipt is not publication."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [
+        "putExact"
+      ],
+      "views": []
+    },
+    "publish": {
+      "file": "src/outage_explorer/infrastructure/postgresql/publication.py",
+      "symbol": "PostgresqlResourcePublicationStore.publish",
+      "title": "Publish the generation",
+      "summary": "Validate descriptors and delegate to the atomic PostgreSQL publication transaction.",
+      "talk": [
+        "Validate descriptors and delegate to the atomic PostgreSQL publication transaction."
+      ],
+      "layer": "Infrastructure",
+      "types": [
+        "generation"
+      ],
+      "links": [
+        "atomic"
+      ],
+      "views": []
+    },
+    "atomic": {
+      "file": "src/outage_explorer/infrastructure/postgresql/publication.py",
+      "symbol": "PostgresqlResourcePublicationStore._publish",
+      "title": "Commit publication atomically",
+      "summary": "Check live ownership and unchanged base, then persist descriptors, success and the active pointer in one transaction.",
+      "talk": [
+        "Check live ownership and unchanged base, then persist descriptors, success and the active pointer in one transaction."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [
+        "owned"
+      ],
+      "views": [],
+      "handoffs": [
+        {
+          "module": "datasets",
+          "view": "initial",
+          "label": "Follow readers selecting the published generation"
+        }
+      ]
+    },
+    "owned": {
+      "file": "src/outage_explorer/infrastructure/postgresql/publication.py",
+      "symbol": "PostgresqlResourcePublicationStore._owned",
+      "title": "Fence stale publishers",
+      "summary": "Require the exact run, owner identity, epoch and live lease.",
+      "talk": [
+        "Require the exact run, owner identity, epoch and live lease."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "finish": {
+      "file": "src/outage_explorer/infrastructure/postgresql/publication.py",
+      "symbol": "PostgresqlResourcePublicationStore.finish",
+      "title": "Finish without publication",
+      "summary": "Record failed or retained outcomes under the owner fence; preserve active published data.",
+      "talk": [
+        "Record failed or retained outcomes under the owner fence; preserve active published data."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "progress": {
+      "file": "src/outage_explorer/application/services/refresh_execution.py",
+      "symbol": "RefreshReports.progress",
+      "title": "Report bounded progress",
+      "summary": "Map connector stages and safe quality summaries into durable refresh progress.",
+      "talk": [
+        "Map connector stages and safe quality summaries into durable refresh progress."
+      ],
+      "layer": "Application",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "connector": {
+      "file": "src/outage_explorer/application/ports/refresh_execution.py",
+      "symbol": "RefreshConnector",
+      "title": "RefreshConnector",
+      "summary": "Application-owned per-run capabilities connect the candidate to restoration, verification and durability.",
+      "talk": [
+        "Application-owned per-run capabilities connect the candidate to restoration, verification and durability."
+      ],
+      "layer": "Application",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "receipt": {
+      "file": "src/outage_explorer/application/ports/connector.py",
+      "symbol": "DurableResourceReceipt",
+      "title": "DurableResourceReceipt",
+      "summary": "Three exact durable resource descriptors plus generation identity. A receipt alone does not switch readers.",
+      "talk": [
+        "Three exact durable resource descriptors plus generation identity. A receipt alone does not switch readers."
+      ],
+      "layer": "Application",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "candidateType": {
+      "file": "src/outage_explorer/application/ports/candidates.py",
+      "symbol": "CandidateResult",
+      "title": "CandidateResult",
+      "summary": "Local modeled resources, summaries, interval and transformation identity before publication.",
+      "talk": [
+        "Local modeled resources, summaries, interval and transformation identity before publication."
+      ],
+      "layer": "Application",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "generation": {
+      "file": "src/outage_explorer/domain/publication.py",
+      "symbol": "ResourcePublishedGeneration",
+      "title": "Published generation",
+      "summary": "PostgreSQL owns exact resource descriptors and which generation readers select.",
+      "talk": [
+        "PostgreSQL owns exact resource descriptors and which generation readers select."
+      ],
+      "layer": "Domain",
+      "types": [],
+      "links": [],
+      "views": []
+    },
+    "putExact": {
+      "file": "src/outage_explorer/infrastructure/s3/artifacts.py",
+      "symbol": "S3ArtifactStore.put_exact",
+      "title": "Upload exact bytes",
+      "summary": "Conditionally upload the expected bytes and verify the durable object through full readback.",
+      "talk": [
+        "Conditionally upload the expected bytes and verify the durable object through full readback."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [
+        "readback"
+      ],
+      "views": []
+    },
+    "readback": {
+      "file": "src/outage_explorer/infrastructure/s3/artifacts.py",
+      "symbol": "S3ArtifactStore.read",
+      "title": "Read and verify the durable file",
+      "summary": "Stream the exact object and verify its expected length and checksum.",
+      "talk": [
+        "Stream the exact object and verify its expected length and checksum."
+      ],
+      "layer": "Infrastructure",
+      "types": [],
+      "links": [],
+      "views": []
+    }
+  },
+  "flows": [
+    {
+      "id": "high-level",
+      "title": "High-level diagram",
+      "endpoint": "The big picture",
+      "lead": "The refresh pipeline combines admitted source data with the previous valid baseline, verifies three resource files and changes the published pointer only after durable verification.",
+      "heading": "Publish only a complete, verified generation.",
+      "layout": "conceptual",
+      "group": "Start here",
+      "nodes": [],
+      "edges": [],
+      "lanes": [
+        {
+          "title": "Build the candidate",
+          "caption": "All phases use the configuration and baseline selected at admission.",
+          "view": "pipeline",
+          "steps": [
+            {
+              "actor": "Worker / PostgreSQL",
+              "title": "Confirm ownership and base",
+              "text": "Require the committed claim and the original published baseline.",
+              "code": {
+                "module": "refresh-execution",
+                "view": "pipeline",
+                "node": "execute"
+              }
+            },
+            {
+              "actor": "S3 \u2192 local preparation",
+              "title": "Restore prior valid data",
+              "text": "When a baseline exists, restore and verify its exact resource files.",
+              "code": {
+                "module": "refresh-execution",
+                "view": "pipeline",
+                "node": "restore"
+              }
+            },
+            {
+              "actor": "EIA \u2192 connector",
+              "title": "Retrieve incoming observations",
+              "text": "Fetch the three source grains with bounded requests and explicit failure handling.",
+              "code": {
+                "module": "refresh-execution",
+                "view": "pipeline",
+                "node": "candidate"
+              }
+            },
+            {
+              "actor": "Modeling",
+              "title": "Merge and calculate",
+              "text": "Apply invalid-row, duplicate, revision and retention rules while building one file per grain.",
+              "code": {
+                "module": "refresh-execution",
+                "view": "pipeline",
+                "node": "build"
+              }
+            },
+            {
+              "actor": "Verification",
+              "title": "Approve the candidate",
+              "text": "Check identity, coverage, counts and complete usable output before persistence.",
+              "code": {
+                "module": "refresh-execution",
+                "view": "pipeline",
+                "node": "verify"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Persist, then publish",
+          "caption": "A successful upload alone does not make data visible to readers.",
+          "view": "publication",
+          "steps": [
+            {
+              "actor": "Local candidate \u2192 S3",
+              "title": "Store three exact files",
+              "text": "Persist national, facilities and generators resources under the generation\u2019s prefix.",
+              "code": {
+                "module": "refresh-execution",
+                "view": "durability",
+                "node": "putExact"
+              }
+            },
+            {
+              "actor": "S3 \u2192 verification",
+              "title": "Read back and verify",
+              "text": "Read all three durable files and verify their exact expected contents.",
+              "code": {
+                "module": "refresh-execution",
+                "view": "durability",
+                "node": "readback"
+              }
+            },
+            {
+              "actor": "Worker \u2194 PostgreSQL",
+              "title": "Commit publication",
+              "text": "Recheck ownership and base, then atomically store descriptors, success and the active pointer.",
+              "code": {
+                "module": "refresh-execution",
+                "view": "publication",
+                "node": "atomic"
+              }
+            },
+            {
+              "actor": "New data requests",
+              "title": "Select the new generation",
+              "text": "New readers can select it; existing preview sequences keep their pinned generation.",
+              "code": {
+                "module": "datasets",
+                "view": "initial",
+                "node": "active"
+              }
+            }
+          ]
+        }
+      ],
+      "boundaries": [
+        [
+          "Failure before publication",
+          "Record the failed outcome under the owner fence and preserve the previous published data."
+        ],
+        [
+          "All incoming rows excluded",
+          "A valid baseline can be retained without publishing a replacement generation. An initial load needs usable data in every grain."
+        ],
+        [
+          "Uncertain commit",
+          "Reconcile durable publication history. Do not overwrite an ambiguous commit with a fabricated failure."
+        ]
+      ],
+      "note": "",
+      "outcomes": []
+    },
+    {
+      "id": "overview",
+      "title": "Refresh pipeline at a glance",
+      "endpoint": "Restore \u2192 model \u2192 verify \u2192 persist \u2192 publish",
+      "lead": "Explain why failed candidates never replace the published generation.",
+      "nodes": [
+        "execute",
+        "restore",
+        "candidate",
+        "persist",
+        "publish",
+        "finish"
+      ],
+      "edges": [],
+      "group": "Orientation",
+      "layout": "catalog",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": []
+    },
+    {
+      "id": "pipeline",
+      "title": "Build a verified candidate",
+      "endpoint": "Admitted configuration and base",
+      "lead": "RefreshExecution owns the phase ordering and identity checks.",
+      "nodes": [
+        "execute",
+        "factory",
+        "restore",
+        "candidate",
+        "build",
+        "verify"
+      ],
+      "edges": [
+        [
+          "execute",
+          "factory",
+          "read next"
+        ],
+        [
+          "factory",
+          "restore",
+          "read next"
+        ],
+        [
+          "restore",
+          "candidate",
+          "read next"
+        ],
+        [
+          "candidate",
+          "build",
+          "read next"
+        ],
+        [
+          "build",
+          "verify",
+          "read next"
+        ]
+      ],
+      "group": "Walkthrough",
+      "layout": "sequence",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": [
+        "The candidate must match the admitted run, base, interval and transformation identities.",
+        "Initial publication needs usable output in all three grains."
+      ]
+    },
+    {
+      "id": "durability",
+      "title": "Three-file durability",
+      "endpoint": "Exact S3 resource objects",
+      "lead": "Complete durable readback precedes publication.",
+      "nodes": [
+        "execute",
+        "coverage",
+        "persist",
+        "transfer",
+        "s3"
+      ],
+      "edges": [
+        [
+          "execute",
+          "coverage",
+          "read next"
+        ],
+        [
+          "coverage",
+          "persist",
+          "read next"
+        ],
+        [
+          "persist",
+          "transfer",
+          "read next"
+        ],
+        [
+          "transfer",
+          "s3",
+          "read next"
+        ]
+      ],
+      "group": "Walkthrough",
+      "layout": "sequence",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": [
+        "Exactly national.parquet, facilities.parquet and generators.parquet under the generation prefix.",
+        "Failure preserves the previous active generation."
+      ]
+    },
+    {
+      "id": "publication",
+      "title": "Atomic publication",
+      "endpoint": "PostgreSQL transaction",
+      "lead": "The receipt is converted into exact descriptors and committed under the owner fence.",
+      "nodes": [
+        "execute",
+        "publish",
+        "atomic",
+        "owned"
+      ],
+      "edges": [
+        [
+          "execute",
+          "publish",
+          "read next"
+        ],
+        [
+          "publish",
+          "atomic",
+          "read next"
+        ],
+        [
+          "atomic",
+          "owned",
+          "read next"
+        ]
+      ],
+      "group": "Walkthrough",
+      "layout": "sequence",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": [
+        "An uncertain commit is reconciled; it is not overwritten with a fabricated failed outcome."
+      ]
+    },
+    {
+      "id": "outcomes",
+      "title": "Progress and failures",
+      "endpoint": "Conditional terminal paths",
+      "lead": "Progress, retained data and failed work have separate meanings.",
+      "nodes": [
+        "execute",
+        "progress",
+        "finish"
+      ],
+      "edges": [
+        [
+          "execute",
+          "progress",
+          "read next"
+        ],
+        [
+          "progress",
+          "finish",
+          "read next"
+        ]
+      ],
+      "group": "Walkthrough",
+      "layout": "sequence",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": [
+        "Wholly excluded incoming data can retain a valid prior generation.",
+        "Lease loss and database uncertainty propagate for recovery."
+      ]
+    },
+    {
+      "id": "types",
+      "title": "Pipeline types",
+      "endpoint": "Application-owned contracts",
+      "lead": "Inspect the actual contracts between orchestration and adapters.",
+      "nodes": [
+        "connector",
+        "candidateType",
+        "receipt",
+        "generation"
+      ],
+      "edges": [],
+      "group": "Types",
+      "layout": "catalog",
+      "note": "Reading path through the implementation. Calls return to their orchestrator; adjacent boxes are not necessarily direct callers. Conditional behavior is explained in the selected step.",
+      "outcomes": []
+    }
+  ]
+}
