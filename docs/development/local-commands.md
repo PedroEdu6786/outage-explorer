@@ -144,6 +144,10 @@ entry points remain valid. History and old images are retained without automatic
 pruning. The VM is never deleted or recreated. This is local preview/SQL readiness with refresh idle;
 full capacity and external-service evidence remain deferred.
 
+Containment validation holds the existing API ownership lock and preserves its
+file across runs. Existing cache/results are retained; unresolved staging work
+still blocks validation. Full measurements separately require empty data roots.
+
 **Failures/recovery:** Progress identifies the failed stage. Build logs and the
 previous build live at `/var/lib/outage-runtime-history/<id>/` inside the guest;
 `.local-runtime/rebuild.json` records the pending stage locally. An unfinished

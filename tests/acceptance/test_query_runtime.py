@@ -46,7 +46,10 @@ def harness(request):
             "Explicit runtime selection has no Docker executable", pytrace=False
         )
     adapter = RuntimeHarness(
-        Path(os.environ["OUTAGE_RUNTIME_TEST_PROFILE"]), Path(executable)
+        Path(os.environ["OUTAGE_RUNTIME_TEST_PROFILE"]),
+        Path(executable),
+        containment_only=request.node.get_closest_marker("runtime_measurements")
+        is None,
     )
     gate = request.node.originalname.removeprefix("test_")
     cleanup_failed = False

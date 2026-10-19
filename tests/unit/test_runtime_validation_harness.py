@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import os
 from dataclasses import asdict, replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -14,6 +15,7 @@ from outage_explorer.domain.datasets import Column, ValueType
 from outage_explorer.infrastructure.query_results.encoding import retain_result
 from outage_explorer.infrastructure.worker_runtime.configuration import RuntimeProfile
 from outage_explorer.infrastructure.worker_runtime.docker import ControlResult
+from outage_explorer.infrastructure.worker_runtime.ownership import OwnershipLedger
 from tests.runtime_validation import (
     MEASUREMENT_MANIFEST_BYTES,
     EvidenceReport,
@@ -168,6 +170,150 @@ def test_failed_cleanup_preserves_ownership(profile, tmp_path, monkeypatch):
     finally:
         adapter.ledger.clear()
         adapter.ledger.close()
+
+
+@pytest.fixture
+def reusable_harness(profile, tmp_path, monkeypatch):
+    profile = replace(profile, docker_executable=str(Path(__file__).absolute()))
+    path = tmp_path / "candidate.json"
+    path.write_text(json.dumps({"profile": asdict(profile), "evidence": None}))
+    adapter = RuntimeHarness(path, Path(__file__).absolute())
+    monkeypatch.setattr(
+        adapter,
+        "command",
+        lambda args: ControlResult(
+            0,
+            (
+                profile.daemon_version + " " + profile.platform
+                if args[0] == "version"
+                else profile.image_id
+            ).encode(),
+            b"",
+        ),
+    )
+    monkeypatch.setattr(adapter.runtime, "terminate_and_reap", Mock())
+    return adapter
+
+
+def test_validation_reuses_and_holds_existing_api_lock(reusable_harness):
+    adapter = reusable_harness
+    root = Path(adapter.profile.staging_root)
+    owner = OwnershipLedger(root, "b" * 32)
+    owner.open()
+    owner.close()
+    lock = root / "owner.lock"
+    inode = lock.stat().st_ino
+    for _ in range(2):
+        adapter.open()
+        try:
+            with pytest.raises(RuntimeUnavailableError, match="busy"):
+                owner.open()
+            assert (
+                adapter.report.document["profile_identity"] == adapter.profile.identity
+            )
+        finally:
+            adapter.close()
+        assert lock.stat().st_ino == inode
+        owner.open()
+        owner.close()
+
+
+def test_containment_preserves_existing_cache_and_results(reusable_harness):
+    adapter = reusable_harness
+    adapter.containment_only = True
+    retained = []
+    for root in (adapter.profile.cache_root, adapter.profile.result_root):
+        private_directory(Path(root))
+        path = Path(root) / "retained"
+        path.write_bytes(b"existing API data")
+        retained.append((path, path.stat().st_ino))
+    adapter.open()
+    adapter.close()
+    for path, inode in retained:
+        assert path.read_bytes() == b"existing API data"
+        assert path.stat().st_ino == inode
+
+
+@pytest.mark.parametrize("root_name", ["cache_root", "result_root"])
+def test_measurements_still_require_empty_data_roots(reusable_harness, root_name):
+    adapter = reusable_harness
+    root = Path(getattr(adapter.profile, root_name))
+    private_directory(root)
+    (root / "retained").write_bytes(b"existing API data")
+    with pytest.raises(ValueError, match="Measurement roots"):
+        adapter.open()
+    owner = OwnershipLedger(Path(adapter.profile.staging_root), "b" * 32)
+    owner.open()
+    owner.close()
+    assert not adapter.ledger.root.exists()
+    assert (root / "retained").read_bytes() == b"existing API data"
+
+
+@pytest.mark.parametrize("name", ["worker.json", "worker.partial", "execution-old"])
+def test_containment_rejects_unresolved_staging(reusable_harness, name):
+    adapter = reusable_harness
+    adapter.containment_only = True
+    root = Path(adapter.profile.staging_root)
+    private_directory(root)
+    path = root / name
+    path.write_bytes(b"preserve recovery evidence")
+    with pytest.raises(ValueError, match="unresolved"):
+        adapter.open()
+    assert path.read_bytes() == b"preserve recovery evidence"
+    assert not adapter.ledger.root.exists()
+
+
+def test_validation_refuses_running_api_owner(reusable_harness):
+    adapter = reusable_harness
+    owner = OwnershipLedger(Path(adapter.profile.staging_root), "b" * 32)
+    owner.open()
+    try:
+        with pytest.raises(BlockingIOError):
+            adapter.open()
+        assert not adapter.ledger.root.exists()
+    finally:
+        owner.close()
+
+
+@pytest.mark.parametrize("kind", ["public", "symlink", "fifo"])
+def test_validation_rejects_unsafe_owner_lock(reusable_harness, kind):
+    adapter = reusable_harness
+    root = Path(adapter.profile.staging_root)
+    private_directory(root)
+    lock = root / "owner.lock"
+    if kind == "public":
+        lock.touch(mode=0o644)
+    elif kind == "symlink":
+        lock.symlink_to(root / "absent-target")
+    else:
+        os.mkfifo(lock, 0o600)
+    inode = lock.lstat().st_ino
+    with pytest.raises((OSError, ValueError)):
+        adapter.open()
+    assert lock.lstat().st_ino == inode
+    assert not adapter.ledger.root.exists()
+
+
+def test_failed_reap_keeps_api_excluded_until_cleanup(reusable_harness, monkeypatch):
+    adapter = reusable_harness
+    adapter.open()
+    owner = OwnershipLedger(Path(adapter.profile.staging_root), "b" * 32)
+    monkeypatch.setattr(
+        adapter.runtime,
+        "terminate_and_reap",
+        Mock(side_effect=RuntimeUnavailableError("unconfirmed cleanup")),
+    )
+    try:
+        with pytest.raises(RuntimeUnavailableError):
+            adapter.close()
+        with pytest.raises(RuntimeUnavailableError, match="busy"):
+            owner.open()
+        assert adapter.ledger.root.exists()
+    finally:
+        monkeypatch.setattr(adapter.runtime, "terminate_and_reap", Mock())
+        adapter.close()
+    owner.open()
+    owner.close()
 
 
 def test_private_report_root_rejects_symlinks_and_public_permissions(tmp_path):

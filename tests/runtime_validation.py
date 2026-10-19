@@ -4,6 +4,7 @@ The candidate launcher may be exercised without fabricating readiness evidence.
 All Docker operations use the bounded production controller and isolation flags.
 """
 
+import fcntl
 import hashlib
 import http.client
 import json
@@ -139,7 +140,7 @@ class EvidenceReport:
 
 
 class RuntimeHarness:
-    def __init__(self, config_path, executable):
+    def __init__(self, config_path, executable, *, containment_only=False):
         self.profile, _ = read_runtime_config(config_path)
         if not executable.is_absolute() or not executable.is_file():
             raise ValueError("Explicit absolute Docker executable required")
@@ -153,6 +154,8 @@ class RuntimeHarness:
         )
         self.runtime = DockerRuntime(self.profile, self.control, self.ledger)
         self.stats = ContainerStats(self.profile.daemon_endpoint)
+        self.containment_only = containment_only
+        self._owner_fd = None
         self._opened = False
 
     def command(self, arguments, *, data=b"", seconds=None, limit=8192):
@@ -191,9 +194,27 @@ class RuntimeHarness:
             self.profile.result_root,
         ):
             private_directory(Path(root))
-            if any(Path(root).iterdir()):
-                raise ValueError("Validation roots must be empty and dedicated")
-        self.ledger.open()
+        self._lock_owner()
+        try:
+            # The API intentionally retains its lock inode across restarts.
+            # Hold that same lock while synthetic workers use separate ledgers;
+            # unresolved staging must still be reconciled, never discarded.
+            if any(
+                path.name != "owner.lock"
+                for path in Path(self.profile.staging_root).iterdir()
+            ):
+                raise ValueError("Validation staging contains unresolved work")
+            # Containment probes use synthetic inputs, never these retained data
+            # roots. Measurements still need empty roots for meaningful totals.
+            if not self.containment_only and any(
+                any(Path(root).iterdir())
+                for root in (self.profile.cache_root, self.profile.result_root)
+            ):
+                raise ValueError("Measurement roots must be empty and dedicated")
+            self.ledger.open()
+        except BaseException:
+            self._unlock_owner()
+            raise
         self._opened = True
         self.report.gate("identity", "passed")
         self.runtime.validate_temporary_backend()
@@ -204,6 +225,31 @@ class RuntimeHarness:
             else "unsupported",
         )
 
+    def _lock_owner(self):
+        fd = os.open(
+            Path(self.profile.staging_root) / "owner.lock",
+            os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK,
+            0o600,
+        )
+        try:
+            info = os.fstat(fd)
+            if (
+                not stat.S_ISREG(info.st_mode)
+                or info.st_uid != os.getuid()
+                or info.st_mode & 0o077
+            ):
+                raise ValueError("Validation requires a private owned runtime lock")
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BaseException:
+            os.close(fd)
+            raise
+        self._owner_fd = fd
+
+    def _unlock_owner(self):
+        if self._owner_fd is not None:
+            os.close(self._owner_fd)
+            self._owner_fd = None
+
     def close(self):
         if not self._opened:
             return
@@ -211,6 +257,7 @@ class RuntimeHarness:
         self.runtime.terminate_and_reap()
         self.ledger.close()
         shutil.rmtree(self.ledger.root)
+        self._unlock_owner()
         self._opened = False
 
     def query(self, request):

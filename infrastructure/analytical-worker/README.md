@@ -378,8 +378,12 @@ on invalid prerequisites; it never substitutes controlled adapters or enables AP
 resources. The test harness accepts `evidence: null` candidate profiles directly;
 it does not change the production supervisor's matching-evidence requirements.
 
-Prepare a dedicated, nonsecret JSON profile with the Phase 3 format. Use **new,
-private validation-only roots**, never the running product's cache/staging/result
+Prepare a dedicated, nonsecret JSON profile with the Phase 3 format. Keep the
+product API stopped during containment validation. The harness acquires and
+preserves the API's stable `owner.lock`; any other staging entry fails validation.
+Synthetic containment probes leave existing private cache/results untouched.
+Representative measurements require empty cache/result roots so retained data
+cannot affect totals. New standalone validation should use private dedicated
 roots. On a Linux Docker host, a minimal candidate looks like:
 
 ```json
