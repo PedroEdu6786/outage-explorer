@@ -24,6 +24,7 @@ shell_quote = '$(subst ','"'"',$(1))'
 help:
 	@printf '%s\n' \
 	  'make local-help   Show the guided Colima setup commands' \
+	  'make local-rebuild REVIEWER="Your name"   Run fresh runtime setup through interactive review/configuration' \
 	  'make setup   Install the pinned dependencies in .venv' \
 	  'make run     Start macOS Flask health/docs scaffold (preview/SQL unavailable)' \
 	  'make run-analytical   Serve the configured Colima API with AWS credential renewal' \
@@ -44,7 +45,7 @@ help:
 
 # Manual local setup, always using the dedicated Colima outage-runtime guest.
 LOCAL_STEPS := dependencies ca runtime candidate validate reports configure forward
-.PHONY: local-help local-review $(addprefix local-,$(LOCAL_STEPS))
+.PHONY: local-help local-review local-rebuild $(addprefix local-,$(LOCAL_STEPS))
 local-help:
 	@printf '%s\n' \
 	  '1. make local-dependencies       Install macOS tools (Homebrew required)' \
@@ -60,6 +61,7 @@ local-help:
 	  '10. make local-forward           Forward API port (separate terminal)' \
 	  'Then npm run dev in the sibling web checkout; see docs/development/fresh-machine.md.' \
 	  'Runtime is fresh-install only. Configure AWS login and .env before configuration.' \
+	  'Shortcut for steps 3–8: make local-rebuild REVIEWER="Your name" (interactive report review; fresh VM required).' \
 	  'Command details: docs/development/local-commands.md'
 
 $(addprefix local-,$(LOCAL_STEPS)):
@@ -69,6 +71,9 @@ local-configure: check-env
 
 local-review:
 	$(PYTHON) scripts/local_machine.py review --reviewer $(call shell_quote,$(REVIEWER))
+
+local-rebuild: check-env
+	$(PYTHON) scripts/local_machine.py rebuild --reviewer $(call shell_quote,$(REVIEWER))
 
 
 $(VENV_PYTHON):

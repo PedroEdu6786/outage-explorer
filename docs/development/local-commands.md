@@ -8,9 +8,9 @@ defines their installation order. For an existing installation, use
 [daily development](local-setup.md).
 
 Run these commands from the backend checkout on **Apple Silicon macOS**.
-They use the dedicated Colima `outage-runtime` Linux VM. Run setup stages one
-at a time, in order; a later command does not automatically run earlier stages.
-Stop on a failure and resolve it before continuing.
+They use the dedicated Colima `outage-runtime` Linux VM. Run individual setup
+stages in order, or use `local-rebuild` to orchestrate runtime installation through
+configuration. Stop on a failure and resolve it before continuing.
 
 ## At a glance
 
@@ -21,6 +21,7 @@ Stop on a failure and resolve it before continuing.
 | `make setup` | Installs backend dependencies and prepares private local settings. |
 | `make local-ca` | Downloads public RDS CA certificates for database TLS verification. |
 | `make local-runtime` | Creates/prepares the Colima VM, installs committed source and builds the query-worker image. |
+| `make local-rebuild REVIEWER="Your name"` | Runs fresh runtime preparation, candidate capture, validation, reports, interactive review and configuration. |
 | `make local-candidate` | Records the installed worker/parser and Linux runtime identities. |
 | `make local-validate` | Runs tests inside the VM and saves containment evidence. |
 | `make local-reports` | Prints the saved test and containment reports for you to read. |
@@ -113,6 +114,28 @@ archive. VM sizes are initial settings, not measured application budgets.
 is not an update or repair command, and a failed partial installation is not
 rolled back automatically. Preserve the existing resources and investigate the
 failed step before retrying; see [recovery](fresh-machine.md#11-stop-restart-and-troubleshoot).
+
+## `make local-rebuild REVIEWER="Your name"`
+
+**Before:** Complete host dependencies, `make setup`, AWS login, backend `.env`
+and the RDS CA setup. Commit the source to install. Like `local-runtime`, this
+requires a fresh runtime; remove an existing VM separately only when you intend
+to discard it. This command does not delete a VM or any existing evidence.
+
+**Does:** Runs `local-runtime`, `local-candidate`, `local-validate` and
+`local-reports` sequentially. After printing the reports, asks you to type `yes`
+to accept local preview/SQL containment with refresh idle under your supplied
+reviewer name. Only then does it run `local-review` and `local-configure`.
+An interactive terminal and nonempty reviewer name are required before any work.
+The command stops immediately if a stage fails; it does not roll back or retry.
+
+**After:** Settings are installed, but the API is not started. Use
+`make run-analytical` and `make local-forward` in separate terminals.
+Declining the review or interrupting leaves existing reports in place. Resume
+with the relevant individual command after investigating; do not restart the
+whole fresh-install sequence against a partially prepared VM. After declining
+review, you can later run `make local-reports`,
+`make local-review REVIEWER="Your name"`, then `make local-configure`.
 
 ## `make local-candidate`
 

@@ -6,6 +6,7 @@ import os
 import platform
 import shlex
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -23,6 +24,9 @@ SOURCE = [
     "pyproject.toml",
     "requirements-dev.txt",
     "README.md",
+    "docs/specs/data-api/openapi.json",
+    "docs/specs/data-api/fixtures.json",
+    "docs/specs/preview-facility-filter/contract-cases.json",
 ]
 
 
@@ -174,6 +178,26 @@ def execute(action, reviewer):
         )
 
 
+def rebuild(reviewer):
+    """Run fresh installation stages, retaining the operator's report review."""
+    for action in ("runtime", "candidate", "validate", "reports"):
+        print(f"Running local-{action}...", flush=True)
+        execute(action, reviewer)
+    answer = input(
+        "Review the reports above. Accept local preview/SQL containment with "
+        f"refresh idle as {reviewer}? Type yes to record review and configure: "
+    )
+    if answer.strip() != "yes":
+        raise ValueError(
+            "Review not accepted; reports preserved. When ready, run "
+            'make local-review REVIEWER="Your name", then make local-configure.'
+        )
+    for action in ("review", "configure"):
+        print(f"Running local-{action}...", flush=True)
+        execute(action, reviewer)
+    print("Runtime configured. Start the API separately with make run-analytical.")
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -182,6 +206,7 @@ def main(argv=None):
             "dependencies",
             "ca",
             "runtime",
+            "rebuild",
             "candidate",
             "validate",
             "reports",
@@ -196,11 +221,20 @@ def main(argv=None):
         parser.error(
             "Requires Apple Silicon macOS and the dedicated Colima outage-runtime VM"
         )
-    if args.action == "review" and not args.reviewer.strip():
-        parser.error('Read make local-reports first, then supply REVIEWER="Your name"')
+    if args.action in {"review", "rebuild"} and not args.reviewer.strip():
+        parser.error('Supply REVIEWER="Your name" for explicit report review')
+    if args.action == "rebuild" and not sys.stdin.isatty():
+        parser.error("Rebuild requires an interactive terminal for report review")
     try:
-        execute(args.action, args.reviewer.strip())
-    except (OSError, ValueError, subprocess.CalledProcessError):
+        if args.action == "rebuild":
+            rebuild(args.reviewer.strip())
+        else:
+            execute(args.action, args.reviewer.strip())
+    except (EOFError, KeyboardInterrupt):
+        parser.exit(1, "Setup interrupted; existing files and reports are preserved.\n")
+    except ValueError as error:
+        parser.exit(1, f"{error}\n")
+    except (OSError, subprocess.CalledProcessError):
         parser.exit(
             1, "Setup step failed; resolve the reported step before continuing.\n"
         )

@@ -192,6 +192,19 @@ its path. Keep RDS network access limited to the intended developer host/VPN.
 
 ## 6. Prepare the runtime with Make
 
+To run steps 6–8 with one command, after completing steps 1–5:
+
+```sh
+make local-rebuild REVIEWER="Your name"
+```
+
+This runs runtime preparation, candidate capture, validation and report display,
+then waits for you to review the reports and type `yes` before recording acceptance
+and installing settings. It requires a fresh runtime, preserves existing resources
+and stops on the first failure. It does not delete an existing VM or start the API.
+On success, continue at step 9. The individual commands below remain available
+for step-by-step setup and recovery.
+
 Run these from the macOS backend checkout, one at a time:
 
 ```sh
