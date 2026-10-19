@@ -1104,7 +1104,7 @@ def execute_analytical_http(
         parser_profile, parser_review = read_inspection_config(Path(inspection_path))
         if parser_review is None:
             raise RuntimeUnavailableError("Reviewed SQL inspection unavailable")
-        parser_review.require_ready(parser_profile)
+        parser_review.require_ready(parser_profile, local_acceptance=True)
         inspector = parser_profile.build()
     if evidence is None:
         raise RuntimeUnavailableError("Reviewed analytical runtime unavailable")

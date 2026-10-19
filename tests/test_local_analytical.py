@@ -136,6 +136,21 @@ def test_invalid_socket_group_never_starts_service(monkeypatch, group):
     assert not any("systemd-run" in args for args in calls)
 
 
+def test_unfinished_rebuild_blocks_api_startup(monkeypatch):
+    calls = []
+
+    def fail(arguments, **kwargs):
+        calls.append(arguments)
+        raise RuntimeError("Active rebuild")
+
+    monkeypatch.setattr(local, "run", fail)
+    with pytest.raises(RuntimeError, match="Active rebuild"):
+        local.start_service()
+    assert len(calls) == 1
+    assert calls[0][-1] == "/var/lib/outage-runtime-history/active"
+    assert "systemctl" not in calls[0]
+
+
 def reviewed_configs(tmp_path, *, reviewed=True):
     from dataclasses import asdict
     from datetime import date

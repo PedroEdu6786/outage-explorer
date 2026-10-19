@@ -1,7 +1,7 @@
 """Candidate/review separation and inert CLI parser composition."""
 
 import json
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import date
 from unittest.mock import Mock
 
@@ -56,6 +56,25 @@ def test_candidate_roundtrip_and_review_identity(tmp_path):
     adapter = candidate.build()
     assert not (tmp_path / "parser").exists()
     adapter.close()
+
+
+def test_automated_parser_validation_is_local_only(tmp_path):
+    candidate = profile(tmp_path)
+    record = InspectionReview(
+        candidate.identity,
+        "d" * 64,
+        "e" * 64,
+        "",
+        date.today(),
+        "automated-local-rebuild",
+    )
+    with pytest.raises(RuntimeUnavailableError):
+        record.require_ready(candidate)
+    record.require_ready(candidate, local_acceptance=True)
+    with pytest.raises(ValueError):
+        replace(record, reviewer="Fictitious reviewer")
+    with pytest.raises(ValueError):
+        replace(record, validation_method="skip-checks")
 
 
 @pytest.mark.parametrize(

@@ -246,14 +246,26 @@ class RuntimeEvidence:
     reviewer: str
     reviewed_on: date
     acceptance_scope: str = "complete-runtime"
+    validation_method: str = "human-review"
 
     def __post_init__(self) -> None:
+        if self.validation_method not in {"human-review", "automated-local-rebuild"}:
+            raise ValueError("Unsupported runtime validation method")
+        if self.validation_method == "automated-local-rebuild" and (
+            self.acceptance_scope != "local-preview-sql" or self.reviewer != ""
+        ):
+            raise ValueError("Automated evidence must be local and have no reviewer")
         if not isinstance(self.acceptance_scope, str) or self.acceptance_scope not in {
             "complete-runtime",
             "local-preview-sql",
         }:
             raise ValueError("Unsupported analytical acceptance scope")
         for name, value in vars(self).items():
+            if (
+                name == "reviewer"
+                and self.validation_method == "automated-local-rebuild"
+            ):
+                continue
             if name == "reviewed_on":
                 if type(value) is not date:
                     raise ValueError("Evidence review date required")

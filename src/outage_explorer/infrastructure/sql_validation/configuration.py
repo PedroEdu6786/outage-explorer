@@ -80,8 +80,13 @@ class InspectionReview:
     native_report: str
     reviewer: str
     reviewed_on: date
+    validation_method: str = "human-review"
 
     def __post_init__(self) -> None:
+        if self.validation_method not in {"human-review", "automated-local-rebuild"}:
+            raise ValueError("Unsupported parser validation method")
+        if self.validation_method == "automated-local-rebuild" and self.reviewer != "":
+            raise ValueError("Automated parser evidence must have no reviewer")
         if (
             not all(
                 digest(d)
@@ -93,13 +98,18 @@ class InspectionReview:
             )
             or type(self.reviewed_on) is not date
             or not isinstance(self.reviewer, str)
-            or not self.reviewer
+            or (not self.reviewer and self.validation_method == "human-review")
             or len(self.reviewer) > 256
         ):
             raise ValueError("Explicit parser review required")
 
-    def require_ready(self, profile: InspectionProfile) -> None:
-        if self.profile_identity != profile.identity:
+    def require_ready(
+        self, profile: InspectionProfile, *, local_acceptance: bool = False
+    ) -> None:
+        if self.profile_identity != profile.identity or (
+            self.validation_method == "automated-local-rebuild"
+            and local_acceptance is not True
+        ):
             raise RuntimeUnavailableError("Reviewed SQL inspection unavailable")
 
 

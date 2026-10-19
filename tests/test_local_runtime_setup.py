@@ -95,7 +95,10 @@ def test_review_preserves_existing_record(tmp_path):
     assert json.loads(path.read_text()) == {"actual": True}
 
 
-def test_review_records_only_local_scope_and_binds_exact_reports(tmp_path, monkeypatch):
+@pytest.mark.parametrize("automated", [False, True])
+def test_review_records_only_local_scope_and_binds_exact_reports(
+    tmp_path, monkeypatch, automated
+):
     from types import SimpleNamespace
 
     from tests.test_local_analytical import reviewed_configs
@@ -132,14 +135,27 @@ def test_review_records_only_local_scope_and_binds_exact_reports(tmp_path, monke
     )
 
     monkeypatch.setattr(InspectionProfile, "build", lambda self: ControlledInspector())
-    review.review("Controlled test only")
+    review.review("" if automated else "Controlled test only", automated=automated)
     runtime, evidence = review.read_runtime_config(tmp_path / "runtime-reviewed.json")
     parser, record = review.read_inspection_config(tmp_path / "parser-reviewed.json")
     evidence.require_ready(runtime, started=True, local_acceptance=True)
-    record.require_ready(parser)
+    record.require_ready(parser, local_acceptance=True)
     assert evidence.acceptance_scope == "local-preview-sql"
     summary = json.loads((tmp_path / "local-scope-review.json").read_text())
     assert summary["containment_reports"][0]["sha256"] == review.digest(path)
     assert summary["refresh"] == "idle"
     assert "deferred" in summary["capacity_measurements"]
     assert calls == ["start", "close"]
+    assert (
+        evidence.validation_method
+        == record.validation_method
+        == ("automated-local-rebuild" if automated else "human-review")
+    )
+    if automated:
+        assert evidence.reviewer == record.reviewer == ""
+        assert "reviewer" not in summary and "reviewed_on" not in summary
+
+
+def test_automated_evidence_cannot_claim_human_review():
+    with pytest.raises(ValueError, match="human reviewer"):
+        review.review("Invented reviewer", automated=True)

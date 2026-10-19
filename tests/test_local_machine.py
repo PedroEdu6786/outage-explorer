@@ -78,91 +78,13 @@ def test_runtime_exports_contracts_required_by_guest_validation(calls):
         assert (local.ROOT / path).is_file()
 
 
-@pytest.fixture
-def rebuild_steps(monkeypatch):
+def test_rebuild_delegates_without_reviewer_or_terminal(calls, monkeypatch):
     monkeypatch.setattr(local.platform, "system", lambda: "Darwin")
     monkeypatch.setattr(local.platform, "machine", lambda: "arm64")
-    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
-    steps = []
-    monkeypatch.setattr(local, "execute", lambda action, reviewer: steps.append(action))
-    return steps
-
-
-def test_rebuild_waits_for_review_before_accepting_and_configuring(
-    rebuild_steps, monkeypatch
-):
-    def accept(prompt):
-        assert rebuild_steps == ["runtime", "candidate", "validate", "reports"]
-        assert "refresh idle" in prompt
-        return "yes"
-
-    monkeypatch.setattr("builtins.input", accept)
-    assert local.main(["rebuild", "--reviewer", "Named operator"]) == 0
-    assert rebuild_steps == [
-        "runtime",
-        "candidate",
-        "validate",
-        "reports",
-        "review",
-        "configure",
+    assert local.main(["rebuild"]) == 0
+    assert calls == [
+        ([sys.executable, str(local.ROOT / "scripts/local_rebuild.py")], {})
     ]
-
-
-@pytest.mark.parametrize("answer", ["", "no", "y"])
-def test_declined_review_never_accepts_or_configures(
-    rebuild_steps, monkeypatch, answer
-):
-    monkeypatch.setattr("builtins.input", lambda prompt: answer)
-    with pytest.raises(SystemExit) as failure:
-        local.main(["rebuild", "--reviewer", "Named operator"])
-    assert failure.value.code != 0
-    assert rebuild_steps == ["runtime", "candidate", "validate", "reports"]
-
-
-@pytest.mark.parametrize(
-    "failed_step",
-    ["runtime", "candidate", "validate", "reports", "review", "configure"],
-)
-def test_rebuild_stops_at_failed_stage(rebuild_steps, monkeypatch, failed_step):
-    def execute(action, reviewer):
-        rebuild_steps.append(action)
-        if action == failed_step:
-            raise subprocess.CalledProcessError(1, ["controlled"])
-
-    monkeypatch.setattr(local, "execute", execute)
-    monkeypatch.setattr("builtins.input", lambda prompt: "yes")
-    with pytest.raises(SystemExit) as failure:
-        local.main(["rebuild", "--reviewer", "Named operator"])
-    assert failure.value.code != 0
-    stages = ["runtime", "candidate", "validate", "reports", "review", "configure"]
-    assert rebuild_steps == stages[: stages.index(failed_step) + 1]
-
-
-@pytest.mark.parametrize("missing", ["reviewer", "terminal"])
-def test_rebuild_requires_reviewer_and_terminal_before_work(
-    rebuild_steps, monkeypatch, missing
-):
-    args = ["rebuild"]
-    if missing == "terminal":
-        args += ["--reviewer", "Named operator"]
-        monkeypatch.setattr(sys.stdin, "isatty", lambda: False)
-    with pytest.raises(SystemExit):
-        local.main(args)
-    assert rebuild_steps == []
-
-
-@pytest.mark.parametrize("interruption", [EOFError, KeyboardInterrupt])
-def test_interrupted_review_never_accepts_or_configures(
-    rebuild_steps, monkeypatch, interruption
-):
-    def interrupt(prompt):
-        raise interruption()
-
-    monkeypatch.setattr("builtins.input", interrupt)
-    with pytest.raises(SystemExit) as failure:
-        local.main(["rebuild", "--reviewer", "Named operator"])
-    assert failure.value.code != 0
-    assert rebuild_steps == ["runtime", "candidate", "validate", "reports"]
 
 
 def test_validation_runs_guest_checks_without_review_or_start(calls):

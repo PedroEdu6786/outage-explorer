@@ -97,6 +97,7 @@ def export_credentials(profiles):
 
 def start_service():
     """Restart the transient guest unit, creating it first if it was stopped."""
+    run(SSH + ["sudo", "test", "!", "-e", "/var/lib/outage-runtime-history/active"])
     state = run(SSH + ["systemctl", "show", UNIT, "-p", "LoadState", "--value"])
     if state.decode().strip() == "not-found":
         group = run(SSH + ["stat", "-c", "%g", "/run/docker.sock"]).decode().strip()
@@ -182,7 +183,7 @@ def configure(environment, runtime_path, inspection_path):
     if evidence is None or review is None or parser.python != PYTHON:
         raise ValueError("Matching reviewed runtime/parser configuration required")
     evidence.require_ready(profile, started=True, local_acceptance=True)
-    review.require_ready(parser)
+    review.require_ready(parser, local_acceptance=True)
     prefixes = (
         "OUTAGE_AUTH_",
         "OUTAGE_ACCESS_DATABASE_",

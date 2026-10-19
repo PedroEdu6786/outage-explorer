@@ -105,6 +105,13 @@ and stop further external-service/browser validation. Those unperformed checks
 remain open evidence rather than startup blockers. Keep normal authorization,
 parser/worker isolation, bounds and lifecycle enforcement; keep refresh idle.
 
+[ADR-0066](docs/adr/0066-unattended-local-runtime-rebuilds.md) permits unattended
+local rebuilds in the existing VM from current allowlisted working-tree changes.
+All required checks still pass before configuration; evidence explicitly records
+`automated-local-rebuild` without a human reviewer. This local-only workflow
+supersedes per-rebuild manual review, preserves previous builds and leaves the
+API stopped. No VM deletion, cloud reset or full capacity acceptance is implied.
+
 Before SQL endpoint enablement, enforce user-SQL parsing/reference inspection in
 a separate bounded subprocess under
 [ADR-0054](docs/adr/0054-bounded-subprocess-sql-inspection.md). Preserve application

@@ -92,7 +92,31 @@ result IDs; start a new preview or explicitly rerun the query.
 Do not rerun `make local-runtime`, candidate generation or review for a settings-only
 change. Changes to installed source, worker image, parser executables, daemon or
 filesystem identity require the matching runtime installation/review procedure;
-see [runtime recovery](fresh-machine.md#11-stop-restart-and-troubleshoot).
+use [rebuild after code changes](#rebuild-after-code-changes).
+
+## Rebuild after code changes
+
+After initial installation, run this from the backend checkout:
+
+```sh
+make local-rebuild
+```
+
+It uses current tracked and new allowlisted files, including uncommitted edits,
+and applies deletions. No commit, stash, reviewer name or confirmation is needed.
+The existing VM is reused. The command stops the local API, builds a replacement,
+validates its actual worker/parser identities, records automated local-only
+evidence and configures the new build. Refresh must remain idle.
+
+On success, run `make run-analytical` and reuse your forwarding terminal. Stop any
+old credential-supervisor terminal with Ctrl+C first. The rebuild leaves the API
+stopped and retains the prior build and evidence for recovery.
+
+On failure, use `make local-rebuild-resume` to retry validation/configuration of
+the saved snapshot, or `make local-rebuild-rollback` to restore the previous build.
+A failed configuration resumes without repeating the build or passing tests.
+See the [command reference](local-commands.md#make-local-rebuild) for log paths
+and recovery details. No recovery command deletes the VM or starts the API.
 
 ## Change web settings
 

@@ -9,8 +9,8 @@ defines their installation order. For an existing installation, use
 
 Run these commands from the backend checkout on **Apple Silicon macOS**.
 They use the dedicated Colima `outage-runtime` Linux VM. Run individual setup
-stages in order, or use `local-rebuild` to orchestrate runtime installation through
-configuration. Stop on a failure and resolve it before continuing.
+stages in order, or, after initial installation, use `local-rebuild` for source
+updates. Stop on a failure and resolve it before continuing.
 
 ## At a glance
 
@@ -21,7 +21,9 @@ configuration. Stop on a failure and resolve it before continuing.
 | `make setup` | Installs backend dependencies and prepares private local settings. |
 | `make local-ca` | Downloads public RDS CA certificates for database TLS verification. |
 | `make local-runtime` | Creates/prepares the Colima VM, installs committed source and builds the query-worker image. |
-| `make local-rebuild REVIEWER="Your name"` | Runs fresh runtime preparation, candidate capture, validation, reports, interactive review and configuration. |
+| `make local-rebuild` | Rebuilds current changes in the existing VM, validates and configures without prompts. |
+| `make local-rebuild-resume` | Resumes validation/configuration of the saved rebuild snapshot. |
+| `make local-rebuild-rollback` | Restores the previous source, image, profiles and settings; keeps failed evidence. |
 | `make local-candidate` | Records the installed worker/parser and Linux runtime identities. |
 | `make local-validate` | Runs tests inside the VM and saves containment evidence. |
 | `make local-reports` | Prints the saved test and containment reports for you to read. |
@@ -115,27 +117,50 @@ is not an update or repair command, and a failed partial installation is not
 rolled back automatically. Preserve the existing resources and investigate the
 failed step before retrying; see [recovery](fresh-machine.md#11-stop-restart-and-troubleshoot).
 
-## `make local-rebuild REVIEWER="Your name"`
+## `make local-rebuild`
 
-**Before:** Complete host dependencies, `make setup`, AWS login, backend `.env`
-and the RDS CA setup. Commit the source to install. Like `local-runtime`, this
-requires a fresh runtime; remove an existing VM separately only when you intend
-to discard it. This command does not delete a VM or any existing evidence.
+**Before:** Complete initial installation once. The existing `outage-runtime`
+VM must be running, Docker usable and spill storage mounted. Keep refresh idle.
+Backend `.env`, AWS profile and RDS CA configuration remain in the host checkout.
 
-**Does:** Runs `local-runtime`, `local-candidate`, `local-validate` and
-`local-reports` sequentially. After printing the reports, asks you to type `yes`
-to accept local preview/SQL containment with refresh idle under your supplied
-reviewer name. Only then does it run `local-review` and `local-configure`.
-An interactive terminal and nonempty reviewer name are required before any work.
-The command stops immediately if a stage fails; it does not roll back or retry.
+**Does:** Snapshots current allowlisted source files, including uncommitted edits
+and new files. Tracked deletions are absent from the replacement. Ignored files,
+hidden paths, credentials, key files and generated files are excluded; source
+symlinks are rejected. Git state and stashes are unchanged.
 
-**After:** Settings are installed, but the API is not started. Use
-`make run-analytical` and `make local-forward` in separate terminals.
-Declining the review or interrupting leaves existing reports in place. Resume
-with the relevant individual command after investigating; do not restart the
-whole fresh-install sequence against a partially prepared VM. After declining
-review, you can later run `make local-reports`,
-`make local-review REVIEWER="Your name"`, then `make local-configure`.
+The guest temporarily masks/stops the local API, checks that workloads and
+ownership have settled, and builds a fresh environment/image in staging. It then
+archives the previous installed source and active evidence outside their lookup
+paths, switches the active source link to the replacement, captures candidates and runs all controlled,
+parser and actual-host containment checks. Passing evidence is explicitly marked
+`automated-local-rebuild`, without a human reviewer, under [ADR-0066](../adr/0066-unattended-local-runtime-rebuilds.md).
+No name, confirmation or interactive terminal is required.
+
+**After:** Installs private API configuration and leaves the API stopped. Start it
+with `make run-analytical`; retain the existing port-forwarding terminal. If the
+old credential supervisor is still running, stop that terminal with Ctrl+C first.
+Caches, spill storage, ownership metadata and cloud data are preserved. Each replacement environment stays at its original build path so its executable
+entry points remain valid. History and old images are retained without automatic
+pruning. The VM is never deleted or recreated. This is local preview/SQL readiness with refresh idle;
+full capacity and external-service evidence remain deferred.
+
+**Failures/recovery:** Progress identifies the failed stage. Build logs and the
+previous build live at `/var/lib/outage-runtime-history/<id>/` inside the guest;
+`.local-runtime/rebuild.json` records the pending stage locally. An unfinished
+update blocks API startup and another rebuild. Failed attempts are preserved.
+
+- `make local-rebuild-resume` retries validation of the saved installed snapshot,
+  archiving failed reports first. After configuration failure it retries only
+  configuration; it does not rebuild or rerun successful validation.
+- `make local-rebuild-rollback` restores the previous source, image tag, evidence
+  and API settings, leaving the API stopped. Failed source/reports are retained.
+  Use rollback after a failed preparation/build, then retry `make local-rebuild`.
+- Resume uses the saved snapshot, not edits made after the failed run. Roll back
+  and start a new rebuild to include subsequent source changes.
+
+The initial `local-runtime` command remains fresh-install only. The existing
+individual candidate/validate/reports/review commands remain available for first
+installation. Do not use them to bypass an unfinished rebuild's recovery state.
 
 ## `make local-candidate`
 

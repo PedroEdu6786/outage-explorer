@@ -192,18 +192,9 @@ its path. Keep RDS network access limited to the intended developer host/VPN.
 
 ## 6. Prepare the runtime with Make
 
-To run steps 6–8 with one command, after completing steps 1–5:
-
-```sh
-make local-rebuild REVIEWER="Your name"
-```
-
-This runs runtime preparation, candidate capture, validation and report display,
-then waits for you to review the reports and type `yes` before recording acceptance
-and installing settings. It requires a fresh runtime, preserves existing resources
-and stops on the first failure. It does not delete an existing VM or start the API.
-On success, continue at step 9. The individual commands below remain available
-for step-by-step setup and recovery.
+These steps create the runtime once. For later source changes, use
+`make local-rebuild` as described in [daily development](local-setup.md#rebuild-after-code-changes).
+Rebuilding reuses the VM and does not require a commit, stash or confirmation.
 
 Run these from the macOS backend checkout, one at a time:
 
@@ -382,7 +373,7 @@ outside the active report directory. Capture new candidates (step 6), then
 repeat steps 7–8 for the new identities.
 Do not patch old evidence. Source updates require installing the new committed
 revision and rebuilding the image before collecting new evidence. Fresh
-preparation is not an update command. See the
+preparation is not an update command; use `make local-rebuild` for current source changes. See the
 [runtime recovery contract](../../infrastructure/analytical-worker/README.md).
 
 The guide and setup helpers have controlled automated coverage. A complete

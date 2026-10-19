@@ -58,6 +58,10 @@ Ctrl+C stops each process.
 API: http://localhost:8000 · Swagger: http://localhost:8000/api/docs ·
 [OpenAPI](http://localhost:8000/api/openapi.json)
 
+After changing backend code, run `make local-rebuild`. It updates the existing
+VM from current working-tree files, validates and configures without confirmation
+prompts. See [rebuilding and recovery](docs/development/local-setup.md#rebuild-after-code-changes).
+
 For credential-free health and documentation only, run `make setup`, then
 `make run`. This startup has no analytical resources; preview/SQL return 503.
 

@@ -134,3 +134,23 @@ def test_profile_requires_current_paired_protocol():
     )
 
     assert profile().protocol_version == WORKER_PROTOCOL_VERSION == 2
+
+
+def test_automated_runtime_evidence_requires_local_scope_and_no_reviewer():
+    from dataclasses import replace
+    from datetime import date
+
+    record = RuntimeEvidence(
+        "a" * 64,
+        *("b" * 64 for _ in range(5)),
+        "",
+        date.today(),
+        "local-preview-sql",
+        "automated-local-rebuild",
+    )
+    with pytest.raises(ValueError):
+        replace(record, acceptance_scope="complete-runtime")
+    with pytest.raises(ValueError):
+        replace(record, reviewer="Fictitious reviewer")
+    with pytest.raises(ValueError):
+        replace(record, validation_method="skip-checks")

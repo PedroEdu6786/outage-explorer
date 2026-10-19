@@ -65,6 +65,13 @@ execution slot. Refresh has its own supervisor: API shutdown does not stop a
 healthy refresh worker. Imports and app factories start no connections, jobs or
 threads. See [daily development](../development/local-setup.md) for commands.
 
+Local source updates use `make local-rebuild`, reusing the existing VM and
+preserving prior source/settings/evidence. Automated local-only evidence may
+satisfy rebuild readiness after all required checks pass under
+[ADR-0066](../adr/0066-unattended-local-runtime-rebuilds.md); it never claims human
+review or full capacity acceptance. Failed updates block startup until resumed
+or rolled back. Rebuild and recovery leave the API stopped.
+
 ## Login and authorization
 
 1. The API creates a bounded, browser-bound, single-use login attempt.

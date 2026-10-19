@@ -1,7 +1,7 @@
-"""Record an operator's explicit local containment review of actual-host reports.
+"""Record human review or automated local rebuild validation of actual-host reports.
 
 Never enables the API, fetches data or claims full capacity acceptance. Run only
-after reading the reports and accepting the documented local limits.
+after reading the reports, or in automated rebuild mode under ADR-0066.
 """
 
 import argparse
@@ -96,7 +96,9 @@ def write_private(path, document):
         stream.write("\n")
 
 
-def review(reviewer):
+def review(reviewer, *, automated=False):
+    if automated and reviewer:
+        raise ValueError("Automated validation cannot name a human reviewer")
     profile, _ = read_runtime_config(ROOT / "candidate.json")
     parser, _ = read_inspection_config(ROOT / "parser-candidate.json")
     outputs = [
@@ -140,8 +142,8 @@ def review(reviewer):
         "scope": "local-preview-sql",
         "profile_identity": profile.identity,
         "parser_profile_identity": parser.identity,
-        "reviewer": reviewer,
-        "reviewed_on": date.today(),
+        "validation_method": "automated-local-rebuild" if automated else "human-review",
+        "validated_on": date.today(),
         "controlled": controlled,
         "native_parser": native_parser,
         "native_worker": native_worker,
@@ -152,6 +154,8 @@ def review(reviewer):
         "capacity_measurements": "deferred; not measured or accepted by this record",
         "external_services": "operator configured; not verified by this command",
     }
+    if not automated:
+        summary.update(reviewer=reviewer, reviewed_on=date.today())
     write_private(outputs[0], summary)
     summary_digest = digest(outputs[0])
     # The same scope summary binds containment/termination/storage reports. Its
@@ -166,9 +170,15 @@ def review(reviewer):
         reviewer,
         date.today(),
         "local-preview-sql",
+        summary["validation_method"],
     )
     parser_review = InspectionReview(
-        parser.identity, controlled["sha256"], summary_digest, reviewer, date.today()
+        parser.identity,
+        controlled["sha256"],
+        summary_digest,
+        reviewer,
+        date.today(),
+        summary["validation_method"],
     )
     write_private(
         outputs[1], {"profile": asdict(profile), "evidence": asdict(evidence)}
@@ -182,8 +192,13 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--reviewer",
-        required=True,
+        default="",
         help="Your name, after personally reviewing the reports",
+    )
+    parser.add_argument(
+        "--automated-local-rebuild",
+        action="store_true",
+        help="Record passing local rebuild validation under ADR-0066 without human review",
     )
     parser.add_argument(
         "--accept-local-containment",
@@ -191,19 +206,25 @@ def main(argv=None):
         help="Explicitly accept initial local limits with refresh idle; does not start the API",
     )
     args = parser.parse_args(argv)
-    if not args.accept_local_containment or not args.reviewer.strip():
+    if args.automated_local_rebuild and (
+        args.reviewer or args.accept_local_containment
+    ):
+        parser.error("Automated validation cannot be combined with human review")
+    if not args.automated_local_rebuild and (
+        not args.accept_local_containment or not args.reviewer.strip()
+    ):
         parser.error("Read the reports and explicitly accept local containment first")
     if sys.platform != "linux" or os.getuid() != 65534:
         parser.error("Run as the configured controller on the Linux daemon host")
     try:
-        review(args.reviewer.strip())
+        review(args.reviewer.strip(), automated=args.automated_local_rebuild)
     except Exception:
         parser.exit(
             1,
             "Review not recorded: check actual reports, matching identities, parser and unused output paths.\n",
         )
     print(
-        "Local review recorded. API and refresh remain stopped; full capacity acceptance is deferred."
+        "Local validation recorded. API and refresh remain stopped; full capacity acceptance is deferred."
     )
     return 0
 

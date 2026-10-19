@@ -1,5 +1,12 @@
 # Candidate analytical worker image
 
+For routine local source changes, use `make local-rebuild` after initial setup.
+It reuses the VM, runs required validation without prompts, and records automated
+local-only evidence under [ADR-0066](../../docs/adr/0066-unattended-local-runtime-rebuilds.md).
+See [rebuild and recovery commands](../../docs/development/local-commands.md#make-local-rebuild).
+Historical manual-review and incomplete-phase notes below retain their original scope.
+
+
 This implements one-request stdin/stdout transport around the existing preview
 and query adapters. It does not enable the product API or supply a reviewed
 container launcher. T1.7 isolation/limits/termination validation remains pending.
