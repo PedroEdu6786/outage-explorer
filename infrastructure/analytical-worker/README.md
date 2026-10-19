@@ -189,8 +189,10 @@ container intent before staging/cache reclamation; constructs the verified cache
 trusted S3 readers, launcher, fresh cursor key and ephemeral results; and starts
 periodic recovery, preview-expiry and result cleanup before admitting work.
 Transfer sessions renew their bounded budget for each serialized cold cache load.
-Existing artifact defaults and the 30,000-row preparation bound remain candidate
-allowances, not representative measurements.
+Existing artifact defaults and the 100,000-row preparation bound per published
+dataset remain candidate allowances, not representative measurements. Larger
+descriptors fail before download under
+[ADR-0067](../../docs/adr/0067-analytical-input-row-limit.md).
 
 Shutdown stops admission and cancels outstanding work. Active execution, preview
 leases, result readers and unresolved recovery retain their resources and lock;

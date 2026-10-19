@@ -114,7 +114,7 @@ def execute(action, reviewer):
     elif action == "validate":
         pytest = ".venv/bin/python -m pytest -q -p no:cacheprovider"
         controller(
-            f"{pytest} tests/unit tests/architecture tests/test_local_analytical.py tests/test_local_runtime_setup.py tests/test_local_machine.py tests/test_local_rebuild.py tests/integration/test_sql_compatibility.py --junitxml={REPORTS}/controlled.xml\n"
+            f"{pytest} tests/unit tests/architecture tests/test_local_analytical.py tests/test_local_runtime_setup.py tests/test_local_machine.py tests/test_local_rebuild.py tests/integration/test_sql_compatibility.py tests/integration/test_analytical_supervisor.py --junitxml={REPORTS}/controlled.xml\n"
             f"{pytest} tests/integration/test_sql_parser_process.py --junitxml={REPORTS}/parser.xml\n"
             f"OUTAGE_RUNTIME_TEST_PROFILE={REPORTS}/candidate.json OUTAGE_RUNTIME_DOCKER_EXECUTABLE=/usr/bin/docker {pytest} tests/acceptance/test_query_runtime.py -m runtime_docker --junitxml={REPORTS}/docker.xml\n"
         )

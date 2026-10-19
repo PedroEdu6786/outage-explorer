@@ -985,7 +985,7 @@ def build_analytical_resources(
                 CacheBounds(
                     profile.cache_bytes,
                     profile.input_files,
-                    30_000,
+                    100_000,
                     profile.worker.preparation_seconds,
                 ),
             )

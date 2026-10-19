@@ -3,15 +3,24 @@
 import json
 import os
 from dataclasses import asdict, replace
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
 
-from outage_explorer.application.errors import RuntimeUnavailableError
+from outage_explorer.application.errors import (
+    AnalyticalResourceError,
+    RuntimeUnavailableError,
+)
 from outage_explorer.bootstrap import build_analytical_resources
+from outage_explorer.domain.access import AnalyticalGrain
 from outage_explorer.domain.datasets import PUBLIC_DATASETS
+from outage_explorer.domain.publication import (
+    DatasetSummary,
+    ResourcePublishedGeneration,
+)
 from outage_explorer.entrypoints.http.analytical_command import run
 from outage_explorer.infrastructure.query_results.previews import (
     BoundedPreviewSequences,
@@ -281,6 +290,69 @@ def test_production_builder_inert_and_quota_prerequisites_closed(tmp_path, monke
     resources.close()
     assert not Path(candidate.cache_root).exists()
     assert not Path(candidate.result_root).exists()
+
+
+@pytest.mark.parametrize("rows", [30_001, 100_000, 100_001])
+def test_production_cache_row_admission_before_download(tmp_path, monkeypatch, rows):
+    from outage_explorer import bootstrap
+    from outage_explorer.infrastructure.local_cache import modeled
+    from outage_explorer.infrastructure.worker_runtime import docker
+
+    class DownloadReached(Exception):
+        pass
+
+    # Exercise the production composition and cache admission without network or
+    # daemon operations. Reaching the reader proves descriptor admission only.
+    objects = Mock(read=Mock(side_effect=DownloadReached))
+    session = Mock()
+    monkeypatch.setattr(bootstrap.boto3, "Session", Mock(return_value=session))
+    monkeypatch.setattr(
+        bootstrap,
+        "s3_settings",
+        lambda _: SimpleNamespace(
+            profile=None, region="us-east-1", bucket="test-bucket", prefix="test/"
+        ),
+    )
+    monkeypatch.setattr(modeled, "ResourceReadSessions", lambda _: objects)
+    monkeypatch.setattr(docker, "DockerRuntime", Mock())
+    candidate = profile(tmp_path)
+    resources = build_analytical_resources(candidate, evidence(candidate))
+    day = date(2026, 4, 2)
+    published = ResourcePublishedGeneration(
+        "synthetic-generation",
+        "synthetic-run",
+        None,
+        "v1",
+        datetime.now(UTC),
+        tuple(
+            DatasetSummary(
+                AnalyticalGrain(dataset.grain),
+                "v1",
+                rows,
+                day,
+                day,
+                f"test/generations/synthetic-generation/{dataset.id}.parquet",
+                "a" * 64,
+                1,
+            )
+            for dataset in PUBLIC_DATASETS
+        ),
+    )
+    resources.start()
+    try:
+        for dataset in PUBLIC_DATASETS:
+            objects.read.reset_mock()
+            if rows <= 100_000:
+                with pytest.raises(DownloadReached):
+                    resources.inputs.prepare(published, dataset)
+                objects.read.assert_called_once()
+            else:
+                with pytest.raises(AnalyticalResourceError):
+                    resources.inputs.prepare(published, dataset)
+                objects.read.assert_not_called()
+    finally:
+        resources.close()
+    session.client.return_value.close.assert_called_once()
 
 
 def test_config_round_trip_missing_evidence_and_strict_rejection(tmp_path):

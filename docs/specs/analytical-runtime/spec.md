@@ -85,6 +85,9 @@ SQL use cases, with explicit startup ownership and unchanged public contracts.
   termination. Execution/result production is at most ten seconds; preparation,
   overall, Docker control operations and stdout/stderr have explicit hard bounds.
   Uncertain death may retain ownership beyond a deadline; it never implies reuse.
+  The verified input cache admits at most 100,000 rows per published dataset,
+  inclusive; larger descriptors fail before download under
+  [ADR-0067](../../adr/0067-analytical-input-row-limit.md).
 - **TR4:** Preserve 1,000 rows/1,048,576 canonical SQL bytes, existing truncation,
   preview 100/500 paging and fixed 60-second preview/result lifetimes. Query-ID
   metadata remains bounded and ephemeral outside PostgreSQL.
